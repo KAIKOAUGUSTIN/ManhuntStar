@@ -74,7 +74,8 @@ public final class BlockCosts {
             return CostProvider.UNBREAKABLE;
         }
         int cost = (int) (4f + hardness * 2.0f);
-        return (byte) Math.min(250, Math.max(1, cost));
+        // byte vai só até 127: acima disso o custo virava negativo e o bloco contava como ar
+        return (byte) Math.min(Byte.MAX_VALUE, Math.max(1, cost));
     }
 
     public static byte cost(Material m) {

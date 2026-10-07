@@ -235,7 +235,14 @@ public final class MenuManager implements Listener {
             p.closeInventory();
             msg().send(p, "comando.criando", Messages.p("quantidade", d.amount), Messages.p("dificuldade", d.difficulty.label()), Messages.p("nome", d.name));
             plugin.botManager().createBots(p.getLocation(), d.name, d.skin.isEmpty() ? null : d.skin, d.amount, d.difficulty, d.phase, d.aggression)
-                    .thenAccept(bots -> msg().send(p, "comando.criados", Messages.p("quantidade", bots.size()), Messages.p("nome", d.name)));
+                    .whenComplete((bots, err) -> {
+                        if (err != null) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Falha ao criar bots", err);
+                            msg().send(p, "comando.erro-criar");
+                        } else {
+                            msg().send(p, "comando.criados", Messages.p("quantidade", bots.size()), Messages.p("nome", d.name));
+                        }
+                    });
         });
         set(m, 18, item(Material.ARROW, t("Voltar", NamedTextColor.GRAY), List.of()), c -> openMain(p));
         p.openInventory(m.inventory);

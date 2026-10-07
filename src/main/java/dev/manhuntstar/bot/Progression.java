@@ -76,8 +76,10 @@ public final class Progression {
         if (phase >= 10 && difficulty != BotDifficulty.TERMINATOR) {
             return;
         }
+        // a passagem 10 → 12 do Terminator também respeita o multiplicador de duração das fases
+        int limit = (int) (difficulty.phaseDurationTicks() * bot.settings().phaseMultiplier.value());
         if (difficulty == BotDifficulty.TERMINATOR && phase == 10) {
-            if (++ticksInPhase >= difficulty.phaseDurationTicks()) {
+            if (++ticksInPhase >= limit) {
                 setPhase(FINAL_PHASE);
             }
             return;
@@ -86,7 +88,6 @@ public final class Progression {
             return;
         }
         ticksInPhase++;
-        int limit = (int) (difficulty.phaseDurationTicks() * bot.settings().phaseMultiplier.value());
         if (ticksInPhase >= limit) {
             setPhase(phase + 1);
         }

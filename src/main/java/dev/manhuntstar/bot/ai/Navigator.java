@@ -44,6 +44,8 @@ public final class Navigator {
     private static final int RESOLVE_CACHE_TICKS = 10;
     private static final int WATER_ASCEND_AIR = 60;
     private static final int WATER_RESUME_AIR = 220;
+    /** Um pulo de 2–3 blocos leva menos de 1 s; passou de 3 s, o bot ficou preso. */
+    private static final int PARKOUR_TIMEOUT_TICKS = 60;
 
     private enum WaterMode { NONE, CRUISE, ASCEND_FOR_AIR }
 
@@ -64,6 +66,7 @@ public final class Navigator {
     private final ArrayDeque<Pos> placeQueue = new ArrayDeque<>();
     private boolean parkouring;
     private Pos parkourTarget;
+    private int parkourTicks;
     private Pos lastFlowTarget;
     private WaterMode waterMode = WaterMode.NONE;
     private Pos escapeTarget;
@@ -340,6 +343,7 @@ public final class Navigator {
             if ((gapX >= 2 || gapZ >= 2) && (gapX == 0 || gapZ == 0) && vehicle == null) {
                 parkouring = true;
                 parkourTarget = next;
+                parkourTicks = 0;
             }
             enqueueActions(next);
         }
@@ -425,13 +429,19 @@ public final class Navigator {
         if (!parkouring || parkourTarget == null) {
             return;
         }
+        if (++parkourTicks > PARKOUR_TIMEOUT_TICKS) {
+            // o pulo não deu certo e o bot ficou num vão raso: desiste e recalcula o caminho
+            parkouring = false;
+            current = null;
+            return;
+        }
         Vec3 target = Vec3.bottomCenter(parkourTarget);
         bot.lookAt(target.add(0, 1.5, 0));
         bot.motor().setSprinting(true);
         Vec3 dir = target.subtract(bot.pos()).horizontal().normalize();
         bot.motor().walk(dir);
         Pos edge = bot.pos().add(dir.scale(0.4)).add(0, -0.2, 0).toPos();
-        if (bot.onGround() && !WorldUtil.collides(world(), edge)) {
+        if (bot.onGround() && (!WorldUtil.collides(world(), edge) || bot.horizontalCollision())) {
             bot.motor().jump();
         }
         Vec3 p = bot.pos();

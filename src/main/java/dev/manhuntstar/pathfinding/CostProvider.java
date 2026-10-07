@@ -7,7 +7,7 @@ package dev.manhuntstar.pathfinding;
  *   <li>{@link #WATER} (-2): água (dá para nadar).</li>
  *   <li>{@link #AVOID} (-1): perigo ou fora da área conhecida (lava, fogo, arbusto de frutas, neve fofa...).</li>
  *   <li>{@link #UNBREAKABLE} (-3): sólido que não quebra (bedrock, barreira): dá para pisar, não dá para cavar.</li>
- *   <li>1..250: sólido quebrável; o valor é o custo de cavar.</li>
+ *   <li>1..127: sólido quebrável; o valor é o custo de cavar.</li>
  * </ul>
  */
 @FunctionalInterface

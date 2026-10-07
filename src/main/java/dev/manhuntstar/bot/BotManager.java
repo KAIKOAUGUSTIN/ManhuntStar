@@ -1105,7 +1105,8 @@ public final class BotManager {
                     bot.spawnEntity(loc);
                     bot.applySnapshotEquipment(s);
                     bot.progression().updateGear();
-                } else if (s.shouldRespawn()) {
+                } else if (s.shouldRespawn() && settings().respawn.on()) {
+                    // morto ao desligar: só volta se o respawn estiver ligado, como numa morte normal
                     pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), Bukkit.getCurrentTick() + 40, w.getName(), Vec3.of(loc)));
                 }
                 notePhaseReached(bot.progression().phase());

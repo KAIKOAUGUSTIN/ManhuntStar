@@ -18,6 +18,9 @@ import org.bukkit.inventory.ItemStack;
 /** Quebra de blocos pelo bot, com tempo, animação de rachadura, som e drops como um jogador. */
 public final class Mining {
 
+    /** Alcance máximo para continuar quebrando (o do jogador é 4,5 a partir dos olhos). */
+    private static final double MAX_REACH = 6.0;
+
     private final Bot bot;
     private Pos miningPos;
     private int ticksRemaining;
@@ -43,6 +46,11 @@ public final class Mining {
         Block b = miningPos.block(w);
         if (b.getType().isAir()) {
             clear(false);
+            return;
+        }
+        if (bot.eyePos().distanceTo(Vec3.center(miningPos)) > MAX_REACH) {
+            // teleportado (/bot tp, pérola, redistribuição) no meio da quebra: não quebra de longe
+            clear(true);
             return;
         }
         bot.lookAtBlock(miningPos);

@@ -75,14 +75,14 @@ public final class SkinService {
             if (key.matches("[a-z0-9_]{1,16}")) {
                 skin = fetchMojang(key);
             }
-            if (skin == null) {
-                skin = robotSkin();
-            }
             if (skin != null) {
                 cache.put(key, new CachedSkin(skin, System.currentTimeMillis()));
                 saveCache();
+                return skin;
             }
-            return skin;
+            // A reserva não fica guardada com o nome: se a Mojang só estava fora do ar, a skin
+            // certa volta na próxima criação em vez de ficar 7 dias no robô.
+            return robotSkin();
         }, executor).exceptionally(t -> null);
     }
 
