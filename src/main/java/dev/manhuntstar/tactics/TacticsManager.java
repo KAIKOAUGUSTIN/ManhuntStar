@@ -186,7 +186,7 @@ public final class TacticsManager {
         });
         if (manager.plugin().settings().autoCapacities.on()) {
             refreshTrackers(now);
-            if (now % CHECK_INTERVAL == 0 && !manager.countdown().isRunning()) {
+            if (now % CHECK_INTERVAL == 0 && !manager.countdown().isActive()) {
                 autoTrigger(now);
             }
         }

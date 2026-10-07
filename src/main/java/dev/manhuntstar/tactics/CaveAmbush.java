@@ -58,7 +58,7 @@ public final class CaveAmbush {
             return;
         }
         cleanupInvalid();
-        if (!manager.plugin().settings().caveAmbush.on() || manager.countdown().isRunning()) {
+        if (!manager.plugin().settings().caveAmbush.on() || manager.countdown().isActive()) {
             return;
         }
         long now = Bukkit.getCurrentTick();

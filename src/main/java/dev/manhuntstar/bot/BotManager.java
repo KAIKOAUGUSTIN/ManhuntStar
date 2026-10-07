@@ -507,7 +507,7 @@ public final class BotManager {
             created.add(bot);
         }
         if (creator != null && mode == SpawnMode.MANHUNT && settings().startCountdown.value() > 0 && !created.isEmpty()) {
-            countdown.start(creator, settings().startCountdown.value());
+            countdown.start(creator, pos, radius, settings().startCountdown.value());
         }
         dirty = true;
         return created;
@@ -951,7 +951,7 @@ public final class BotManager {
     private void checkStrandedBots() {
         for (Bot b : aliveBots()) {
             Player t = b.target();
-            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.world()) && b.idle() == null && !countdown.isRunning()) {
+            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.world()) && b.idle() == null && !countdown.isActive()) {
                 requestDimensionChange(t, b.world());
             }
         }
@@ -976,7 +976,7 @@ public final class BotManager {
             }
             toKill.forEach(this::killSilently);
         }
-        if (now % 20 != 0 || !settings().silentDeaths.on() || countdown.isRunning()) {
+        if (now % 20 != 0 || !settings().silentDeaths.on() || countdown.isActive()) {
             return;
         }
         for (Player p : Bukkit.getOnlinePlayers()) {

@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
 /**
  * Bots esperando na roda em volta de quem os criou (modo MANHUNT): pulam, agacham, giram, olham
  * para o jogador e para os colegas. Sem contagem, soltam quando o jogador começa a correr para
- * longe; com contagem, ficam na roda até o tempo acabar (ou até o jogador sair, se configurado).
+ * longe; com contagem, ficam na roda até a {@link dev.manhuntstar.manhunt.CountdownService} soltar.
  */
 public final class IdleBehavior {
 
@@ -46,10 +46,14 @@ public final class IdleBehavior {
         return creatorId;
     }
 
+    /** Sai da roda de vez: o bot deixa de ser tratado como "esperando" pelo resto do plugin. */
     public void release() {
         if (active) {
             active = false;
             bot.setSneaking(false);
+        }
+        if (bot.idle() == this) {
+            bot.setIdle(null);
         }
     }
 
@@ -58,7 +62,7 @@ public final class IdleBehavior {
         if (!active) {
             return false;
         }
-        boolean countdown = bot.manager().countdown().isRunning();
+        boolean countdown = bot.manager().countdown().isActive();
         Player creator = Bukkit.getPlayer(creatorId);
         if (creator == null || creator.isDead() || !creator.getWorld().equals(bot.world())) {
             if (countdown) {
@@ -73,16 +77,6 @@ public final class IdleBehavior {
         creatorLastPos = creatorPos;
         double dist = bot.pos().distanceTo(creatorPos);
         if (countdown) {
-            if (dist > radius + 2.0) {
-                outsideTimer++;
-                if (bot.settings().releaseOnLeaveCircle.on() && outsideTimer >= OUTSIDE_RELEASE_TICKS) {
-                    bot.manager().countdown().finishEarly(creator);
-                    release();
-                    return false;
-                }
-            } else {
-                outsideTimer = 0;
-            }
             executeBehavior(creator, creatorPos);
             return true;
         }

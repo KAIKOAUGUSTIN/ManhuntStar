@@ -57,7 +57,7 @@ public final class BotEntityListener implements Listener {
         }
         DamageSource src = event.getDamageSource();
         boolean bypass = src.getDamageType().equals(DamageType.OUT_OF_WORLD) || src.getDamageType().equals(DamageType.GENERIC_KILL);
-        if (!bypass && settings().countdownInvulnerable.on() && manager().countdown().isRunning()) {
+        if (!bypass && settings().countdownInvulnerable.on() && manager().countdown().holds(bot)) {
             event.setCancelled(true);
             return;
         }

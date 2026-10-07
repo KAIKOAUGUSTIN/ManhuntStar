@@ -43,6 +43,7 @@ class SettingsTest {
         assertSame(s.minNetherDelay, s.byKey("min_sec_range_nether_entering"));
         assertSame(s.startCountdown, s.byKey("starttime"));
         assertSame(s.glowHunters, s.byKey("glowing"));
+        assertSame(s.countdownOnLeave, s.byKey("countdownonleave"));
         assertNotNull(s.byKey("allowhorseriding"));
     }
 

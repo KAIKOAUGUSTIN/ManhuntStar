@@ -48,9 +48,12 @@ Dificuldades: `difficulty.easy`, `difficulty.medium`, `difficulty.hard`, `diffic
 
 Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 
-- **Contagem antes da caçada** (`manhunt.contagem-segundos`, padrão 20): os bots ficam na roda, com barra no
-  topo e títulos 3-2-1, e só então começam a caçar. `0` = os bots soltam assim que o jogador corre.
-- **Brilho** nos caçadores (`aparencia.brilho-cacadores`, com cor) e, separado, nos fugitivos.
+- **Contagem antes da caçada** (`manhunt.contagem-segundos`, padrão 20): os bots esperam na roda até o
+  jogador sair dela; aí começa a contagem de vantagem, com barra no topo e títulos 3-2-1, e só então eles
+  começam a caçar. Com `manhunt.contagem-ao-sair-da-roda: false` a contagem começa assim que os bots são
+  criados. `0` = os bots soltam assim que o jogador corre, como no mod.
+- **Brilho** nos caçadores (`aparencia.brilho-cacadores`, com cor) e, separado, nos fugitivos. Vem desligado;
+  liga e troca a cor direto no `/bot menu` ou com `/bot settings glowing true red`.
 - **Fidelidade de jogador**: bots no TAB com skin e ping, contando no número de jogadores da lista de
   servidores e no `/list`, mensagens "entrou/saiu do jogo" e mensagens de morte do jogo.
 - **Mobs hostis atacam os bots** (zumbis, esqueletos, creepers, aranhas no escuro, slimes por contato,

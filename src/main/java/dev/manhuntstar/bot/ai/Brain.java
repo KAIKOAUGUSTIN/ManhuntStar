@@ -243,12 +243,7 @@ public final class Brain {
         }
         IdleBehavior idle = bot.idle();
         if (idle != null && idle.tick()) {
-            state = "esperando na roda";
-            return;
-        }
-        if (bot.manager().countdown().isRunning() && bot.manager().countdown().holds(bot)) {
-            state = "contagem";
-            bot.motor().stopWalk();
+            state = bot.manager().countdown().isCounting() ? "contagem" : "esperando na roda";
             return;
         }
         if (playerTarget != null) {

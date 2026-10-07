@@ -139,10 +139,11 @@ manhunt:
   modo-spawn: MANHUNT
   # Contagem (segundos) antes da caçada começar. 0 = como no mod (soltam quando o jogador corre). [starttime]
   contagem-segundos: 20
-  # Bots não levam dano durante a contagem. [countdowninvulnerable]
+  # A contagem só começa quando o jogador sai da roda; até lá os bots esperam.
+  # false = a contagem começa assim que os bots são criados. [countdownonleave]
+  contagem-ao-sair-da-roda: true
+  # Bots da roda não levam dano enquanto esperam e durante a contagem. [countdowninvulnerable]
   invulneravel-na-contagem: true
-  # Se o jogador sair da roda durante a contagem, a caçada começa na hora. [releaseonleave]
-  liberar-ao-sair-da-roda: false
 
 aparencia:
   # Brilho (contorno visível através das paredes) nos caçadores. [glowing]

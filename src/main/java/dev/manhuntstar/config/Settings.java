@@ -105,8 +105,8 @@ public final class Settings {
     // --- Manhunt ---
     public final Setting.Enumerated<SpawnMode> spawnMode = choice("manhunt.modo-spawn", "spawnmode", "Modo de spawn", Category.MANHUNT, SpawnMode.class, SpawnMode.MANHUNT);
     public final Setting.Int startCountdown = integer("manhunt.contagem-segundos", "starttime", "Contagem antes da caçada (s)", Category.MANHUNT, 20, 0, 600);
-    public final Setting.Bool countdownInvulnerable = bool("manhunt.invulneravel-na-contagem", "countdowninvulnerable", "Bots invulneráveis na contagem", Category.MANHUNT, true);
-    public final Setting.Bool releaseOnLeaveCircle = bool("manhunt.liberar-ao-sair-da-roda", "releaseonleave", "Começar ao sair da roda", Category.MANHUNT, false);
+    public final Setting.Bool countdownOnLeave = bool("manhunt.contagem-ao-sair-da-roda", "countdownonleave", "Contar só depois de sair da roda", Category.MANHUNT, true);
+    public final Setting.Bool countdownInvulnerable = bool("manhunt.invulneravel-na-contagem", "countdowninvulnerable", "Bots invulneráveis na roda", Category.MANHUNT, true);
 
     // --- Aparência ---
     public final Setting.Bool glowHunters = bool("aparencia.brilho-cacadores", "glowing", "Brilho nos caçadores", Category.APARENCIA, false);
@@ -114,6 +114,9 @@ public final class Settings {
     public final Setting.Bool glowEscapers = bool("aparencia.brilho-fugitivos", "glowingescape", "Brilho nos fugitivos", Category.APARENCIA, false);
     public final Setting.Enumerated<GlowColor> glowEscapersColor = choice("aparencia.cor-brilho-fugitivos", "glowcolorescape", "Cor do brilho dos fugitivos", Category.APARENCIA, GlowColor.class, GlowColor.AQUA);
     public final Setting.Bool showNameTag = bool("aparencia.mostrar-nome", "nametag", "Nome em cima do bot", Category.APARENCIA, true);
+
+    /** Opções que já existiram e saem do config.yml ao salvar. */
+    private static final List<String> REMOVED_PATHS = List.of("manhunt.liberar-ao-sair-da-roda");
 
     private volatile Set<EntityType> excludedMobs = Set.of();
 
@@ -231,6 +234,9 @@ public final class Settings {
         cfg.options().parseComments(true);
         for (Setting<?> s : byKey.values()) {
             s.save(cfg);
+        }
+        for (String path : REMOVED_PATHS) {
+            cfg.set(path, null);
         }
         try {
             cfg.save(file);

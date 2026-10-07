@@ -44,6 +44,9 @@ fase:
 
 # --- contagem antes da caçada ---
 contagem:
+  esperando: "<gold>Os caçadores estão na roda.</gold> <gray>Quando</gray> <yellow><jogador></yellow> <gray>sair dela, começa a contagem de</gray> <yellow><segundos></yellow> <gray>segundos. Use /bot start para começar já.</gray>"
+  barra-esperando: "<yellow>Saia da roda para começar</yellow> <gray>(<segundos>s de vantagem)</gray>"
+  saiu-e-contando: "<yellow><jogador></yellow> <gold>saiu da roda! A caçada começa em</gold> <yellow><segundos></yellow> <gold>segundos.</gold>"
   iniciada: "<gold>A caçada começa em <yellow><segundos></yellow> segundos!</gold> <gray>Use /bot start para começar já.</gray>"
   barra: "<red>A caçada começa em</red> <yellow><segundos>s</yellow>"
   titulo-numero: "<red><bold><segundos></bold></red>"
@@ -51,7 +54,6 @@ contagem:
   comecou-titulo: "<dark_red><bold>A caçada começou!</bold></dark_red>"
   comecou-subtitulo: "<gray>Corra.</gray>"
   comecou: "<dark_red>A caçada começou!</dark_red>"
-  saiu-da-roda: "<yellow><jogador></yellow> <gold>saiu da roda — a caçada começou!</gold>"
   liberados: "<green><quantidade> bot(s) soltos da roda.</green>"
   nada: "<gray>Não há contagem nem bots esperando na roda.</gray>"
 

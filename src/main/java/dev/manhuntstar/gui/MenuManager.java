@@ -133,7 +133,7 @@ public final class MenuManager implements Listener {
             set(m, slot++, item(icons[c.ordinal()], t("Opções: " + categoryName(c), NamedTextColor.YELLOW), List.of(t("Clique para editar", NamedTextColor.GRAY))),
                     ct -> openSettings(p, cat));
         }
-        boolean running = plugin.botManager().countdown().isRunning();
+        boolean running = plugin.botManager().countdown().isActive();
         set(m, 28, item(Material.LIME_DYE, t(running ? "Começar a caçada agora" : "Soltar bots da roda", NamedTextColor.GREEN), List.of()), c -> {
             p.closeInventory();
             p.performCommand("bot start");
