@@ -1,0 +1,134 @@
+# ==============================================================================
+#  Manhunt* — mensagens (formato MiniMessage: https://docs.advntr.dev/minimessage/format.html)
+#  Os textos entre <...> como <bot>, <fase>, <quantidade> são preenchidos pelo plugin.
+# ==============================================================================
+
+prefixo: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
+
+ajuda: |-
+  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(bots caçadores de ManHunt)</gray>
+  <yellow>/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]</yellow> <gray>— cria bots aqui</gray>
+  <yellow>/bot create <nome> <qtd> <dificuldade> skin <jogador> [fase] [agr]</yellow> <gray>— com skin de outro jogador</gray>
+  <yellow>/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]</yellow> <gray>— cria em coordenadas</gray>
+  <yellow>/bot start</yellow> <gray>— começa a caçada agora (pula a contagem)</gray>
+  <yellow>/bot menu</yellow> <gray>— menu com tudo</gray>
+  <yellow>/bot list · info · remove · tp · tpall · target · cleartarget</yellow>
+  <yellow>/bot settings <chave> <valor></yellow> <gray>— opções (sem argumentos mostra todas)</gray>
+  <yellow>/bot group role|enemy|spawnpoint|phaseprogression|trackplayers|delete</yellow>
+  <yellow>/bot skin <bot> <jogador> · give <item> · armor <tier> · execute <capacidade></yellow>
+  <yellow>/bot deleteall confirm · reload</yellow> <gray>— e /mansave spawn|clear</gray>
+
+# --- fases ---
+fase:
+  salto: "<red>[SALTO DE FASE]</red> <white><bot></white> <gray>fase</gray> <yellow><de></yellow> <gray>→</gray> <gold><para></gold> <gray>(<motivo> de <white><jogador></white>).</gray>"
+  motivo:
+    nether: "entrou no Nether"
+    diamantes: "5+ diamantes no inventário"
+    muito-ferro: "mais de 20 de ferro"
+    ferro: "ferro no inventário"
+    arma-madeira: "arma de madeira"
+  upgrade: "<dark_red><bold>[BOTS MAIS FORTES]</bold></dark_red> <gold>Fase <fase> alcançada!</gold>"
+  descricao:
+    "1": "<gray>Bot básico: sem equipamento de fase; persegue, cava, faz pontes e se vira.</gray>"
+    "2": "<gray>Espada de madeira e comida básica. Arma de madeira do jogador força esta fase.</gray>"
+    "3": "<gray>Liberam a besta e o balde de água contra fogo; comida melhor.</gray>"
+    "4": "<gray>Armadura de couro, espada de pedra, escudo, tridente com lealdade, cavalos e rajada de arco.</gray>"
+    "5": "<gray>Armadura e espada de ferro, balde de lava e maçãs douradas.</gray>"
+    "6": "<gray>Ferro com Proteção I, drops melhores e barcos contra alvos na água.</gray>"
+    "7": "<gray>Espada de diamante, parte da armadura de diamante e drops mais fortes.</gray>"
+    "8": "<gray>Diamante completo com Proteção II e espada com Afiação II.</gray>"
+    "9": "<gray>Mantém o diamante encantado e a recarga da pérola cai 50%.</gray>"
+    "10": "<gray>Mantém o diamante encantado e a recarga da pérola cai 75%.</gray>"
+    "11": "<gray>Os bots ficaram mais fortes.</gray>"
+    "12": "<dark_red>Fase final (só Terminator): armadura de netherite e espada de netherite com Repulsão.</dark_red>"
+
+# --- contagem antes da caçada ---
+contagem:
+  iniciada: "<gold>A caçada começa em <yellow><segundos></yellow> segundos!</gold> <gray>Use /bot start para começar já.</gray>"
+  barra: "<red>A caçada começa em</red> <yellow><segundos>s</yellow>"
+  titulo-numero: "<red><bold><segundos></bold></red>"
+  subtitulo: "<gray>Prepare-se...</gray>"
+  comecou-titulo: "<dark_red><bold>A caçada começou!</bold></dark_red>"
+  comecou-subtitulo: "<gray>Corra.</gray>"
+  comecou: "<dark_red>A caçada começou!</dark_red>"
+  saiu-da-roda: "<yellow><jogador></yellow> <gold>saiu da roda — a caçada começou!</gold>"
+  liberados: "<green><quantidade> bot(s) soltos da roda.</green>"
+  nada: "<gray>Não há contagem nem bots esperando na roda.</gray>"
+
+# --- comandos ---
+comando:
+  criando: "<gray>Criando</gray> <yellow><quantidade></yellow> <gray>bot(s)</gray> <white><nome></white> <gray>(<dificuldade>)... buscando a skin.</gray>"
+  criados: "<green><quantidade> bot(s) <white><nome></white> criados.</green>"
+  erro-criar: "<red>Não foi possível criar os bots. Veja o console.</red>"
+  dificuldade-invalida: "<red>Dificuldade inválida. Use difficulty.easy, difficulty.medium, difficulty.hard ou difficulty.terminator.</red>"
+  sem-local: "<red>Este comando precisa de um local (use no jogo ou /bot spawn com coordenadas).</red>"
+  removidos: "<yellow><quantidade> bot(s) com o nome <white><nome></white> removidos.</yellow>"
+  todos-removidos: "<yellow><quantidade> bot(s) apagados permanentemente.</yellow>"
+  confirmar-deleteall: "<red>Isso apaga todos os bots e o salvamento. Digite <white>/bot deleteall confirm</white> para confirmar.</red>"
+  lista-titulo: "<gold>Bots: <yellow><quantidade></yellow> (<green><vivos> vivos</green>)</gold>"
+  lista-linha: "<gray>-</gray> <white><visivel></white> <dark_gray>(<nome>)</dark_gray> <gray>fase</gray> <yellow><fase></yellow> <gray><dificuldade> · vida</gray> <red><vida></red> <gray>· grupo</gray> <aqua><grupo></aqua> <gray>· alvo</gray> <white><alvo></white> <gray>· <local> · abates</gray> <yellow><abates></yellow> <dark_gray>[<estado>]</dark_gray>"
+  lista-morto: "morto (renascendo)"
+  info: |-
+    <gold><visivel></gold> <dark_gray>(<nome>)</dark_gray>
+    <gray>Vivo: <white><vivo></white> · Fase <yellow><fase></yellow> · <dificuldade></gray>
+    <gray>Vida <red><vida></red> · Fome <white><fome></white> · Abates <yellow><abates></yellow> · Agressividade <white><agressividade></white></gray>
+    <gray>Grupo <aqua><grupo></aqua> · Alvo <white><alvo></white></gray>
+    <gray>Local <white><local></white> · Velocidade <white><velocidade></white> blocos/s · No chão <white><chao></white></gray>
+    <gray>IA: <yellow><estado></yellow></gray>
+  bot-nao-encontrado: "<red>Bot não encontrado.</red>"
+  apenas-jogador: "<red>Só jogadores podem usar isso.</red>"
+  alvo-definido: "<green>Todos os bots agora perseguem <white><jogador></white>.</green>"
+  alvo-limpo: "<green>Alvo forçado removido: os bots voltam a escolher sozinhos.</green>"
+  item-dado: "<green>Item <white><item></white> dado a todos os bots.</green>"
+  tier-invalido: "<red>Tipo de armadura desconhecido: <white><tier></white>. Use leather, chainmail, iron, gold, diamond ou netherite.</red>"
+  armadura: "<green>Armadura <white><tier></white> colocada em todos os bots.</green>"
+  tp-ok: "<green><white><bot></white> foi até <white><jogador></white>.</green>"
+  tpall: "<green><quantidade> bot(s) trazidos até você.</green>"
+  spawnpoint-bot: "<green>Ponto de respawn de <white><bot></white> definido em <white><pos></white>.</green>"
+  skin-ok: "<green>Skin de <white><jogador></white> aplicada em <white><bot></white>.</green>"
+  skin-falhou: "<red>Não encontrei a skin de <white><jogador></white>.</red>"
+  recarregado: "<green>config.yml e messages.yml recarregados.</green>"
+
+capacidade:
+  iniciada: "<green>Capacidade <white><capacidade></white> iniciada.</green>"
+  voce-precisa-estar-vivo: "<red>Você precisa estar vivo.</red>"
+  capacidade-ja-ativa: "<red>Já há uma capacidade ativa contra você.</red>"
+  fora-da-caverna: "<red>Você não está numa caverna (Y abaixo de 60, sem luz do céu).</red>"
+  sem-bot-elegivel: "<red>Nenhum bot elegível (vivo, mirando você, no mesmo mundo, livre e na fase necessária).</red>"
+  sem-posicao-emboscada: "<red>Não achei um ponto da mesma caverna para a emboscada.</red>"
+  capacidade-desconhecida: "<red>Capacidade desconhecida. Use tnt-craft, bow-burst ou firework-crossbow.</red>"
+
+grupo:
+  nao-existe: "<red>O grupo <white><grupo></white> não existe.</red>"
+  papel: "<green>Grupo <white><grupo></white> agora é <yellow><papel></yellow>.</green>"
+  apagado: "<yellow>Grupo <white><grupo></white> apagado (<quantidade> bot(s) removidos).</yellow>"
+  progressao: "<green>Progressão de fase <yellow><valor></yellow> para <white><grupo></white> (<quantidade> bot(s)).</green>"
+  rastrear: "<green>Grupo <white><grupo></white> persegue jogadores: <yellow><valor></yellow>.</green>"
+  spawnpoint: "<green>Ponto de respawn do grupo <white><grupo></white> em <white><pos></white>.</green>"
+  spawnpoint-limpo: "<green>Ponto de respawn do grupo <white><grupo></white> removido.</green>"
+  inimigo-add: "<green><white><grupo></white> agora é inimigo de <white><inimigo></white>.</green>"
+  inimigo-remove: "<green><white><grupo></white> não é mais inimigo de <white><inimigo></white>.</green>"
+
+opcoes:
+  titulo: "<gold>Opções do Manhunt*</gold> <gray>(/bot settings <chave> <valor>)</gray>"
+  linha: "<gray>-</gray> <yellow><chave></yellow> <gray>=</gray> <white><valor></white> <dark_gray>(<caminho>)</dark_gray>"
+  alterada: "<green><white><chave></white> = <yellow><valor></yellow></green>"
+  valor-atual: "<gray><white><chave></white> está em <yellow><valor></yellow>.</gray>"
+  desconhecida: "<red>Opção desconhecida: <white><chave></white>. Use /bot settings para ver todas.</red>"
+  invalido: "<red><white><chave></white>: <erro></red>"
+  persistencia-limpa: "<green>Salvamento dos bots apagado.</green>"
+
+mansave:
+  criados: "<green><quantidade> protetor(es) Mansave <white><nome></white> criados.</green>"
+  removidos: "<yellow><quantidade> protetor(es) Mansave removidos.</yellow>"
+
+menu:
+  titulo-principal: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Menu</dark_gray>"
+  titulo-criar: "<dark_gray>Criar bots</dark_gray>"
+  titulo-bots: "<dark_gray>Bots</dark_gray>"
+  titulo-grupos: "<dark_gray>Grupos</dark_gray>"
+  titulo-opcoes: "<dark_gray>Opções</dark_gray>"
+  titulo-confirmar: "<dark_red>Apagar todos os bots?</dark_red>"
+  digite-nome: "<yellow>Digite no chat o nome dos bots (use % para o número). Digite <white>cancelar</white> para desistir.</yellow>"
+  digite-skin: "<yellow>Digite no chat o nome do jogador da skin (ou <white>-</white> para usar o nome do bot).</yellow>"
+  cancelado: "<gray>Cancelado.</gray>"
