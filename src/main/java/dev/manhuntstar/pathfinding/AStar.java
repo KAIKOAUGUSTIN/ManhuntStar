@@ -153,17 +153,23 @@ public final class AStar {
         int cx = nx[cur];
         int cy = ny[cur];
         int cz = nz[cur];
+        // o pulo sobe mais de 1 bloco: com teto logo acima da cabeça ele não sai e o bot cai no vão
+        if (CostProvider.isSolid(costs.cost(cx, cy + 2, cz))) {
+            return;
+        }
         for (int dist = 2; dist <= 3; dist++) {
             int px = cx + d[0] * dist;
             int pz = cz + d[1] * dist;
-            if (!CostProvider.isSolid(costs.cost(px, cy - 1, pz)) || costs.cost(px, cy, pz) != CostProvider.AIR || costs.cost(px, cy + 1, pz) != CostProvider.AIR) {
+            if (!CostProvider.isSolid(costs.cost(px, cy - 1, pz)) || costs.cost(px, cy, pz) != CostProvider.AIR || costs.cost(px, cy + 1, pz) != CostProvider.AIR
+                    || CostProvider.isSolid(costs.cost(px, cy + 2, pz))) {
                 continue;
             }
             boolean clear = true;
             for (int i = 1; i < dist; i++) {
                 int mx = cx + d[0] * i;
                 int mz = cz + d[1] * i;
-                if (costs.cost(mx, cy, mz) != CostProvider.AIR || costs.cost(mx, cy + 1, mz) != CostProvider.AIR) {
+                if (costs.cost(mx, cy, mz) != CostProvider.AIR || costs.cost(mx, cy + 1, mz) != CostProvider.AIR
+                        || CostProvider.isSolid(costs.cost(mx, cy + 2, mz))) {
                     clear = false;
                     break;
                 }

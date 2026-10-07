@@ -36,6 +36,8 @@ import org.bukkit.entity.Player;
 public final class Navigator {
 
     private static final double NODE_REACH_SQ = 2.25;
+    /** Raio para dar o nó por alcançado quando não dá para seguir reto até o próximo (curva em quina). */
+    private static final double NODE_REACH_TIGHT_SQ = 0.36;
     private static final long STALE_MS = 2000L;
     private static final int LOOKAHEAD_TRIGGER = 25;
     private static final int MAX_DISTANCE = 150;
@@ -368,7 +370,12 @@ public final class Navigator {
         double dx = p.x() - centre.x();
         double dz = p.z() - centre.z();
         double dy = p.y() - centre.y();
-        if (dx * dx + dz * dz < NODE_REACH_SQ && dy > -0.2 && dy < 1.5) {
+        double distSq = dx * dx + dz * dz;
+        // Perto do nó já vale seguir para o próximo, a não ser que a linha reta até ele bata num bloco:
+        // aí o caminho faz uma curva em volta dele e o bot precisa chegar de fato no nó.
+        boolean reached = distSq < NODE_REACH_TIGHT_SQ || (distSq < NODE_REACH_SQ
+                && (pathIndex + 1 >= current.path().size() || vehicle != null || straightWalkClear(p, current.path().get(pathIndex + 1))));
+        if (reached && dy > -0.2 && dy < 1.5) {
             pathIndex++;
             if (pathIndex >= current.path().size()) {
                 current = null;
@@ -385,16 +392,44 @@ public final class Navigator {
                 parkourTarget = next;
                 parkourTicks = 0;
             }
-            enqueueActions(next);
+            enqueueActions(prev, next);
         }
         return centre;
     }
 
-    private void enqueueActions(Pos node) {
+    /**
+     * A linha reta da posição atual até o centro do nó passa livre na altura dos pés e da cabeça do bot.
+     * Degrau para cima não passa (o bloco do degrau está na altura dos pés), então subida nunca corta caminho.
+     */
+    private boolean straightWalkClear(Vec3 from, Pos node) {
+        World w = world();
+        Vec3 to = Vec3.bottomCenter(node);
+        double dx = to.x() - from.x();
+        double dz = to.z() - from.z();
+        int steps = (int) Math.ceil(Math.hypot(dx, dz) / 0.25);
+        // +0.5: em cima de laje ou areia das almas os pés ficam no bloco de cima, não no da laje
+        int feet = (int) Math.floor(from.y() + 0.5);
+        for (int i = 1; i < steps; i++) {
+            double t = (double) i / steps;
+            int x = (int) Math.floor(from.x() + dx * t);
+            int z = (int) Math.floor(from.z() + dz * t);
+            if (WorldUtil.collides(w, new Pos(x, feet, z)) || WorldUtil.collides(w, new Pos(x, feet + 1, z))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void enqueueActions(Pos from, Pos node) {
         if (bot.isRiding() || current == null) {
             return;
         }
         World w = world();
+        // Para subir um degrau o corpo passa 2 blocos acima do nó atual. O A* conta com cavar esse
+        // bloco, que não é nem os pés nem a cabeça do próximo nó; sem isso o bot fica preso embaixo dele.
+        if (node.y() > from.y() && WorldUtil.collides(w, from.above(2))) {
+            mineQueue.addLast(from.above(2));
+        }
         if (WorldUtil.collides(w, node)) {
             mineQueue.addLast(node);
         }

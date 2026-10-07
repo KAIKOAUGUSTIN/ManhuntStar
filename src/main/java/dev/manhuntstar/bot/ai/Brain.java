@@ -835,8 +835,11 @@ public final class Brain {
                 }
             }
         }
-        Vec3 moveDir = finalTarget.subtract(bot.pos()).horizontal().normalize();
-        Vec3 lookAhead = moveDir.scale(1.5);
+        Vec3 toTarget = finalTarget.subtract(bot.pos()).horizontal();
+        Vec3 moveDir = toTarget.normalize();
+        // Num caminho calculado só confere até o próximo nó: o A* já desviou da lava, e olhar além dele
+        // fazia o bot recuar para sempre de uma descida segura ao lado de um lago de lava.
+        Vec3 lookAhead = moveDir.scale(plannerActive ? Math.min(1.5, toTarget.length()) : 1.5);
         Pos lookAheadBlock = bot.pos().add(lookAhead).toPos();
         boolean cliff = !WorldUtil.blocksMotion(w, lookAheadBlock.below());
         if (w.getEnvironment() == World.Environment.NETHER && cliff
