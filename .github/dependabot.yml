@@ -1,0 +1,23 @@
+version: 2
+
+registries:
+  papermc:
+    type: maven-repository
+    url: https://repo.papermc.io/repository/maven-public/
+
+updates:
+  # Dependências do Gradle (gradle/libs.versions.toml) e o próprio Gradle Wrapper.
+  - package-ecosystem: gradle
+    directory: /
+    registries:
+      - papermc
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      junit:
+        patterns:
+          - "org.junit*"

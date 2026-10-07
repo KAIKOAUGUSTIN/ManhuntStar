@@ -1,0 +1,13 @@
+[versions]
+# Versão principal da API do Paper (compilação e testes).
+paper-api = "26.2.build.132-stable"
+# Versão beta usada só para checar compatibilidade (compileAgainst263). Fica fora de [libraries]
+# para o Dependabot não trocar a versão principal pela beta; atualize à mão.
+paper-compat = "26.3.build.159-beta"
+junit = "5.13.4"
+
+[libraries]
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }

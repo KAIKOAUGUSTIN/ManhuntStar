@@ -6,9 +6,7 @@ group = "dev.manhuntstar"
 version = "1.0.0"
 description = "Manhunt* - bots caçadores de ManHunt para Paper"
 
-// Versão principal da API (compilação) e versão beta usada só para checar compatibilidade.
-val paperApi = "26.2.build.132-stable"
-val paperApiCompat = "26.3.build.159-beta"
+// As versões ficam em gradle/libs.versions.toml (lidas pelo Dependabot).
 
 repositories {
     mavenCentral()
@@ -18,13 +16,13 @@ repositories {
 val compat263: Configuration by configurations.creating
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:$paperApi")
-    compat263("io.papermc.paper:paper-api:$paperApiCompat")
+    compileOnly(libs.paper.api)
+    compat263("io.papermc.paper:paper-api:${libs.versions.paper.compat.get()}")
 
-    testImplementation("io.papermc.paper:paper-api:$paperApi")
-    testImplementation(platform("org.junit:junit-bom:5.13.4"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(libs.paper.api)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<JavaCompile>().configureEach {
