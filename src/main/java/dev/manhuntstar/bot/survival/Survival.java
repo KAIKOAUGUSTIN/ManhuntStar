@@ -34,7 +34,6 @@ public final class Survival {
     private boolean eatingGoldenApple;
     private ItemStack currentFood = ItemStack.empty();
     private ItemStack savedMainHand = ItemStack.empty();
-    private ItemStack savedOffHand = ItemStack.empty();
     private boolean fireEscapeActive;
     private int fireEscapeTicks;
     private Vec3 fireEscapeSource;
@@ -236,7 +235,6 @@ public final class Survival {
         eatingGoldenApple = golden;
         currentFood = food.clone();
         savedMainHand = bot.getItem(EquipmentSlot.HAND).clone();
-        savedOffHand = bot.getItem(EquipmentSlot.OFF_HAND).clone();
         if (bot.combat().isBlocking()) {
             bot.combat().stopBlock();
         }
@@ -269,11 +267,11 @@ public final class Survival {
             e.getWorld().playSound(e.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
         }
         applyFood(currentFood, eatingGoldenApple);
+        // A mão secundária não é mexida ao comer; devolver a de antes traria de volta um totem
+        // gasto durante a refeição.
         bot.setItem(EquipmentSlot.HAND, savedMainHand.clone());
-        bot.setItem(EquipmentSlot.OFF_HAND, savedOffHand.clone());
         currentFood = ItemStack.empty();
         savedMainHand = ItemStack.empty();
-        savedOffHand = ItemStack.empty();
         eatingGoldenApple = false;
     }
 
