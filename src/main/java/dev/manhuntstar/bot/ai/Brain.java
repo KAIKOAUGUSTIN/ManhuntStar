@@ -162,6 +162,7 @@ public final class Brain {
 
     public void tick() {
         bot.combat().tickTridentPickup();
+        bot.combat().tickLavaCleanup();
         if (bot.capacityLocked()) {
             state = "capacidade especial";
             bot.manager().tactics().tickControlled(bot);

@@ -74,6 +74,7 @@ public final class Combat {
     private boolean hasLavaBucket = true;
     private boolean lavaUsedThisRun;
     private Pos placedLavaPos;
+    private World placedLavaWorld;
     private int lavaCleanupTicks;
     private boolean lavaHitPlayer;
 
@@ -665,7 +666,6 @@ public final class Combat {
     // ------------------------------------------------------------------ balde de lava
 
     public boolean handleLavaBucketCombat(LivingEntity target, double dist) {
-        tickLavaCleanup(target);
         if (!bot.progression().canUseLavaBucket() || !hasLavaBucket || lavaUsedThisRun || placedLavaPos != null) {
             return false;
         }
@@ -693,31 +693,42 @@ public final class Combat {
         bot.swing();
         w.playSound(placeAt.getLocation(), Sound.ITEM_BUCKET_EMPTY_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
         placedLavaPos = p;
+        placedLavaWorld = w;
         lavaCleanupTicks = 0;
         lavaHitPlayer = false;
         hasLavaBucket = false;
+        // se o bot morrer ou sumir antes de recolher, a lava não fica no mundo para sempre
+        bot.manager().temporaryBlocks().add(w, p, Material.LAVA, 60 + 40);
         bot.manager().plugin().pathService().invalidate(w, p);
         bot.inventory().restorePreferredMainHand();
         return true;
     }
 
-    private void tickLavaCleanup(LivingEntity target) {
+    /**
+     * Recolhe a lava colocada. Roda todo tick, qualquer que seja a decisão da IA: antes só rodava
+     * enquanto o bot continuava no combate com balde, e a lava ficava se ele fugisse ou montasse.
+     */
+    public void tickLavaCleanup() {
         if (placedLavaPos == null) {
             return;
         }
         lavaCleanupTicks++;
-        if (!lavaHitPlayer && target instanceof Player p && (p.isInLava() || p.getFireTicks() > 0)) {
+        Player target = bot.target();
+        if (!lavaHitPlayer && target != null && (target.isInLava() || target.getFireTicks() > 0)) {
             lavaHitPlayer = true;
         }
         int cleanupTime = lavaHitPlayer ? 5 : 60;
         if (lavaCleanupTicks < cleanupTime) {
             return;
         }
-        World w = bot.world();
+        World w = placedLavaWorld;
+        boolean sameWorld = w.equals(bot.world());
         Vec3 c = Vec3.center(placedLavaPos);
-        boolean canReach = bot.distanceTo(c) <= 5.0 && bot.canSee(c);
+        boolean canReach = sameWorld && bot.distanceTo(c) <= 5.0 && bot.canSee(c);
         Block b = placedLavaPos.block(w);
-        if (b.getType() == Material.LAVA) {
+        // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+        if (sameWorld && b.getType() == Material.LAVA) {
+            bot.manager().temporaryBlocks().remove(w, placedLavaPos);
             b.setType(Material.AIR);
             w.playSound(b.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
             bot.manager().plugin().pathService().invalidate(w, placedLavaPos);

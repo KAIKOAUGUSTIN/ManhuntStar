@@ -7,6 +7,7 @@ import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.mobility.PortalEntrance;
 import dev.manhuntstar.bot.world.PlayerBlockTracker;
+import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.CountdownService;
 import dev.manhuntstar.tactics.CaveAmbush;
@@ -68,6 +69,7 @@ public final class BotManager {
     private final Map<UUID, UUID> controlledHorses = new HashMap<>();
     private final List<PortalEntrance> entrances = new ArrayList<>();
     private final PlayerBlockTracker blockTracker = new PlayerBlockTracker();
+    private final TemporaryBlocks temporaryBlocks;
     private final CountdownService countdown;
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
@@ -83,6 +85,7 @@ public final class BotManager {
         this.plugin = plugin;
         this.botKey = new NamespacedKey(plugin, "bot");
         this.horseKey = new NamespacedKey(plugin, "cavalo_controlado");
+        this.temporaryBlocks = new TemporaryBlocks(plugin::pathService);
         this.countdown = new CountdownService(plugin);
         this.tactics = new TacticsManager(this);
         this.caveAmbush = new CaveAmbush(this);
@@ -116,6 +119,10 @@ public final class BotManager {
 
     public PlayerBlockTracker blockTracker() {
         return blockTracker;
+    }
+
+    public TemporaryBlocks temporaryBlocks() {
+        return temporaryBlocks;
     }
 
     public Collection<Bot> allBots() {
@@ -919,6 +926,7 @@ public final class BotManager {
         }
         tactics.tick();
         caveAmbush.tick();
+        temporaryBlocks.tick();
         tickEntrances();
         tickRespawns();
         tickDistanceManagement();
@@ -1121,6 +1129,7 @@ public final class BotManager {
         countdown.cancel();
         caveAmbush.clear();
         tactics.clear();
+        temporaryBlocks.revertAll();
         entrances.clear();
     }
 }

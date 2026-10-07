@@ -36,6 +36,7 @@ public final class MlgClutch {
     private boolean boatClutching;
     private int boatTicks;
     private Pos waterPos;
+    private World waterWorld;
     private int waterTicks;
     private final Set<UUID> spawnedBoats = new HashSet<>();
 
@@ -61,8 +62,10 @@ public final class MlgClutch {
         }
         handleMlg(nav);
         if (waterPos != null && ++waterTicks > 15) {
-            World w = bot.world();
-            if (w != null && waterPos.block(w).getType() == Material.WATER) {
+            World w = waterWorld;
+            // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+            if (w.equals(bot.world()) && waterPos.block(w).getType() == Material.WATER) {
+                bot.manager().temporaryBlocks().remove(w, waterPos);
                 waterPos.block(w).setType(Material.AIR);
                 w.playSound(waterPos.toLocation(w), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
                 bot.manager().plugin().pathService().invalidate(w, waterPos);
@@ -187,7 +190,10 @@ public final class MlgClutch {
             bot.swing();
             bot.motor().resetFallTracking();
             bot.manager().plugin().pathService().invalidate(w, water);
+            // se o bot morrer antes de recolher, a água some do mesmo jeito
+            bot.manager().temporaryBlocks().add(w, water, Material.WATER, 15 + 40);
             waterPos = water;
+            waterWorld = w;
             waterTicks = 0;
         }
     }

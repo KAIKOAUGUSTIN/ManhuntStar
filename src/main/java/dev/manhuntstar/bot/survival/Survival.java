@@ -39,6 +39,7 @@ public final class Survival {
     private int fireEscapeTicks;
     private Vec3 fireEscapeSource;
     private Pos fireEscapeWaterPos;
+    private World fireEscapeWaterWorld;
     private int fireEscapeWaterCleanupTicks;
 
     public Survival(Bot bot) {
@@ -184,7 +185,10 @@ public final class Survival {
         waterPos.block(w).setType(Material.WATER);
         bot.swing();
         w.playSound(waterPos.toLocation(w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        // se o bot morrer antes de recolher, a água some do mesmo jeito
+        bot.manager().temporaryBlocks().add(w, waterPos, Material.WATER, FIRE_WATER_PICKUP_TICKS + 40);
         fireEscapeWaterPos = waterPos;
+        fireEscapeWaterWorld = w;
         fireEscapeWaterCleanupTicks = 0;
         bot.setItem(EquipmentSlot.HAND, oldMain);
         resetFireEscape();
@@ -197,9 +201,11 @@ public final class Survival {
         if (++fireEscapeWaterCleanupTicks < FIRE_WATER_PICKUP_TICKS) {
             return;
         }
-        World w = bot.world();
+        World w = fireEscapeWaterWorld;
         Block b = fireEscapeWaterPos.block(w);
-        if (b.getType() == Material.WATER) {
+        // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+        if (w.equals(bot.world()) && b.getType() == Material.WATER) {
+            bot.manager().temporaryBlocks().remove(w, fireEscapeWaterPos);
             ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
             bot.motor().stopWalk();
             bot.motor().setSprinting(false);

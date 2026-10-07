@@ -14,7 +14,6 @@ import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -34,6 +33,7 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
@@ -51,6 +51,8 @@ import org.bukkit.util.BoundingBox;
 public final class Bot {
 
     private static final double EYE_HEIGHT = 1.62;
+    /** Folhas de carvalho colocadas pelo bot somem depois de 100 s. */
+    private static final int LEAF_LIFETIME_TICKS = 2000;
 
     private final BotManager manager;
     private final UUID id;
@@ -85,7 +87,6 @@ public final class Bot {
     private boolean sneaking;
     private boolean swimmingPose;
     private Vec3 lastFireSourcePos;
-    private final Map<Pos, Long> temporaryLeaves = new HashMap<>();
     private int blocksPlacedInWindow;
     private long lastBlockWindowReset;
     private final Set<Long> chunkTickets = new HashSet<>();
@@ -705,13 +706,17 @@ public final class Bot {
         lookAt(Vec3.center(pos));
         Block b = pos.block(w);
         BlockData data = material.createBlockData();
+        if (data instanceof Leaves leaves) {
+            // sem tronco perto as folhas apodreceriam sozinhas e derrubariam mudas e maçãs
+            leaves.setPersistent(true);
+        }
         b.setBlockData(data, true);
         swing();
         w.playSound(b.getLocation().add(0.5, 0.5, 0.5), data.getSoundGroup().getPlaceSound(), SoundCategory.BLOCKS,
                 (data.getSoundGroup().getVolume() + 1.0f) / 2.0f, data.getSoundGroup().getPitch() * 0.8f);
         blocksPlacedInWindow++;
         if (material == Material.OAK_LEAVES) {
-            temporaryLeaves.put(pos, now + 100_000L);
+            manager.temporaryBlocks().add(w, pos, Material.OAK_LEAVES, LEAF_LIFETIME_TICKS);
         }
         manager.plugin().pathService().invalidate(w, pos);
         return true;
@@ -749,27 +754,6 @@ public final class Bot {
             }
         }
         return false;
-    }
-
-    private void tickLeafDecay() {
-        if (temporaryLeaves.isEmpty()) {
-            return;
-        }
-        long now = System.currentTimeMillis();
-        World w = world();
-        Iterator<Map.Entry<Pos, Long>> it = temporaryLeaves.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Pos, Long> e = it.next();
-            if (now < e.getValue()) {
-                continue;
-            }
-            Block b = e.getKey().block(w);
-            if (b.getType() == Material.OAK_LEAVES) {
-                b.setType(Material.AIR);
-                w.playSound(b.getLocation(), Sound.BLOCK_GRASS_BREAK, SoundCategory.BLOCKS, 0.8f, 1.0f);
-            }
-            it.remove();
-        }
     }
 
     /**
@@ -902,7 +886,6 @@ public final class Bot {
         brain.navigator().reset();
         createRuntime();
         idle = null;
-        temporaryLeaves.clear();
     }
 
     /** Remove a entidade sem efeito de morte. */
@@ -1100,7 +1083,6 @@ public final class Bot {
         lastKnownWorld = entity.getWorld().getName();
         keepActive(entity);
         updateChunkTickets(false);
-        tickLeafDecay();
         progression.tick();
         motor.beginTick();
         tickPendingPillar();

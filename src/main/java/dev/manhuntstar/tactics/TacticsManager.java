@@ -546,6 +546,8 @@ public final class TacticsManager {
                     return false;
                 }
                 tntPos.block(w).setType(Material.TNT);
+                // se a emboscada acabar antes de acender (bot morreu, jogador fugiu), a TNT some
+                manager.temporaryBlocks().add(w, tntPos, Material.TNT, 40);
                 w.playSound(tntPos.toLocation(w), Sound.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
                 bot.swing();
                 a.tntPos = tntPos;
@@ -563,6 +565,7 @@ public final class TacticsManager {
                 cancelTnt(a, bot);
                 return false;
             }
+            manager.temporaryBlocks().remove(w, a.tntPos);
             a.tntPos.block(w).setType(Material.AIR);
             Location at = new Location(w, a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
             w.spawn(at, TNTPrimed.class, t -> {
