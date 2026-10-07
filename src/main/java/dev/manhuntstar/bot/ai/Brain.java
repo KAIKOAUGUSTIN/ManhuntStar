@@ -401,7 +401,8 @@ public final class Brain {
             Vec3 wp = navigator.waypoint(targetLoc);
             if (wp != null) {
                 targetLoc = wp;
-                hasPath = true;
+                // sem caminho calculado o ponto é só a direção: anda desviando dos obstáculos
+                hasPath = navigator.onPath();
             }
         }
         state = (hasPath ? "seguindo caminho até " : "indo direto até ") + who + String.format(java.util.Locale.ROOT, " (%.0f blocos)", dist);
@@ -563,7 +564,7 @@ public final class Brain {
             }
             Vec3 wp = navigator.escapeWaypoint(threatPos);
             if (wp != null) {
-                dumbStarMove(wp, true, threat);
+                dumbStarMove(wp, navigator.onPath(), threat);
                 return;
             }
         }
@@ -797,7 +798,10 @@ public final class Brain {
 
     /** Anda até o ponto desviando de obstáculos, abrindo portas, pulando degraus e nadando. */
     public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, LivingEntity lookTarget) {
-        if (!plannerActive && detourPos != null) {
+        if (plannerActive) {
+            // um desvio de quando não havia caminho não vale mais
+            detourPos = null;
+        } else if (detourPos != null) {
             if (bot.pos().distanceTo(detourPos) < 2.0 || --detourTimer <= 0) {
                 detourPos = null;
             } else {
@@ -923,7 +927,8 @@ public final class Brain {
             return false;
         }
         if (pos.block(w).isPassable()) {
-            return false;
+            // pés livres mas a cabeça bate (folha, laje): o bot tem quase 2 blocos de altura e não passa
+            return head.isSolid() && !pos.above().block(w).isPassable();
         }
         if (Tag.DOORS.isTagged(legs) || Tag.FENCE_GATES.isTagged(legs)) {
             return false;

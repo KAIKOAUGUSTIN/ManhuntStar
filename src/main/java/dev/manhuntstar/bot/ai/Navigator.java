@@ -18,6 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -40,6 +41,15 @@ public final class Navigator {
     private static final int MAX_DISTANCE = 150;
     private static final int APPROACH_RADIUS = 12;
     private static final int FAR_STEP = 96;
+    /** Distâncias e desvios (graus) tentados, nessa ordem, para o ponto intermediário. */
+    private static final int[] STEP_LENGTHS = {FAR_STEP, 64, 40, 20};
+    private static final int[] STEP_ANGLES = {0, 30, -30, 60, -60};
+    private static final int STEP_RADIUS = 5;
+    /** O desvio escolhido vale até o bot chegar a esta distância dele ou o alvo andar mais que isso. */
+    private static final int STEP_KEEP = 4;
+    private static final int STEP_KEEP_TARGET_MOVE = 16;
+    /** Em mundo com teto (Nether), quantos blocos acima e abaixo do bot procurar chão. */
+    private static final int CEILING_BAND = 12;
     private static final int SKYBASE_MIN_ELEVATION = 3;
     private static final int RESOLVE_CACHE_TICKS = 10;
     private static final int WATER_ASCEND_AIR = 60;
@@ -48,6 +58,12 @@ public final class Navigator {
     private static final int PARKOUR_TIMEOUT_TICKS = 60;
 
     private enum WaterMode { NONE, CRUISE, ASCEND_FOR_AIR }
+
+    /** Procura, numa coluna (x, z), onde ficar em pé. */
+    @FunctionalInterface
+    private interface ColumnSearch {
+        Pos find(int x, int z);
+    }
 
     private final Bot bot;
     private final Personality personality;
@@ -70,6 +86,16 @@ public final class Navigator {
     private Pos lastFlowTarget;
     private WaterMode waterMode = WaterMode.NONE;
     private Pos escapeTarget;
+    /** O último ponto devolvido é um nó de caminho calculado (e não um "vá reto até lá"). */
+    private boolean onPath;
+    /** Como saiu o último ponto intermediário, para o debug: distância/desvio, água ou motivo da falha. */
+    private String stepNote = "";
+    /** Desvio em uso quando a reta de 96 blocos não tem chão, e o alvo para o qual foi escolhido. */
+    private Pos keptStep;
+    private Pos keptStepTarget;
+    private String keptStepNote = "";
+    /** Lado (1 ou -1) do último desvio: na próxima escolha esse lado é tentado primeiro. */
+    private int stepSide = 1;
 
     public Navigator(Bot bot) {
         this.bot = bot;
@@ -127,6 +153,7 @@ public final class Navigator {
     // ------------------------------------------------------------------ A*
 
     private Vec3 astarWaypoint(Vec3 finalTarget) {
+        onPath = false;
         Pos botPos = anchorPos();
         Pos realTarget = finalTarget.toPos();
         Pos targetPos = resolveTarget(botPos, realTarget);
@@ -172,12 +199,23 @@ public final class Navigator {
             return null;
         }
         if (tickActions()) {
+            onPath = true;
             updateDebug();
             return Vec3.bottomCenter(current.path().get(pathIndex));
         }
         Vec3 wp = advanceToNextNode(finalTarget);
+        onPath = current != null;
         updateDebug();
         return wp;
+    }
+
+    /**
+     * O último {@link #waypoint} veio de um caminho calculado. Quando é false o ponto é só uma direção
+     * (alvo longe demais, caminho ainda sendo calculado ou que falhou) e quem anda precisa desviar dos
+     * obstáculos sozinho.
+     */
+    public boolean onPath() {
+        return onPath;
     }
 
     private void consumeFinishedTask() {
@@ -259,6 +297,7 @@ public final class Navigator {
     // ------------------------------------------------------------------ Dijkstra (campo de fluxo)
 
     private Vec3 dijkstraWaypoint(Vec3 finalTarget) {
+        onPath = false;
         Pos botPos = anchorPos();
         Pos real = finalTarget.toPos();
         Pos targetPos = resolveTarget(botPos, real);
@@ -279,6 +318,7 @@ public final class Navigator {
         if (raw == null) {
             return Vec3.bottomCenter(targetPos);
         }
+        onPath = true;
         Pos next = raw.toPos();
         World w = world();
         if (!bot.mining().isMining() && !bot.isRiding()) {
@@ -539,6 +579,8 @@ public final class Navigator {
         lastResolveMode = "reset";
         lastResolveDebugTick = -200;
         lastFlowTarget = null;
+        keptStep = null;
+        keptStepTarget = null;
         mineQueue.clear();
         placeQueue.clear();
         parkouring = false;
@@ -551,9 +593,11 @@ public final class Navigator {
 
     private Pos resolveTarget(Pos botPos, Pos real) {
         int now = Bukkit.getCurrentTick();
-        if (lastResolved != null && lastResolvedReal != null && now - lastResolvedTick <= RESOLVE_CACHE_TICKS
-                && lastResolvedReal.manhattan(real) <= 2) {
-            lastResolveMode = "cache";
+        // a falha também fica guardada: refazer a busca toda a cada tick custaria caro
+        if (lastResolvedReal != null && now - lastResolvedTick <= RESOLVE_CACHE_TICKS && lastResolvedReal.manhattan(real) <= 2) {
+            if (lastResolved != null) {
+                lastResolveMode = "cache";
+            }
             return lastResolved;
         }
         World w = world();
@@ -561,7 +605,7 @@ public final class Navigator {
         Pos resolved = real;
         String mode = needsApproach ? "skybase" : "direct";
         if (needsApproach) {
-            Pos approach = closestStandableNear(real, botPos, true, APPROACH_RADIUS);
+            Pos approach = closestStandableNear(real, botPos, APPROACH_RADIUS, (x, z) -> standableInColumn(x, z, real.y(), true));
             if (approach != null) {
                 resolved = approach;
                 mode = "skybase-approach";
@@ -573,20 +617,24 @@ public final class Navigator {
             Pos step = intermediateTarget(botPos, resolved);
             if (step != null) {
                 resolved = step;
-                mode += "+step";
+                mode += "+step" + stepNote;
             }
         }
         if (botPos.manhattan(resolved) > MAX_DISTANCE) {
-            Pos fallback = intermediateTarget(botPos, real);
+            // rumo ao alvo real; se já foi essa a busca que falhou acima, não repete
+            Pos fallback = resolved.equals(real) ? null : intermediateTarget(botPos, real);
             if (fallback == null || botPos.manhattan(fallback) > MAX_DISTANCE) {
-                lastResolveMode = mode + "+null";
+                lastResolveMode = mode + "+null" + stepNote;
+                lastResolvedReal = real;
+                lastResolved = null;
+                lastResolvedTick = now;
                 return null;
             }
             resolved = fallback;
-            mode += "+force-step";
+            mode += "+force-step" + stepNote;
         }
         if (needsApproach && resolved.equals(real)) {
-            Pos soft = closestStandableNear(real, botPos, false, APPROACH_RADIUS);
+            Pos soft = closestStandableNear(real, botPos, APPROACH_RADIUS, (x, z) -> standableInColumn(x, z, real.y(), false));
             if (soft != null) {
                 resolved = soft;
                 mode = "skybase-soft-approach";
@@ -599,22 +647,150 @@ public final class Navigator {
         return resolved;
     }
 
+    /**
+     * Ponto intermediário rumo a um alvo distante. Primeiro 96 blocos em linha reta, como no mod; se ali
+     * não houver chão (lago, mar, mata fechada), tenta para os lados e mais perto, e por fim a superfície
+     * da água, porque o bot nada. Só aceita pontos ao alcance do A* ({@link #MAX_DISTANCE}). Um desvio
+     * escolhido é mantido enquanto servir, senão o bot trocaria de lado a cada passo.
+     */
     private Pos intermediateTarget(Pos botPos, Pos target) {
+        stepNote = "";
         Vec3 flat = new Vec3(target.x() - botPos.x(), 0, target.z() - botPos.z());
         if (flat.lengthSqr() < 1.0E-6) {
             return null;
         }
-        Vec3 step = flat.normalize().scale(Math.min(FAR_STEP, flat.length()));
-        int x = botPos.x() + (int) Math.round(step.x());
-        int z = botPos.z() + (int) Math.round(step.z());
         World w = world();
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
-            return new Pos(x, botPos.y(), z);
+        boolean ceiling = w.hasCeiling();
+        Vec3 dir = flat.normalize();
+        ColumnSearch ground = (x, z) -> {
+            Pos c = ceiling ? groundNearY(x, z, botPos.y()) : groundInColumn(x, z);
+            return c != null && botPos.manhattan(c) <= MAX_DISTANCE ? c : null;
+        };
+        Pos water = null;
+        boolean lava = false;
+        int lastLength = -1;
+        for (int length : STEP_LENGTHS) {
+            int d = (int) Math.min(length, flat.length());
+            if (d == lastLength) {
+                continue;
+            }
+            lastLength = d;
+            for (int baseAngle : STEP_ANGLES) {
+                boolean straight = length == FAR_STEP && baseAngle == 0;
+                if (!straight && keptStepStillGood(botPos, target)) {
+                    stepNote = keptStepNote;
+                    return keptStep;
+                }
+                int angle = baseAngle * stepSide;
+                Vec3 step = dir.rotateY(Math.toRadians(angle)).scale(d);
+                int x = botPos.x() + (int) Math.round(step.x());
+                int z = botPos.z() + (int) Math.round(step.z());
+                if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+                    if (straight) {
+                        keptStep = null;
+                        return new Pos(x, botPos.y(), z);
+                    }
+                    continue;
+                }
+                Pos rough = new Pos(x, ceiling ? botPos.y() : WorldUtil.surfaceYNoLeaves(w, x, z), z);
+                Pos found = closestStandableNear(rough, botPos, STEP_RADIUS, ground);
+                if (found != null) {
+                    if (straight) {
+                        keptStep = null;
+                    } else {
+                        stepNote = "(" + d + (angle == 0 ? "" : " " + angle + "°") + ")";
+                        keep(found, target, angle);
+                    }
+                    return found;
+                }
+                if (!ceiling) {
+                    Pos top = rough.below();
+                    lava |= WorldUtil.isLava(w, top);
+                    if (water == null && WorldUtil.isWater(w, top) && !WorldUtil.hasFluid(w, rough) && botPos.manhattan(top) <= MAX_DISTANCE) {
+                        water = top;
+                    }
+                }
+            }
         }
-        return closestStandableNear(new Pos(x, WorldUtil.surfaceYNoLeaves(w, x, z), z), botPos, false, 5);
+        if (water != null) {
+            stepNote = "(água)";
+            keep(water, target, 0);
+            return water;
+        }
+        keptStep = null;
+        stepNote = lava ? "(lava)" : "(sem chão)";
+        return null;
     }
 
-    private Pos closestStandableNear(Pos target, Pos botPos, boolean avoidPlayerSupport, int radius) {
+    private void keep(Pos step, Pos target, int angle) {
+        keptStep = step;
+        keptStepTarget = target;
+        keptStepNote = stepNote;
+        if (angle != 0) {
+            stepSide = angle > 0 ? 1 : -1;
+        }
+    }
+
+    /** O desvio guardado ainda leva para perto do alvo, o bot não chegou nele e ainda dá para ficar lá. */
+    private boolean keptStepStillGood(Pos botPos, Pos target) {
+        if (keptStep == null || keptStepTarget == null || keptStepTarget.manhattan(target) > STEP_KEEP_TARGET_MOVE
+                || botPos.manhattan(keptStep) > MAX_DISTANCE) {
+            return false;
+        }
+        double botToStep = Math.hypot(keptStep.x() - botPos.x(), keptStep.z() - botPos.z());
+        double stepToTarget = Math.hypot(target.x() - keptStep.x(), target.z() - keptStep.z());
+        double botToTarget = Math.hypot(target.x() - botPos.x(), target.z() - botPos.z());
+        if (botToStep < STEP_KEEP || stepToTarget > botToTarget - STEP_KEEP) {
+            return false;
+        }
+        World w = world();
+        return WorldUtil.isLoaded(w, keptStep) && (WorldUtil.isWater(w, keptStep) || isStandableApproach(keptStep, false));
+    }
+
+    /** Chão da coluna para o ponto intermediário: o lugar em pé mais alto perto do terreno, sem contar copa de árvore. */
+    private Pos groundInColumn(int x, int z) {
+        World w = world();
+        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+            return null;
+        }
+        int surface = WorldUtil.surfaceYNoLeaves(w, x, z);
+        int top = Math.min(w.getMaxHeight() - 2, surface + 4);
+        int bottom = Math.max(w.getMinHeight() + 1, surface - 8);
+        for (int y = top; y >= bottom; y--) {
+            Pos feet = new Pos(x, y, z);
+            if (isStandableApproach(feet, false) && !Tag.LEAVES.isTagged(feet.below().block(w).getType())) {
+                return feet;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Em mundo com teto (Nether) o mapa de alturas aponta o teto de bedrock; procura chão perto da altura
+     * do bot, abaixo do teto.
+     */
+    private Pos groundNearY(int x, int z, int refY) {
+        World w = world();
+        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+            return null;
+        }
+        int low = Math.max(w.getMinHeight() + 1, refY - CEILING_BAND);
+        int high = Math.min(w.getLogicalHeight() - 1, refY + CEILING_BAND);
+        for (int i = 0; i <= 2 * CEILING_BAND; i++) {
+            // refY, refY+1, refY-1, refY+2, ...: o mais perto da altura do bot primeiro
+            int y = refY + ((i + 1) >> 1) * ((i & 1) == 1 ? 1 : -1);
+            if (y < low || y > high) {
+                continue;
+            }
+            Pos feet = new Pos(x, y, z);
+            if (isStandableApproach(feet, false)) {
+                return feet;
+            }
+        }
+        return null;
+    }
+
+    private Pos closestStandableNear(Pos target, Pos botPos, int radius, ColumnSearch column) {
         Pos best = null;
         double bestScore = Double.MAX_VALUE;
         for (int r = 0; r <= radius; r++) {
@@ -623,7 +799,7 @@ public final class Navigator {
                     if (r > 0 && Math.abs(dx) != r && Math.abs(dz) != r) {
                         continue;
                     }
-                    Pos c = standableInColumn(target.x() + dx, target.z() + dz, target.y(), avoidPlayerSupport);
+                    Pos c = column.find(target.x() + dx, target.z() + dz);
                     if (c == null) {
                         continue;
                     }
