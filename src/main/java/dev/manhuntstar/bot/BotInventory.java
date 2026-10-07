@@ -3,7 +3,10 @@ package dev.manhuntstar.bot;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -24,6 +27,7 @@ public final class BotInventory {
     public static final int SIZE = 36;
     private static final double PICKUP_RADIUS = 1.8;
     private static final EquipmentSlot[] ARMOR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+    private static final EquipmentSlot[] EQUIPMENT = {EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
 
     private final Bot bot;
     private final ItemStack[] main = new ItemStack[SIZE];
@@ -327,8 +331,7 @@ public final class BotInventory {
                     item.remove();
                 } else {
                     item.setItemStack(left);
-                }
-                e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f,
+                }                e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f,
                         (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 1.4f + 2.0f);
             } else if (near instanceof ExperienceOrb orb && orb.isValid()) {
                 orb.remove();
@@ -348,26 +351,37 @@ public final class BotInventory {
             boolean keep = mode == Modes.GearPersistence.KEEP_ON_RESPAWN_NO_DROP;
             int keepSword = keep ? findBestSwordSlot() : -1;
             int keepPick = keep ? findBestPickaxeSlot() : -1;
+            // O que o bot veste ou segura e veio do inventário é uma cópia do item de lá: é um item só.
+            // Antes ele caía duas vezes (ou caía e continuava com o bot no modo que mantém).
+            Map<EquipmentSlot, Integer> source = equippedSourceSlots();
+            Set<Integer> keptSources = new HashSet<>();
+            for (EquipmentSlot slot : EQUIPMENT) {
+                ItemStack s = bot.getItem(slot);
+                if (s.isEmpty()) {
+                    continue;
+                }
+                Integer from = source.get(slot);
+                if (keep && (isArmorSlot(slot) || (slot == EquipmentSlot.HAND && (GearScoring.isSword(s) || GearScoring.isPickaxe(s))) || keepNamedCombatItem(s))) {
+                    if (from != null) {
+                        keptSources.add(from);
+                    }
+                    continue;
+                }
+                // a elytra vestida é emprestada para o voo (opção "elytra"), não é do bot
+                if (from == null && !(slot == EquipmentSlot.CHEST && s.getType() == Material.ELYTRA)) {
+                    drops.add(s.clone());
+                }
+            }
             for (int i = 0; i < SIZE; i++) {
                 ItemStack s = main[i];
                 if (s.isEmpty()) {
                     continue;
                 }
-                if (keep && (i == keepSword || i == keepPick || keepNamedCombatItem(s))) {
+                if (keep && (i == keepSword || i == keepPick || keptSources.contains(i) || keepNamedCombatItem(s))) {
                     continue;
                 }
                 drops.add(s.clone());
                 main[i] = ItemStack.empty();
-            }
-            for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-                ItemStack s = bot.getItem(slot);
-                if (s.isEmpty()) {
-                    continue;
-                }
-                if (keep && (isArmorSlot(slot) || (slot == EquipmentSlot.HAND && (GearScoring.isSword(s) || GearScoring.isPickaxe(s))) || keepNamedCombatItem(s))) {
-                    continue;
-                }
-                drops.add(s.clone());
             }
         }
         drops.addAll(bot.progression().deathDrops(dropInventory));
@@ -375,6 +389,26 @@ public final class BotInventory {
             clearPersistentGear();
         }
         return drops;
+    }
+
+    /** Para cada peça vestida/segurada, o espaço do inventário de onde ela foi copiada (se houver). */
+    private Map<EquipmentSlot, Integer> equippedSourceSlots() {
+        Map<EquipmentSlot, Integer> out = new EnumMap<>(EquipmentSlot.class);
+        Set<Integer> used = new HashSet<>();
+        for (EquipmentSlot slot : EQUIPMENT) {
+            ItemStack s = bot.getItem(slot);
+            if (s.isEmpty()) {
+                continue;
+            }
+            for (int i = 0; i < SIZE; i++) {
+                if (!used.contains(i) && main[i].isSimilar(s)) {
+                    used.add(i);
+                    out.put(slot, i);
+                    break;
+                }
+            }
+        }
+        return out;
     }
 
     private void reevaluateAndEquipBestGearSafe() {
