@@ -238,7 +238,7 @@ public final class Brain {
             state = "preso dentro de bloco";
             return;
         }
-        elytra.tick(playerTarget);
+        Player chosenTarget = playerTarget;
         if (playerTarget == null || playerTarget.isDead()) {
             playerTarget = bot.manager().isTrackingPlayers(bot) ? bot.fallbackTarget() : null;
         }
@@ -247,6 +247,10 @@ public final class Brain {
             state = bot.manager().countdown().isCounting() ? "contagem" : "esperando na roda";
             return;
         }
+        BotGroup group = bot.group();
+        boolean escaping = group != null && group.role() == BotRole.ESCAPE;
+        // na roda o bot não decola, e fugitivo não voa na direção do alvo
+        elytra.tick(escaping ? null : chosenTarget);
         if (playerTarget != null) {
             if (!playerTarget.getWorld().equals(bot.world())) {
                 state = "alvo em outra dimensão";
@@ -268,7 +272,7 @@ public final class Brain {
                 state = "jogo furtivo";
                 return;
             }
-            if (bot.distanceTo(playerTarget) > 75.0 && pearlCooldown <= 0 && PearlAbility.canUsePearl(bot)) {
+            if (!escaping && bot.distanceTo(playerTarget) > 75.0 && pearlCooldown <= 0 && PearlAbility.canUsePearl(bot)) {
                 handleOffensivePearl(playerTarget);
             }
         }
@@ -287,8 +291,7 @@ public final class Brain {
         }
         String who = active instanceof Player pl ? pl.getName() : bot.manager().byEntity(active) != null
                 ? bot.manager().byEntity(active).name() : active.getType().name().toLowerCase(java.util.Locale.ROOT);
-        BotGroup group = bot.group();
-        if (group != null && group.role() == BotRole.ESCAPE) {
+        if (escaping) {
             state = "fugindo de " + who;
             flee(active, plannerEnabled());
             return;

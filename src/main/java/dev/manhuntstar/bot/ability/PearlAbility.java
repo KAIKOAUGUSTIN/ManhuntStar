@@ -2,6 +2,8 @@ package dev.manhuntstar.bot.ability;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.bot.BotGroup;
+import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.PearlDimension;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -45,7 +47,7 @@ public final class PearlAbility {
             }
             return;
         }
-        if (diff == BotDifficulty.TERMINATOR) {
+        if (diff == BotDifficulty.TERMINATOR && isChasing()) {
             Player t = bot.target();
             if (t != null && t.getWorld().equals(bot.world()) && bot.distanceTo(t) > 15.0) {
                 Vec3 dir = Vec3.of(t.getLocation()).subtract(bot.pos()).normalize();
@@ -54,6 +56,15 @@ public final class PearlAbility {
                 setCooldown(diff, false);
             }
         }
+    }
+
+    /** Bot da roda espera a caçada começar e fugitivo não pula atrás do alvo. */
+    private boolean isChasing() {
+        if (bot.idle() != null && bot.idle().isActive()) {
+            return false;
+        }
+        BotGroup g = bot.group();
+        return g == null || g.role() != BotRole.ESCAPE;
     }
 
     /** Respeita as opções "perolas" e "dimensao-perolas". */

@@ -251,7 +251,9 @@ public final class TacticsManager {
     private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase) {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
-            if (!b.world().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)) {
+            // bots esperando na roda não saem dela para emboscar
+            if (!b.world().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
+                    || b.idle() != null) {
                 continue;
             }
             if (!ignoreCooldown && botCooldown.getOrDefault(b.id(), Long.MIN_VALUE) > now) {
