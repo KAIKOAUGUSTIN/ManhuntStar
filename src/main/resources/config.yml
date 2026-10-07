@@ -97,8 +97,9 @@ mobilidade:
   redistribuir: true
   # Distância (blocos) a partir da qual o bot é redistribuído. [redistdistance]
   distancia-redistribuicao: 200
-  # Tempo mínimo/máximo até os bots seguirem o alvo para outra dimensão. [min_sec_range_nether_entering / max_sec_range_nether_entering]
+  # Tempo mínimo até os bots seguirem o alvo para outra dimensão. [min_sec_range_nether_entering]
   atraso-min-dimensao-segundos: 30
+  # Tempo máximo até os bots seguirem o alvo para outra dimensão. [max_sec_range_nether_entering]
   atraso-max-dimensao-segundos: 60
 
 pathfinding:
@@ -150,6 +151,7 @@ aparencia:
   cor-brilho-cacadores: red
   # Brilho nos bots de grupos fugitivos. [glowingescape]
   brilho-fugitivos: false
+  # Cor do brilho dos fugitivos. [glowcolorescape]
   cor-brilho-fugitivos: aqua
   # Nome visível em cima do bot. [nametag]
   mostrar-nome: true

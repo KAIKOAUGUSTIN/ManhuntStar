@@ -7,20 +7,23 @@ import java.util.Locale;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Uma opção do plugin: caminho no config.yml, chave usada nos comandos, valor padrão e validação.
- * O valor é volátil porque algumas opções (ex.: limite de nós do A*) são lidas por threads de pathfinding.
+ * Uma opção do plugin: caminho no config.yml, chave usada nos comandos, nome mostrado no menu,
+ * valor padrão e validação. O valor é volátil porque algumas opções (ex.: limite de nós do A*)
+ * são lidas por threads de pathfinding.
  */
 public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setting.Dbl, Setting.Enumerated, Setting.Text {
 
     private final String path;
     private final String key;
+    private final String label;
     private final Category category;
     private final T defaultValue;
     private volatile T value;
 
-    protected Setting(String path, String key, Category category, T defaultValue) {
+    protected Setting(String path, String key, String label, Category category, T defaultValue) {
         this.path = path;
         this.key = key;
+        this.label = label;
         this.category = category;
         this.defaultValue = defaultValue;
         this.value = defaultValue;
@@ -32,6 +35,11 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
 
     public String key() {
         return key;
+    }
+
+    /** Nome curto em português para o menu. */
+    public String label() {
+        return label;
     }
 
     public Category category() {
@@ -98,8 +106,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     public static final class Bool extends Setting<Boolean> {
-        public Bool(String path, String key, Category category, boolean def) {
-            super(path, key, category, def);
+        public Bool(String path, String key, String label, Category category, boolean def) {
+            super(path, key, label, category, def);
         }
 
         @Override
@@ -126,8 +134,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         private final int min;
         private final int max;
 
-        public Int(String path, String key, Category category, int def, int min, int max) {
-            super(path, key, category, def);
+        public Int(String path, String key, String label, Category category, int def, int min, int max) {
+            super(path, key, label, category, def);
             this.min = min;
             this.max = max;
         }
@@ -169,8 +177,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         private final double max;
         private final double step;
 
-        public Dbl(String path, String key, Category category, double def, double min, double max, double step) {
-            super(path, key, category, def);
+        public Dbl(String path, String key, String label, Category category, double def, double min, double max, double step) {
+            super(path, key, label, category, def);
             this.min = min;
             this.max = max;
             this.step = step;
@@ -224,8 +232,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     public static final class Enumerated<E extends Enum<E> & Choice> extends Setting<E> {
         private final Class<E> type;
 
-        public Enumerated(String path, String key, Category category, Class<E> type, E def) {
-            super(path, key, category, def);
+        public Enumerated(String path, String key, String label, Category category, Class<E> type, E def) {
+            super(path, key, label, category, def);
             this.type = type;
         }
 
@@ -263,8 +271,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     public static final class Text extends Setting<String> {
         private final List<String> suggestions;
 
-        public Text(String path, String key, Category category, String def, String... suggestions) {
-            super(path, key, category, def);
+        public Text(String path, String key, String label, Category category, String def, String... suggestions) {
+            super(path, key, label, category, def);
             this.suggestions = Arrays.asList(suggestions);
         }
 

@@ -5,10 +5,14 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
+import dev.manhuntstar.bot.Modes.GlowColor;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Setting.Category;
 import io.papermc.paper.event.player.AsyncChatEvent;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +50,7 @@ public final class MenuManager implements Listener {
     private final ManhuntStarPlugin plugin;
     private final Map<UUID, SpawnDraft> drafts = new HashMap<>();
     private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
+    private Map<String, List<String>> descriptions;
 
     private static final class SpawnDraft {
         String name = "Terminator";
@@ -129,16 +134,39 @@ public final class MenuManager implements Listener {
                     ct -> openSettings(p, cat));
         }
         boolean running = plugin.botManager().countdown().isRunning();
-        set(m, 29, item(Material.LIME_DYE, t(running ? "Começar a caçada agora" : "Soltar bots da roda", NamedTextColor.GREEN), List.of()), c -> {
+        set(m, 28, item(Material.LIME_DYE, t(running ? "Começar a caçada agora" : "Soltar bots da roda", NamedTextColor.GREEN), List.of()), c -> {
             p.closeInventory();
             p.performCommand("bot start");
         });
-        set(m, 31, item(Material.ENDER_PEARL, t("Trazer todos os bots até mim", NamedTextColor.LIGHT_PURPLE), List.of()), c -> {
+        setGlowButton(p, m, 30);
+        set(m, 32, item(Material.ENDER_PEARL, t("Trazer todos os bots até mim", NamedTextColor.LIGHT_PURPLE), List.of()), c -> {
             int n = plugin.botManager().teleportAllTo(p);
             msg().send(p, "comando.tpall", Messages.p("quantidade", n));
         });
-        set(m, 33, item(Material.BARRIER, t("Apagar todos os bots", NamedTextColor.RED), List.of(t("Pede confirmação", NamedTextColor.GRAY))), c -> openConfirmDelete(p));
+        set(m, 34, item(Material.BARRIER, t("Apagar todos os bots", NamedTextColor.RED), List.of(t("Pede confirmação", NamedTextColor.GRAY))), c -> openConfirmDelete(p));
         p.openInventory(m.inventory);
+    }
+
+    /** Atalho para o brilho dos caçadores: esquerdo liga/desliga, direito troca a cor. */
+    private void setGlowButton(Player p, Menu m, int slot) {
+        Setting.Bool glow = plugin.settings().glowHunters;
+        Setting.Enumerated<GlowColor> color = plugin.settings().glowHuntersColor;
+        boolean on = glow.on();
+        set(m, slot, item(on ? Material.GLOW_INK_SAC : Material.INK_SAC,
+                t(glow.label() + ": " + (on ? "ligado" : "desligado"), on ? NamedTextColor.GREEN : NamedTextColor.GRAY),
+                List.of(t("Cor: ", NamedTextColor.GRAY).append(t(color.display(), color.get().color())),
+                        t("Esquerdo: ligar/desligar • Direito: trocar a cor", NamedTextColor.DARK_GRAY))), c -> {
+                    Setting<?> changed;
+                    if (c.isRightClick()) {
+                        color.setFromText(color.next().configName());
+                        changed = color;
+                    } else {
+                        glow.set(!on);
+                        changed = glow;
+                    }
+                    plugin.onSettingChanged(changed);
+                    openMain(p);
+                });
     }
 
     private static String categoryName(Category c) {
@@ -297,11 +325,15 @@ public final class MenuManager implements Listener {
         for (Setting<?> s : list) {
             Material icon;
             List<Component> lore = new ArrayList<>();
-            lore.add(t(s.path(), NamedTextColor.DARK_GRAY));
-            lore.add(t("Valor: " + s.display(), NamedTextColor.WHITE));
+            for (String line : description(s)) {
+                lore.add(t(line, NamedTextColor.GRAY));
+            }
+            String value = s instanceof Setting.Bool b ? (b.on() ? "ligado" : "desligado") : s.display();
+            lore.add(t("Valor: " + value, NamedTextColor.WHITE));
+            lore.add(t("/bot settings " + s.key(), NamedTextColor.DARK_GRAY));
             if (s instanceof Setting.Bool b) {
                 icon = b.on() ? Material.LIME_DYE : Material.GRAY_DYE;
-                lore.add(t("Clique para alternar", NamedTextColor.GRAY));
+                lore.add(t("Clique para ligar/desligar", NamedTextColor.GRAY));
             } else if (s instanceof Setting.Enumerated<?>) {
                 icon = Material.PAPER;
                 lore.add(t("Clique para a próxima opção", NamedTextColor.GRAY));
@@ -310,7 +342,7 @@ public final class MenuManager implements Listener {
                 lore.add(t("Esquerdo +, direito -, shift = passo maior", NamedTextColor.GRAY));
             }
             Setting<?> setting = s;
-            set(m, i++, item(icon, t("/bot settings " + s.key(), NamedTextColor.YELLOW), lore), c -> {
+            set(m, i++, item(icon, t(s.label(), NamedTextColor.YELLOW), lore), c -> {
                 adjust(setting, c);
                 plugin.onSettingChanged(setting);
                 openSettings(p, cat);
@@ -318,6 +350,41 @@ public final class MenuManager implements Listener {
         }
         set(m, m.inventory.getSize() - 5, item(Material.OAK_DOOR, t("Voltar", NamedTextColor.GRAY), List.of()), c -> openMain(p));
         p.openInventory(m.inventory);
+    }
+
+    /** Descrição da opção, tirada dos comentários do config.yml que vem dentro do plugin. */
+    private List<String> description(Setting<?> s) {
+        if (descriptions == null) {
+            descriptions = new HashMap<>();
+            try (InputStream in = plugin.getResource("config.yml")) {
+                if (in != null) {
+                    plugin.settings().descriptions(new InputStreamReader(in, StandardCharsets.UTF_8))
+                            .forEach((path, text) -> descriptions.put(path, wrap(text, 40)));
+                }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Não foi possível ler as descrições das opções: " + e.getMessage());
+            }
+        }
+        return descriptions.getOrDefault(s.path(), List.of());
+    }
+
+    private static List<String> wrap(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split("\\s+")) {
+            if (line.length() > 0 && line.length() + 1 + word.length() > width) {
+                lines.add(line.toString());
+                line.setLength(0);
+            }
+            if (line.length() > 0) {
+                line.append(' ');
+            }
+            line.append(word);
+        }
+        if (line.length() > 0) {
+            lines.add(line.toString());
+        }
+        return lines;
     }
 
     private static void adjust(Setting<?> s, ClickType c) {

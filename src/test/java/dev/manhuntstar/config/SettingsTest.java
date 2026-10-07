@@ -10,6 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.Modes.PearlDimension;
 import dev.manhuntstar.bot.Modes.TargetMode;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /** Opções: chaves e apelidos do mod, faixas e conversão de texto. */
@@ -58,6 +62,24 @@ class SettingsTest {
         s.pearlDimension.setFromText("1");
         assertSame(PearlDimension.BOTH, s.pearlDimension.get());
         assertThrows(IllegalArgumentException.class, () -> s.respawn.setFromText("talvez"));
+    }
+
+    /** O menu mostra o nome e a descrição (comentário do config.yml) de cada opção. */
+    @Test
+    void everyOptionHasLabelAndDescription() throws Exception {
+        Settings s = new Settings();
+        Map<String, String> descriptions;
+        try (InputStream in = SettingsTest.class.getResourceAsStream("/config.yml")) {
+            assertNotNull(in, "config.yml não encontrado");
+            descriptions = s.descriptions(new InputStreamReader(in, StandardCharsets.UTF_8));
+        }
+        for (Setting<?> each : s.all()) {
+            assertFalse(each.label().isBlank(), "sem nome: " + each.key());
+            String d = descriptions.get(each.path());
+            assertNotNull(d, "sem comentário no config.yml: " + each.path());
+            assertFalse(d.contains("["), "chave de comando sobrou na descrição: " + d);
+        }
+        assertEquals("Brilho (contorno visível através das paredes) nos caçadores.", descriptions.get(s.glowHunters.path()));
     }
 
     @Test
