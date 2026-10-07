@@ -37,6 +37,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
@@ -169,10 +170,14 @@ public final class Combat {
         Bukkit.getScheduler().runTaskLater(bot.manager().plugin(), this::stopBlock, Math.max(1, time));
     }
 
-    /** O escudo só bloqueia ataques vindos da frente e que não ignoram escudo (fogo, queda etc.). */
+    /**
+     * O escudo só bloqueia, como no jogo, ataques vindos da frente, com um ponto de origem e que não
+     * ignoram escudo. Sufocar, cacto, magma, congelar e efeito de wither não têm origem e passam.
+     */
     public boolean canBlockDamage(EntityDamageEvent event) {
         DamageSource src = event.getDamageSource();
-        if (src.getDamageType().equals(DamageType.FALL) || src.getDamageType().equals(DamageType.ON_FIRE)
+        if (DamageTypeTags.BYPASSES_SHIELD.isTagged(src.getDamageType())
+                || src.getDamageType().equals(DamageType.FALL) || src.getDamageType().equals(DamageType.ON_FIRE)
                 || src.getDamageType().equals(DamageType.IN_FIRE) || src.getDamageType().equals(DamageType.LAVA)
                 || src.getDamageType().equals(DamageType.OUT_OF_WORLD) || src.getDamageType().equals(DamageType.GENERIC_KILL)
                 || src.getDamageType().equals(DamageType.MAGIC) || src.getDamageType().equals(DamageType.INDIRECT_MAGIC)
@@ -181,10 +186,10 @@ public final class Combat {
         }
         Location from = src.getSourceLocation();
         if (from == null) {
-            return true;
+            return false;
         }
-        Vec3 toSource = Vec3.of(from).subtract(bot.pos()).normalize();
-        return bot.lookVector().dot(toSource) > 0.0;
+        Vec3 toSource = Vec3.of(from).subtract(bot.pos()).horizontal().normalize();
+        return bot.forwardVector().dot(toSource) > 0.0;
     }
 
     public void cancelWeaponUseForCapacity() {
