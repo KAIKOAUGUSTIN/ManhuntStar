@@ -19,6 +19,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -66,11 +67,8 @@ public final class BotCommand {
 
     private SuggestionProvider<CommandSourceStack> botNames() {
         return (ctx, b) -> {
-            String rem = b.getRemaining().toLowerCase(Locale.ROOT);
             for (Bot bot : manager().allBots()) {
-                if (bot.name().toLowerCase(Locale.ROOT).startsWith(rem)) {
-                    b.suggest(bot.name());
-                }
+                suggestName(b, bot.name());
             }
             return b.buildFuture();
         };
@@ -79,12 +77,18 @@ public final class BotCommand {
     private SuggestionProvider<CommandSourceStack> groupNames() {
         return (ctx, b) -> {
             for (BotGroup g : manager().groups()) {
-                if (g.name().toLowerCase(Locale.ROOT).startsWith(b.getRemaining().toLowerCase(Locale.ROOT))) {
-                    b.suggest(g.name());
-                }
+                suggestName(b, g.name());
             }
             return b.buildFuture();
         };
+    }
+
+    /** Nomes com %, acento ou espaço só passam entre aspas, então a sugestão já vem com elas. */
+    private static void suggestName(SuggestionsBuilder b, String name) {
+        String text = StringArgumentType.escapeIfRequired(name);
+        if (text.toLowerCase(Locale.ROOT).startsWith(b.getRemaining().toLowerCase(Locale.ROOT))) {
+            b.suggest(text);
+        }
     }
 
     private static SuggestionProvider<CommandSourceStack> words(String... options) {
@@ -157,26 +161,26 @@ public final class BotCommand {
         root.then(settingsNode("gameplay"));
 
         root.then(Commands.literal("group")
-                .then(Commands.literal("role").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
+                .then(Commands.literal("role").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
                         .then(Commands.argument("papel", StringArgumentType.word()).suggests(words("hunter", "escape", "cacador", "fugitivo")).executes(this::groupRole))))
-                .then(Commands.literal("delete").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames()).executes(this::groupDelete)))
-                .then(Commands.literal("phaseprogression").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
+                .then(Commands.literal("delete").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames()).executes(this::groupDelete)))
+                .then(Commands.literal("phaseprogression").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
                         .then(Commands.argument("ligado", StringArgumentType.word()).suggests(words("true", "false")).executes(this::groupPhase))))
-                .then(Commands.literal("trackplayers").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
+                .then(Commands.literal("trackplayers").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
                         .then(Commands.argument("ligado", StringArgumentType.word()).suggests(words("true", "false")).executes(this::groupTrack))))
                 .then(Commands.literal("spawnpoint")
-                        .then(Commands.literal("set").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
+                        .then(Commands.literal("set").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
                                 .executes(ctx -> groupSpawn(ctx, ctx.getSource().getLocation()))
                                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("y", DoubleArgumentType.doubleArg())
                                         .then(Commands.argument("z", DoubleArgumentType.doubleArg()).executes(ctx -> groupSpawn(ctx,
                                                 new Location(ctx.getSource().getLocation().getWorld(), DoubleArgumentType.getDouble(ctx, "x"),
                                                         DoubleArgumentType.getDouble(ctx, "y"), DoubleArgumentType.getDouble(ctx, "z")))))))))
-                        .then(Commands.literal("clear").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames()).executes(ctx -> groupSpawn(ctx, null)))))
+                        .then(Commands.literal("clear").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupSpawn(ctx, null)))))
                 .then(Commands.literal("enemy")
-                        .then(Commands.literal("add").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
-                                .then(Commands.argument("inimigo", StringArgumentType.word()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, true)))))
-                        .then(Commands.literal("remove").then(Commands.argument("grupo", StringArgumentType.word()).suggests(groupNames())
-                                .then(Commands.argument("inimigo", StringArgumentType.word()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, false)))))));
+                        .then(Commands.literal("add").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
+                                .then(Commands.argument("inimigo", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, true)))))
+                        .then(Commands.literal("remove").then(Commands.argument("grupo", StringArgumentType.string()).suggests(groupNames())
+                                .then(Commands.argument("inimigo", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, false)))))));
 
         root.then(Commands.literal("gamerule")
                 .then(Commands.literal("min_sec_range_nether_entering").then(Commands.argument("valor", IntegerArgumentType.integer(0, 600))
@@ -189,7 +193,7 @@ public final class BotCommand {
         root.then(Commands.literal("tpall").executes(this::tpAll));
         root.then(Commands.literal("setspawnpoint")
                 .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("y", DoubleArgumentType.doubleArg())
-                        .then(Commands.argument("z", DoubleArgumentType.doubleArg()).then(Commands.argument("bot", StringArgumentType.word()).suggests(botNames())
+                        .then(Commands.argument("z", DoubleArgumentType.doubleArg()).then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames())
                                 .executes(this::setSpawnpoint))))));
         root.then(Commands.literal("execute").then(Commands.argument("capacidade", StringArgumentType.word())
                 .suggests(words("tnt-craft", "bow-burst", "firework-crossbow")).executes(this::execute)));

@@ -44,6 +44,9 @@ Todos exigem a permissão `manhuntstar.admin` (operadores têm por padrão). `/m
 
 Dificuldades: `difficulty.easy`, `difficulty.medium`, `difficulty.hard`, `difficulty.terminator` (ou `facil`, `medio`, `dificil`, `terminator`).
 
+Nomes com `%`, acento ou espaço vão entre aspas nos comandos, por exemplo `/bot create "Caçador%" 5` e
+`/bot group role "Caçador%" escape`. O Tab já completa os nomes com as aspas.
+
 ## O que dá para configurar
 
 Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
