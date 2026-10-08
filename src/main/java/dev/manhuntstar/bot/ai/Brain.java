@@ -341,7 +341,10 @@ public final class Brain {
         if (playerTarget != null) {
             bot.combat().handleRiskyHitBoost(playerTarget);
         }
-        if (dist < 4.5 && !los && openPassageTo(active)) {
+        // Na água o olho fica na altura da margem e ela tapa a visão: cavar a margem abre um canal de água
+        // corrente que prende o bot. Ele sai nadando e pulando (melee faz isso).
+        boolean inFluid = bot.isInWater() || bot.isInLava();
+        if (dist < 4.5 && !los && !inFluid && openPassageTo(active)) {
             state = "abrindo passagem até " + who;
             return;
         }
@@ -625,11 +628,16 @@ public final class Brain {
         Vec3 forward = Vec3.of(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
         Vec3 left = new Vec3(-forward.z(), 0, forward.x()).normalize();
         Vec3 strafe = left.scale(strafeDirection * 0.25);
+        // Na água andar não sobe a margem: nada até o alvo e pula para sair (sem isso ficava preso na beira).
+        boolean inFluid = bot.isInWater() || bot.isInLava();
         if (aggressive) {
             if (bot.combat().isBlocking()) {
                 bot.combat().stopBlock();
             }
-            if (dist > 2.5) {
+            if (inFluid) {
+                bot.motor().setSprinting(true);
+                swimToward(Vec3.of(target.getLocation()), target);
+            } else if (dist > 2.5) {
                 bot.motor().walk(forward.add(strafe));
                 bot.motor().setSprinting(true);
             } else {
@@ -645,7 +653,11 @@ public final class Brain {
         }
         boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand();
         if (canShield) {
-            bot.motor().stopWalk();
+            if (inFluid) {
+                swimToward(Vec3.of(target.getLocation()), target);
+            } else {
+                bot.motor().stopWalk();
+            }
             if (!bot.combat().hasUsableShield()) {
                 bot.combat().setShield(true);
             }
@@ -668,8 +680,12 @@ public final class Brain {
             }
             return;
         }
-        bot.motor().walk(forward.add(strafe));
         bot.motor().setSprinting(true);
+        if (inFluid) {
+            swimToward(Vec3.of(target.getLocation()), target);
+        } else {
+            bot.motor().walk(forward.add(strafe));
+        }
         jumpForCritIfNeeded(target, dist);
         if (now - bot.combat().lastAttackTime() > 10) {
             bot.combat().attack(target);
@@ -782,10 +798,23 @@ public final class Brain {
         }
     }
 
-    private boolean isTargetOutOfWater(Player p) {
-        World w = p.getWorld();
-        Pos feet = Pos.of(p.getLocation());
-        return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !p.isInWater();
+    private boolean isTargetOutOfWater(LivingEntity target) {
+        World w = target.getWorld();
+        Pos feet = Pos.of(target.getLocation());
+        return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !target.isInWater();
+    }
+
+    /** Nada até o ponto; com o alvo fora da água, mira acima da margem e pula para subir nela. */
+    private void swimToward(Vec3 finalTarget, LivingEntity lookTarget) {
+        Vec3 swimTarget = finalTarget;
+        if (bot.isInWater() && lookTarget != null && isTargetOutOfWater(lookTarget)) {
+            swimTarget = new Vec3(finalTarget.x(), Math.max(finalTarget.y() + 1.0, bot.pos().y() + 0.35), finalTarget.z());
+            if (bot.horizontalCollision() || hasShorelineExitAhead()) {
+                bot.motor().jump();
+            }
+        }
+        bot.motor().swimTowardNode(swimTarget);
+        bot.motor().tickWaterBuoyancy();
     }
 
     private boolean hasShorelineExitAhead() {
@@ -864,15 +893,7 @@ public final class Brain {
             bot.lookAt(finalTarget.add(0, inFluid ? 0.5 : 1.5, 0));
         }
         if (inFluid) {
-            Vec3 swimTarget = finalTarget;
-            if (bot.isInWater() && lookTarget instanceof Player chase && isTargetOutOfWater(chase)) {
-                swimTarget = new Vec3(finalTarget.x(), Math.max(finalTarget.y() + 1.0, bot.pos().y() + 0.35), finalTarget.z());
-                if (bot.horizontalCollision() || hasShorelineExitAhead()) {
-                    bot.motor().jump();
-                }
-            }
-            bot.motor().swimTowardNode(swimTarget);
-            bot.motor().tickWaterBuoyancy();
+            swimToward(finalTarget, lookTarget);
             return;
         }
         bot.motor().walk(moveDir);
