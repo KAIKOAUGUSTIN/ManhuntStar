@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "dev.manhuntstar"
-version = "1.1.2"
+version = "1.2.0"
 description = "Manhunt* - bots caçadores de ManHunt para Paper"
 
 // As versões ficam em gradle/libs.versions.toml (lidas pelo Dependabot).
