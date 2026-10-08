@@ -76,6 +76,10 @@ public final class Progression {
         if (phase >= 10 && difficulty != BotDifficulty.TERMINATOR) {
             return;
         }
+        // o relógio das fases só anda durante a caçada: na roda, na contagem ou com o jogador morto, não
+        if (bot.idle() != null || livingTarget() == null) {
+            return;
+        }
         // a passagem 10 → 12 do Terminator também respeita o multiplicador de duração das fases
         int limit = (int) (difficulty.phaseDurationTicks() * bot.settings().phaseMultiplier.value());
         if (difficulty == BotDifficulty.TERMINATOR && phase == 10) {
@@ -119,12 +123,18 @@ public final class Progression {
         }
     }
 
-    private void applyPlayerTriggeredBoost() {
+    /** O jogador que o bot caça (ou o mais próximo, se o alvo sumiu), se estiver vivo. */
+    private Player livingTarget() {
         Player p = bot.target();
         if (p == null || !p.isValid() || p.isDead()) {
             p = bot.fallbackTarget();
         }
-        if (p == null || p.isDead()) {
+        return p == null || p.isDead() ? null : p;
+    }
+
+    private void applyPlayerTriggeredBoost() {
+        Player p = livingTarget();
+        if (p == null) {
             return;
         }
         int ironCount = countIron(p);
