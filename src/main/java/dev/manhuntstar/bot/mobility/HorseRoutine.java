@@ -40,6 +40,12 @@ public final class HorseRoutine {
     private static final int TAME_TICKS = 60;
     private static final float MAX_TURN_PER_TICK = 30f;
     private static final double MAX_HORIZONTAL_SPEED = 1.5;
+    /**
+     * Desvio máximo (ir até o cavalo e dele até o alvo, menos ir direto) para buscar um cavalo. O cavalo
+     * ganha ~0,075 s por bloco sobre correr; 16 blocos de desvio (~3 s) mais a doma (3 s) já empatam
+     * com o ganho numa perseguição de ~100 blocos.
+     */
+    private static final double MAX_DETOUR = 16.0;
 
     /** Só nos testes em servidor ({@code -Dmanhuntstar.teste.cavalo=true}): mais detalhes no /bot info. */
     private static final boolean TEST_DETAIL = Boolean.getBoolean("manhuntstar.teste.cavalo");
@@ -106,7 +112,7 @@ public final class HorseRoutine {
             resetTarget();
             return false;
         }
-        Horse horse = findCandidate();
+        Horse horse = findCandidate(target);
         if (horse == null) {
             resetTarget();
             return false;
@@ -353,19 +359,24 @@ public final class HorseRoutine {
         return a == null ? 0.225 : a.getValue();
     }
 
-    private Horse findCandidate() {
+    /** O cavalo com menor desvio no caminho até o alvo; nenhum se todos exigirem voltar demais. */
+    private Horse findCandidate(LivingEntity target) {
         if (targetHorse != null && lockTicks > 0 && Bukkit.getEntity(targetHorse) instanceof Horse locked && eligible(locked)) {
             return locked;
         }
+        Vec3 me = bot.pos();
+        Vec3 goal = Vec3.of(target.getLocation());
+        double direct = me.distanceTo(goal);
         Horse best = null;
-        double bestDist = Double.MAX_VALUE;
+        double bestDetour = MAX_DETOUR;
         for (Horse h : bot.world().getNearbyEntitiesByType(Horse.class, bot.location(), SEARCH_RADIUS)) {
             if (!eligible(h)) {
                 continue;
             }
-            double d = bot.pos().distanceToSqr(Vec3.of(h.getLocation()));
-            if (d < bestDist) {
-                bestDist = d;
+            Vec3 hp = Vec3.of(h.getLocation());
+            double detour = me.distanceTo(hp) + hp.distanceTo(goal) - direct;
+            if (detour < bestDetour) {
+                bestDetour = detour;
                 best = h;
             }
         }
