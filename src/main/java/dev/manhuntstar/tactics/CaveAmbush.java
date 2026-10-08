@@ -36,6 +36,9 @@ public final class CaveAmbush {
     private static final int CAVE_MAX_Y = 60;
     private static final int MAX_SCAN_NODES = 6000;
     private static final int MAX_RADIUS = 96;
+    /** Sem esconderijo na caverna, espera isso (10 s) antes de procurar de novo, em vez de todo segundo. */
+    private static final int RETRY_TICKS = 200;
+    private static final int[][] DIRS = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
     public record AmbushBed(UUID botId, UUID targetId, UUID worldId, Pos foot, Pos head, int restorePhase) {
     }
@@ -44,6 +47,7 @@ public final class CaveAmbush {
     private final Map<UUID, AmbushBed> beds = new HashMap<>();
     private final Map<UUID, UUID> botTargets = new HashMap<>();
     private final Map<UUID, Long> lastAmbushTick = new HashMap<>();
+    private final Map<UUID, Long> nextAttemptTick = new HashMap<>();
 
     public CaveAmbush(BotManager manager) {
         this.manager = manager;
@@ -68,11 +72,14 @@ public final class CaveAmbush {
                 continue;
             }
             Long last = lastAmbushTick.get(p.getUniqueId());
-            if (last != null && now - last < cooldown) {
+            Long retry = nextAttemptTick.get(p.getUniqueId());
+            if ((last != null && now - last < cooldown) || (retry != null && now < retry)) {
                 continue;
             }
             if (tryStartOne(p)) {
                 lastAmbushTick.put(p.getUniqueId(), now);
+            } else {
+                nextAttemptTick.put(p.getUniqueId(), now + RETRY_TICKS);
             }
         }
     }
@@ -90,7 +97,12 @@ public final class CaveAmbush {
         }
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         World w = target.getWorld();
-        Pos ambush = findHiddenFarPos(w, target);
+        // a caverna do jogador é varrida uma vez só; esconderijo e cama só consultam o resultado
+        Set<Long> cave = caveRegion(w, Pos.of(target.getLocation()));
+        if (cave == null) {
+            return false;
+        }
+        Pos ambush = findHiddenFarPos(w, target, cave);
         if (ambush == null) {
             return false;
         }
@@ -98,7 +110,7 @@ public final class CaveAmbush {
         Location dest = new Location(w, ambush.x() + 0.5, ambush.y() + 0.1, ambush.z() + 0.5, target.getLocation().getYaw(), target.getLocation().getPitch());
         manager.teleportBot(chosen, dest);
         chosen.setTargetPlayer(target.getUniqueId());
-        AmbushBed bed = tryPlaceBed(chosen, w, target, ambush, restorePhase);
+        AmbushBed bed = tryPlaceBed(chosen, w, target, ambush, restorePhase, cave);
         if (bed != null) {
             beds.put(chosen.id(), bed);
             botTargets.put(chosen.id(), target.getUniqueId());
@@ -106,9 +118,8 @@ public final class CaveAmbush {
         return true;
     }
 
-    private Pos findHiddenFarPos(World w, Player target) {
+    private Pos findHiddenFarPos(World w, Player target, Set<Long> cave) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        Pos tpos = Pos.of(target.getLocation());
         for (int attempt = 0; attempt < 64; attempt++) {
             double angle = r.nextDouble() * Math.PI * 2;
             double distance = 50 + r.nextDouble() * 80;
@@ -127,7 +138,7 @@ public final class CaveAmbush {
                 if (WorldUtil.clearLine(w, Vec3.of(target.getEyeLocation()), Vec3.center(c))) {
                     continue;
                 }
-                if (isSameCave(w, tpos, c)) {
+                if (inRegion(cave, c)) {
                     return c;
                 }
             }
@@ -135,19 +146,18 @@ public final class CaveAmbush {
         return null;
     }
 
-    private AmbushBed tryPlaceBed(Bot bot, World w, Player target, Pos near, int restorePhase) {
+    private AmbushBed tryPlaceBed(Bot bot, World w, Player target, Pos near, int restorePhase, Set<Long> cave) {
         if (w.getEnvironment() != World.Environment.NORMAL) {
             return null;
         }
         BlockFace[] faces = {BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST};
-        Pos tpos = Pos.of(target.getLocation());
         for (int radius = 1; radius <= 5; radius++) {
             for (BlockFace facing : faces) {
                 for (int dx = -radius; dx <= radius; dx++) {
                     for (int dz = -radius; dz <= radius; dz++) {
                         Pos foot = near.offset(dx, 0, dz);
                         Pos head = foot.relative(facing);
-                        if (!canPlaceBed(w, foot, head) || !isSameCave(w, tpos, foot)) {
+                        if (!canPlaceBed(w, foot, head) || !inRegion(cave, foot)) {
                             continue;
                         }
                         placeBedHalf(w, foot, facing, Bed.Part.FOOT);
@@ -317,6 +327,7 @@ public final class CaveAmbush {
         }
         botTargets.clear();
         lastAmbushTick.clear();
+        nextAttemptTick.clear();
     }
 
     // ------------------------------------------------------------------ caverna
@@ -353,19 +364,59 @@ public final class CaveAmbush {
         Set<Long> visited = new HashSet<>();
         open.add(start);
         visited.add(start.asLong());
-        int[][] dirs = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
         while (!open.isEmpty() && visited.size() < MAX_SCAN_NODES) {
             Pos cur = open.poll();
             if (Math.abs(cur.x() - target.x()) <= 2 && Math.abs(cur.y() - target.y()) <= 2 && Math.abs(cur.z() - target.z()) <= 2) {
                 return true;
             }
-            for (int[] d : dirs) {
+            for (int[] d : DIRS) {
                 Pos next = cur.offset(d[0], d[1], d[2]);
                 if (visited.contains(next.asLong()) || !within(a, next, MAX_RADIUS) || !passable(w, next)) {
                     continue;
                 }
                 visited.add(next.asLong());
                 open.add(next);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * O ar da caverna ligado a {@code from}, com os mesmos limites de {@link #isSameCave} (6000 blocos,
+     * raio 96), ou null se não houver ar perto. Serve para testar vários pontos com uma busca só.
+     */
+    private static Set<Long> caveRegion(World w, Pos from) {
+        Pos start = normalize(w, from);
+        if (start == null) {
+            return null;
+        }
+        ArrayDeque<Pos> open = new ArrayDeque<>();
+        Set<Long> visited = new HashSet<>();
+        open.add(start);
+        visited.add(start.asLong());
+        while (!open.isEmpty() && visited.size() < MAX_SCAN_NODES) {
+            Pos cur = open.poll();
+            for (int[] d : DIRS) {
+                Pos next = cur.offset(d[0], d[1], d[2]);
+                if (visited.contains(next.asLong()) || !within(from, next, MAX_RADIUS) || !passable(w, next)) {
+                    continue;
+                }
+                visited.add(next.asLong());
+                open.add(next);
+            }
+        }
+        return visited;
+    }
+
+    /** O ponto está a até 2 blocos do ar da região (o mesmo critério de chegada de {@link #isSameCave}). */
+    private static boolean inRegion(Set<Long> region, Pos p) {
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    if (region.contains(Pos.pack(p.x() + dx, p.y() + dy, p.z() + dz))) {
+                        return true;
+                    }
+                }
             }
         }
         return false;

@@ -33,6 +33,12 @@ public final class WorldUtil {
     }
 
     public static Fluid fluid(World w, int x, int y, int z) {
+        // Ar e blocos opacos inteiros nunca têm fluido. O atalho evita a conversão de registro do FluidData,
+        // que dominava buscas grandes por blocos (emboscada em caverna).
+        Material m = w.getType(x, y, z);
+        if (m.isAir() || m.isOccluding()) {
+            return Fluid.EMPTY;
+        }
         FluidData data = w.getFluidData(x, y, z);
         return data.getFluidType();
     }
