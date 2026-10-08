@@ -9,6 +9,7 @@ import dev.manhuntstar.bot.mobility.ElytraFlight;
 import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -631,6 +632,11 @@ public final class Brain {
         Vec3 strafe = left.scale(strafeDirection * 0.25);
         // Na água andar não sobe a margem: nada até o alvo e pula para sair (sem isso ficava preso na beira).
         boolean inFluid = bot.isInWater() || bot.isInLava();
+        // Alvo derrubado da beirada: o bot ia atrás dele andando e caía junto.
+        boolean ledge = !inFluid && dropAhead(forward);
+        if (!inFluid && dropAhead(strafe)) {
+            strafe = Vec3.ZERO;
+        }
         if (aggressive) {
             if (bot.combat().isBlocking()) {
                 bot.combat().stopBlock();
@@ -638,14 +644,20 @@ public final class Brain {
             if (inFluid) {
                 bot.motor().setSprinting(true);
                 swimToward(Vec3.of(target.getLocation()), target);
-            } else if (dist > 2.5) {
+            } else if (dist > 2.5 && !ledge) {
                 bot.motor().walk(forward.add(strafe));
                 bot.motor().setSprinting(true);
             } else {
-                bot.motor().walk(strafe);
+                if (ledge) {
+                    holdAtLedge(strafe);
+                } else {
+                    bot.motor().walk(strafe);
+                }
                 bot.motor().setSprinting(false);
             }
-            jumpForCritIfNeeded(target, dist);
+            if (!ledge) {
+                jumpForCritIfNeeded(target, dist);
+            }
             boolean falling = bot.velocity().y() < 0 && !bot.onGround();
             if (falling || now - bot.combat().lastAttackTime() > 12) {
                 bot.combat().attack(target);
@@ -681,16 +693,61 @@ public final class Brain {
             }
             return;
         }
-        bot.motor().setSprinting(true);
+        bot.motor().setSprinting(!ledge);
         if (inFluid) {
             swimToward(Vec3.of(target.getLocation()), target);
+        } else if (ledge) {
+            holdAtLedge(strafe);
         } else {
             bot.motor().walk(forward.add(strafe));
         }
-        jumpForCritIfNeeded(target, dist);
+        if (!ledge) {
+            jumpForCritIfNeeded(target, dist);
+        }
         if (now - bot.combat().lastAttackTime() > 10) {
             bot.combat().attack(target);
         }
+    }
+
+    /** Na beirada: corta o embalo ({@code walk} só soma aceleração à velocidade atual) e no máximo anda de lado. */
+    private void holdAtLedge(Vec3 strafe) {
+        bot.motor().stopWalk();
+        if (strafe.horizontal().lengthSqr() >= 1.0E-4) {
+            bot.motor().walk(strafe);
+        }
+    }
+
+    /**
+     * Andar nessa direção leva a uma beirada com queda maior que a que o caminho aceita
+     * ({@link AStar#MAX_DIG_FALL}), ou para a lava. Vale também no ar: o bot chegava pulando na beirada e o
+     * embalo do pulo o levava para fora.
+     */
+    private boolean dropAhead(Vec3 dir) {
+        if (dir.horizontal().lengthSqr() < 1.0E-4) {
+            return false;
+        }
+        World w = bot.world();
+        // já no ar sobre o vão (pulando um buraco), parar só o faria cair nele
+        if (!bot.onGround() && isDrop(w, bot.blockPos())) {
+            return false;
+        }
+        return isDrop(w, bot.pos().add(dir.horizontal().normalize().scale(0.8)).toPos());
+    }
+
+    private static boolean isDrop(World w, Pos feet) {
+        if (WorldUtil.collides(w, feet)) {
+            return false;
+        }
+        for (int i = 1; i <= AStar.MAX_DIG_FALL + 1; i++) {
+            Pos p = feet.below(i);
+            if (WorldUtil.hasFluid(w, p)) {
+                return WorldUtil.isLava(w, p);
+            }
+            if (WorldUtil.collides(w, p)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void jumpForCritIfNeeded(LivingEntity target, double dist) {

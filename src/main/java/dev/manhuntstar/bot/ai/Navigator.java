@@ -24,6 +24,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 
 /**
@@ -37,6 +38,13 @@ public final class Navigator {
     private static final double NODE_REACH_SQ = 2.25;
     /** Raio para dar o nó por alcançado quando não dá para seguir reto até o próximo (curva em quina). */
     private static final double NODE_REACH_TIGHT_SQ = 0.36;
+    /** O nó seguido ficou mais que isso acima do bot (caiu, foi empurrado de uma beirada): recalcula. */
+    private static final double STRAY_BELOW = 3.0;
+    /** No chão, longe assim do nó seguido (de lado ou acima dele), o caminho não serve mais. */
+    private static final double STRAY_HORIZONTAL = 5.0;
+    private static final double STRAY_ABOVE = AStar.MAX_DIG_FALL + 2;
+    /** Até onde procurar, embaixo do bot no ar, o chão em que ele vai pousar. */
+    private static final int LANDING_SCAN = 64;
     private static final long STALE_MS = 2000L;
     private static final int LOOKAHEAD_TRIGGER = 25;
     private static final int MAX_DISTANCE = 150;
@@ -86,6 +94,8 @@ public final class Navigator {
     private int lastResolveDebugTick = -200;
     private CompletableFuture<PathResult> task;
     private boolean lookahead;
+    /** Fim de caminho de onde o trecho extra não rendeu nada: não é pedido de novo de lá. */
+    private Pos lookaheadDeadEnd;
     private final ArrayDeque<Pos> mineQueue = new ArrayDeque<>();
     private final ArrayDeque<Pos> placeQueue = new ArrayDeque<>();
     private boolean parkouring;
@@ -183,11 +193,17 @@ public final class Navigator {
             boolean targetMoved = lastTarget == null || lastTarget.manhattan(targetPos) > threshold;
             needsRecalc = stale || targetMoved;
         }
+        // Longe do caminho, o trecho extra pedido do fim dele não serve: recalcula de onde o bot está. Com um
+        // cálculo inteiro já em andamento, espera por ele.
+        if (current != null && (task == null || lookahead) && strayedFromPath()) {
+            needsRecalc = true;
+        }
         if (current != null && task == null && !current.complete() && !needsRecalc) {
             int total = current.path().size();
-            if (pathIndex >= total / 2 && total - pathIndex <= LOOKAHEAD_TRIGGER) {
+            Pos end = current.path().get(total - 1);
+            if (pathIndex >= total / 2 && total - pathIndex <= LOOKAHEAD_TRIGGER && !end.equals(lookaheadDeadEnd)) {
                 lookahead = true;
-                requestPath(current.path().get(total - 1), targetPos);
+                requestPath(end, targetPos);
             }
         }
         if (needsRecalc) {
@@ -287,6 +303,9 @@ public final class Navigator {
                 List<Pos> path = new ArrayList<>(current.path());
                 if (result.path().size() > 1) {
                     path.addAll(result.path().subList(1, result.path().size()));
+                } else {
+                    // do fim do caminho não sai nada (ponto no ar, beco): pedia de novo de lá a cada tick
+                    lookaheadDeadEnd = path.getLast();
                 }
                 Set<Pos> mine = new LinkedHashSet<>(current.toMine());
                 mine.addAll(result.toMine());
@@ -301,6 +320,8 @@ public final class Navigator {
         } else if (!lookahead) {
             current = null;
             pathIndex = 0;
+        } else if (current != null) {
+            lookaheadDeadEnd = current.path().getLast();
         }
         lookahead = false;
         task = null;
@@ -326,7 +347,10 @@ public final class Navigator {
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
         task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement, boatsAllowed());
         lastTarget = target;
-        lastCalcMs = System.currentTimeMillis();
+        // o trecho extra continua o caminho antigo: contar como cálculo novo impedia o caminho de ficar velho
+        if (!lookahead) {
+            lastCalcMs = System.currentTimeMillis();
+        }
     }
 
     private void cancelTask() {
@@ -345,6 +369,28 @@ public final class Navigator {
     }
 
     // ------------------------------------------------------------------ seguir os nós
+
+    /**
+     * O bot saiu de perto do nó que está seguindo (caiu de uma beirada, foi empurrado). Um nó bem acima dele
+     * nunca é alcançado: ele ficava pulando embaixo, olhando para cima.
+     */
+    private boolean strayedFromPath() {
+        if (current == null || pathIndex >= current.path().size() || parkouring || bot.isRiding()) {
+            return false;
+        }
+        Pos node = current.path().get(pathIndex);
+        Vec3 p = bot.pos();
+        double dy = p.y() - node.y();
+        if (dy < -STRAY_BELOW) {
+            return true;
+        }
+        // no ar (pulando, numa queda planejada) espera pousar
+        if (!bot.onGround()) {
+            return false;
+        }
+        double horizontal = Math.hypot(p.x() - (node.x() + 0.5), p.z() - (node.z() + 0.5));
+        return horizontal > STRAY_HORIZONTAL || dy > STRAY_ABOVE;
+    }
 
     private Vec3 advanceToNextNode(Vec3 finalTarget) {
         if (current == null || pathIndex >= current.path().size()) {
@@ -614,6 +660,7 @@ public final class Navigator {
         placeQueue.clear();
         parkouring = false;
         lookahead = false;
+        lookaheadDeadEnd = null;
         cancelTask();
         clearDebug();
     }
@@ -1222,7 +1269,21 @@ public final class Navigator {
         if (v instanceof AbstractHorse horse) {
             return Pos.of(horse.getLocation());
         }
-        return bot.blockPos();
+        Pos p = bot.blockPos();
+        Mannequin e = bot.entity();
+        if (e == null || bot.onGround() || bot.isInWater() || bot.isInLava() || e.isClimbing() || e.isGliding()) {
+            return p;
+        }
+        // No ar (pulando, caindo) o caminho sai de onde ele vai pousar. Saindo do ponto no ar o A* não acha
+        // apoio e devolve só aquele nó: o bot pousava e ficava embaixo dele, pulando e olhando para cima.
+        World w = world();
+        for (int i = 0; i < LANDING_SCAN && p.y() - i > w.getMinHeight(); i++) {
+            Pos feet = p.below(i);
+            if (WorldUtil.hasFluid(w, feet) || WorldUtil.collides(w, feet.below())) {
+                return feet;
+            }
+        }
+        return p;
     }
 
     // ------------------------------------------------------------------ debug
