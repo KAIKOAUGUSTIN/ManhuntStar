@@ -63,6 +63,8 @@ combate:
   tridente: true
   # Besta (fase 3+). [allowcrossbow]
   besta: true
+  # Lança a cavalo (fase 4+): montado, o bot carrega contra o alvo com a lança da fase, passa por ele, dá a volta e carrega de novo. A pé ele usa a espada. [allowspear]
+  lanca-a-cavalo: true
   # Multiplicador da imprecisão de flechas/tridente. [projaccuracy]
   imprecisao-projeteis: 1.0
   # Humanização (0 a 1): erros de mira, golpes perdidos e ritmo irregular. [humanize]

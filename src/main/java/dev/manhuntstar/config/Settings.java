@@ -63,6 +63,7 @@ public final class Settings {
     public final Setting.Enumerated<TargetMode> targetMode = choice("combate.modo-alvo", "targetmode", "Divisão dos alvos", Category.COMBATE, TargetMode.class, TargetMode.EQUAL_BOTS_PER_PLAYER);
     public final Setting.Bool allowTrident = bool("combate.tridente", "allowtrident", "Tridente", Category.COMBATE, true);
     public final Setting.Bool allowCrossbow = bool("combate.besta", "allowcrossbow", "Besta", Category.COMBATE, true);
+    public final Setting.Bool allowSpear = bool("combate.lanca-a-cavalo", "allowspear", "Lança a cavalo", Category.COMBATE, true);
     public final Setting.Dbl projInaccuracy = dbl("combate.imprecisao-projeteis", "projaccuracy", "Imprecisão de flechas e tridente", Category.COMBATE, 1.0, 0.0, 2.0, 0.1);
     public final Setting.Dbl humanize = dbl("combate.humanizacao", "humanize", "Humanização", Category.COMBATE, 0.0, 0.0, 1.0, 0.1);
     public final Setting.Dbl meleeMissChance = dbl("combate.chance-errar-golpe", "meleemisschance", "Chance de errar o golpe", Category.COMBATE, 0.12, 0.0, 0.6, 0.02);

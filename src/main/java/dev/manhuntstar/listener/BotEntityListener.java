@@ -8,6 +8,7 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.util.Vec3;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -101,6 +102,40 @@ public final class BotEntityListener implements Listener {
             return;
         }
         event.setDamage(event.getDamage() * bot.difficulty().damageTakenMultiplier());
+    }
+
+    /**
+     * Carga de lança de um bot a cavalo (dano do próprio jogo, ver HorseRoutine): não acerta aliados,
+     * respeita o PvP desligado e leva o multiplicador de ataque da dificuldade, como o golpe de espada.
+     */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onBotSpear(EntityDamageEvent event) {
+        DamageSource src = event.getDamageSource();
+        if (!src.getDamageType().equals(DamageType.SPEAR)) {
+            return;
+        }
+        Bot bot = manager().byEntity(src.getCausingEntity());
+        if (bot == null) {
+            return;
+        }
+        Entity victim = event.getEntity();
+        if (manager().isAlly(bot, victim) || (victim instanceof Player && settings().respectPvp.on()
+                && Boolean.FALSE.equals(victim.getWorld().getGameRuleValue(GameRules.PVP)))) {
+            event.setCancelled(true);
+            return;
+        }
+        event.setDamage(event.getDamage() * bot.difficulty().attackMultiplier());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBotSpearHit(EntityDamageEvent event) {
+        DamageSource src = event.getDamageSource();
+        if (src.getDamageType().equals(DamageType.SPEAR)) {
+            Bot bot = manager().byEntity(src.getCausingEntity());
+            if (bot != null) {
+                bot.brain().horse().onLanceHit();
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

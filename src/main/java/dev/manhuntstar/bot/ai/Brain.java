@@ -176,6 +176,7 @@ public final class Brain {
             nonHitBowRollCooldown--;
         }
         horse.tickCooldowns();
+        horse.tickLance();
         boat.tickCooldowns();
         mlg.tick(navigator);
         if (!bot.isAlive()) {

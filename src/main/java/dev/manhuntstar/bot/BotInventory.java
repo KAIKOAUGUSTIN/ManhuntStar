@@ -235,7 +235,10 @@ public final class BotInventory {
             persistedPickaxe = bestPick.clone();
         }
         ItemStack currentMain = bot.getItem(EquipmentSlot.HAND);
-        if (!bestSword.isEmpty() && (currentMain.isEmpty() || !GearScoring.isSword(currentMain) || GearScoring.isBetterSword(bestSword, currentMain))) {
+        // a cavalo o bot segura a lança da carga (HorseRoutine); a espada volta quando ele desce
+        boolean ridingWithSpear = bot.isRiding() && GearScoring.isSpear(currentMain);
+        if (!bestSword.isEmpty() && !ridingWithSpear
+                && (currentMain.isEmpty() || !GearScoring.isSword(currentMain) || GearScoring.isBetterSword(bestSword, currentMain))) {
             bot.setItem(EquipmentSlot.HAND, bestSword.clone());
         }
         for (EquipmentSlot s : ARMOR) {
@@ -367,8 +370,10 @@ public final class BotInventory {
                     }
                     continue;
                 }
-                // a elytra vestida é emprestada para o voo (opção "elytra"), não é do bot
-                if (from == null && !(slot == EquipmentSlot.CHEST && s.getType() == Material.ELYTRA)) {
+                // a elytra vestida é emprestada para o voo (opção "elytra") e a lança fora do inventário,
+                // para a carga a cavalo: não são do bot
+                if (from == null && !(slot == EquipmentSlot.CHEST && s.getType() == Material.ELYTRA)
+                        && !(slot == EquipmentSlot.HAND && GearScoring.isSpear(s))) {
                     drops.add(s.clone());
                 }
             }

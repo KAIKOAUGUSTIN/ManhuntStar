@@ -32,6 +32,10 @@ public final class GearScoring {
         return !isEmpty(s) && Tag.ITEMS_PICKAXES.isTagged(s.getType());
     }
 
+    public static boolean isSpear(ItemStack s) {
+        return !isEmpty(s) && Tag.ITEMS_SPEARS.isTagged(s.getType());
+    }
+
     public static boolean isAxe(ItemStack s) {
         return !isEmpty(s) && Tag.ITEMS_AXES.isTagged(s.getType());
     }

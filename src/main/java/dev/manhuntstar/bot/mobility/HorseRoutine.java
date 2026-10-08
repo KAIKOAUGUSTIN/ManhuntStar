@@ -1,11 +1,16 @@
 package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.bot.GearScoring;
+import dev.manhuntstar.bot.Progression;
 import dev.manhuntstar.bot.ai.Navigator;
 import dev.manhuntstar.util.Vec3;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.KineticWeapon;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -14,9 +19,12 @@ import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -25,6 +33,9 @@ import org.bukkit.util.Vector;
  * Cavalo (fase 4+): com o alvo a mais de 32 blocos, procura um cavalo adulto num raio de 40, monta,
  * doma (forçado depois de 3 s, como no mod), sela e cavalga até o alvo. Desce a 4 blocos do alvo e
  * só volta a montar depois de 60 s. Cavalo parado por 3 s fica marcado como inacessível por 30 s.
+ *
+ * <p>Com a lança a cavalo ligada ({@code combate.lanca-a-cavalo}) ele não desce: carrega contra o alvo
+ * com a lança da fase, passa por ele, segue reto, dá a volta e carrega de novo (ver {@link #joust}).
  *
  * <p>No jogo só um jogador comanda o cavalo. Com o bot montado, a IA do cavalo é desligada
  * ({@code setAware(false)}, ver {@code BotManager#takeHorseControl}) e o plugin aplica a entrada do
@@ -47,6 +58,19 @@ public final class HorseRoutine {
      */
     private static final double MAX_DETOUR = 16.0;
 
+    /** Ergue a lança quando faltam até (atraso da lança + isto) ticks para chegar ao alvo. */
+    private static final int LANCE_RAISE_MARGIN = 6;
+    /** Ticks seguindo reto depois de passar pelo alvo, para ganhar distância antes de voltar (~9 blocos a galope). */
+    private static final int LANCE_RUNOUT_TICKS = 14;
+    /** Passadas seguidas sem acertar antes de largar a lança e descer para lutar a pé. */
+    private static final int LANCE_MAX_MISSES = 3;
+    /** Lança erguida por mais que isso sem passar pelo alvo (ele fugiu de lado): abaixa e conta como erro. */
+    private static final int LANCE_MAX_RAISED_TICKS = 100;
+    /** Alvo mais alto ou mais baixo que isso (em cima de um pilar, num buraco): desce e luta a pé. */
+    private static final double LANCE_MAX_DY = 2.5;
+    /** Atraso da carga das lanças do jogo, caso o item não traga o componente. */
+    private static final int DEFAULT_LANCE_DELAY = 12;
+
     /** Só nos testes em servidor ({@code -Dmanhuntstar.teste.cavalo=true}): mais detalhes no /bot info. */
     private static final boolean TEST_DETAIL = Boolean.getBoolean("manhuntstar.teste.cavalo");
 
@@ -61,6 +85,16 @@ public final class HorseRoutine {
     private int untamedTicks;
     private Vector lastSetVelocity;
     private String detail = "";
+    /** Ticks com a lança erguida (0 = abaixada). */
+    private int lanceRaisedTicks;
+    private boolean lanceHit;
+    private int lanceMisses;
+    private int runoutTicks;
+    private double runoutX;
+    private double runoutZ;
+    private ItemStack lance = ItemStack.empty();
+    private int lancePhase = -1;
+    private int lanceDelay = DEFAULT_LANCE_DELAY;
 
     public HorseRoutine(Bot bot) {
         this.bot = bot;
@@ -83,6 +117,24 @@ public final class HorseRoutine {
         }
         if (jumpCooldown > 0) {
             jumpCooldown--;
+        }
+    }
+
+    /** A pé nada de lança: se o bot desceu (ou foi derrubado) do cavalo com ela na mão, volta para a espada. */
+    public void tickLance() {
+        if (!bot.isAlive() || bot.vehicle() instanceof Horse) {
+            return;
+        }
+        if (lanceRaisedTicks > 0 || runoutTicks > 0 || GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+            stowLance();
+            resetJoust();
+        }
+    }
+
+    /** A carga de lança deste bot acertou alguém (ver BotEntityListener). */
+    public void onLanceHit() {
+        if (lanceRaisedTicks > 0) {
+            lanceHit = true;
         }
     }
 
@@ -143,7 +195,8 @@ public final class HorseRoutine {
     }
 
     private boolean handleMounted(Horse horse, LivingEntity target) {
-        if (bot.distanceTo(target) <= DISMOUNT_DISTANCE) {
+        boolean lanceOn = useLance(horse, target);
+        if (!lanceOn && bot.distanceTo(target) <= DISMOUNT_DISTANCE) {
             dismount(horse);
             bot.blockHorseRidingForSeconds(60);
             resetTarget();
@@ -164,7 +217,12 @@ public final class HorseRoutine {
             actionCooldown = Math.max(actionCooldown, 10);
             return true;
         }
-        steer(horse, Vec3.of(target.getLocation()));
+        if (lanceOn) {
+            joust(horse, target);
+        } else {
+            stowLance();
+            steer(horse, Vec3.of(target.getLocation()), true);
+        }
         if (noMoveTicks >= 60) {
             bot.manager().markHorseInaccessible(horse, 600);
             dismount(horse);
@@ -225,6 +283,8 @@ public final class HorseRoutine {
         bot.motor().stopWalk();
         noMoveTicks = 0;
         lastSetVelocity = null;
+        stowLance();
+        resetJoust();
     }
 
     private void trySaddle(Horse horse) {
@@ -243,11 +303,14 @@ public final class HorseRoutine {
         }, 2L);
     }
 
-    /** Entrada do cavaleiro aplicada ao cavalo, como o jogo faz com um jogador montado. */
-    private void steer(Horse horse, Vec3 chaseTarget) {
+    /**
+     * Entrada do cavaleiro aplicada ao cavalo, como o jogo faz com um jogador montado. Sem
+     * {@code usePlanner} vai reto até o ponto (a corrida depois de passar pelo alvo na carga de lança).
+     */
+    private void steer(Horse horse, Vec3 chaseTarget, boolean usePlanner) {
         Navigator nav = bot.brain().navigator();
         Vec3 navTarget = chaseTarget;
-        if (bot.settings().pathMode.get().usesPlanner()) {
+        if (usePlanner && bot.settings().pathMode.get().usesPlanner()) {
             Vec3 wp = nav.waypoint(chaseTarget);
             if (wp != null) {
                 navTarget = wp;
@@ -330,6 +393,141 @@ public final class HorseRoutine {
         }
         horse.setVelocity(v);
         lastSetVelocity = v.clone();
+    }
+
+    // ------------------------------------------------------------------ lança a cavalo
+
+    /** Carga só com a opção ligada, alvo no nível do cavalo e PvP permitido (com "respeitar PvP"). */
+    private boolean useLance(Horse horse, LivingEntity target) {
+        if (!bot.settings().allowSpear.on() || lanceMisses >= LANCE_MAX_MISSES
+                || Math.abs(target.getY() - horse.getY()) > LANCE_MAX_DY) {
+            return false;
+        }
+        return !(target instanceof Player && bot.settings().respectPvp.on()
+                && Boolean.FALSE.equals(target.getWorld().getGameRuleValue(GameRules.PVP)));
+    }
+
+    /**
+     * Justa: segura a lança da fase e a ergue quando falta pouco para chegar ao alvo (a carga do jogo só
+     * vale depois do atraso da lança). Depois de acertar ou de passar por ele, segue reto para ganhar
+     * distância, dá a volta e carrega de novo. Dano, empurrão e derrubada da montaria são os da lança
+     * do jogo, que usa a velocidade do cavalo.
+     */
+    private void joust(Horse horse, LivingEntity target) {
+        holdLance();
+        Location hl = horse.getLocation();
+        if (runoutTicks > 0) {
+            runoutTicks--;
+            steer(horse, new Vec3(runoutX, hl.getY(), runoutZ), false);
+            if (noMoveTicks > 5) {
+                runoutTicks = 0; // parede à frente: volta já
+            }
+            detail += ", passando";
+            return;
+        }
+        Vec3 tp = Vec3.of(target.getLocation());
+        steer(horse, tp, true);
+        double yawRad = Math.toRadians(hl.getYaw());
+        double fx = -Math.sin(yawRad);
+        double fz = Math.cos(yawRad);
+        double dx = tp.x() - hl.getX();
+        double dz = tp.z() - hl.getZ();
+        double dist = Math.hypot(dx, dz);
+        double facing = dist < 1.0E-3 ? 1.0 : (dx * fx + dz * fz) / dist;
+        if (lanceRaisedTicks > 0) {
+            lanceRaisedTicks++;
+            bot.lookAt(tp.add(0, target.getHeight() * 0.5, 0));
+            detail += ", lança erguida";
+            if (lanceHit || (facing < 0 && dist < 5.0)) {
+                endPass(hl, fx, fz);
+            } else if (lanceRaisedTicks > LANCE_MAX_RAISED_TICKS) {
+                lowerLance();
+                lanceMisses++;
+            } else if (!bot.entity().hasActiveItem()) {
+                raiseLance(); // o uso foi interrompido (cavou, trocou de item): ergue de novo
+            }
+            return;
+        }
+        Vector v = horse.getVelocity();
+        double speed = Math.max(Math.hypot(v.getX(), v.getZ()), 0.05);
+        if (facing > 0.8 && dist / speed <= lanceDelay + LANCE_RAISE_MARGIN) {
+            raiseLance();
+        }
+    }
+
+    /** Fim de uma passada: abaixa a lança e segue reto ~12 blocos antes de voltar. */
+    private void endPass(Location hl, double fx, double fz) {
+        lanceMisses = lanceHit ? 0 : lanceMisses + 1;
+        lanceHit = false;
+        lowerLance();
+        runoutX = hl.getX() + fx * 12;
+        runoutZ = hl.getZ() + fz * 12;
+        runoutTicks = LANCE_RUNOUT_TICKS;
+    }
+
+    private void raiseLance() {
+        Mannequin me = bot.entity();
+        if (me == null || !GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+            return;
+        }
+        if (me.getAttribute(Attribute.ATTACK_DAMAGE) == null) {
+            // a carga do jogo lê o dano de ataque de quem segura a lança e o Mannequin não tem esse
+            // atributo: sem ele o jogo lança um erro e o servidor remove o cavalo
+            me.registerAttribute(Attribute.ATTACK_DAMAGE);
+            me.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
+        }
+        me.startUsingItem(EquipmentSlot.HAND);
+        lanceRaisedTicks = Math.max(lanceRaisedTicks, 1);
+    }
+
+    private void lowerLance() {
+        Mannequin me = bot.entity();
+        if (me != null && me.hasActiveItem() && GearScoring.isSpear(me.getActiveItem())) {
+            me.clearActiveItem();
+        }
+        lanceRaisedTicks = 0;
+    }
+
+    /** Abaixa a lança e volta para a espada. */
+    private void stowLance() {
+        lowerLance();
+        if (GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+            bot.inventory().restorePreferredMainHand();
+        }
+    }
+
+    private void resetJoust() {
+        lanceRaisedTicks = 0;
+        lanceHit = false;
+        lanceMisses = 0;
+        runoutTicks = 0;
+    }
+
+    private void holdLance() {
+        if (bot.mining().isMining() || bot.survival().isEating()) {
+            return;
+        }
+        ItemStack l = lanceForPhase();
+        if (!l.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
+            bot.setItem(EquipmentSlot.HAND, l.clone());
+        }
+    }
+
+    /** Lança do nível da espada da fase: pedra (4), ferro (5-6), diamante (7-10, Afiação II a partir da 8), netherite (final). */
+    private ItemStack lanceForPhase() {
+        int phase = bot.progression().phase();
+        if (phase != lancePhase) {
+            Material m = phase >= Progression.FINAL_PHASE ? Material.NETHERITE_SPEAR
+                    : phase >= 7 ? Material.DIAMOND_SPEAR : phase >= 5 ? Material.IRON_SPEAR : Material.STONE_SPEAR;
+            lance = new ItemStack(m);
+            if (phase >= 8) {
+                lance.addUnsafeEnchantment(Enchantment.SHARPNESS, 2);
+            }
+            KineticWeapon kw = lance.getData(DataComponentTypes.KINETIC_WEAPON);
+            lanceDelay = kw == null ? DEFAULT_LANCE_DELAY : kw.delayTicks();
+            lancePhase = phase;
+        }
+        return lance;
     }
 
     /**

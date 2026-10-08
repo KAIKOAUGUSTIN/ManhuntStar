@@ -4,8 +4,8 @@ Bots caçadores de **ManHunt** para servidores **Paper 26.2** (e 26.3 beta).
 
 Os bots são entidades **Mannequin** (o "boneco com skin de jogador" do jogo) controladas pelo plugin
 para agir como jogadores: correm, pulam, nadam, cavam, constroem torres e pontes, lutam com recarga de
-arma, críticos e escudo, comem, sobem de fase, usam pérolas, besta, tridente, balde de lava, cavalo, barco
-e elytra, e seguem o jogador para o Nether e o End.
+arma, críticos e escudo, comem, sobem de fase, usam pérolas, besta, tridente, balde de lava, cavalo (com carga
+de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
@@ -78,6 +78,10 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
   antecipam o alvo pelo tempo de voo.
 - **Cavalo**: no jogo só um jogador comanda o cavalo; com o bot montado, a IA do cavalo é desligada enquanto ele
   cavalga (o cavalo vira para onde o bot olha, galopa, pula obstáculos e vãos, boia na água) e religada quando ele desce.
+- **Lança a cavalo**: montado, o bot segura a lança do nível da fase e faz a carga do jogo contra o alvo (o dano vem
+  da velocidade do cavalo e a galope derruba quem estiver montado). Ele passa pelo alvo, segue reto, dá a volta e
+  carrega de novo; depois de 3 passadas sem acertar, desce e luta com a espada. A pé não usa lança
+  (`combate.lanca-a-cavalo`).
 - **Barco no caminho**: o A* compara atravessar um lago de barco com dar a volta a pé. Quando a travessia
   compensa, o bot coloca um barco na beira, rema até a outra margem e quebra o barco ao descer
   (`mobilidade.barcos`).
