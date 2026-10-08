@@ -206,9 +206,9 @@ public final class AStar {
             cost += head;
         }
         boolean swimming = feet == CostProvider.WATER || head == CostProvider.WATER;
-        if (swimming && allowBoat && feet == CostProvider.WATER && head == CostProvider.AIR && boatFits(x, y, z)) {
+        if (swimming && allowBoat && isBoatNode(x, y, z)) {
             cost = baseCost * BOAT_FACTOR;
-            if (costs.cost(nx[cur], ny[cur], nz[cur]) != CostProvider.WATER) {
+            if (!isBoatNode(nx[cur], ny[cur], nz[cur])) {
                 cost += BOAT_BOARD_COST;
             }
         } else if (swimming) {
@@ -232,15 +232,22 @@ public final class AStar {
         submit(cur, x, y, z, cost);
     }
 
-    /** O barco tem 1,4 bloco de largura e não passa num canal de 1 bloco: a água precisa continuar para os lados. */
+    /** Superfície da água onde o barco cabe (pés na água, cabeça no ar). */
+    private boolean isBoatNode(int x, int y, int z) {
+        return costs.cost(x, y, z) == CostProvider.WATER && costs.cost(x, y + 1, z) == CostProvider.AIR && boatFits(x, y, z);
+    }
+
+    /**
+     * O barco tem 1,4 bloco de largura: centrado num bloco, ele entra uns 0,2 bloco nos quatro vizinhos.
+     * Se um deles for a margem, o casco raspa na terra e o barco quase para.
+     */
     private boolean boatFits(int x, int y, int z) {
-        int water = 0;
         for (int[] d : CARDINALS) {
-            if (costs.cost(x + d[0], y, z + d[1]) == CostProvider.WATER) {
-                water++;
+            if (costs.cost(x + d[0], y, z + d[1]) != CostProvider.WATER) {
+                return false;
             }
         }
-        return water >= 3;
+        return true;
     }
 
     private void submit(int cur, int x, int y, int z, double moveCost) {

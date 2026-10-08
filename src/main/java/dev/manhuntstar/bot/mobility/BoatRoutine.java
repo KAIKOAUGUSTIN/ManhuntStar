@@ -43,6 +43,9 @@ public final class BoatRoutine {
     private static final int CROSSING_REQUEST_TTL = 5;
     /** Depois de uma travessia que falhou, o A* fica esse tempo sem planejar barco (30 s). */
     private static final int CROSSING_FAIL_BLOCK_TICKS = 600;
+    /** Custo extra por passo em água encostada na margem: o casco raspa na terra e o barco quase para. */
+    private static final double SHORE_PENALTY = 3.0;
+    private static final int[][] CARDINALS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     private final Bot bot;
     private UUID riderBoat;
@@ -419,6 +422,7 @@ public final class BoatRoutine {
     private List<Pos> computeSurfacePath(Pos start, Pos goal) {
         PriorityQueue<Node> open = new PriorityQueue<>((a, b) -> Double.compare(a.f, b.f));
         Map<Long, Double> bestG = new HashMap<>();
+        Map<Long, Boolean> shore = new HashMap<>();
         Set<Long> closed = new HashSet<>();
         Node startNode = new Node(start, 0, heuristic(start, goal), null);
         open.add(startNode);
@@ -444,6 +448,9 @@ public final class BoatRoutine {
                     continue;
                 }
                 double step = (d[0] != 0 && d[1] != 0 ? 1.414 : 1.0) + Math.abs(n.y() - cur.pos.y()) * 0.2;
+                if (touchesShore(n, shore)) {
+                    step += SHORE_PENALTY;
+                }
                 double ng = cur.g + step;
                 Double known = bestG.get(n.asLong());
                 if (known != null && known <= ng) {
@@ -454,6 +461,25 @@ public final class BoatRoutine {
             }
         }
         return best == startNode ? Collections.emptyList() : reconstruct(best);
+    }
+
+    /** Algum dos quatro vizinhos não é água (chunk descarregado não conta). */
+    private boolean touchesShore(Pos p, Map<Long, Boolean> cache) {
+        Boolean known = cache.get(p.asLong());
+        if (known != null) {
+            return known;
+        }
+        World w = bot.world();
+        boolean result = false;
+        for (int[] d : CARDINALS) {
+            Pos side = p.offset(d[0], 0, d[1]);
+            if (WorldUtil.isLoaded(w, side) && !WorldUtil.isWater(w, side)) {
+                result = true;
+                break;
+            }
+        }
+        cache.put(p.asLong(), result);
+        return result;
     }
 
     private static List<Pos> reconstruct(Node tail) {

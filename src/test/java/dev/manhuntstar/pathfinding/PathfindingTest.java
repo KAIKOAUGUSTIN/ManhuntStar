@@ -160,6 +160,16 @@ class PathfindingTest {
     }
 
     @Test
+    void boatKeepsOffTheShore() {
+        Grid g = new Grid(20);
+        // já de barco ao lado da margem (z = 0 é a última fileira de água), alvo em terra lá na frente
+        lake(g, -5, 30, 0, 12);
+        PathResult r = find(g, new Pos(2, 63, 1), new Pos(28, 64, -2), false, true);
+        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.path().stream().filter(p -> p.y() == 63 && p.z() == 0).count() <= 2, () -> "rente à margem " + r.path());
+    }
+
+    @Test
     void walksAroundSmallPondEvenWithBoat() {
         Grid g = new Grid(20);
         lake(g, 5, 8, -2, 2);
