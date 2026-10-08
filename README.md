@@ -9,7 +9,7 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
-1. Coloque `ManhuntStar-1.3.0.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
+1. Coloque `ManhuntStar-1.4.0.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
 3. Entre como operador e use `/bot create Cacador 3` perto de você, ou abra `/bot menu`.
 
@@ -109,7 +109,7 @@ Precisa do JDK 25.
 ./gradlew build
 ```
 
-O jar sai em `build/libs/ManhuntStar-1.3.0.jar`. O `build` também roda os testes e compila o código contra a
+O jar sai em `build/libs/ManhuntStar-1.4.0.jar`. O `build` também roda os testes e compila o código contra a
 API do Paper 26.3 (`compileAgainst263`) para avisar de quebras de compatibilidade.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou
