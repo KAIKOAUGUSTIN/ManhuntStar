@@ -76,8 +76,9 @@ public final class Progression {
         if (phase >= 10 && difficulty != BotDifficulty.TERMINATOR) {
             return;
         }
-        // o relógio das fases só anda durante a caçada: na roda, na contagem ou com o jogador morto, não
-        if (bot.idle() != null || livingTarget() == null) {
+        // o relógio das fases só anda durante a caçada: na roda, na contagem ou sem jogador caçável
+        // (morto, desconectado ou em espectador), não
+        if (bot.idle() != null || huntedPlayer() == null) {
             return;
         }
         // a passagem 10 → 12 do Terminator também respeita o multiplicador de duração das fases
@@ -123,17 +124,18 @@ public final class Progression {
         }
     }
 
-    /** O jogador que o bot caça (ou o mais próximo, se o alvo sumiu), se estiver vivo. */
-    private Player livingTarget() {
+    /** O jogador que o bot caça (ou o mais próximo, se o alvo sumiu), se ainda puder ser caçado. */
+    private Player huntedPlayer() {
+        BotManager manager = bot.manager();
         Player p = bot.target();
-        if (p == null || !p.isValid() || p.isDead()) {
+        if (!manager.isEligibleTarget(p)) {
             p = bot.fallbackTarget();
         }
-        return p == null || p.isDead() ? null : p;
+        return manager.isEligibleTarget(p) ? p : null;
     }
 
     private void applyPlayerTriggeredBoost() {
-        Player p = livingTarget();
+        Player p = huntedPlayer();
         if (p == null) {
             return;
         }
