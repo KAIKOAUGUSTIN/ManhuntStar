@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -31,7 +32,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Salva e lê os bots e grupos em {@code bots.yml}. O texto é montado na thread principal e gravado
+ * Salva e lê os bots, grupos, rodas e a caçada em andamento em {@code bots.yml}. O texto é montado na thread principal e gravado
  * numa thread separada, num arquivo temporário trocado de uma vez (não corrompe se o servidor cair).
  */
 public final class BotStorage {
@@ -45,7 +46,8 @@ public final class BotStorage {
     });
     private String lastWritten;
 
-    public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups) {
+    /** @param manhunt rodas e caçada em andamento (null se não houver) */
+    public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigurationSection manhunt) {
     }
 
     public BotStorage(File dataFolder, Logger logger) {
@@ -53,9 +55,13 @@ public final class BotStorage {
         this.logger = logger;
     }
 
-    public void save(List<BotSnapshot> bots, List<BotGroup> groups, boolean async) {
+    /** @param manhunt escreve as rodas e a caçada na seção "manhunt" (null = não salva) */
+    public void save(List<BotSnapshot> bots, List<BotGroup> groups, Consumer<ConfigurationSection> manhunt, boolean async) {
         YamlConfiguration y = new YamlConfiguration();
         y.set("versao", 1);
+        if (manhunt != null) {
+            manhunt.accept(y.createSection("manhunt"));
+        }
         for (BotGroup g : groups) {
             ConfigurationSection s = y.createSection("grupos." + key(g.name()));
             s.set("nome", g.name());
@@ -155,7 +161,7 @@ public final class BotStorage {
         List<BotSnapshot> bots = new ArrayList<>();
         List<BotGroup> groups = new ArrayList<>();
         if (!file.exists()) {
-            return new LoadResult(bots, groups);
+            return new LoadResult(bots, groups, null);
         }
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection gs = y.getConfigurationSection("grupos");
@@ -206,7 +212,7 @@ public final class BotStorage {
                 }
             }
         }
-        return new LoadResult(bots, groups);
+        return new LoadResult(bots, groups, y.getConfigurationSection("manhunt"));
     }
 
     private static BotSnapshot readBot(UUID id, ConfigurationSection s) {

@@ -7,6 +7,8 @@ import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.GlowColor;
+import dev.manhuntstar.bot.Modes.PlayerListMode;
+import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
@@ -28,6 +30,7 @@ import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSele
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
@@ -89,6 +92,24 @@ public final class BotCommand {
         if (text.toLowerCase(Locale.ROOT).startsWith(b.getRemaining().toLowerCase(Locale.ROOT))) {
             b.suggest(text);
         }
+    }
+
+    private static SuggestionProvider<CommandSourceStack> onlinePlayerNames() {
+        return (ctx, b) -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                suggestName(b, p.getName());
+            }
+            return b.buildFuture();
+        };
+    }
+
+    private SuggestionProvider<CommandSourceStack> listedPlayerNames() {
+        return (ctx, b) -> {
+            for (String n : settings().playerList()) {
+                suggestName(b, n);
+            }
+            return b.buildFuture();
+        };
     }
 
     private static SuggestionProvider<CommandSourceStack> words(String... options) {
@@ -208,19 +229,26 @@ public final class BotCommand {
                     return Command.SINGLE_SUCCESS;
                 })));
         root.then(Commands.literal("start").executes(ctx -> {
-            if (manager().countdown().finishNow()) {
-                return Command.SINGLE_SUCCESS;
+            if (manager().rings().releaseAll() == 0) {
+                msg().send(sender(ctx), "contagem.nada");
             }
-            int released = 0;
-            for (Bot b : manager().aliveBots()) {
-                if (b.idle() != null && b.idle().isActive()) {
-                    b.idle().release();
-                    released++;
-                }
-            }
-            msg().send(sender(ctx), released > 0 ? "contagem.liberados" : "contagem.nada", Messages.p("quantidade", released));
             return Command.SINGLE_SUCCESS;
         }));
+        root.then(Commands.literal("roda").executes(this::ringInfo)
+                .then(Commands.literal("ponto")
+                        .executes(ctx -> sender(ctx) instanceof Entity ? ringPoint(ctx, ctx.getSource().getLocation()) : noLocation(ctx))
+                        .then(Commands.literal("limpar").executes(ctx -> ringPoint(ctx, null)))
+                        .then(Commands.argument("x", DoubleArgumentType.doubleArg()).then(Commands.argument("y", DoubleArgumentType.doubleArg())
+                                .then(Commands.argument("z", DoubleArgumentType.doubleArg()).executes(ctx -> ringPoint(ctx,
+                                        new Location(ctx.getSource().getLocation().getWorld(), DoubleArgumentType.getDouble(ctx, "x"),
+                                                DoubleArgumentType.getDouble(ctx, "y"), DoubleArgumentType.getDouble(ctx, "z")))))))));
+        root.then(Commands.literal("lista").executes(this::playerListInfo)
+                .then(Commands.literal("add").then(Commands.argument("jogador", StringArgumentType.word()).suggests(onlinePlayerNames())
+                        .executes(ctx -> playerListEdit(ctx, true))))
+                .then(Commands.literal("remove").then(Commands.argument("jogador", StringArgumentType.word()).suggests(listedPlayerNames())
+                        .executes(ctx -> playerListEdit(ctx, false))))
+                .then(Commands.literal("modo").then(Commands.argument("modo", StringArgumentType.word())
+                        .suggests(words("desligada", "permitidos", "bloqueados")).executes(this::playerListMode))));
         root.then(Commands.literal("menu").executes(ctx -> {
             if (!(sender(ctx) instanceof Player p)) {
                 msg().send(sender(ctx), "comando.apenas-jogador");
@@ -256,8 +284,12 @@ public final class BotCommand {
         return Command.SINGLE_SUCCESS;
     }
 
+    /** Cria onde quem digitou está, ou no ponto da roda se o centro da roda estiver em manual. */
     private int create(CommandContext<CommandSourceStack> ctx, int amount, String diffRaw, String skin, int phase, int aggression) {
-        return spawn(ctx, ctx.getSource().getLocation(), amount, diffRaw, skin, phase, aggression);
+        if (manager().manualRingPointMissing()) {
+            msg().send(sender(ctx), "roda.sem-ponto");
+        }
+        return spawn(ctx, manager().ringCenterFor(ctx.getSource().getLocation()), amount, diffRaw, skin, phase, aggression);
     }
 
     private int spawnAt(CommandContext<CommandSourceStack> ctx, int phase, int aggression) {
@@ -642,6 +674,9 @@ public final class BotCommand {
             msg().send(sender(ctx), "opcoes.desconhecida", Messages.p("chave", k));
             return 0;
         }
+        if (s == settings().ringRadius && (v.equalsIgnoreCase("auto") || v.equalsIgnoreCase("automatico") || v.equalsIgnoreCase("automático"))) {
+            v = "0";
+        }
         if (s == settings().glowHunters || s == settings().glowEscapers) {
             String[] parts = v.split("\\s+", 2);
             v = parts[0];
@@ -671,6 +706,75 @@ public final class BotCommand {
         }
         plugin.onSettingChanged(s);
         msg().send(sender(ctx), "opcoes.alterada", Messages.p("chave", s.key()), Messages.p("valor", s.display()));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    // ------------------------------------------------------------------ roda e lista de jogadores
+
+    private int ringInfo(CommandContext<CommandSourceStack> ctx) {
+        Settings.RingPoint pt = settings().ringPoint();
+        msg().send(sender(ctx), "roda.info",
+                Messages.p("raio", settings().ringRadius.value() <= 0 ? "automático" : settings().ringRadius.display()),
+                Messages.p("centro", settings().ringCenter.display()),
+                Messages.p("ponto", pt == null ? "nenhum" : String.format(Locale.ROOT, "%.1f %.1f %.1f (%s)", pt.x(), pt.y(), pt.z(), pt.world())),
+                Messages.p("rodas", manager().rings().count()));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    /** Marca o ponto da roda (e passa o centro para manual) ou apaga o ponto (volta ao automático). */
+    private int ringPoint(CommandContext<CommandSourceStack> ctx, Location loc) {
+        if (loc == null) {
+            settings().setRingPoint(null);
+            settings().ringCenter.set(RingCenter.AUTOMATICO);
+            plugin.onSettingChanged(settings().ringCenter);
+            msg().send(sender(ctx), "roda.ponto-limpo");
+            return Command.SINGLE_SUCCESS;
+        }
+        if (loc.getWorld() == null) {
+            return noLocation(ctx);
+        }
+        settings().setRingPoint(new Settings.RingPoint(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ()));
+        settings().ringCenter.set(RingCenter.MANUAL);
+        plugin.onSettingChanged(settings().ringCenter);
+        msg().send(sender(ctx), "roda.ponto-marcado", Messages.p("mundo", loc.getWorld().getName()),
+                Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int noLocation(CommandContext<CommandSourceStack> ctx) {
+        msg().send(sender(ctx), "comando.sem-local");
+        return 0;
+    }
+
+    private int playerListInfo(CommandContext<CommandSourceStack> ctx) {
+        List<String> names = settings().playerList();
+        msg().send(sender(ctx), "lista.info", Messages.p("modo", settings().playerListMode.display()),
+                Messages.p("nomes", names.isEmpty() ? msg().raw("lista.vazia") : String.join(", ", names)));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int playerListEdit(CommandContext<CommandSourceStack> ctx, boolean add) {
+        String name = StringArgumentType.getString(ctx, "jogador");
+        boolean changed = add ? settings().addListedPlayer(name) : settings().removeListedPlayer(name);
+        if (!changed) {
+            msg().send(sender(ctx), add ? "lista.ja-esta" : "lista.nao-esta", Messages.p("jogador", name));
+            return 0;
+        }
+        plugin.saveSettings();
+        msg().send(sender(ctx), add ? "lista.adicionado" : "lista.removido", Messages.p("jogador", name));
+        if (settings().playerListMode.get() == PlayerListMode.DESLIGADA) {
+            msg().send(sender(ctx), "lista.aviso-desligada");
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private int playerListMode(CommandContext<CommandSourceStack> ctx) {
+        if (applySilently(ctx, settings().playerListMode, StringArgumentType.getString(ctx, "modo")) == 0) {
+            return 0;
+        }
+        plugin.onSettingChanged(settings().playerListMode);
+        String mode = settings().playerListMode.display();
+        msg().send(sender(ctx), "lista.modo", Messages.p("modo", mode), Messages.p("explicacao", msg().raw("lista.explicacao." + mode)));
         return Command.SINGLE_SUCCESS;
     }
 }

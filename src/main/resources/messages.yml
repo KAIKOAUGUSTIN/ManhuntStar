@@ -10,7 +10,9 @@ ajuda: |-
   <yellow>/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]</yellow> <gray>— cria bots aqui</gray>
   <yellow>/bot create <nome> <qtd> <dificuldade> skin <jogador> [fase] [agr]</yellow> <gray>— com skin de outro jogador</gray>
   <yellow>/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]</yellow> <gray>— cria em coordenadas</gray>
-  <yellow>/bot start</yellow> <gray>— começa a caçada agora (pula a contagem)</gray>
+  <yellow>/bot start</yellow> <gray>— começa a caçada agora (solta as rodas e pula a contagem)</gray>
+  <yellow>/bot roda [ponto [x y z] | ponto limpar]</yellow> <gray>— ponto fixo da roda</gray>
+  <yellow>/bot lista [add|remove <jogador> | modo desligada|permitidos|bloqueados]</yellow> <gray>— quem é caçado</gray>
   <yellow>/bot menu</yellow> <gray>— menu com tudo</gray>
   <yellow>/bot list · info · remove · tp · tpall · target · cleartarget</yellow>
   <yellow>/bot settings <chave> <valor></yellow> <gray>— opções (sem argumentos mostra todas)</gray>
@@ -42,10 +44,13 @@ fase:
     "11": "<gray>Os bots ficaram mais fortes.</gray>"
     "12": "<dark_red>Fase final (só Terminator): armadura de netherite e espada de netherite com Repulsão.</dark_red>"
 
-# --- contagem antes da caçada ---
+# --- roda e contagem antes da caçada ---
 contagem:
-  esperando: "<gold>Os caçadores estão na roda.</gold> <gray>Quando</gray> <yellow><jogador></yellow> <gray>sair dela, começa a contagem de</gray> <yellow><segundos></yellow> <gray>segundos. Use /bot start para começar já.</gray>"
+  roda-criada: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, começa a contagem de</gray> <yellow><segundos></yellow> <gray>segundos. Use /bot start para começar já.</gray>"
+  roda-criada-sem-contagem: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, a caçada começa. Use /bot start para começar já.</gray>"
   barra-esperando: "<yellow>Saia da roda para começar</yellow> <gray>(<segundos>s de vantagem)</gray>"
+  barra-esperando-sem-contagem: "<yellow>Saia da roda para começar a caçada</yellow>"
+  saiu: "<yellow><jogador></yellow> <gold>saiu da roda!</gold>"
   saiu-e-contando: "<yellow><jogador></yellow> <gold>saiu da roda! A caçada começa em</gold> <yellow><segundos></yellow> <gold>segundos.</gold>"
   iniciada: "<gold>A caçada começa em <yellow><segundos></yellow> segundos!</gold> <gray>Use /bot start para começar já.</gray>"
   barra: "<red>A caçada começa em</red> <yellow><segundos>s</yellow>"
@@ -54,8 +59,38 @@ contagem:
   comecou-titulo: "<dark_red><bold>A caçada começou!</bold></dark_red>"
   comecou-subtitulo: "<gray>Corra.</gray>"
   comecou: "<dark_red>A caçada começou!</dark_red>"
-  liberados: "<green><quantidade> bot(s) soltos da roda.</green>"
-  nada: "<gray>Não há contagem nem bots esperando na roda.</gray>"
+  nada: "<gray>Não há bots esperando na roda.</gray>"
+
+roda:
+  info: |-
+    <gold>Roda</gold> <gray>· raio</gray> <white><raio></white> <gray>· centro</gray> <white><centro></white> <gray>· ponto</gray> <white><ponto></white>
+    <gray>Rodas esperando agora:</gray> <white><rodas></white> <gray>(raio: /bot settings ringradius, em blocos ou auto)</gray>
+  ponto-marcado: "<green>Ponto da roda marcado em <white><pos></white> (<white><mundo></white>). As próximas rodas nascem aqui (centro da roda: manual).</green>"
+  ponto-limpo: "<green>Ponto da roda apagado. As rodas voltam a nascer onde são criadas (centro da roda: automático).</green>"
+  sem-ponto: "<yellow>O centro da roda está em manual, mas não há ponto marcado (ou o mundo dele não está carregado): a roda fica onde você está. Marque com /bot roda ponto.</yellow>"
+
+# --- quem é caçado: lista de jogadores e quem entra no meio ---
+lista:
+  info: "<gold>Lista de jogadores</gold> <gray>(<modo>):</gray> <white><nomes></white>"
+  vazia: "ninguém"
+  adicionado: "<green><white><jogador></white> entrou na lista.</green>"
+  ja-esta: "<yellow><white><jogador></white> já está na lista.</yellow>"
+  removido: "<green><white><jogador></white> saiu da lista.</green>"
+  nao-esta: "<yellow><white><jogador></white> não está na lista.</yellow>"
+  aviso-desligada: "<gray>A lista está desligada: use /bot lista modo permitidos ou bloqueados para ela valer.</gray>"
+  modo: "<green>Lista de jogadores: <yellow><modo></yellow>.</green> <gray><explicacao></gray>"
+  explicacao:
+    desligada: "Todos podem ser caçados e disparar a roda."
+    permitidos: "Só os da lista são caçados e disparam a roda."
+    bloqueados: "Os da lista não são caçados nem disparam a roda."
+
+cacada:
+  entrou-cacado: "<red>A caçada está em andamento: você já é um alvo!</red>"
+  entrou-protegido: "<gold>A caçada está em andamento.</gold> <gray>Você fica</gray> <yellow><segundos></yellow> <gray>segundos protegido dos caçadores.</gray>"
+  entrou-fora: "<gray>A caçada está em andamento. Você não será caçado até a próxima.</gray>"
+  protecao-barra: "<green>Protegido dos caçadores:</green> <yellow><segundos>s</yellow>"
+  protecao-acabou-barra: "<red>Sua proteção acabou!</red>"
+  protecao-acabou: "<red>Sua proteção acabou: os caçadores agora vêm atrás de você!</red>"
 
 # --- comandos ---
 comando:

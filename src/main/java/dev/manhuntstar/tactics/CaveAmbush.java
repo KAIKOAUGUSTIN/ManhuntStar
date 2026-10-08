@@ -62,7 +62,8 @@ public final class CaveAmbush {
             return;
         }
         cleanupInvalid();
-        if (!manager.plugin().settings().caveAmbush.on() || manager.countdown().isActive()) {
+        // bots da roda ficam de fora em tryStartOne; os que já caçam seguem emboscando
+        if (!manager.plugin().settings().caveAmbush.on()) {
             return;
         }
         long now = Bukkit.getCurrentTick();

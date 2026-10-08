@@ -8,7 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.bot.Modes.LateJoin;
 import dev.manhuntstar.bot.Modes.PearlDimension;
+import dev.manhuntstar.bot.Modes.PlayerListMode;
+import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -44,7 +47,44 @@ class SettingsTest {
         assertSame(s.startCountdown, s.byKey("starttime"));
         assertSame(s.glowHunters, s.byKey("glowing"));
         assertSame(s.countdownOnLeave, s.byKey("countdownonleave"));
+        assertSame(s.ringRadius, s.byKey("ringradius"));
+        assertSame(s.ringCenter, s.byKey("ringcenter"));
+        assertSame(s.lateJoin, s.byKey("latejoin"));
+        assertSame(s.playerListMode, s.byKey("listmode"));
         assertNotNull(s.byKey("allowhorseriding"));
+    }
+
+    @Test
+    void ringAndHuntDefaults() {
+        Settings s = new Settings();
+        assertEquals(0.0, s.ringRadius.value());
+        assertSame(RingCenter.AUTOMATICO, s.ringCenter.get());
+        assertSame(LateJoin.PROTEGIDO, s.lateJoin.get());
+        assertSame(PlayerListMode.DESLIGADA, s.playerListMode.get());
+        s.lateJoin.setFromText("caçado");
+        assertSame(LateJoin.CACADO, s.lateJoin.get());
+        s.playerListMode.setFromText("blacklist");
+        assertSame(PlayerListMode.BLOQUEADOS, s.playerListMode.get());
+        s.ringRadius.setFromText("200");
+        assertEquals(64.0, s.ringRadius.value());
+    }
+
+    /** Permitidos: só os da lista; bloqueados: todos menos os da lista; nomes sem diferenciar maiúsculas. */
+    @Test
+    void playerListAllowsAndBlocks() {
+        Settings s = new Settings();
+        assertTrue(s.addListedPlayer("Steve"));
+        assertFalse(s.addListedPlayer("steve"));
+        assertTrue(s.listAllows("Alex"));
+        s.playerListMode.set(PlayerListMode.PERMITIDOS);
+        assertTrue(s.listAllows("STEVE"));
+        assertFalse(s.listAllows("Alex"));
+        s.playerListMode.set(PlayerListMode.BLOQUEADOS);
+        assertFalse(s.listAllows("steve"));
+        assertTrue(s.listAllows("Alex"));
+        assertTrue(s.removeListedPlayer("STEVE"));
+        assertFalse(s.removeListedPlayer("Steve"));
+        assertTrue(s.listAllows("Steve"));
     }
 
     @Test

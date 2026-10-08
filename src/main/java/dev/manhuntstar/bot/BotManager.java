@@ -2,14 +2,15 @@ package dev.manhuntstar.bot;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.api.BotEvents;
+import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
-import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.mobility.PortalEntrance;
 import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.manhunt.CountdownService;
+import dev.manhuntstar.manhunt.HuntPolicy;
+import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Pos;
@@ -36,6 +37,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Horse;
@@ -70,7 +72,8 @@ public final class BotManager {
     private final List<PortalEntrance> entrances = new ArrayList<>();
     private final PlayerBlockTracker blockTracker = new PlayerBlockTracker();
     private final TemporaryBlocks temporaryBlocks;
-    private final CountdownService countdown;
+    private final RingService rings;
+    private final HuntPolicy policy;
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
@@ -86,7 +89,8 @@ public final class BotManager {
         this.botKey = new NamespacedKey(plugin, "bot");
         this.horseKey = new NamespacedKey(plugin, "cavalo_controlado");
         this.temporaryBlocks = new TemporaryBlocks(plugin::pathService);
-        this.countdown = new CountdownService(plugin);
+        this.rings = new RingService(plugin);
+        this.policy = new HuntPolicy(plugin);
         this.tactics = new TacticsManager(this);
         this.caveAmbush = new CaveAmbush(this);
     }
@@ -105,8 +109,13 @@ public final class BotManager {
         return botKey;
     }
 
-    public CountdownService countdown() {
-        return countdown;
+    public RingService rings() {
+        return rings;
+    }
+
+    /** Quem pode ser caçado (lista de jogadores e quem entra no meio). */
+    public HuntPolicy policy() {
+        return policy;
     }
 
     public TacticsManager tactics() {
@@ -254,7 +263,16 @@ public final class BotManager {
 
     // ------------------------------------------------------------------ alvo
 
+    /**
+     * Jogador que os bots podem caçar agora: vivo, fora do espectador e liberado pela lista de
+     * jogadores e pela regra de quem entra no meio. O alvo forçado (/bot target) passa sempre.
+     */
     public boolean isEligibleTarget(Player p) {
+        return isActivePlayer(p) && (p.getUniqueId().equals(forcedTarget) || policy.canBeHunted(p));
+    }
+
+    /** Online, vivo e fora do modo espectador. */
+    public static boolean isActivePlayer(Player p) {
         return p != null && p.isOnline() && !p.isDead() && p.getGameMode() != GameMode.SPECTATOR;
     }
 
@@ -452,8 +470,8 @@ public final class BotManager {
 
     /**
      * Cria {@code count} bots no local. Nomes: "nome1, nome2..." ou "%" trocado pelo número;
-     * o nome visível é o nome sem "%". Com o modo MANHUNT eles nascem em roda em volta do jogador
-     * mais próximo (até 10 blocos), que vira o alvo e "dono" da roda.
+     * o nome visível é o nome sem "%". Com o modo MANHUNT eles nascem em roda em volta do local
+     * (que é o centro da roda) e esperam até alguém sair dela.
      */
     public CompletableFuture<List<Bot>> createBots(Location loc, String name, String skinName, int count,
                                                    BotDifficulty difficulty, int startPhase, int aggression) {
@@ -462,21 +480,43 @@ public final class BotManager {
                 r -> Bukkit.getScheduler().runTask(plugin, r));
     }
 
+    /**
+     * Centro da roda para bots criados em {@code given} (posição de quem criou): no modo manual, o
+     * ponto marcado com /bot roda ponto; sem ponto (ou com o mundo dele descarregado), o próprio local.
+     */
+    public Location ringCenterFor(Location given) {
+        if (!manualRingPointInUse()) {
+            return given;
+        }
+        Settings.RingPoint p = settings().ringPoint();
+        return new Location(Bukkit.getWorld(p.world()), p.x(), p.y(), p.z());
+    }
+
+    /** O modo manual está ligado mas não há ponto da roda utilizável. */
+    public boolean manualRingPointMissing() {
+        return settings().spawnMode.get() == SpawnMode.MANHUNT && settings().ringCenter.get() == RingCenter.MANUAL && !manualRingPointInUse();
+    }
+
+    private boolean manualRingPointInUse() {
+        if (settings().spawnMode.get() != SpawnMode.MANHUNT || settings().ringCenter.get() != RingCenter.MANUAL) {
+            return false;
+        }
+        Settings.RingPoint p = settings().ringPoint();
+        return p != null && Bukkit.getWorld(p.world()) != null;
+    }
+
+    /** Raio da roda: o da opção, ou 5 blocos + 1 a cada 5 bots com a opção em 0. */
+    private double ringRadius(int count) {
+        double fixed = settings().ringRadius.value();
+        return fixed <= 0 ? 5.0 + count / 5.0 : Math.max(2.0, fixed);
+    }
+
     private List<Bot> spawnBots(Location pos, String name, SkinData skin, int count, BotDifficulty difficulty, int startPhase, int aggression) {
         List<Bot> created = new ArrayList<>();
         World world = pos.getWorld();
-        Player creator = null;
-        double best = 10.0 * 10.0;
-        for (Player p : world.getPlayers()) {
-            double d = p.getLocation().distanceSquared(pos);
-            if (d <= best && isEligibleTarget(p)) {
-                best = d;
-                creator = p;
-            }
-        }
         String visual = visualNameOf(name);
         SpawnMode mode = settings().spawnMode.get();
-        double radius = 5.0 + count / 5.0;
+        double radius = ringRadius(count);
         ThreadLocalRandom r = ThreadLocalRandom.current();
         BotGroup group = getOrCreateGroup(name);
         for (int i = 1; i <= count; i++) {
@@ -488,10 +528,8 @@ public final class BotManager {
             } else {
                 spawn = pos.clone().add(Math.cos(angle) * radius + (r.nextDouble() - 0.5), 0, Math.sin(angle) * radius + (r.nextDouble() - 0.5));
                 spawn.setY(surfaceNear(world, spawn, pos.getY()));
-            }
-            if (creator != null) {
-                Vec3 look = Vec3.of(creator.getLocation()).subtract(Vec3.of(spawn));
-                spawn.setYaw(look.yaw());
+                // de frente para o centro da roda
+                spawn.setYaw(Vec3.of(pos).subtract(Vec3.of(spawn)).yaw());
             }
             String botName = name.contains("%") ? name.replace("%", String.valueOf(i)) : name + i;
             Bot bot = new Bot(this, UUID.randomUUID(), botName, visual, skin, difficulty);
@@ -504,17 +542,13 @@ public final class BotManager {
             }
             bot.progression().updateGear();
             bot.restoreDefaultOffhand();
-            if (creator != null) {
-                if (mode == SpawnMode.MANHUNT) {
-                    bot.setIdle(new IdleBehavior(bot, creator, radius));
-                }
-                bot.setTargetPlayer(creator.getUniqueId());
-            }
             announceJoin(bot);
             created.add(bot);
         }
-        if (creator != null && mode == SpawnMode.MANHUNT && settings().startCountdown.value() > 0 && !created.isEmpty()) {
-            countdown.start(creator, pos, radius, settings().startCountdown.value());
+        boolean inRing = mode == SpawnMode.MANHUNT && rings.create(pos, radius, created, settings().startCountdown.value());
+        if (!inRing && !created.isEmpty()) {
+            // sem roda os bots já caçam
+            policy.beginIfIdle();
         }
         dirty = true;
         return created;
@@ -874,7 +908,8 @@ public final class BotManager {
         pendingSilentDeaths.clear();
         caveAmbush.clear();
         tactics.clear();
-        countdown.cancel();
+        rings.cancelAll();
+        policy.end();
         globalMaxPhase = 0;
         dirty = true;
         flush(false);
@@ -908,7 +943,8 @@ public final class BotManager {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
-        countdown.tick();
+        rings.tick();
+        policy.tick();
         for (Bot bot : new ArrayList<>(bots.values())) {
             if (!bot.isAlive()) {
                 continue;
@@ -959,7 +995,7 @@ public final class BotManager {
     private void checkStrandedBots() {
         for (Bot b : aliveBots()) {
             Player t = b.target();
-            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.world()) && b.idle() == null && !countdown.isActive()) {
+            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.world()) && b.idle() == null) {
                 requestDimensionChange(t, b.world());
             }
         }
@@ -984,7 +1020,8 @@ public final class BotManager {
             }
             toKill.forEach(this::killSilently);
         }
-        if (now % 20 != 0 || !settings().silentDeaths.on() || countdown.isActive()) {
+        // bots da roda ficam de fora (b.idle() != null); os outros seguem com as mortes silenciosas
+        if (now % 20 != 0 || !settings().silentDeaths.on()) {
             return;
         }
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -1054,7 +1091,7 @@ public final class BotManager {
     public void flush(boolean async) {
         if (!settings().persistentBots.on()) {
             if (dirty) {
-                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), async);
+                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), null, async);
                 dirty = false;
             }
             return;
@@ -1068,12 +1105,27 @@ public final class BotManager {
                 snaps.add(b.snapshot());
             }
         }
-        plugin.storage().save(snaps, new ArrayList<>(groups.values()), async);
+        plugin.storage().save(snaps, new ArrayList<>(groups.values()), this::saveManhunt, async);
         dirty = false;
     }
 
+    /** Rodas esperando e a caçada em andamento (participantes, protegidos, quem ficou de fora). */
+    private void saveManhunt(ConfigurationSection s) {
+        policy.save(s.createSection("cacada"));
+        rings.save(s.createSection("rodas"));
+    }
+
+    /** Recria as rodas e a caçada salvas; chamado depois de {@link #restore}. */
+    public void restoreManhunt(ConfigurationSection s) {
+        if (s == null || !settings().persistentBots.on()) {
+            return;
+        }
+        policy.load(s.getConfigurationSection("cacada"));
+        rings.load(s.getConfigurationSection("rodas"));
+    }
+
     public void clearPersistentSnapshots() {
-        plugin.storage().save(List.of(), new ArrayList<>(groups.values()), true);
+        plugin.storage().save(List.of(), new ArrayList<>(groups.values()), null, true);
     }
 
     /** Recria os bots salvos ao ligar o servidor. */
@@ -1127,7 +1179,7 @@ public final class BotManager {
             b.despawnEntity();
             plugin.tabList().remove(b);
         }
-        countdown.cancel();
+        rings.cancelAll();
         caveAmbush.clear();
         tactics.clear();
         temporaryBlocks.revertAll();

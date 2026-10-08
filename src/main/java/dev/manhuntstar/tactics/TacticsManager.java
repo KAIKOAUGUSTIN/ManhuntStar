@@ -186,7 +186,8 @@ public final class TacticsManager {
         });
         if (manager.plugin().settings().autoCapacities.on()) {
             refreshTrackers(now);
-            if (now % CHECK_INTERVAL == 0 && !manager.countdown().isActive()) {
+            // bots da roda ficam de fora em selectBot; os que já caçam seguem com as capacidades
+            if (now % CHECK_INTERVAL == 0) {
                 autoTrigger(now);
             }
         }

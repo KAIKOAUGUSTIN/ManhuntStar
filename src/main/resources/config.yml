@@ -137,15 +137,29 @@ taticas:
   entrada-por-portal: true
 
 manhunt:
-  # NORMAL: nasce no ponto. MANHUNT: nasce em roda em volta do jogador mais próximo. [spawnmode]
+  # NORMAL: nasce no ponto. MANHUNT: nasce em roda e espera a caçada começar. [spawnmode]
   modo-spawn: MANHUNT
-  # Contagem (segundos) antes da caçada começar. 0 = como no mod (soltam quando o jogador corre). [starttime]
+  # Contagem (segundos) antes da caçada começar. 0 = soltam assim que alguém sai da roda. [starttime]
   contagem-segundos: 20
-  # A contagem só começa quando o jogador sai da roda; até lá os bots esperam.
-  # false = a contagem começa assim que os bots são criados. [countdownonleave]
+  # A contagem só começa quando um jogador que estava dentro da roda sai dela (vale o primeiro);
+  # até lá os bots esperam. false = a contagem começa assim que os bots são criados. [countdownonleave]
   contagem-ao-sair-da-roda: true
   # Bots da roda não levam dano enquanto esperam e durante a contagem. [countdowninvulnerable]
   invulneravel-na-contagem: true
+  # Raio da roda em blocos. 0 = automático (5 blocos + 1 a cada 5 bots). [ringradius]
+  raio-roda: 0
+  # automatico = a roda fica onde é criada (sua posição ou as coordenadas do /bot spawn);
+  # manual = no ponto marcado com /bot roda ponto. [ringcenter]
+  centro-roda: automatico
+  # Quem entra no servidor com a caçada em andamento: cacado = vira alvo na hora;
+  # protegido = fica sem ser alvo pelo tempo da contagem da roda (no mínimo 5 s);
+  # fora = não é caçado até a próxima caçada. [latejoin]
+  quem-entra-no-meio: protegido
+  # desligada = todos podem ser caçados; permitidos = só os da lista são caçados e disparam a roda;
+  # bloqueados = os da lista não são caçados nem disparam a roda. [listmode]
+  lista-modo: desligada
+  # Nomes da lista de jogadores. Edite com /bot lista add|remove <jogador>.
+  lista-jogadores: []
 
 aparencia:
   # Brilho (contorno visível através das paredes) nos caçadores. [glowing]

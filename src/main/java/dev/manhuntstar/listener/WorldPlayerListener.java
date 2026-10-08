@@ -34,8 +34,9 @@ import org.bukkit.event.server.ServerCommandEvent;
 
 /**
  * Eventos de mundo e de jogador: blocos colocados por jogadores (torres/skybases), mudanças de bloco
- * para o pathfinding, cama de emboscada quebrada, mesa de trabalho, TAB para quem entra, contagem
- * na lista de servidores e no /list, e redistribuição quando o jogador renasce longe dos bots.
+ * para o pathfinding, cama de emboscada quebrada, mesa de trabalho, TAB e regra da caçada para quem
+ * entra, contagem na lista de servidores e no /list, e redistribuição quando o jogador renasce longe
+ * dos bots.
  */
 public final class WorldPlayerListener implements Listener {
 
@@ -113,6 +114,8 @@ public final class WorldPlayerListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
+        // caçada em andamento: caçado na hora, protegido ou de fora, conforme a opção
+        plugin.botManager().policy().admit(p);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
                 plugin.tabList().sendAll(p);

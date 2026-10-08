@@ -33,7 +33,7 @@ public final class Modes {
         }
     }
 
-    /** NORMAL: nasce exatamente no ponto. MANHUNT: nasce em roda em volta do jogador e fica parado até a caçada começar. */
+    /** NORMAL: nasce exatamente no ponto. MANHUNT: nasce em roda e fica parado até a caçada começar. */
     public enum SpawnMode implements Setting.Choice {
         NORMAL, MANHUNT;
 
@@ -45,6 +45,69 @@ public final class Modes {
         @Override
         public List<String> aliases() {
             return List.of(name().toLowerCase(Locale.ROOT));
+        }
+    }
+
+    /** Centro da roda: AUTOMATICO = onde a roda é criada; MANUAL = ponto marcado com /bot roda ponto. */
+    public enum RingCenter implements Setting.Choice {
+        AUTOMATICO("automatico", "automático", "auto"), MANUAL("manual", "fixo");
+
+        private final List<String> aliases;
+
+        RingCenter(String... aliases) {
+            this.aliases = List.of(aliases);
+        }
+
+        @Override
+        public String configName() {
+            return aliases.getFirst();
+        }
+
+        @Override
+        public List<String> aliases() {
+            return aliases;
+        }
+    }
+
+    /** Quem entra no servidor com a caçada em andamento. */
+    public enum LateJoin implements Setting.Choice {
+        CACADO("cacado", "caçado", "hunted"), PROTEGIDO("protegido", "protected", "protecao", "proteção"), FORA("fora", "ignorado", "ignored");
+
+        private final List<String> aliases;
+
+        LateJoin(String... aliases) {
+            this.aliases = List.of(aliases);
+        }
+
+        @Override
+        public String configName() {
+            return aliases.getFirst();
+        }
+
+        @Override
+        public List<String> aliases() {
+            return aliases;
+        }
+    }
+
+    /** Lista de jogadores: DESLIGADA = todos; PERMITIDOS = só os da lista; BLOQUEADOS = todos menos os da lista. */
+    public enum PlayerListMode implements Setting.Choice {
+        DESLIGADA("desligada", "off", "nenhuma"), PERMITIDOS("permitidos", "allowlist", "whitelist"), BLOQUEADOS("bloqueados", "blacklist", "blocklist");
+
+        private final List<String> aliases;
+
+        PlayerListMode(String... aliases) {
+            this.aliases = List.of(aliases);
+        }
+
+        @Override
+        public String configName() {
+            return aliases.getFirst();
+        }
+
+        @Override
+        public List<String> aliases() {
+            return aliases;
         }
     }
 

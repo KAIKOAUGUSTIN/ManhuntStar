@@ -246,7 +246,7 @@ public final class Brain {
         }
         IdleBehavior idle = bot.idle();
         if (idle != null && idle.tick()) {
-            state = bot.manager().countdown().isCounting() ? "contagem" : "esperando na roda";
+            state = bot.manager().rings().isCounting(bot) ? "contagem" : "esperando na roda";
             return;
         }
         BotGroup group = bot.group();

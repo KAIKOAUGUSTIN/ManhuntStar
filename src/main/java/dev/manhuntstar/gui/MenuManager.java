@@ -133,7 +133,7 @@ public final class MenuManager implements Listener {
             set(m, slot++, item(icons[c.ordinal()], t("Opções: " + categoryName(c), NamedTextColor.YELLOW), List.of(t("Clique para editar", NamedTextColor.GRAY))),
                     ct -> openSettings(p, cat));
         }
-        boolean running = plugin.botManager().countdown().isActive();
+        boolean running = plugin.botManager().rings().isActive();
         set(m, 28, item(Material.LIME_DYE, t(running ? "Começar a caçada agora" : "Soltar bots da roda", NamedTextColor.GREEN), List.of()), c -> {
             p.closeInventory();
             p.performCommand("bot start");
@@ -233,8 +233,11 @@ public final class MenuManager implements Listener {
                 });
         set(m, 16, item(Material.LIME_CONCRETE, t("Criar aqui", NamedTextColor.GREEN), List.of(t("Modo de spawn: " + plugin.settings().spawnMode.display(), NamedTextColor.GRAY))), c -> {
             p.closeInventory();
+            if (plugin.botManager().manualRingPointMissing()) {
+                msg().send(p, "roda.sem-ponto");
+            }
             msg().send(p, "comando.criando", Messages.p("quantidade", d.amount), Messages.p("dificuldade", d.difficulty.label()), Messages.p("nome", d.name));
-            plugin.botManager().createBots(p.getLocation(), d.name, d.skin.isEmpty() ? null : d.skin, d.amount, d.difficulty, d.phase, d.aggression)
+            plugin.botManager().createBots(plugin.botManager().ringCenterFor(p.getLocation()), d.name, d.skin.isEmpty() ? null : d.skin, d.amount, d.difficulty, d.phase, d.aggression)
                     .whenComplete((bots, err) -> {
                         if (err != null) {
                             plugin.getLogger().log(java.util.logging.Level.SEVERE, "Falha ao criar bots", err);

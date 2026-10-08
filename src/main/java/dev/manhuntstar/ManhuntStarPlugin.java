@@ -97,6 +97,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         removeOrphans();
         BotStorage.LoadResult saved = storage.load();
         int restored = botManager.restore(saved.bots(), saved.groups());
+        botManager.restoreManhunt(saved.manhunt());
         if (restored > 0) {
             getLogger().info(restored + " bot(s) restaurado(s) do bots.yml.");
         }
@@ -183,6 +184,11 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     /** Uma opção mudou (comando ou menu): aplica o efeito e grava no config.yml. */
     public void onSettingChanged(Setting<?> s) {
         applySideEffects(s);
+        saveSettings();
+    }
+
+    /** Grava o config.yml (opções, lista de jogadores e ponto da roda). */
+    public void saveSettings() {
         settings.save(new File(getDataFolder(), "config.yml"), getLogger());
     }
 
@@ -214,8 +220,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
             botManager.flush(true);
         } else if (s == settings.debugPaths && !settings.debugPaths.on()) {
             debugRenderer.clearAll();
-        } else if (s == settings.startCountdown && settings.startCountdown.value() == 0) {
-            botManager.countdown().finishNow();
         }
     }
 

@@ -3,8 +3,11 @@ package dev.manhuntstar.config;
 import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.Modes.GearPersistence;
 import dev.manhuntstar.bot.Modes.GlowColor;
+import dev.manhuntstar.bot.Modes.LateJoin;
 import dev.manhuntstar.bot.Modes.PathMode;
 import dev.manhuntstar.bot.Modes.PearlDimension;
+import dev.manhuntstar.bot.Modes.PlayerListMode;
+import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.config.Setting.Category;
@@ -21,6 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -108,6 +112,10 @@ public final class Settings {
     public final Setting.Int startCountdown = integer("manhunt.contagem-segundos", "starttime", "Contagem antes da caçada (s)", Category.MANHUNT, 20, 0, 600);
     public final Setting.Bool countdownOnLeave = bool("manhunt.contagem-ao-sair-da-roda", "countdownonleave", "Contar só depois de sair da roda", Category.MANHUNT, true);
     public final Setting.Bool countdownInvulnerable = bool("manhunt.invulneravel-na-contagem", "countdowninvulnerable", "Bots invulneráveis na roda", Category.MANHUNT, true);
+    public final Setting.Dbl ringRadius = dbl("manhunt.raio-roda", "ringradius", "Raio da roda (0 = automático)", Category.MANHUNT, 0.0, 0.0, 64.0, 1.0);
+    public final Setting.Enumerated<RingCenter> ringCenter = choice("manhunt.centro-roda", "ringcenter", "Centro da roda", Category.MANHUNT, RingCenter.class, RingCenter.AUTOMATICO);
+    public final Setting.Enumerated<LateJoin> lateJoin = choice("manhunt.quem-entra-no-meio", "latejoin", "Quem entra no meio da caçada", Category.MANHUNT, LateJoin.class, LateJoin.PROTEGIDO);
+    public final Setting.Enumerated<PlayerListMode> playerListMode = choice("manhunt.lista-modo", "listmode", "Lista de jogadores", Category.MANHUNT, PlayerListMode.class, PlayerListMode.DESLIGADA);
 
     // --- Aparência ---
     public final Setting.Bool glowHunters = bool("aparencia.brilho-cacadores", "glowing", "Brilho nos caçadores", Category.APARENCIA, false);
@@ -120,6 +128,12 @@ public final class Settings {
     private static final List<String> REMOVED_PATHS = List.of("manhunt.liberar-ao-sair-da-roda");
 
     private volatile Set<EntityType> excludedMobs = Set.of();
+    private volatile List<String> playerList = List.of();
+    private volatile RingPoint ringPoint;
+
+    /** Ponto da roda no modo manual (centro-roda: manual). */
+    public record RingPoint(String world, double x, double y, double z) {
+    }
 
     public Settings() {
         alias("astar nodes", "nodes");
@@ -186,6 +200,58 @@ public final class Settings {
         return excludedMobs;
     }
 
+    public RingPoint ringPoint() {
+        return ringPoint;
+    }
+
+    public void setRingPoint(RingPoint point) {
+        ringPoint = point;
+    }
+
+    /** Nomes da lista de jogadores (permitidos ou bloqueados, conforme a opção lista-modo). */
+    public List<String> playerList() {
+        return playerList;
+    }
+
+    public boolean isListed(String name) {
+        for (String n : playerList) {
+            if (n.equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** @return false se o nome já estava na lista */
+    public synchronized boolean addListedPlayer(String name) {
+        if (isListed(name)) {
+            return false;
+        }
+        List<String> next = new ArrayList<>(playerList);
+        next.add(name);
+        playerList = List.copyOf(next);
+        return true;
+    }
+
+    /** @return false se o nome não estava na lista */
+    public synchronized boolean removeListedPlayer(String name) {
+        List<String> next = new ArrayList<>(playerList);
+        if (!next.removeIf(n -> n.equalsIgnoreCase(name))) {
+            return false;
+        }
+        playerList = List.copyOf(next);
+        return true;
+    }
+
+    /** A lista deixa este jogador ser caçado e disparar a roda? */
+    public boolean listAllows(String name) {
+        return switch (playerListMode.get()) {
+            case DESLIGADA -> true;
+            case PERMITIDOS -> isListed(name);
+            case BLOQUEADOS -> !isListed(name);
+        };
+    }
+
     public void load(File file, Logger logger) {
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         for (Setting<?> s : byKey.values()) {
@@ -200,6 +266,17 @@ public final class Settings {
             }
         }
         excludedMobs = Set.copyOf(excluded);
+        List<String> names = new ArrayList<>();
+        for (String name : cfg.getStringList("manhunt.lista-jogadores")) {
+            String n = name.trim();
+            if (!n.isEmpty() && names.stream().noneMatch(n::equalsIgnoreCase)) {
+                names.add(n);
+            }
+        }
+        playerList = List.copyOf(names);
+        ConfigurationSection point = cfg.getConfigurationSection("manhunt.ponto-roda");
+        ringPoint = point == null || !point.isString("mundo") ? null
+                : new RingPoint(point.getString("mundo"), point.getDouble("x"), point.getDouble("y"), point.getDouble("z"));
         if (minNetherDelay.value() > maxNetherDelay.value()) {
             maxNetherDelay.set(minNetherDelay.value());
         }
@@ -238,6 +315,16 @@ public final class Settings {
         }
         for (String path : REMOVED_PATHS) {
             cfg.set(path, null);
+        }
+        cfg.set("manhunt.lista-jogadores", new ArrayList<>(playerList));
+        RingPoint point = ringPoint;
+        if (point == null) {
+            cfg.set("manhunt.ponto-roda", null);
+        } else {
+            cfg.set("manhunt.ponto-roda.mundo", point.world());
+            cfg.set("manhunt.ponto-roda.x", point.x());
+            cfg.set("manhunt.ponto-roda.y", point.y());
+            cfg.set("manhunt.ponto-roda.z", point.z());
         }
         try {
             cfg.save(file);

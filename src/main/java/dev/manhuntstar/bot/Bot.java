@@ -477,8 +477,13 @@ public final class Bot {
         this.targetPlayer = id;
     }
 
+    /** O jogador alvo, se a lista e a proteção de quem entrou no meio ainda deixam caçá-lo. */
     public Player target() {
-        return targetPlayer == null ? null : Bukkit.getPlayer(targetPlayer);
+        Player p = targetPlayer == null ? null : Bukkit.getPlayer(targetPlayer);
+        if (p == null || p.getUniqueId().equals(manager.forcedTarget()) || manager.policy().canBeHunted(p)) {
+            return p;
+        }
+        return null;
     }
 
     /** Jogador vivo mais próximo em qualquer mundo (fallback quando o alvo sumiu). */

@@ -21,10 +21,12 @@ Todos exigem a permissão `manhuntstar.admin` (operadores têm por padrão). `/m
 
 | Comando | O que faz |
 |---|---|
-| `/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]` | Cria bots onde você está. No modo MANHUNT eles nascem em roda em volta do jogador mais próximo. |
+| `/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]` | Cria bots onde você está (ou no ponto da roda, com o centro em manual). No modo MANHUNT eles nascem em roda. |
 | `/bot create <nome> <qtd> <dificuldade> skin <jogador> [fase] [agr]` | Igual, com a skin de outro jogador. |
-| `/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]` | Cria em coordenadas. |
-| `/bot start` | Começa a caçada na hora (pula a contagem / solta os bots da roda). |
+| `/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]` | Cria em coordenadas (a roda fica nelas). |
+| `/bot start` | Começa a caçada na hora (solta todas as rodas e pula a contagem). |
+| `/bot roda` · `/bot roda ponto [x y z]` · `/bot roda ponto limpar` | Mostra a roda; marca um ponto fixo para as rodas (centro em manual) ou apaga o ponto (volta ao automático). |
+| `/bot lista` · `/bot lista add\|remove <jogador>` · `/bot lista modo <desligada\|permitidos\|bloqueados>` | Lista de jogadores que podem (ou não) ser caçados e disparar a roda. |
 | `/bot menu` | Menu em baú: criar, gerenciar, opções, grupos e ações. |
 | `/bot list` · `/bot info <bot>` | Lista os bots (vida, fase, alvo, local, o que a IA está fazendo). |
 | `/bot remove <nome>` · `/bot deleteall confirm` | Remove bots (o segundo apaga tudo, inclusive o salvamento). |
@@ -51,10 +53,19 @@ Nomes com `%`, acento ou espaço vão entre aspas nos comandos, por exemplo `/bo
 
 Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 
-- **Contagem antes da caçada** (`manhunt.contagem-segundos`, padrão 20): os bots esperam na roda até o
-  jogador sair dela; aí começa a contagem de vantagem, com barra no topo e títulos 3-2-1, e só então eles
-  começam a caçar. Com `manhunt.contagem-ao-sair-da-roda: false` a contagem começa assim que os bots são
-  criados. `0` = os bots soltam assim que o jogador corre, como no mod.
+- **Roda e contagem antes da caçada** (`manhunt.contagem-segundos`, padrão 20): a roda não tem dono. Os
+  bots esperam nela até um jogador que estava dentro sair (vale o primeiro); aí começa a contagem de
+  vantagem, com barra no topo e títulos 3-2-1, e só então eles começam a caçar. Roda criada longe de todos
+  espera alguém entrar e sair (ou o `/bot start`). Cada roda tem a sua contagem, e a roda é salva se o
+  servidor reiniciar. Com `manhunt.contagem-ao-sair-da-roda: false` a contagem começa assim que os bots
+  são criados; `0` = os bots soltam assim que alguém sai da roda.
+- **Raio e centro da roda**: `manhunt.raio-roda` (0 = automático, cresce com a quantidade de bots) e
+  `manhunt.centro-roda` (`automatico` = onde a roda é criada; `manual` = no ponto marcado com `/bot roda ponto`).
+- **Quem entra no meio da caçada** (`manhunt.quem-entra-no-meio`): `protegido` (padrão) fica sem ser alvo
+  pelo tempo da contagem da roda, no mínimo 5 s; `cacado` vira alvo na hora; `fora` não é caçado até a
+  próxima caçada. Quem já estava na caçada, cai e volta continua sendo caçado.
+- **Lista de jogadores** (`manhunt.lista-modo` e `/bot lista`): `permitidos` = só os da lista são caçados e
+  disparam a roda; `bloqueados` = os da lista não são caçados nem disparam a roda. O `/bot target` passa por cima.
 - **Brilho** nos caçadores (`aparencia.brilho-cacadores`, com cor) e, separado, nos fugitivos. Vem desligado;
   liga e troca a cor direto no `/bot menu` ou com `/bot settings glowing true red`.
 - **Fidelidade de jogador**: bots no TAB com skin e ping, contando no número de jogadores da lista de

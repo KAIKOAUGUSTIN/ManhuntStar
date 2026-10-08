@@ -1,40 +1,34 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.manhunt.Ring;
 import dev.manhuntstar.util.Vec3;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
- * Bots esperando na roda em volta de quem os criou (modo MANHUNT): pulam, agacham, giram, olham
- * para o jogador e para os colegas. Sem contagem, soltam quando o jogador começa a correr para
- * longe; com contagem, ficam na roda até a {@link dev.manhuntstar.manhunt.CountdownService} soltar.
+ * Bots esperando na roda (modo MANHUNT): pulam, agacham, giram, olham para o jogador mais perto e
+ * para os colegas. Quem solta é a {@link dev.manhuntstar.manhunt.RingService}, quando alguém sai da
+ * roda e a contagem acaba.
  */
 public final class IdleBehavior {
 
-    private static final int OUTSIDE_RELEASE_TICKS = 4;
-    private static final double RUNNING_SPEED_SQR = 0.035;
+    /** Distância até onde o bot da roda olha para jogadores. */
+    private static final double WATCH_RANGE = 32.0;
 
     private final Bot bot;
-    private final UUID creatorId;
-    private final double radius;
-    private final Vec3 creatorSpawn;
-    private Vec3 creatorLastPos;
-    private int outsideTimer;
+    private final UUID ringId;
     private boolean active = true;
     private int behaviorType;
     private int behaviorTimer;
     private int behaviorLength;
     private int internalTick;
 
-    public IdleBehavior(Bot bot, Player creator, double radius) {
+    public IdleBehavior(Bot bot, UUID ringId) {
         this.bot = bot;
-        this.creatorId = creator.getUniqueId();
-        this.radius = radius;
-        this.creatorSpawn = Vec3.of(creator.getLocation());
-        this.creatorLastPos = creatorSpawn;
+        this.ringId = ringId;
         pickBehavior();
     }
 
@@ -42,8 +36,8 @@ public final class IdleBehavior {
         return active;
     }
 
-    public UUID creatorId() {
-        return creatorId;
+    public UUID ringId() {
+        return ringId;
     }
 
     /** Sai da roda de vez: o bot deixa de ser tratado como "esperando" pelo resto do plugin. */
@@ -62,50 +56,34 @@ public final class IdleBehavior {
         if (!active) {
             return false;
         }
-        boolean countdown = bot.manager().countdown().isActive();
-        Player creator = Bukkit.getPlayer(creatorId);
-        if (creator == null || creator.isDead() || !creator.getWorld().equals(bot.world())) {
-            if (countdown) {
-                bot.motor().stopWalk();
-                return true;
-            }
+        Ring ring = bot.manager().rings().ring(ringId);
+        if (ring == null) {
+            // a roda acabou sem passar por este bot
             release();
             return false;
         }
-        Vec3 creatorPos = Vec3.of(creator.getLocation());
-        Vec3 creatorDelta = creatorPos.subtract(creatorLastPos);
-        creatorLastPos = creatorPos;
-        double dist = bot.pos().distanceTo(creatorPos);
-        if (countdown) {
-            executeBehavior(creator, creatorPos);
-            return true;
-        }
-        if (shouldReleaseToChase(creatorPos, creatorDelta, dist)) {
-            release();
-            return false;
-        }
-        if (dist <= radius + 2.0) {
-            outsideTimer = 0;
-            executeBehavior(creator, creatorPos);
-            return true;
-        }
-        outsideTimer++;
-        bot.lookAt(creatorPos.add(0, creator.getEyeHeight(), 0));
-        bot.motor().stopWalk();
-        if (outsideTimer >= OUTSIDE_RELEASE_TICKS || dist > 32.0) {
-            release();
-            return false;
-        }
+        Player watched = nearestPlayer();
+        Vec3 focus = watched != null ? Vec3.of(watched.getLocation()) : ring.center();
+        double eyeHeight = watched != null ? watched.getEyeHeight() : 1.6;
+        executeBehavior(focus, eyeHeight);
         return true;
     }
 
-    private boolean shouldReleaseToChase(Vec3 creatorPos, Vec3 creatorDelta, double distToCreator) {
-        if (creatorDelta.horizontalLengthSqr() < RUNNING_SPEED_SQR) {
-            return false;
+    private Player nearestPlayer() {
+        Player best = null;
+        double bestDist = WATCH_RANGE * WATCH_RANGE;
+        Vec3 p = bot.pos();
+        for (Player pl : bot.world().getPlayers()) {
+            if (!BotManager.isActivePlayer(pl)) {
+                continue;
+            }
+            double d = p.distanceToSqr(Vec3.of(pl.getLocation()));
+            if (d < bestDist) {
+                bestDist = d;
+                best = pl;
+            }
         }
-        double moved = creatorPos.distanceTo(creatorSpawn);
-        double releaseDistance = Math.max(3.0, Math.min(radius * 0.75, 5.0));
-        return moved >= releaseDistance || distToCreator > radius;
+        return best;
     }
 
     private void pickBehavior() {
@@ -114,7 +92,7 @@ public final class IdleBehavior {
         behaviorLength = 60 + r.nextInt(40);
     }
 
-    private void executeBehavior(Player creator, Vec3 creatorPos) {
+    private void executeBehavior(Vec3 focus, double eyeHeight) {
         internalTick++;
         behaviorTimer++;
         if (behaviorTimer > behaviorLength) {
@@ -123,7 +101,7 @@ public final class IdleBehavior {
             pickBehavior();
             bot.setSneaking(false);
         }
-        Vec3 creatorEyes = creatorPos.add(0, creator.getEyeHeight(), 0);
+        Vec3 focusEyes = focus.add(0, eyeHeight, 0);
         switch (behaviorType) {
             case 0 -> {
                 if (internalTick == 1 && bot.onGround()) {
@@ -151,8 +129,8 @@ public final class IdleBehavior {
             }
             case 2 -> {
                 bot.setSneaking(true);
-                bot.lookAt(creatorEyes);
-                Vec3 dir = creatorPos.subtract(bot.pos()).normalize();
+                bot.lookAt(focusEyes);
+                Vec3 dir = focus.subtract(bot.pos()).normalize();
                 bot.motor().walk(dir.scale((internalTick / 20) % 2 == 0 ? 0.3 : -0.3));
             }
             case 3 -> {
@@ -172,7 +150,7 @@ public final class IdleBehavior {
             }
             default -> {
                 bot.setSneaking(false);
-                bot.lookAt(creatorEyes);
+                bot.lookAt(focusEyes);
                 bot.motor().stopWalk();
             }
         }
