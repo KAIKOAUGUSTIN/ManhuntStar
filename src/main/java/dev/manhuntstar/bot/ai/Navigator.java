@@ -58,6 +58,8 @@ public final class Navigator {
     private static final int PARKOUR_TIMEOUT_TICKS = 60;
     /** Trecho de água mais curto que isso não vale o barco, mesmo que o A* tenha passado por ele. */
     private static final int BOAT_MIN_RUN = 6;
+    /** Quanto um bloco nadando vale em blocos correndo, na escolha do ponto de saída da água. */
+    private static final double SWIM_EXIT_WEIGHT = 3.0;
 
     private enum WaterMode { NONE, CRUISE, ASCEND_FOR_AIR }
 
@@ -998,8 +1000,14 @@ public final class Navigator {
         }
         if (isDryLandTarget(finalTarget)) {
             waterMode = WaterMode.NONE;
-            Pos exit = shoreExitToward(finalTarget);
-            return exit == null ? finalTarget : Vec3.bottomCenter(exit);
+            ShoreExit exit = shoreExitToward(finalTarget);
+            if (exit == null) {
+                return finalTarget;
+            }
+            // já na saída: mira o chão firme para subir (mirar a própria água deixava o bot sem direção)
+            Vec3 water = Vec3.bottomCenter(exit.water());
+            boolean atExit = Math.hypot(water.x() - bot.pos().x(), water.z() - bot.pos().z()) < 1.5;
+            return atExit ? Vec3.bottomCenter(exit.land()) : water;
         }
         if (!isTargetOffSolidGround(finalTarget)) {
             waterMode = WaterMode.NONE;
@@ -1062,13 +1070,21 @@ public final class Navigator {
         waterMode = air <= WATER_ASCEND_AIR ? WaterMode.ASCEND_FOR_AIR : WaterMode.CRUISE;
     }
 
-    private Pos shoreExitToward(Vec3 finalTarget) {
+    /** Bloco de água na beira e o chão firme ao lado dele, por onde o bot sai da água. */
+    private record ShoreExit(Pos water, Pos land) {
+    }
+
+    /**
+     * Saída da água mais rápida até o alvo: nadar custa ~3× correr. Com distâncias ao quadrado a
+     * saída mais longe vencia quando o alvo seguia pela margem, e o bot nadava rente à beira sem sair.
+     */
+    private ShoreExit shoreExitToward(Vec3 finalTarget) {
         World w = world();
         Pos botPos = bot.blockPos();
         Pos targetPos = finalTarget.toPos();
         Vec3 toward = finalTarget.subtract(bot.pos()).horizontal();
         toward = toward.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : toward.normalize();
-        Pos best = null;
+        ShoreExit best = null;
         double bestScore = Double.MAX_VALUE;
         for (int dx = -10; dx <= 10; dx++) {
             for (int dz = -10; dz <= 10; dz++) {
@@ -1093,10 +1109,11 @@ public final class Navigator {
                         }
                         Vec3 edge = new Vec3(face.getModX(), 0, face.getModZ());
                         double align = 1.0 - Math.max(0.0, edge.normalize().dot(toward));
-                        double score = water.distSqr(botPos) * 0.45 + landFeet.distSqr(targetPos) + Math.abs(water.y() - botPos.y()) * 2.0 + align * 4.0;
+                        double score = Math.sqrt(water.distSqr(botPos)) * SWIM_EXIT_WEIGHT + Math.sqrt(landFeet.distSqr(targetPos))
+                                + Math.abs(water.y() - botPos.y()) * 2.0 + align * 4.0;
                         if (score < bestScore) {
                             bestScore = score;
-                            best = water;
+                            best = new ShoreExit(water, landFeet);
                         }
                     }
                 }
