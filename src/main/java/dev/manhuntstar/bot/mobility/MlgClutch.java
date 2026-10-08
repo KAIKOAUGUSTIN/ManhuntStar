@@ -31,6 +31,9 @@ import org.bukkit.util.Vector;
  */
 public final class MlgClutch {
 
+    /** A maior queda que o A* planeja (3 blocos) com uma folga. */
+    private static final float PLANNED_FALL_MAX = 3.5f;
+
     private final Bot bot;
     private int cooldown;
     private boolean boatClutching;
@@ -137,7 +140,10 @@ public final class MlgClutch {
         if (bot.onGround() || boatClutching || cooldown > 0 || bot.isRiding() || waterPos != null) {
             return;
         }
-        if (nav.isPlannedFall() || bot.isInWater() || bot.isInLava()) {
+        // O caminho planeja quedas de até 3 blocos. Caindo mais que isso o bot escorregou (beira de ravina):
+        // enquanto ele cai o caminho não avança e continuava dizendo "queda planejada", e ele morria sem balde.
+        boolean planned = nav.isPlannedFall() && bot.entity() != null && bot.entity().getFallDistance() <= PLANNED_FALL_MAX;
+        if (planned || bot.isInWater() || bot.isInLava()) {
             return;
         }
         if (bot.velocity().y() > -0.6) {
