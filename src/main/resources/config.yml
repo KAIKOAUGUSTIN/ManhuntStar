@@ -103,7 +103,7 @@ mobilidade:
   atraso-max-dimensao-segundos: 60
 
 pathfinding:
-  # Planejador: ASTAR, DIJKSTRA ou DUMB. [pathmode]
+  # Planejador: ASTAR ou DUMB. [pathmode]
   modo: ASTAR
   # Gulosidade do A* (maior = mais rápido, caminhos piores). [greediness]
   gulosidade: 1.5

@@ -1,8 +1,6 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.bot.Modes.PathMode;
-import dev.manhuntstar.pathfinding.FlowField;
 import dev.manhuntstar.pathfinding.PathResult;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -28,7 +26,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 /**
- * Navegação por caminho (A* ou campo de fluxo) com as regras do mod: alvo "resolvido" (skybase →
+ * Navegação por caminho (A*) com as regras do mod: alvo "resolvido" (skybase →
  * ponto de aproximação, alvo distante → passo intermediário de 96 blocos), recálculo quando o
  * caminho fica velho ou o alvo anda, cálculo antecipado do próximo trecho, filas de blocos a
  * cavar/colocar, parkour e navegação na água (subir para respirar, sair pela margem).
@@ -87,7 +85,6 @@ public final class Navigator {
     private boolean parkouring;
     private Pos parkourTarget;
     private int parkourTicks;
-    private Pos lastFlowTarget;
     private WaterMode waterMode = WaterMode.NONE;
     private Pos escapeTarget;
     /** O último ponto devolvido é um nó de caminho calculado (e não um "vá reto até lá"). */
@@ -117,11 +114,7 @@ public final class Navigator {
     /** Próximo ponto para andar rumo ao alvo, ou null se não houver caminho e o fallback estiver desligado. */
     public Vec3 waypoint(Vec3 finalTarget) {
         personality.tick();
-        Vec3 effective = resolveWaterAwareTarget(finalTarget);
-        if (bot.settings().pathMode.get() == PathMode.DIJKSTRA) {
-            return dijkstraWaypoint(effective);
-        }
-        return astarWaypoint(effective);
+        return astarWaypoint(resolveWaterAwareTarget(finalTarget));
     }
 
     /** Foge do ponto de ameaça para um lugar a 40–70 blocos na direção oposta. */
@@ -164,7 +157,7 @@ public final class Navigator {
         Pos realTarget = finalTarget.toPos();
         Pos targetPos = resolveTarget(botPos, realTarget);
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
-        emitResolveDebug(botPos, realTarget, targetPos, allowPlacement, "A*");
+        emitResolveDebug(botPos, realTarget, targetPos, allowPlacement);
         if (!allowPlacement) {
             placeQueue.clear();
             if (current != null && !current.toPlace().isEmpty()) {
@@ -343,67 +336,6 @@ public final class Navigator {
             return 1;
         }
         return dist <= 20 ? 2 : 4;
-    }
-
-    // ------------------------------------------------------------------ Dijkstra (campo de fluxo)
-
-    private Vec3 dijkstraWaypoint(Vec3 finalTarget) {
-        onPath = false;
-        Pos botPos = anchorPos();
-        Pos real = finalTarget.toPos();
-        Pos targetPos = resolveTarget(botPos, real);
-        emitResolveDebug(botPos, real, targetPos, bot.brain().canPlaceToweringBlocksNearTarget(), "Dijkstra");
-        if (targetPos == null) {
-            clearDebug();
-            return finalTarget;
-        }
-        int retarget = recalcThreshold(botPos.manhattan(targetPos));
-        if (lastFlowTarget == null || lastFlowTarget.manhattan(targetPos) > retarget) {
-            lastFlowTarget = targetPos;
-        }
-        FlowField field = bot.manager().plugin().pathService().flowField(world(), lastFlowTarget);
-        if (field == null) {
-            return Vec3.bottomCenter(targetPos);
-        }
-        Vec3 raw = field.waypoint(botPos.x(), botPos.y(), botPos.z());
-        if (raw == null) {
-            return Vec3.bottomCenter(targetPos);
-        }
-        onPath = true;
-        Pos next = raw.toPos();
-        World w = world();
-        if (!bot.mining().isMining() && !bot.isRiding()) {
-            if (WorldUtil.collides(w, next)) {
-                bot.mining().startNoStop(next);
-            } else if (WorldUtil.collides(w, next.above())) {
-                bot.mining().startNoStop(next.above());
-            }
-        }
-        Vec3 moveDir = raw.subtract(bot.pos()).horizontal();
-        double len = moveDir.length();
-        if (len > 1.0E-6) {
-            moveDir = moveDir.scale(1.0 / len);
-        }
-        if (bot.settings().debugPaths.on()) {
-            List<Pos> sim = new ArrayList<>();
-            int cx = botPos.x();
-            int cy = botPos.y();
-            int cz = botPos.z();
-            for (int i = 0; i < 60; i++) {
-                sim.add(new Pos(cx, cy, cz));
-                int[] d = field.direction(cx, cy, cz);
-                if (d == null || (d[0] == 0 && d[1] == 0 && d[2] == 0)) {
-                    break;
-                }
-                cx += d[0];
-                cy += d[1];
-                cz += d[2];
-            }
-            bot.manager().plugin().debugRenderer().update(bot, sim, 0, Set.of(), Set.of());
-        } else {
-            clearDebug();
-        }
-        return personality.humanize(raw, moveDir, bot.settings().humanize.value());
     }
 
     // ------------------------------------------------------------------ seguir os nós
@@ -662,7 +594,6 @@ public final class Navigator {
         lastResolvedTick = -200;
         lastResolveMode = "reset";
         lastResolveDebugTick = -200;
-        lastFlowTarget = null;
         keptStep = null;
         keptStepTarget = null;
         mineQueue.clear();
@@ -1273,7 +1204,7 @@ public final class Navigator {
         bot.manager().plugin().debugRenderer().clear(bot.id());
     }
 
-    private void emitResolveDebug(Pos botPos, Pos real, Pos resolved, boolean allowPlacement, String planner) {
+    private void emitResolveDebug(Pos botPos, Pos real, Pos resolved, boolean allowPlacement) {
         if (!bot.settings().debugPaths.on()) {
             return;
         }
@@ -1289,7 +1220,7 @@ public final class Navigator {
         int horizontal = (int) Math.round(Math.hypot(real.x() - botPos.x(), real.z() - botPos.z()));
         int range = resolved == null ? -1 : botPos.manhattan(resolved);
         String label = resolved == null ? "null" : resolved.x() + "," + resolved.y() + "," + resolved.z();
-        p.sendActionBar(Component.text(String.format("[%s] modo:%s | colocar:%s | dist:%d | alcance:%d | nó:%s",
-                planner, lastResolveMode, allowPlacement ? "SIM" : "NÃO", horizontal, range, label)));
+        p.sendActionBar(Component.text(String.format("[A*] modo:%s | colocar:%s | dist:%d | alcance:%d | nó:%s",
+                lastResolveMode, allowPlacement ? "SIM" : "NÃO", horizontal, range, label)));
     }
 }

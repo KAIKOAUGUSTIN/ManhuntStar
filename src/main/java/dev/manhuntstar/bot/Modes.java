@@ -13,7 +13,7 @@ public final class Modes {
 
     /** Planejador de caminho. */
     public enum PathMode implements Setting.Choice {
-        ASTAR, DIJKSTRA, DUMB;
+        ASTAR, DUMB;
 
         @Override
         public String configName() {
@@ -24,7 +24,6 @@ public final class Modes {
         public List<String> aliases() {
             return switch (this) {
                 case ASTAR -> List.of("astar", "a*");
-                case DIJKSTRA -> List.of("dijkstra");
                 case DUMB -> List.of("dumb", "dumb*");
             };
         }

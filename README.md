@@ -61,7 +61,7 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
   servidores e no `/list`, mensagens "entrou/saiu do jogo" e mensagens de morte do jogo.
 - **Mobs hostis atacam os bots** (zumbis, esqueletos, creepers, aranhas no escuro, slimes por contato,
   piglins ignoram quem usa ouro...), com lista de exceções.
-- Combate, mobilidade, pathfinding (A*, Dijkstra ou direto), táticas, persistência, dificuldade padrão...
+- Combate, mobilidade, pathfinding (A* ou direto), táticas, persistência, dificuldade padrão...
 
 ## Limitações
 

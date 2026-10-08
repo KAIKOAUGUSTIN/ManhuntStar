@@ -2,16 +2,14 @@ package dev.manhuntstar.pathfinding;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.util.Pos;
-import dev.manhuntstar.util.Vec3;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** A* e campo de fluxo em mundos sintéticos (sem servidor). */
+/** A* em mundos sintéticos (sem servidor). */
 class PathfindingTest {
 
     private static final byte STONE = 7;
@@ -168,19 +166,6 @@ class PathfindingTest {
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(14, 64, 0), false, true);
         assertTrue(r.complete());
         assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "caminho " + r.path());
-    }
-
-    @Test
-    void flowFieldPointsTowardTarget() {
-        Grid g = new Grid(60);
-        FlowField f = FlowField.compute(g, new Pos(10, 64, 0));
-        int[] d = f.direction(0, 64, 0);
-        assertNotNull(d);
-        assertEquals(1, d[0]);
-        Vec3 wp = f.waypoint(0, 64, 0);
-        assertNotNull(wp);
-        assertTrue(wp.x() > 0.5);
-        assertEquals(0f, f.costAt(10, 64, 0));
     }
 
     @Test
