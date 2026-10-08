@@ -51,6 +51,9 @@ public final class Navigator {
     /** Em mundo com teto (Nether), quantos blocos acima e abaixo do bot procurar chão. */
     private static final int CEILING_BAND = 12;
     private static final int SKYBASE_MIN_ELEVATION = 3;
+    /** Até essa diferença de altura e distância o bot está no nível do alvo (não precisa de aproximação). */
+    private static final int SAME_LEVEL_DY = 2;
+    private static final int SAME_LEVEL_RADIUS = 32;
     private static final int RESOLVE_CACHE_TICKS = 10;
     private static final int WATER_ASCEND_AIR = 60;
     private static final int WATER_RESUME_AIR = 220;
@@ -618,7 +621,9 @@ public final class Navigator {
             return lastResolved;
         }
         World w = world();
-        boolean needsApproach = isTargetAirborneOrSkybasing(w, real);
+        // O ponto de aproximação é para alvo acima do bot (torre, plataforma no céu). Com o bot já no nível
+        // do alvo e perto, ele mandava o bot para outro lugar (até o teto de uma caixa de vidro) e não no alvo.
+        boolean needsApproach = !sameLevelNearby(botPos, real) && isTargetAirborneOrSkybasing(w, real);
         Pos resolved = real;
         String mode = needsApproach ? "skybase" : "direct";
         if (needsApproach) {
@@ -896,6 +901,12 @@ public final class Navigator {
 
     private boolean isPlayerPlaced(Pos p) {
         return bot.manager().blockTracker().isPlayerPlaced(world(), p);
+    }
+
+    /** Bot na altura do alvo e perto: já está na plataforma dele (ou ao lado) e o caminho normal resolve. */
+    private static boolean sameLevelNearby(Pos botPos, Pos target) {
+        return Math.abs(botPos.y() - target.y()) <= SAME_LEVEL_DY
+                && Math.hypot(botPos.x() - target.x(), botPos.z() - target.z()) <= SAME_LEVEL_RADIUS;
     }
 
     private boolean isTargetAirborneOrSkybasing(World w, Pos target) {
