@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -416,6 +417,10 @@ public final class Navigator {
         if (node.y() > from.y() && WorldUtil.collides(w, from.above(2))) {
             mineQueue.addLast(from.above(2));
         }
+        // Cavar o chão e cair no vão de baixo (teto da caixa do alvo): o bloco cavado é o chão do nó atual.
+        if (node.x() == from.x() && node.z() == from.z() && node.y() < from.y() - 1 && WorldUtil.collides(w, from.below())) {
+            mineQueue.addLast(from.below());
+        }
         if (WorldUtil.collides(w, node)) {
             mineQueue.addLast(node);
         }
@@ -564,21 +569,25 @@ public final class Navigator {
         return false;
     }
 
-    /** O caminho prevê uma queda de 1 a 3 blocos logo à frente (não precisa de MLG). */
-    public boolean isPlannedFall() {
+    /**
+     * Altura da maior queda que o caminho prevê logo à frente (até {@link AStar#MAX_DIG_FALL} blocos; 0 =
+     * nenhuma). Quedas planejadas não precisam de MLG.
+     */
+    public int plannedFallHeight() {
         if (current == null || pathIndex >= current.path().size()) {
-            return false;
+            return 0;
         }
         List<Pos> path = current.path();
         int from = Math.max(0, pathIndex - 1);
         int to = Math.min(path.size() - 1, pathIndex + 3);
+        int height = 0;
         for (int i = from; i < to; i++) {
             int dy = path.get(i).y() - path.get(i + 1).y();
-            if (dy >= 1 && dy <= 3) {
-                return true;
+            if (dy >= 1 && dy <= AStar.MAX_DIG_FALL) {
+                height = Math.max(height, dy);
             }
         }
-        return false;
+        return height;
     }
 
     public List<Pos> currentPath() {
@@ -623,7 +632,9 @@ public final class Navigator {
         World w = world();
         // O ponto de aproximação é para alvo acima do bot (torre, plataforma no céu). Com o bot já no nível
         // do alvo e perto, ele mandava o bot para outro lugar (até o teto de uma caixa de vidro) e não no alvo.
-        boolean needsApproach = !sameLevelNearby(botPos, real) && isTargetAirborneOrSkybasing(w, real);
+        // Com o bot acima do alvo (no teto da caixa dele), mandava descer até o chão embaixo da plataforma.
+        boolean botAbove = botPos.y() - real.y() > SAME_LEVEL_DY;
+        boolean needsApproach = !botAbove && !sameLevelNearby(botPos, real) && isTargetAirborneOrSkybasing(w, real);
         Pos resolved = real;
         String mode = needsApproach ? "skybase" : "direct";
         if (needsApproach) {

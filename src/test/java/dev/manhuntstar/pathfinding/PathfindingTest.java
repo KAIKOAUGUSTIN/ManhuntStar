@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.util.Pos;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -176,6 +177,55 @@ class PathfindingTest {
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(14, 64, 0), false, true);
         assertTrue(r.complete());
         assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "caminho " + r.path());
+    }
+
+    /**
+     * Caixa no céu (chão em y=70, teto de vidro em y=75) com o alvo dentro e o bot no teto: o caminho cava
+     * o teto e cai na caixa. Antes ele saía pela beirada contando com blocos colocados no ar e o bot caía
+     * até o chão lá embaixo. As paredes não quebram para o caminho não descer cavando a coluna da parede.
+     */
+    @Test
+    void digsThroughRoofIntoTheBoxBelow() {
+        Grid g = new Grid(6);
+        byte glass = 2;
+        for (int x = 0; x <= 10; x++) {
+            for (int z = -3; z <= 3; z++) {
+                g.set(x, 70, z, STONE);
+                g.set(x, 75, z, glass);
+                boolean wall = x == 0 || x == 10 || z == -3 || z == 3;
+                for (int y = 71; y <= 74; y++) {
+                    g.set(x, y, z, wall ? CostProvider.UNBREAKABLE : CostProvider.AIR);
+                }
+            }
+        }
+        PathResult r = find(g, new Pos(3, 76, 0), new Pos(6, 71, 0), true);
+        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.path().stream().allMatch(p -> p.x() >= 0 && p.x() <= 10 && Math.abs(p.z()) <= 3 && p.y() >= 71),
+                () -> "saiu da caixa: " + r.path());
+        assertTrue(r.toMine().stream().anyMatch(p -> p.y() == 75), () -> "não cavou o teto: " + r.toMine());
+        assertTrue(r.toPlace().isEmpty(), () -> "colocar " + r.toPlace());
+    }
+
+    /** Despenhadeiro de 13 blocos: nenhuma descida conta com bloco colocado embaixo do pouso. */
+    @Test
+    void neverPlansLandingOnBlocksPlacedInTheAir() {
+        Grid g = new Grid(2);
+        for (int x = 6; x <= 30; x++) {
+            for (int z = -2; z <= 2; z++) {
+                for (int y = 51; y <= 63; y++) {
+                    g.set(x, y, z, CostProvider.AIR);
+                }
+            }
+        }
+        PathResult r = find(g, new Pos(0, 64, 0), new Pos(12, 51, 0), true);
+        assertTrue(r.complete(), () -> "caminho " + r.path());
+        List<Pos> path = r.path();
+        for (int i = 1; i < path.size(); i++) {
+            Pos p = path.get(i);
+            if (p.y() < path.get(i - 1).y()) {
+                assertTrue(CostProvider.isSolid(g.cost(p.x(), p.y() - 1, p.z())), "pouso sem chão em " + p + ", caminho " + path);
+            }
+        }
     }
 
     @Test

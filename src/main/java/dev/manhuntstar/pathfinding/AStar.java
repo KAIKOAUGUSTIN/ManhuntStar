@@ -13,8 +13,17 @@ import java.util.Set;
  * pular buracos de 2-3 blocos, pilar para cima/descer cavando, diagonais, cavar blocos no caminho,
  * colocar blocos para atravessar vãos e atravessar água de barco. Nós ficam em arrays (sem alocar objetos) e cada thread
  * tem sua própria instância, então pode rodar em paralelo com segurança.
+ *
+ * <p>Descer nunca conta com bloco colocado: caindo, o bot não consegue pôr um bloco embaixo de onde vai
+ * pousar. Cavando o chão com um vão embaixo (o teto da sala ou da caixa do alvo), ele cai até o primeiro
+ * apoio, até {@link #MAX_DIG_FALL} blocos.
  */
 public final class AStar {
+
+    /** Maior queda planejada: cavar o chão e cair no vão de baixo (5 blocos = 1 coração de dano). */
+    public static final int MAX_DIG_FALL = 5;
+    /** Custo extra por bloco de queda acima de 3 (dano de queda). */
+    private static final double FALL_DAMAGE_COST = 4.0;
 
     private static final double SPRINT_COST = 2.81;
     private static final double CEILING_SPRINT_COST = 2.22;
@@ -108,14 +117,14 @@ public final class AStar {
                     if (!dropColumnClear(x, cy, z, drop)) {
                         break;
                     }
-                    expand(cur, x, cy - drop, z, 3.0 + drop * 1.5);
+                    expand(cur, x, cy - drop, z, 3.0 + drop * 1.5, false);
                 }
                 if (CostProvider.isSolid(costs.cost(cx, cy - 1, cz))) {
                     tryParkour(cur, d);
                 }
             }
             expand(cur, cx, cy + 1, cz, STEP_UP_COST);
-            expand(cur, cx, cy - 1, cz, 3.0);
+            expandDown(cur);
             for (int[] d : DIAGONALS) {
                 int x = cx + d[0];
                 int z = cz + d[1];
@@ -191,7 +200,55 @@ public final class AStar {
         }
     }
 
+    /**
+     * Descer: nadando, ou cavando o chão. Se embaixo do bloco cavado houver um vão, o bot cai até o
+     * primeiro apoio (ou até a água), no máximo {@link #MAX_DIG_FALL} blocos. Sem bloco para cavar não há
+     * descida: no ar o bot não consegue pôr um bloco embaixo de si. A exceção é o nó inicial no ar (o bot
+     * pulando ou caindo quando o caminho foi pedido), que cai de verdade; os outros nós no ar estão sobre
+     * um bloco que o caminho vai colocar.
+     */
+    private void expandDown(int cur) {
+        int cx = nx[cur];
+        int cy = ny[cur];
+        int cz = nz[cur];
+        byte floor = costs.cost(cx, cy - 1, cz);
+        if (floor == CostProvider.WATER || costs.cost(cx, cy, cz) == CostProvider.WATER) {
+            expand(cur, cx, cy - 1, cz, 3.0, false);
+            return;
+        }
+        boolean dig = CostProvider.isMinable(floor);
+        if (!dig && !(floor == CostProvider.AIR && parent[cur] < 0)) {
+            return;
+        }
+        for (int land = cy - 1; land >= cy - MAX_DIG_FALL; land--) {
+            byte feet = land == cy - 1 ? CostProvider.AIR : costs.cost(cx, land, cz);
+            if (CostProvider.isSolid(feet) || feet == CostProvider.AVOID) {
+                return;
+            }
+            if (feet != CostProvider.WATER && !CostProvider.isSolid(costs.cost(cx, land - 1, cz))) {
+                continue;
+            }
+            if (land == cy - 1) {
+                expand(cur, cx, land, cz, 3.0, false);
+                return;
+            }
+            int fall = cy - land;
+            double cost = 3.0 + fall * 1.5 + Math.max(0, fall - 3) * FALL_DAMAGE_COST;
+            // o bloco cavado só entra na conta do expand quando é a cabeça do pouso (queda de 2)
+            if (dig && land < cy - 2) {
+                cost += floor;
+            }
+            expand(cur, cx, land, cz, cost, false);
+            return;
+        }
+    }
+
     private void expand(int cur, int x, int y, int z, double baseCost) {
+        expand(cur, x, y, z, baseCost, true);
+    }
+
+    /** @param canPlace pode pousar sobre um bloco colocado (não vale para quedas: caindo não dá para colocar) */
+    private void expand(int cur, int x, int y, int z, double baseCost, boolean canPlace) {
         byte feet = costs.cost(x, y, z);
         byte head = costs.cost(x, y + 1, z);
         byte ground = costs.cost(x, y - 1, z);
@@ -215,7 +272,7 @@ public final class AStar {
             cost += SWIM_EXTRA;
         }
         if (!swimming && (ground == CostProvider.AIR || ground == CostProvider.WATER)) {
-            if (!allowPlacement) {
+            if (!allowPlacement || !canPlace) {
                 return;
             }
             cost += PLACE_COST;
@@ -325,6 +382,10 @@ public final class AStar {
             int p = parent[cur];
             if (p >= 0 && y > ny[p] && CostProvider.isMinable(costs.cost(nx[p], ny[p] + 2, nz[p]))) {
                 toMine.add(new Pos(nx[p], ny[p] + 2, nz[p]));
+            }
+            // cavou o chão e caiu no vão de baixo: o bloco cavado não é nem os pés nem a cabeça do pouso
+            if (p >= 0 && x == nx[p] && z == nz[p] && y < ny[p] - 2 && CostProvider.isMinable(costs.cost(x, ny[p] - 1, z))) {
+                toMine.add(new Pos(x, ny[p] - 1, z));
             }
             boolean swimming = feet == CostProvider.WATER || head == CostProvider.WATER;
             if (allowPlacement && !swimming && (ground == CostProvider.AIR || ground == CostProvider.WATER)) {
