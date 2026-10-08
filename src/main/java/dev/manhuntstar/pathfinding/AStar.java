@@ -10,8 +10,8 @@ import java.util.Set;
 
 /**
  * A* com o modelo de movimento do mod: andar/correr (com teto), subir 1 bloco, cair até 3,
- * pular buracos de 2-3 blocos, pilar para cima/descer cavando, diagonais, cavar blocos no caminho
- * e colocar blocos para atravessar vãos. Nós ficam em arrays (sem alocar objetos) e cada thread
+ * pular buracos de 2-3 blocos, pilar para cima/descer cavando, diagonais, cavar blocos no caminho,
+ * colocar blocos para atravessar vãos e atravessar água de barco. Nós ficam em arrays (sem alocar objetos) e cada thread
  * tem sua própria instância, então pode rodar em paralelo com segurança.
  */
 public final class AStar {
@@ -21,6 +21,10 @@ public final class AStar {
     private static final double JUMP_COST = 3.16;
     private static final double STEP_UP_COST = 7.79;
     private static final double SWIM_EXTRA = 4.63;
+    /** De barco na superfície: ~8 blocos/s contra ~5,6 correndo. */
+    private static final double BOAT_FACTOR = 0.7;
+    /** Colocar o barco, embarcar e quebrá-lo na outra margem (~2 s): só compensa em travessia longa. */
+    private static final double BOAT_BOARD_COST = 25.0;
     private static final double PLACE_COST = 20.0;
     private static final double DIAG_COST = 3.97334;
     private static final double DIAG_CEILING_COST = 3.13908;
@@ -54,8 +58,14 @@ public final class AStar {
     private int tz;
     private double greediness;
     private boolean allowPlacement;
+    private boolean allowBoat;
 
-    public PathResult findPath(CostProvider costs, Pos start, Pos target, int maxNodes, long maxTimeMs, double greediness, boolean allowPlacement) {
+    /**
+     * @param allowBoat a superfície da água conta como trecho de barco (mais rápido que nadar, com um
+     *                  custo fixo para embarcar), e o bot atravessa de barco o trecho que o caminho escolher
+     */
+    public PathResult findPath(CostProvider costs, Pos start, Pos target, int maxNodes, long maxTimeMs, double greediness,
+            boolean allowPlacement, boolean allowBoat) {
         long t0 = System.nanoTime();
         long deadline = t0 + maxTimeMs * 1_000_000L;
         this.costs = costs;
@@ -64,6 +74,7 @@ public final class AStar {
         this.tz = target.z();
         this.greediness = greediness;
         this.allowPlacement = allowPlacement;
+        this.allowBoat = allowBoat;
         count = 0;
         heapSize = 0;
         index.clear();
@@ -195,7 +206,12 @@ public final class AStar {
             cost += head;
         }
         boolean swimming = feet == CostProvider.WATER || head == CostProvider.WATER;
-        if (swimming) {
+        if (swimming && allowBoat && feet == CostProvider.WATER && head == CostProvider.AIR && boatFits(x, y, z)) {
+            cost = baseCost * BOAT_FACTOR;
+            if (costs.cost(nx[cur], ny[cur], nz[cur]) != CostProvider.WATER) {
+                cost += BOAT_BOARD_COST;
+            }
+        } else if (swimming) {
             cost += SWIM_EXTRA;
         }
         if (!swimming && (ground == CostProvider.AIR || ground == CostProvider.WATER)) {
@@ -214,6 +230,17 @@ public final class AStar {
             }
         }
         submit(cur, x, y, z, cost);
+    }
+
+    /** O barco tem 1,4 bloco de largura e não passa num canal de 1 bloco: a água precisa continuar para os lados. */
+    private boolean boatFits(int x, int y, int z) {
+        int water = 0;
+        for (int[] d : CARDINALS) {
+            if (costs.cost(x + d[0], y, z + d[1]) == CostProvider.WATER) {
+                water++;
+            }
+        }
+        return water >= 3;
     }
 
     private void submit(int cur, int x, int y, int z, double moveCost) {

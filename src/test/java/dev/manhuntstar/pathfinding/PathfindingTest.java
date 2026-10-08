@@ -43,7 +43,21 @@ class PathfindingTest {
     }
 
     private static PathResult find(CostProvider g, Pos from, Pos to, boolean place) {
-        return AStar.get().findPath(g, from, to, 20_000, 2_000, 1.5, place);
+        return find(g, from, to, place, false);
+    }
+
+    private static PathResult find(CostProvider g, Pos from, Pos to, boolean place, boolean boat) {
+        return AStar.get().findPath(g, from, to, 20_000, 2_000, 1.5, place, boat);
+    }
+
+    /** Lago de 2 blocos de fundo, com a superfície em y=63. */
+    private static void lake(Grid g, int x0, int x1, int z0, int z1) {
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                g.set(x, 63, z, CostProvider.WATER);
+                g.set(x, 62, z, CostProvider.WATER);
+            }
+        }
     }
 
     @Test
@@ -130,6 +144,30 @@ class PathfindingTest {
         for (Pos p : r.path()) {
             assertFalse(p.x() >= 5 && p.x() <= 8 && p.y() == 64, "pisou na lava em " + p);
         }
+    }
+
+    @Test
+    void crossesLakeByBoatAndWalksAroundWithout() {
+        Grid g = new Grid(20);
+        // 21 blocos de travessia; dar a volta pela ponta (|z| >= 9) custa menos que nadar e mais que remar
+        lake(g, 4, 24, -8, 8);
+        PathResult boat = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, true);
+        assertTrue(boat.complete());
+        assertTrue(boat.path().stream().filter(p -> p.y() == 63).count() >= 15, () -> "de barco " + boat.path());
+        assertTrue(boat.path().stream().allMatch(p -> Math.abs(p.z()) < 9), () -> "de barco " + boat.path());
+        PathResult walk = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, false);
+        assertTrue(walk.complete());
+        assertTrue(walk.path().stream().anyMatch(p -> Math.abs(p.z()) >= 9), () -> "a pé " + walk.path());
+        assertTrue(walk.path().stream().noneMatch(p -> p.y() == 63), () -> "a pé " + walk.path());
+    }
+
+    @Test
+    void walksAroundSmallPondEvenWithBoat() {
+        Grid g = new Grid(20);
+        lake(g, 5, 8, -2, 2);
+        PathResult r = find(g, new Pos(0, 64, 0), new Pos(14, 64, 0), false, true);
+        assertTrue(r.complete());
+        assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "caminho " + r.path());
     }
 
     @Test

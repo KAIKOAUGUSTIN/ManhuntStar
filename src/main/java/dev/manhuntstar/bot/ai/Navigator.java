@@ -58,6 +58,8 @@ public final class Navigator {
     private static final int WATER_RESUME_AIR = 220;
     /** Um pulo de 2–3 blocos leva menos de 1 s; passou de 3 s, o bot ficou preso. */
     private static final int PARKOUR_TIMEOUT_TICKS = 60;
+    /** Trecho de água mais curto que isso não vale o barco, mesmo que o A* tenha passado por ele. */
+    private static final int BOAT_MIN_RUN = 6;
 
     private enum WaterMode { NONE, CRUISE, ASCEND_FOR_AIR }
 
@@ -98,6 +100,8 @@ public final class Navigator {
     private String keptStepNote = "";
     /** Lado (1 ou -1) do último desvio: na próxima escolha esse lado é tentado primeiro. */
     private int stepSide = 1;
+    /** Até este tick o A* não planeja barco (uma travessia acabou de falhar). */
+    private int boatBlockedUntil;
 
     public Navigator(Bot bot) {
         this.bot = bot;
@@ -220,6 +224,51 @@ public final class Navigator {
         return onPath;
     }
 
+    // ------------------------------------------------------------------ barco
+
+    private boolean boatsAllowed() {
+        return bot.settings().allowBoat.on() && Bukkit.getCurrentTick() >= boatBlockedUntil;
+    }
+
+    /** Depois de uma travessia que não deu certo o bot nada ou contorna por um tempo. */
+    public void blockBoats(int ticks) {
+        boatBlockedUntil = Bukkit.getCurrentTick() + ticks;
+    }
+
+    /**
+     * Fim do trecho de água à frente no caminho, quando o A* decidiu atravessá-lo de barco. A pé só
+     * responde com o bot já na beira de um trecho longo; de barco, devolve o fim do trecho em que ele está.
+     */
+    public Pos boatCrossingGoal(boolean riding) {
+        if (current == null || !boatsAllowed()) {
+            return null;
+        }
+        List<Pos> path = current.path();
+        World w = world();
+        int start = -1;
+        for (int i = pathIndex; i < Math.min(path.size(), pathIndex + 3); i++) {
+            if (isBoatWater(w, path.get(i))) {
+                start = i;
+                break;
+            }
+        }
+        if (start < 0) {
+            return null;
+        }
+        int end = start;
+        while (end + 1 < path.size() && isBoatWater(w, path.get(end + 1))) {
+            end++;
+        }
+        if (!riding && (end - start + 1 < BOAT_MIN_RUN || bot.pos().distanceTo(Vec3.bottomCenter(path.get(start))) > 3.0)) {
+            return null;
+        }
+        return path.get(end);
+    }
+
+    private static boolean isBoatWater(World w, Pos p) {
+        return WorldUtil.isWater(w, p) && !WorldUtil.hasFluid(w, p.above());
+    }
+
     private void consumeFinishedTask() {
         if (task == null || !task.isDone()) {
             return;
@@ -276,7 +325,7 @@ public final class Navigator {
             return;
         }
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
-        task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement);
+        task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement, boatsAllowed());
         lastTarget = target;
         lastCalcMs = System.currentTimeMillis();
     }
@@ -685,7 +734,8 @@ public final class Navigator {
     /**
      * Ponto intermediário rumo a um alvo distante. Primeiro 96 blocos em linha reta, como no mod; se ali
      * não houver chão (lago, mar, mata fechada), tenta para os lados e mais perto, e por fim a superfície
-     * da água, porque o bot nada. Só aceita pontos ao alcance do A* ({@link #MAX_DISTANCE}). Um desvio
+     * da água, porque o bot nada. Com barco liberado, água na reta já serve: ele atravessa remando. Só
+     * aceita pontos ao alcance do A* ({@link #MAX_DISTANCE}). Um desvio
      * escolhido é mantido enquanto servir, senão o bot trocaria de lado a cada passo.
      */
     private Pos intermediateTarget(Pos botPos, Pos target) {
@@ -741,7 +791,14 @@ public final class Navigator {
                 if (!ceiling) {
                     Pos top = rough.below();
                     lava |= WorldUtil.isLava(w, top);
-                    if (water == null && WorldUtil.isWater(w, top) && !WorldUtil.hasFluid(w, rough) && botPos.manhattan(top) <= MAX_DISTANCE) {
+                    boolean surfaceWater = WorldUtil.isWater(w, top) && !WorldUtil.hasFluid(w, rough) && botPos.manhattan(top) <= MAX_DISTANCE;
+                    if (surfaceWater && straight && boatsAllowed()) {
+                        // de barco, atravessar em linha reta costuma ganhar de procurar terra para os lados
+                        keptStep = null;
+                        stepNote = "(barco)";
+                        return top;
+                    }
+                    if (water == null && surfaceWater) {
                         water = top;
                     }
                 }

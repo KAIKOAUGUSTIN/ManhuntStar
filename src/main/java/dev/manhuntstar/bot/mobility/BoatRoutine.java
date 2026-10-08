@@ -23,6 +23,7 @@ import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -31,12 +32,17 @@ import org.bukkit.util.Vector;
 /**
  * Barco: perseguir quem está de barco (ou, da fase 6 em diante, quem está nadando), colocando um
  * barco próprio na água e remando por um caminho na superfície; descer perto da margem, encostar
- * no barco do alvo para atacar ou embarcar como passageiro. O barco é dirigido como o cliente faria
+ * no barco do alvo para atacar ou embarcar como passageiro. Também atravessa de barco o trecho de
+ * água que o A* escolheu em vez de contornar um lago. O barco é dirigido como o cliente faria
  * (giro ±1°/tick acumulado, impulso 0,04 para frente), porque só jogadores mandam remadas.
  */
 public final class BoatRoutine {
 
     private static final double SEARCH_RADIUS_SQ = 40.0 * 40.0;
+    /** Sem novo pedido do caminho por esse tempo, a travessia a pé é cancelada. */
+    private static final int CROSSING_REQUEST_TTL = 5;
+    /** Depois de uma travessia que falhou, o A* fica esse tempo sem planejar barco (30 s). */
+    private static final int CROSSING_FAIL_BLOCK_TICKS = 600;
 
     private final Bot bot;
     private UUID riderBoat;
@@ -52,9 +58,41 @@ public final class BoatRoutine {
     private int surfaceRecalc;
     private Pos surfaceStart;
     private Pos surfaceGoal;
+    /** Travessia pedida pelo caminho: onde descer, quem está sendo seguido e o prazo. */
+    private Pos crossingGoal;
+    private LivingEntity crossingFollow;
+    private int crossingRequestTick;
+    private int crossingTicks;
+    private int crossingBudget;
 
     public BoatRoutine(Bot bot) {
         this.bot = bot;
+    }
+
+    /**
+     * O caminho tem à frente um trecho de água que o A* decidiu atravessar de barco, terminando em
+     * {@code goal}. O pedido vale enquanto for repetido; o bot embarca quando chegar na beira.
+     */
+    public void requestCrossing(Pos goal, LivingEntity follow) {
+        if (!bot.settings().allowBoat.on()) {
+            return;
+        }
+        if (crossingGoal == null) {
+            crossingTicks = 0;
+            crossingBudget = budgetFor(bot.pos(), goal);
+        }
+        crossingGoal = goal;
+        crossingFollow = follow;
+        crossingRequestTick = Bukkit.getCurrentTick();
+    }
+
+    public boolean isCrossing() {
+        return crossingGoal != null;
+    }
+
+    /** Prazo da travessia: 10 s de folga mais 6 ticks por bloco (o barco faz ~2,5 ticks por bloco). */
+    private int budgetFor(Vec3 from, Pos goal) {
+        return crossingTicks + 200 + (int) (from.distanceTo(Vec3.bottomCenter(goal)) * 6);
     }
 
     public void tickCooldowns() {
@@ -87,9 +125,17 @@ public final class BoatRoutine {
                 cleanup(true);
             }
             clearAssault();
+            clearCrossing();
             return false;
         }
         Player boating = findNearbyBoatingPlayer();
+        if (crossingGoal != null) {
+            if (boating == null) {
+                return handleCrossing(vehicle);
+            }
+            // alguém de barco por perto: vale a perseguição de barco de sempre
+            clearCrossing();
+        }
         Player chase = primaryChaseTarget();
         boolean phase6WaterChase = bot.progression().phase() >= 6 && chase != null && !isOutOfWater(chase);
         boolean deferToVertical = boating == null && chase != null && shouldDeferToVerticalChase(chase);
@@ -124,9 +170,10 @@ public final class BoatRoutine {
             return false;
         }
         Pos water = findBoatPlacementWater();
-        if (water == null) {
-            return false;
-        }
+        return water != null && placeAndBoard(water);
+    }
+
+    private boolean placeAndBoard(Pos water) {
         if (bot.combat().isBlocking()) {
             bot.combat().stopBlock();
         }
@@ -146,6 +193,72 @@ public final class BoatRoutine {
         boat.addPassenger(bot.entity());
         bot.motor().resetFallTracking();
         return true;
+    }
+
+    // ------------------------------------------------------------------ travessia pedida pelo caminho
+
+    private boolean handleCrossing(Entity vehicle) {
+        LivingEntity follow = crossingFollow;
+        boolean followGone = follow == null || follow.isDead() || !follow.getWorld().equals(bot.world());
+        if (vehicle instanceof Boat mounted && isRiderBoat(mounted)) {
+            crossingTicks++;
+            if (!followGone && bot.tickDelay(10)) {
+                // o caminho é recalculado a partir do barco; o fim do trecho de água pode ter mudado
+                Navigator nav = bot.brain().navigator();
+                nav.waypoint(Vec3.of(follow.getLocation()));
+                Pos next = nav.boatCrossingGoal(true);
+                if (next != null && !next.equals(crossingGoal)) {
+                    crossingGoal = next;
+                    crossingBudget = budgetFor(Vec3.of(mounted.getLocation()), next);
+                }
+            }
+            Location bl = mounted.getLocation();
+            Vec3 goal = Vec3.bottomCenter(crossingGoal);
+            boolean arrived = Math.hypot(goal.x() - bl.getX(), goal.z() - bl.getZ()) < 2.5;
+            boolean close = !followGone && bl.distance(follow.getLocation()) < 4.0;
+            boolean stuck = noMoveTicks >= 40;
+            boolean late = crossingTicks > crossingBudget;
+            if (followGone || close || stuck || late || shouldDismountNearShore(mounted) || (arrived && isBoatCloseToLand(mounted))) {
+                finishCrossing(stuck || late);
+                return false;
+            }
+            if (arrived) {
+                // o caminho acaba no meio da água (alvo ainda longe): espera o próximo trecho
+                deltaRotation = 0;
+                bot.motor().stopWalk();
+                return true;
+            }
+            steerTowards(mounted, goal);
+            return true;
+        }
+        if (vehicle != null || followGone || Bukkit.getCurrentTick() - crossingRequestTick > CROSSING_REQUEST_TTL) {
+            // o caminho deixou de pedir a travessia (desviou, perdeu o alvo) ou o bot montou em outra coisa
+            clearCrossing();
+            return false;
+        }
+        if (actionCooldown > 0 || reboardCooldown > 0) {
+            return false;
+        }
+        // a pé: embarca quando estiver na beira; até lá o caminho normal leva o bot até a água
+        Pos water = findBoatPlacementWater();
+        return water != null && placeAndBoard(water);
+    }
+
+    private void finishCrossing(boolean failed) {
+        cleanup(true);
+        bot.inventory().restorePreferredMainHand();
+        clearCrossing();
+        Navigator nav = bot.brain().navigator();
+        if (failed) {
+            nav.blockBoats(CROSSING_FAIL_BLOCK_TICKS);
+        }
+        // caminho novo a partir da margem: o antigo ainda apontava para o começo da água
+        nav.reset();
+    }
+
+    private void clearCrossing() {
+        crossingGoal = null;
+        crossingFollow = null;
     }
 
     private boolean handleForeignBoat(Boat mounted, Player chase) {

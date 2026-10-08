@@ -297,7 +297,7 @@ public final class Brain {
             return;
         }
         if (boat.handle()) {
-            state = "barco";
+            state = boat.isCrossing() ? "atravessando de barco" : "barco";
             return;
         }
         LivingEntity horseTarget = playerTarget;
@@ -403,6 +403,11 @@ public final class Brain {
                 targetLoc = wp;
                 // sem caminho calculado o ponto é só a direção: anda desviando dos obstáculos
                 hasPath = navigator.onPath();
+            }
+            Pos crossing = navigator.boatCrossingGoal(false);
+            if (crossing != null) {
+                // o A* preferiu atravessar a água de barco: embarca quando chegar na beira
+                boat.requestCrossing(crossing, active);
             }
         }
         state = (hasPath ? "seguindo caminho até " : "indo direto até ") + who + String.format(java.util.Locale.ROOT, " (%.0f blocos)", dist);

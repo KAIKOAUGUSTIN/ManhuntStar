@@ -68,7 +68,7 @@ public final class PathService {
      * Pede um caminho. Assíncrono: devolve um future completado numa thread do pool (ler só com
      * {@code isDone()/join()} na thread principal). Síncrono: já vem completado.
      */
-    public CompletableFuture<PathResult> findPath(World world, Pos start, Pos target, boolean allowPlacement) {
+    public CompletableFuture<PathResult> findPath(World world, Pos start, Pos target, boolean allowPlacement, boolean allowBoat) {
         if (closed) {
             return CompletableFuture.completedFuture(null);
         }
@@ -79,14 +79,14 @@ public final class PathService {
         double greed = settings.greediness.value();
         long submitted = System.currentTimeMillis();
         if (!settings.asyncPaths.on()) {
-            PathResult r = safeFind(grid, start, target, cap, SYNC_TIME_BUDGET_MS, greed, allowPlacement);
+            PathResult r = safeFind(grid, start, target, cap, SYNC_TIME_BUDGET_MS, greed, allowPlacement, allowBoat);
             record(System.currentTimeMillis() - submitted);
             return CompletableFuture.completedFuture(r);
         }
         activeTasks.incrementAndGet();
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return safeFind(grid, start, target, cap, ASYNC_TIME_BUDGET_MS, greed, allowPlacement);
+                return safeFind(grid, start, target, cap, ASYNC_TIME_BUDGET_MS, greed, allowPlacement, allowBoat);
             } finally {
                 activeTasks.decrementAndGet();
                 record(System.currentTimeMillis() - submitted);
@@ -94,9 +94,9 @@ public final class PathService {
         }, pool);
     }
 
-    private PathResult safeFind(CostProvider grid, Pos start, Pos target, int cap, long budget, double greed, boolean place) {
+    private PathResult safeFind(CostProvider grid, Pos start, Pos target, int cap, long budget, double greed, boolean place, boolean boat) {
         try {
-            return AStar.get().findPath(grid, start, target, cap, budget, greed, place);
+            return AStar.get().findPath(grid, start, target, cap, budget, greed, place, boat);
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "Erro no A*", e);
             return null;

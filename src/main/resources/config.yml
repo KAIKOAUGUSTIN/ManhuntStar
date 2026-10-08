@@ -89,7 +89,7 @@ mobilidade:
   dimensao-perolas: nether
   # Cavalos (fase 4+). [allowhorse]
   cavalos: true
-  # Barcos. [allowboat]
+  # Barcos: perseguir quem está de barco ou nadando, e atravessar lagos de barco quando é mais rápido que contornar. [allowboat]
   barcos: true
   # Elytra para alcançar alvos longe. [botuseelytra]
   elytra: false

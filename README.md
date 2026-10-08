@@ -78,6 +78,9 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
   antecipam o alvo pelo tempo de voo.
 - **Cavalo**: no jogo só um jogador comanda o cavalo; com o bot montado, a IA do cavalo é desligada enquanto ele
   cavalga (o cavalo vira para onde o bot olha, galopa, pula obstáculos e vãos, boia na água) e religada quando ele desce.
+- **Barco no caminho**: o A* compara atravessar um lago de barco com dar a volta a pé. Quando a travessia
+  compensa, o bot coloca um barco na beira, rema até a outra margem e quebra o barco ao descer
+  (`mobilidade.barcos`).
 - **Bots longe dos jogadores** continuam se movendo: o plugin mantém os chunks em volta de cada bot carregados (com
   contagem, para um bot não soltar o chunk de outro) e impede que o Paper deixe o bot "inativo" por estar longe de jogadores.
 - **Skins**: pela conta Mojang do nome, por um `.png` em `plugins/ManhuntStar/skins/` ou a skin de robô padrão.
