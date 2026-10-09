@@ -14,6 +14,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 /**
  * Pausa da caçada (/manhunt pause): cada bot fica parado onde está, até no ar, montado ou de barco,
@@ -102,6 +103,23 @@ public final class PauseService {
             frozen.put(bot.id(), f);
         }
         f.hold();
+    }
+
+    /**
+     * O bot foi levado de propósito durante a pausa (/manhunt tp, menu): congela de novo onde ele está.
+     * Sem isso o congelamento o devolvia ao lugar antigo no tick seguinte.
+     */
+    public void refreeze(Bot bot) {
+        Frozen f = frozen.remove(bot.id());
+        if (f != null) {
+            f.release();
+        }
+        if (paused && bot.isAlive()) {
+            // chega parado, como depois de qualquer teleporte
+            bot.entity().setVelocity(new Vector());
+            bot.entity().setFallDistance(0);
+            hold(bot);
+        }
     }
 
     /** Fim do tick pausado: solta quem deixou de ser bot vivo (removido ou /kill) e atualiza a barra. */

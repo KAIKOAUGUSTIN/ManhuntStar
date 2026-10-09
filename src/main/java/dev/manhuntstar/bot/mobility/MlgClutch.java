@@ -126,6 +126,19 @@ public final class MlgClutch {
         }
     }
 
+    /**
+     * O bot morreu ou saiu do mundo: some com os barcos que ele colocou. A próxima vida começa com um
+     * registro novo, então sem isso o barco ficava no mundo para sempre.
+     */
+    public void discardBoats() {
+        for (UUID id : spawnedBoats) {
+            if (Bukkit.getEntity(id) instanceof Boat b && b.isValid()) {
+                b.remove();
+            }
+        }
+        spawnedBoats.clear();
+    }
+
     /** Desmonta e quebra o barco como o jogador quebrando com socos (sem drop). */
     public void breakBoat(Boat b) {
         if (b.getPassengers().contains(bot.entity())) {

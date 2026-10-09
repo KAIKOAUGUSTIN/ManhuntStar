@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -60,7 +61,8 @@ public final class MenuManager implements Listener {
 
     private final ManhuntStarPlugin plugin;
     private final Map<UUID, SpawnDraft> drafts = new HashMap<>();
-    private final Map<UUID, Consumer<String>> chatInput = new HashMap<>();
+    /** Lido pelo evento de chat, que roda fora da thread principal. */
+    private final Map<UUID, Consumer<String>> chatInput = new ConcurrentHashMap<>();
     private Map<String, List<String>> descriptions;
 
     private static final class SpawnDraft {

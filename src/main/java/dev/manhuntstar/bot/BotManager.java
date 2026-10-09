@@ -5,6 +5,7 @@ import dev.manhuntstar.api.BotEvents;
 import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
+import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.mobility.PortalEntrance;
 import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
@@ -636,27 +637,38 @@ public final class BotManager {
         registerEntity(bot, bot.entity());
         plugin.glow().apply(bot);
         bot.brain().startPostTeleportStabilization();
+        if (pause.isPaused()) {
+            pause.refreeze(bot);
+        }
     }
 
-    public boolean teleportBotToPlayer(String name, Player target) {
-        List<Bot> list = botsNamed(name);
-        for (Bot b : list) {
+    /** Leva os bots vivos com esse nome até o jogador (como remove e skin, vale para todos). @return quantos foram */
+    public int teleportBotsToPlayer(String name, Player target) {
+        List<Bot> alive = new ArrayList<>();
+        for (Bot b : botsNamed(name)) {
             if (b.isAlive()) {
-                teleportBot(b, target.getLocation());
-                return true;
+                alive.add(b);
             }
         }
-        return false;
+        for (Bot b : alive) {
+            teleportBot(b, alive.size() == 1 ? target.getLocation() : nearPlayer(target));
+        }
+        return alive.size();
     }
 
     public int teleportAllTo(Player target) {
         int n = 0;
         for (Bot b : aliveBots()) {
-            Location l = target.getLocation().clone().add(ThreadLocalRandom.current().nextDouble(-2, 2), 0, ThreadLocalRandom.current().nextDouble(-2, 2));
-            teleportBot(b, l);
+            teleportBot(b, nearPlayer(target));
             n++;
         }
         return n;
+    }
+
+    /** Perto do jogador, espalhado um pouco para os bots não ficarem um dentro do outro. */
+    private static Location nearPlayer(Player target) {
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        return target.getLocation().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
     }
 
     /** Alvo foi para outra dimensão: abre uma entrada por portal para os bots que o seguem. */
@@ -668,7 +680,8 @@ public final class BotManager {
         }
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
-            if (b.world().equals(from) && target.getUniqueId().equals(b.targetPlayerId())) {
+            // bots esperando numa roda ficam nela até a largada
+            if (b.world().equals(from) && target.getUniqueId().equals(b.targetPlayerId()) && b.idle() == null) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
             }
@@ -766,11 +779,15 @@ public final class BotManager {
     }
 
     private void respawn(Bot bot, PendingRespawn p) {
+        // bot da roda que morreu antes da largada volta para a roda, e não já caçando
+        UUID ringId = waitingRing(bot);
         Location caveLoc = caveAmbush.respawnLocation(bot);
         Location spawn;
         boolean caveBed = caveLoc != null;
         if (caveBed) {
             spawn = caveLoc;
+        } else if (ringId != null) {
+            spawn = deathSpot(p);
         } else {
             spawn = normalRespawnLocation(bot, p);
         }
@@ -780,6 +797,9 @@ public final class BotManager {
         int phase = caveBed ? caveAmbush.restorePhase(bot) : bot.progression().phase();
         bot.resetRuntime();
         bot.spawnEntity(spawn);
+        if (ringId != null) {
+            bot.setIdle(new IdleBehavior(bot, ringId));
+        }
         if (caveBed && bot.progression().progressionEnabled()) {
             bot.progression().startRespawnRegeneration(phase);
         } else {
@@ -791,11 +811,26 @@ public final class BotManager {
         dirty = true;
     }
 
+    /** A roda em que o bot ainda espera (também morto, antes de renascer), ou null. */
+    private UUID waitingRing(Bot bot) {
+        IdleBehavior idle = bot.idle();
+        return idle != null && idle.isActive() && rings.ring(idle.ringId()) != null ? idle.ringId() : null;
+    }
+
+    private static World deathWorld(PendingRespawn p) {
+        World w = p.world() == null ? null : Bukkit.getWorld(p.world());
+        return w == null ? Bukkit.getWorlds().getFirst() : w;
+    }
+
+    /** No chão, onde o bot morreu (para o bot da roda, a própria roda). */
+    private static Location deathSpot(PendingRespawn p) {
+        World w = deathWorld(p);
+        Vec3 pos = p.deathPos() == null ? Vec3.of(w.getSpawnLocation()) : p.deathPos();
+        return resolveSurface(pos.toLocation(w));
+    }
+
     private Location normalRespawnLocation(Bot bot, PendingRespawn p) {
-        World deathWorld = p.world() == null ? null : Bukkit.getWorld(p.world());
-        if (deathWorld == null) {
-            deathWorld = Bukkit.getWorlds().getFirst();
-        }
+        World deathWorld = deathWorld(p);
         Location custom = customSpawnpoints.get(bot.id());
         if (custom != null && custom.getWorld() != null) {
             return resolveSurface(custom);
@@ -814,8 +849,7 @@ public final class BotManager {
                 return resolveSurface(hidden);
             }
         }
-        Vec3 pos = p.deathPos() == null ? Vec3.of(deathWorld.getSpawnLocation()) : p.deathPos();
-        return resolveSurface(pos.toLocation(deathWorld));
+        return deathSpot(p);
     }
 
     /** Lugar de 100–200 blocos do alvo, fora da linha de visão dele (só em chunks carregados). */
@@ -1097,8 +1131,12 @@ public final class BotManager {
         if (last != null && last.getWorld() != null) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (bots.containsKey(bot.id()) && !bot.isAlive() && !pendingRespawns.containsKey(bot.id())) {
+                    UUID ringId = waitingRing(bot);
                     bot.resetRuntime();
                     bot.spawnEntity(resolveSurface(last));
+                    if (ringId != null) {
+                        bot.setIdle(new IdleBehavior(bot, ringId));
+                    }
                     bot.progression().updateGear();
                     bot.restoreDefaultOffhand();
                 }

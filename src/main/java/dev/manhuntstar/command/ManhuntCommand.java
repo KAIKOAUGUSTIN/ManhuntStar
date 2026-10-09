@@ -500,9 +500,14 @@ public final class ManhuntCommand {
             return 0;
         }
         String name = StringArgumentType.getString(ctx, "bot");
-        boolean ok = manager().teleportBotToPlayer(name, dest);
-        msg().send(sender(ctx), ok ? "comando.tp-ok" : "comando.bot-nao-encontrado", Messages.p("bot", name), Messages.p("jogador", dest.getName()));
-        return ok ? Command.SINGLE_SUCCESS : 0;
+        int n = manager().teleportBotsToPlayer(name, dest);
+        if (n == 0) {
+            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            return 0;
+        }
+        msg().send(sender(ctx), n == 1 ? "comando.tp-ok" : "comando.tp-todos", Messages.p("bot", name), Messages.p("quantidade", n),
+                Messages.p("jogador", dest.getName()));
+        return Command.SINGLE_SUCCESS;
     }
 
     private int tpAll(CommandContext<CommandSourceStack> ctx, Player to) {

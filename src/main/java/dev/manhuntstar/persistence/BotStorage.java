@@ -45,6 +45,9 @@ public final class BotStorage {
         return t;
     });
     private String lastWritten;
+    /** Ordem dos salvamentos (montados na thread principal) e o último que foi para o disco. */
+    private long saveSeq;
+    private long writtenSeq;
 
     /** @param manhunt rodas e caçada em andamento (null se não houver) */
     public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigurationSection manhunt) {
@@ -134,14 +137,21 @@ public final class BotStorage {
             return;
         }
         lastWritten = text;
+        long seq = ++saveSeq;
         if (async) {
-            writer.execute(() -> write(text));
+            writer.execute(() -> write(seq, text));
         } else {
-            write(text);
+            write(seq, text);
         }
     }
 
-    private synchronized void write(String text) {
+    private synchronized void write(long seq, String text) {
+        // um salvamento direto (desligar, apagar tudo) pode passar na frente de um que ainda estava na
+        // fila; o da fila, mais velho, não pode gravar por cima
+        if (seq <= writtenSeq) {
+            return;
+        }
+        writtenSeq = seq;
         try {
             Path target = file.toPath();
             Files.createDirectories(target.getParent());

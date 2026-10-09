@@ -904,6 +904,7 @@ public final class Bot {
             }
         }
         entity = null;
+        brain.mlg().discardBoats();
         releaseChunkTickets();
         manager.plugin().debugRenderer().clear(id);
     }
@@ -915,6 +916,7 @@ public final class Bot {
         }
         mining.cancel();
         entity = null;
+        brain.mlg().discardBoats();
         releaseChunkTickets();
         manager.plugin().debugRenderer().clear(id);
     }

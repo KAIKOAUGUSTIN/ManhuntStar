@@ -267,7 +267,8 @@ public final class CaveAmbush {
         }
         for (UUID targetId : targetsToKill) {
             for (Bot b : new ArrayList<>(manager.aliveBots())) {
-                if (targetId.equals(b.targetPlayerId()) && isInCave(b.world(), b.blockPos())) {
+                // bots esperando numa roda (mesmo embaixo da terra) não fazem parte da emboscada
+                if (targetId.equals(b.targetPlayerId()) && b.idle() == null && isInCave(b.world(), b.blockPos())) {
                     removeBed(b.id());
                     botTargets.remove(b.id());
                     manager.killSilently(b);

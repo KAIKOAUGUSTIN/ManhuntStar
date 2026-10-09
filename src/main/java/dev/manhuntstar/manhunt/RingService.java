@@ -349,7 +349,8 @@ public final class RingService {
                     c.getInt("segundos"), radius + LEAVE_MARGIN);
             for (UUID botId : readIds(c.getStringList("bots"))) {
                 Bot b = manager().bot(botId);
-                if (b != null && b.isAlive()) {
+                // morto ao desligar também volta para a roda quando renascer
+                if (b != null && (b.isAlive() || manager().isPendingRespawn(b))) {
                     b.setIdle(new IdleBehavior(b, r.id));
                     r.bots.add(botId);
                 }
