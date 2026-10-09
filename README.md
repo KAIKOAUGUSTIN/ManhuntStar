@@ -108,6 +108,9 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 
 - **Mira**: besta, arco, tridente e besta com fogos calculam o ângulo pela física real do projétil no servidor e
   antecipam o alvo pelo tempo de voo.
+- **Besta com fogos**: o foguete tem duração de voo 3 (explode entre 40 e 51 ticks, uns 66 blocos). O bot só
+  atira se o foguete chega ao jogador antes de explodir e sem bloco no caminho; com a besta carregada, espera
+  até 1 s o jogador entrar no alcance e, se não entrar, desiste sem atirar.
 - **Cavalo**: no jogo só um jogador comanda o cavalo; com o bot montado, a IA do cavalo é desligada enquanto ele
   cavalga (o cavalo vira para onde o bot olha, galopa, pula obstáculos e vãos, boia na água) e religada quando ele desce.
 - **Lança a cavalo**: montado, o bot segura a lança do nível da fase e faz a carga do jogo contra o alvo (o dano vem

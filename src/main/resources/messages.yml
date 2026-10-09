@@ -150,6 +150,7 @@ capacidade:
   capacidade-ja-ativa: "<red>Já há uma capacidade ativa contra você.</red>"
   fora-da-caverna: "<red>Você não está numa caverna (Y abaixo de 60, sem luz do céu).</red>"
   sem-bot-elegivel: "<red>Nenhum bot elegível (vivo, mirando você, no mesmo mundo, livre e na fase necessária).</red>"
+  foguete-fora-do-alcance: "<red>Nenhum bot tem você ao alcance do foguete (uns 66 blocos, sem bloco no caminho).</red>"
   sem-posicao-emboscada: "<red>Não achei um ponto da mesma caverna para a emboscada.</red>"
   capacidade-desconhecida: "<red>Capacidade desconhecida. Use tnt-craft, bow-burst ou firework-crossbow.</red>"
 

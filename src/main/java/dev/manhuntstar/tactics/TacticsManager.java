@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
@@ -40,7 +41,8 @@ import org.bukkit.util.Vector;
  *   <li>emboscada de TNT: o bot surge atrás do jogador na caverna, chega agachado, coloca e acende
  *   uma TNT perto dele e foge;</li>
  *   <li>rajada de arco (fase 4+): para, puxa o arco e dispara 2–6 flechas;</li>
- *   <li>besta com fogos (fase 5+, experimental no mod, desligada por padrão).</li>
+ *   <li>besta com fogos (fase 5+, experimental no mod, desligada por padrão): foguete de duração 3, e só
+ *   atira se ele chega ao jogador antes de explodir.</li>
  * </ul>
  * No mod a ativação automática estava travada no código; aqui é a opção "capacidades-automaticas".
  */
@@ -51,6 +53,13 @@ public final class TacticsManager {
     private static final int CRAFTING_WINDOW_TICKS = 60;
     private static final double TNT_TRIGGER_DISTANCE = 3.0;
     private static final int ESCAPE_TICKS = 24;
+    /** Duração de voo do foguete da besta (como no item do jogo, de 1 a 3). */
+    private static final int FIREWORK_FLIGHT = 3;
+    /** Menor tempo de vida do foguete no jogo: 10·(1 + duração) ticks, mais um sorteio de 0 a 11. */
+    private static final int FIREWORK_MIN_LIFETIME = 10 * (1 + FIREWORK_FLIGHT);
+    private static final double FIREWORK_SPEED = 1.65;
+    /** Com a besta carregada, quanto tempo espera o jogador entrar no alcance antes de desistir. */
+    private static final int FIREWORK_HOLD_TICKS = 20;
 
     private final BotManager manager;
     private final Map<UUID, Tracker> trackers = new HashMap<>();
@@ -230,7 +239,7 @@ public final class TacticsManager {
                 }
             }
             if (manager.plugin().settings().fireworkCrossbow.on()) {
-                Bot bot = selectBot(p, now, false, 5);
+                Bot bot = selectBot(p, now, false, 5, b -> fireworkReaches(b, p, Vec3.ZERO));
                 if (bot != null) {
                     double chance = (0.2 + (bot.progression().phase() - 5) * 0.2 + (Math.max(1, bot.aggression()) - 1) * 0.1) * (CHECK_INTERVAL / 20.0);
                     if (bot.aggression() > 0 && r.nextDouble() < chance) {
@@ -250,6 +259,10 @@ public final class TacticsManager {
     }
 
     private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase) {
+        return selectBot(p, now, ignoreCooldown, minPhase, b -> true);
+    }
+
+    private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase, Predicate<Bot> able) {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
             // bots esperando na roda não saem dela para emboscar
@@ -258,6 +271,9 @@ public final class TacticsManager {
                 continue;
             }
             if (!ignoreCooldown && botCooldown.getOrDefault(b.id(), Long.MIN_VALUE) > now) {
+                continue;
+            }
+            if (!able.test(b)) {
                 continue;
             }
             eligible.add(b);
@@ -304,9 +320,12 @@ public final class TacticsManager {
                 return null;
             }
             case "firework-crossbow" -> {
-                Bot bot = selectBot(player, now, true, 5);
-                if (bot == null) {
+                if (selectBot(player, now, true, 5) == null) {
                     return "sem-bot-elegivel";
+                }
+                Bot bot = selectBot(player, now, true, 5, b -> fireworkReaches(b, player, Vec3.ZERO));
+                if (bot == null) {
+                    return "foguete-fora-do-alcance";
                 }
                 startFirework(player, bot, now);
                 return null;
@@ -445,13 +464,22 @@ public final class TacticsManager {
             case 0 -> {
                 bot.stand();
                 bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
-                bot.setItem(EquipmentSlot.OFF_HAND, new ItemStack(Material.FIREWORK_ROCKET));
+                bot.setItem(EquipmentSlot.OFF_HAND, fireworkRocket());
                 e.startUsingItem(EquipmentSlot.HAND);
                 e.getWorld().playSound(e.getLocation(), Sound.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1f, 1f);
                 s.step = 1;
                 s.nextAction = now + 25;
             }
             case 1 -> {
+                // só atira se o foguete chega ao jogador antes de explodir; senão segura a besta carregada
+                // (nextAction fica no fim da carga) e desiste sem atirar se o jogador não entrar no alcance
+                if (!fireworkReaches(bot, p, s.aim.velocity())) {
+                    if (now - s.nextAction >= FIREWORK_HOLD_TICKS) {
+                        cleanupFirework(s, bot);
+                        return false;
+                    }
+                    return true;
+                }
                 e.clearActiveItem();
                 shootFirework(bot, p, s.aim.velocity());
                 bot.swing();
@@ -479,26 +507,51 @@ public final class TacticsManager {
     /** Fogo disparado de besta voa reto (sem gravidade), então a mira é direta, com antecipação. */
     private static void shootFirework(Bot bot, Player player, Vec3 playerVelocity) {
         Mannequin e = bot.entity();
-        Vec3 from = bot.eyePos().add(0, -0.1, 0);
+        Vec3 from = fireworkOrigin(bot);
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        Vec3 point = new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+        Vec3 point = chest(player);
         double dist = point.horizontalDistance(from);
         double inacc = 0.04 + dist * 0.006;
         point = point.add((r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc);
-        Vec3 aim = Ballistics.aim(from, point, playerVelocity, 1.65, 0, 1);
-        Vector vel = shootVector(aim.toVector(), 1.65f, 0.65f);
+        Vec3 aim = Ballistics.aim(from, point, playerVelocity, FIREWORK_SPEED, 0, 1);
+        Vector vel = shootVector(aim.toVector(), (float) FIREWORK_SPEED, 0.65f);
         Location at = from.toLocation(e.getWorld());
         e.getWorld().spawn(at, Firework.class, fw -> {
-            FireworkMeta meta = fw.getFireworkMeta();
-            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL_LARGE).withColor(Color.RED, Color.ORANGE).build());
-            meta.setPower(1);
-            fw.setFireworkMeta(meta);
+            // o Paper sorteia o tempo de vida pela duração de voo, como o jogo
+            fw.setFireworkMeta((FireworkMeta) fireworkRocket().getItemMeta());
             fw.setShooter(e);
             fw.setShotAtAngle(true);
-            fw.setTicksToDetonate(45);
             fw.setVelocity(vel);
         });
         e.getWorld().playSound(e.getLocation(), Sound.ITEM_CROSSBOW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+    }
+
+    private static ItemStack fireworkRocket() {
+        ItemStack rocket = new ItemStack(Material.FIREWORK_ROCKET);
+        rocket.editMeta(FireworkMeta.class, meta -> {
+            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL_LARGE).withColor(Color.RED, Color.ORANGE).build());
+            meta.setPower(FIREWORK_FLIGHT);
+        });
+        return rocket;
+    }
+
+    private static Vec3 fireworkOrigin(Bot bot) {
+        return bot.eyePos().add(0, -0.1, 0);
+    }
+
+    private static Vec3 chest(Player player) {
+        return new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+    }
+
+    /**
+     * O foguete chega ao jogador antes de explodir: o tiro reto alcança o ponto antecipado dentro do menor
+     * tempo de vida do foguete, sem bloco no caminho.
+     */
+    private static boolean fireworkReaches(Bot bot, Player player, Vec3 playerVelocity) {
+        Vec3 from = fireworkOrigin(bot);
+        Vec3 target = chest(player);
+        double ticks = Ballistics.straightTicks(from, target, playerVelocity, FIREWORK_SPEED);
+        return ticks <= FIREWORK_MIN_LIFETIME && WorldUtil.clearLine(bot.world(), from, target.add(playerVelocity.scale(ticks)));
     }
 
     // ------------------------------------------------------------------ emboscada de TNT

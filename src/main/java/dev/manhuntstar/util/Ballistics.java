@@ -129,6 +129,16 @@ public final class Ballistics {
         return new Vec3(flat.x() * c * speed, s * speed, flat.z() * c * speed);
     }
 
+    /** Ticks até um tiro reto (gravidade 0) chegar ao ponto antecipado, com a mesma antecipação de {@link #aim}. */
+    public static double straightTicks(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
+        Vec3 aimPoint = target;
+        for (int i = 0; i < 3 && targetVelocity != null && targetVelocity.lengthSqr() >= 1.0E-6; i++) {
+            double t = Math.min(aimPoint.subtract(from).length() / speed, 60);
+            aimPoint = target.add(targetVelocity.scale(t));
+        }
+        return aimPoint.subtract(from).length() / speed;
+    }
+
     /** Vetor de disparo de flecha/tridente (gravidade 0,05 e arrasto 0,99). */
     public static Vec3 aimArrow(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
         return aim(from, target, targetVelocity, speed, ARROW_GRAVITY, ARROW_DRAG);

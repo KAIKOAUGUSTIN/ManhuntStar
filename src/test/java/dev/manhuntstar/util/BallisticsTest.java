@@ -89,4 +89,17 @@ class BallisticsTest {
         Vec3 dir = target.subtract(from).normalize().scale(1.65);
         assertTrue(v.subtract(dir).length() < 1.0E-6);
     }
+
+    @Test
+    void straightShotTicksMatchTheAim() {
+        Vec3 from = new Vec3(0, 65, 0);
+        Vec3 target = new Vec3(0, 65, 30);
+        assertTrue(Math.abs(Ballistics.straightTicks(from, target, Vec3.ZERO, 1.65) - 30 / 1.65) < 1.0E-9);
+        // no tick calculado o foguete (reto, velocidade constante) está em cima do jogador que corre de lado
+        Vec3 running = new Vec3(0.28, 0, 0);
+        Vec3 v = Ballistics.aim(from, target, running, 1.65, 0, 1);
+        double t = Ballistics.straightTicks(from, target, running, 1.65);
+        double miss = from.add(v.scale(t)).subtract(target.add(running.scale(t))).length();
+        assertTrue(miss < 0.1, "errou " + miss);
+    }
 }
