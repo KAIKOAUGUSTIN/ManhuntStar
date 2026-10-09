@@ -9,7 +9,7 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
-1. Coloque `ManhuntStar-1.5.0.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
+1. Coloque `ManhuntStar-1.5.1.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
 3. Entre como operador e use `/manhunt create Cacador 3` perto de você, ou abra `/manhunt menu`.
 
@@ -18,8 +18,8 @@ Requisitos: Java 25 (o mesmo do Paper 26.x). Não depende de outros plugins.
 ## Comandos
 
 Tudo fica em `/manhunt` e exige a permissão `manhuntstar.admin` (operadores têm por padrão). Os verbos são
-os mesmos em tudo: `create`/`remove` para bots, grupos e protetores, `add`/`remove` para listas e `clear` para
-apagar um valor. Posições aceitam `~ ~ ~`; sem posição vale onde você está.
+os mesmos em tudo: `create`/`remove` para bots e grupos, `add`/`remove` para listas e `clear` para apagar um
+valor. Posições aceitam `~ ~ ~`; sem posição vale onde você está.
 
 **Partida**
 
@@ -43,7 +43,6 @@ apagar um valor. Posições aceitam `~ ~ ~`; sem posição vale onde você está
 | `/manhunt spawnpoint <bot> [x y z \| clear]` | Ponto de renascimento de um bot. |
 | `/manhunt equip item <item>` · `/manhunt equip armor <tipo>` | Dá item / armadura a todos os bots. |
 | `/manhunt test <tnt-craft\|bow-burst\|firework-crossbow>` | Testa uma capacidade especial contra você. |
-| `/manhunt mansave create [nome] [qtd]` · `/manhunt mansave remove` | Protetores Mansave. |
 
 **Grupos** (o nome do grupo vem antes da ação)
 
@@ -142,7 +141,7 @@ Precisa do JDK 25.
 ./gradlew build
 ```
 
-O jar sai em `build/libs/ManhuntStar-1.5.0.jar`. O `build` também roda os testes e compila o código contra a
+O jar sai em `build/libs/ManhuntStar-1.5.1.jar`. O `build` também roda os testes e compila o código contra a
 API do Paper 26.3 (`compileAgainst263`) para avisar de quebras de compatibilidade.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou

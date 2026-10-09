@@ -5,7 +5,7 @@
 #  messages-v<versão>.yml e trocado pelo novo.
 # ==============================================================================
 
-versao: 2
+versao: 3
 
 prefixo: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -23,7 +23,6 @@ ajuda: |-
   <yellow>/manhunt list · info <bot> · tp <bot|all> [jogador]</yellow>
   <yellow>/manhunt skin <bot> <jogador> · spawnpoint <bot> [x y z | clear]</yellow>
   <yellow>/manhunt equip item <item> · equip armor <tipo> · test <capacidade></yellow>
-  <yellow>/manhunt mansave create [nome] [qtd] · mansave remove</yellow>
   <gold>Grupos</gold>
   <yellow>/manhunt group <grupo> role|enemy|spawnpoint|phases|chaseplayers|remove</yellow>
   <gold>Opções</gold>
@@ -173,10 +172,6 @@ opcoes:
   valor-atual: "<gray><white><chave></white> está em <yellow><valor></yellow>.</gray>"
   desconhecida: "<red>Opção desconhecida: <white><chave></white>. Use /manhunt settings para ver todas.</red>"
   invalido: "<red><white><chave></white>: <erro></red>"
-
-mansave:
-  criados: "<green><quantidade> protetor(es) Mansave <white><nome></white> criados.</green>"
-  removidos: "<yellow><quantidade> protetor(es) Mansave removidos.</yellow>"
 
 menu:
   titulo-principal: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Menu</dark_gray>"

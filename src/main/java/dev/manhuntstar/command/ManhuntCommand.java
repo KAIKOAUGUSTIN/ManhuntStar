@@ -43,8 +43,8 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * {@code /manhunt}. Partida: start, pause, resume, target, ring, players. Bots: create, remove, list,
- * info, tp, skin, spawnpoint, equip, test, mansave. Grupos: group. Opções: settings, reload. E o menu.
- * Os verbos são os mesmos em tudo: create/remove para bots, grupos e protetores, add/remove para
+ * info, tp, skin, spawnpoint, equip, test. Grupos: group. Opções: settings, reload. E o menu.
+ * Os verbos são os mesmos em tudo: create/remove para bots e grupos, add/remove para
  * listas e clear para apagar um valor. Posições aceitam {@code ~ ~ ~}; sem posição vale onde você está.
  */
 public final class ManhuntCommand {
@@ -189,13 +189,6 @@ public final class ManhuntCommand {
                 .then(Commands.literal("armor").then(Commands.argument("tier", StringArgumentType.word())
                         .suggests(words("leather", "chainmail", "iron", "gold", "diamond", "netherite")).executes(this::equipArmor))));
         root.then(Commands.literal("test").then(Commands.argument("ability", StringArgumentType.word()).suggests(words(ABILITIES)).executes(this::test)));
-        root.then(Commands.literal("mansave")
-                .then(Commands.literal("create").executes(ctx -> mansaveCreate(ctx, "Mansave", 1))
-                        .then(Commands.argument("name", StringArgumentType.word())
-                                .executes(ctx -> mansaveCreate(ctx, StringArgumentType.getString(ctx, "name"), 1))
-                                .then(Commands.argument("amount", IntegerArgumentType.integer(1, 20))
-                                        .executes(ctx -> mansaveCreate(ctx, StringArgumentType.getString(ctx, "name"), IntegerArgumentType.getInteger(ctx, "amount"))))))
-                .then(Commands.literal("remove").executes(this::mansaveRemove)));
 
         // grupos
         root.then(Commands.literal("group").then(Commands.argument("group", StringArgumentType.string()).suggests(groupNames())
@@ -618,22 +611,6 @@ public final class ManhuntCommand {
         }
         msg().send(p, "capacidade." + err, Messages.p("capacidade", cap));
         return 0;
-    }
-
-    private int mansaveCreate(CommandContext<CommandSourceStack> ctx, String name, int count) {
-        Location loc = ctx.getSource().getLocation();
-        if (loc.getWorld() == null) {
-            return noLocation(ctx);
-        }
-        int n = plugin.mansave().spawn(loc, name, count);
-        msg().send(sender(ctx), "mansave.criados", Messages.p("quantidade", n), Messages.p("nome", name));
-        return Command.SINGLE_SUCCESS;
-    }
-
-    private int mansaveRemove(CommandContext<CommandSourceStack> ctx) {
-        int n = plugin.mansave().clear();
-        msg().send(sender(ctx), "mansave.removidos", Messages.p("quantidade", n));
-        return Command.SINGLE_SUCCESS;
     }
 
     // ------------------------------------------------------------------ grupos

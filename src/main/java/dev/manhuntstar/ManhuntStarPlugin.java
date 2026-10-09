@@ -14,7 +14,6 @@ import dev.manhuntstar.gui.MenuManager;
 import dev.manhuntstar.listener.BotEntityListener;
 import dev.manhuntstar.listener.MobTargeting;
 import dev.manhuntstar.listener.WorldPlayerListener;
-import dev.manhuntstar.mansave.MansaveManager;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.skin.SkinService;
@@ -53,7 +52,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private DeathMessages deathMessages;
     private BotStorage storage;
     private BotManager botManager;
-    private MansaveManager mansave;
     private MenuManager menus;
     private MobTargeting mobTargeting;
     private final ChunkTickets chunkTickets = new ChunkTickets(this);
@@ -83,7 +81,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         storage = new BotStorage(getDataFolder(), getLogger());
         botManager = new BotManager(this);
         deathMessages = new DeathMessages(botManager);
-        mansave = new MansaveManager(this);
         menus = new MenuManager(this);
         mobTargeting = new MobTargeting(this);
 
@@ -117,9 +114,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         if (botManager != null) {
             botManager.shutdown();
         }
-        if (mansave != null) {
-            mansave.clear();
-        }
         chunkTickets.releaseAll();
         if (tabList != null) {
             tabList.clear();
@@ -143,7 +137,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         int now = Bukkit.getCurrentTick();
         pathService.tick();
         botManager.tick();
-        mansave.tick();
         mobTargeting.tick(now);
         debugRenderer.tick(now, settings.debugPaths.on());
         tabList.tick(now);
@@ -153,7 +146,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private void removeOrphans() {
         for (World w : getServer().getWorlds()) {
             for (Entity e : w.getEntitiesByClass(Mannequin.class)) {
-                if (botManager.isBotEntity(e) || mansave.isOrphan(e)) {
+                if (botManager.isBotEntity(e)) {
                     e.remove();
                 }
             }
@@ -300,10 +293,6 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     public BotManager botManager() {
         return botManager;
-    }
-
-    public MansaveManager mansave() {
-        return mansave;
     }
 
     public MenuManager menus() {
