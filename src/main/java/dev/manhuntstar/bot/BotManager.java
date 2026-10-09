@@ -547,7 +547,7 @@ public final class BotManager {
             register(bot);
             bot.spawnEntity(spawn);
             if (startPhase > 0) {
-                bot.progression().setPhase(startPhase);
+                bot.progression().setInitialPhase(startPhase);
             }
             bot.progression().updateGear();
             bot.restoreDefaultOffhand();

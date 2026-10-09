@@ -205,6 +205,16 @@ public final class Combat {
         }
     }
 
+    /** O alvo sumiu (morreu, saiu) no meio da carga: solta a besta ou o tridente e volta para a arma de sempre. */
+    public void cancelChargeWithoutTarget() {
+        if (!chargingCrossbow && !chargingTrident) {
+            return;
+        }
+        cancelWeaponUseForCapacity();
+        clearSwimStateIfDry();
+        bot.inventory().restorePreferredMainHand();
+    }
+
     // ------------------------------------------------------------------ corpo a corpo
 
     public void attack(Entity target) {

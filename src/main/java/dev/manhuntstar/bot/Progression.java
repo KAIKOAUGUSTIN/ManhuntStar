@@ -221,6 +221,19 @@ public final class Progression {
         }
     }
 
+    /**
+     * Fase escolhida ao criar o bot (menu ou /manhunt create). Diferente de {@link #setPhase}, também desce: um
+     * Terminator (que começa na 8) criado na fase 3 fica na 3. O equipamento vem depois, em {@link #updateGear}.
+     */
+    public void setInitialPhase(int startPhase) {
+        if (startPhase > phase) {
+            setPhase(startPhase);
+            return;
+        }
+        phase = Math.max(1, startPhase);
+        ticksInPhase = 0;
+    }
+
     public void setPhaseSilently(int newPhase) {
         phase = Math.max(1, newPhase);
         ticksInPhase = 0;

@@ -286,6 +286,8 @@ public final class Brain {
         if (active == null) {
             horse.handle(null);
             state = "sem alvo";
+            // sem isto o bot ficava parado segurando a besta "carregando" até achar outro alvo
+            bot.combat().cancelChargeWithoutTarget();
             if (bot.idle() == null) {
                 bot.motor().stopWalk();
             }
