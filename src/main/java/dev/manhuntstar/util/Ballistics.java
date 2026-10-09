@@ -98,10 +98,29 @@ public final class Ballistics {
     }
 
     /**
+     * @param velocity  vetor de disparo
+     * @param ticks     tempo de voo até o ponto antecipado
+     * @param reachable false quando nem o melhor ângulo chega ao alvo
+     */
+    public record Shot(Vec3 velocity, double ticks, boolean reachable) {
+    }
+
+    /** Velocidade da flecha do arco puxado por {@code drawTicks} ticks, como no jogo (força × 3,0). */
+    public static double bowSpeed(int drawTicks) {
+        double f = drawTicks / 20.0;
+        return Math.min(1.0, (f * f + f * 2) / 3) * 3.0;
+    }
+
+    /**
      * Vetor de disparo de {@code from} até {@code target}, antecipando a velocidade do alvo
      * (blocos/tick). Usa a física da flecha; {@code gravity = 0} vira um tiro reto.
      */
     public static Vec3 aim(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed, double gravity, double drag) {
+        return shot(from, target, targetVelocity, speed, gravity, drag).velocity();
+    }
+
+    /** Como {@link #aim}, mas também diz o tempo de voo e se o tiro alcança (o desnível conta). */
+    public static Shot shot(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed, double gravity, double drag) {
         Vec3 aimPoint = target;
         Solution sol = null;
         for (int i = 0; i < 3; i++) {
@@ -122,11 +141,11 @@ public final class Ballistics {
         Vec3 d = aimPoint.subtract(from);
         Vec3 flat = d.horizontal().normalize();
         if (flat.lengthSqr() < 1.0E-6) {
-            return new Vec3(0, Math.signum(d.y()) * speed, 0);
+            return new Shot(new Vec3(0, Math.signum(d.y()) * speed, 0), sol.ticks(), sol.reachable());
         }
         double c = Math.cos(sol.angle());
         double s = Math.sin(sol.angle());
-        return new Vec3(flat.x() * c * speed, s * speed, flat.z() * c * speed);
+        return new Shot(new Vec3(flat.x() * c * speed, s * speed, flat.z() * c * speed), sol.ticks(), sol.reachable());
     }
 
     /** Ticks até um tiro reto (gravidade 0) chegar ao ponto antecipado, com a mesma antecipação de {@link #aim}. */
@@ -142,5 +161,10 @@ public final class Ballistics {
     /** Vetor de disparo de flecha/tridente (gravidade 0,05 e arrasto 0,99). */
     public static Vec3 aimArrow(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
         return aim(from, target, targetVelocity, speed, ARROW_GRAVITY, ARROW_DRAG);
+    }
+
+    /** {@link #shot} com a física da flecha. */
+    public static Shot shotArrow(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
+        return shot(from, target, targetVelocity, speed, ARROW_GRAVITY, ARROW_DRAG);
     }
 }

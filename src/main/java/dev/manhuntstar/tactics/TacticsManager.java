@@ -8,6 +8,7 @@ import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -40,7 +41,8 @@ import org.bukkit.util.Vector;
  * <ul>
  *   <li>emboscada de TNT: o bot surge atrás do jogador na caverna, chega agachado, coloca e acende
  *   uma TNT perto dele e foge;</li>
- *   <li>rajada de arco (fase 4+): para, puxa o arco e dispara 2–6 flechas;</li>
+ *   <li>rajada de arco (fase 4+): para, puxa o arco o quanto precisa para alcançar o jogador e dispara
+ *   2–6 flechas;</li>
  *   <li>besta com fogos (fase 5+, experimental no mod, desligada por padrão): foguete de duração 3, e só
  *   atira se ele chega ao jogador antes de explodir.</li>
  * </ul>
@@ -61,6 +63,11 @@ public final class TacticsManager {
     private static final double FIREWORK_SPEED = 1.6;
     /** Com a besta carregada, quanto tempo espera o jogador entrar no alcance antes de desistir. */
     private static final int FIREWORK_HOLD_TICKS = 20;
+    /** Puxada da rajada de arco, em ticks: de 10 (flecha a 1,25 bloco/tick) ao arco todo puxado (20, flecha a 3,0). */
+    private static final int BOW_MIN_DRAW = 10;
+    private static final int BOW_MAX_DRAW = 20;
+    /** Com o arco todo puxado, quanto tempo espera o jogador entrar no alcance antes de desistir. */
+    private static final int BOW_HOLD_TICKS = 20;
 
     private final BotManager manager;
     private final Map<UUID, Tracker> trackers = new HashMap<>();
@@ -104,6 +111,7 @@ public final class TacticsManager {
         int shots;
         int step;
         long nextAction;
+        long drawStart;
 
         BowBurst(UUID bot, UUID player, ItemStack oldMain, int shots, long now) {
             this.bot = bot;
@@ -313,9 +321,12 @@ public final class TacticsManager {
                 return startTntAmbush(player, bot, now, true) ? null : "sem-posicao-emboscada";
             }
             case "bow-burst" -> {
-                Bot bot = selectBot(player, now, true, 4);
-                if (bot == null) {
+                if (selectBot(player, now, true, 4) == null) {
                     return "sem-bot-elegivel";
+                }
+                Bot bot = selectBot(player, now, true, 4, b -> bowDraw(b, player, Vec3.ZERO) >= 0);
+                if (bot == null) {
+                    return "flecha-fora-do-alcance";
                 }
                 startBowBurst(bot, player, now);
                 return null;
@@ -347,6 +358,10 @@ public final class TacticsManager {
         if (!player.getUniqueId().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.getUniqueId()) || isBusy(bot)) {
             return false;
         }
+        // nem com o arco todo puxado a flecha chega (longe demais para o desnível, ou bloco na trajetória)
+        if (bowDraw(bot, player, Vec3.ZERO) < 0) {
+            return false;
+        }
         startBowBurst(bot, player, now);
         return true;
     }
@@ -374,15 +389,31 @@ public final class TacticsManager {
         Mannequin e = bot.entity();
         switch (s.step) {
             case 0 -> {
+                int draw = bowDraw(bot, p, s.aim.velocity());
+                if (draw < 0) {
+                    cleanupBow(s, bot);
+                    return false;
+                }
                 bot.stand();
                 bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.BOW));
                 e.startUsingItem(EquipmentSlot.HAND);
+                s.drawStart = now;
                 s.step = 1;
-                s.nextAction = now + 20;
+                s.nextAction = now + draw;
             }
             case 1 -> {
+                // na hora de soltar o jogador pode ter saído do alcance desta puxada: puxa mais; com o arco
+                // todo puxado espera um pouco e desiste sem atirar
+                double speed = Ballistics.bowSpeed((int) (now - s.drawStart));
+                if (!arrowReaches(bot, p, s.aim.velocity(), speed)) {
+                    if (now - s.drawStart >= BOW_MAX_DRAW + BOW_HOLD_TICKS) {
+                        cleanupBow(s, bot);
+                        return false;
+                    }
+                    return true;
+                }
                 e.clearActiveItem();
-                shootArrow(bot, p, s.aim.velocity());
+                shootArrow(bot, p, s.aim.velocity(), speed);
                 bot.swing();
                 if (--s.shots > 0) {
                     s.step = 0;
@@ -411,24 +442,83 @@ public final class TacticsManager {
 
     /**
      * Flecha do arco puxado. No mod a elevação era uma fórmula fixa ({@code 0,24·d + 0,0032·d²}) que
-     * passava 1,5 a 2,5 blocos acima da cabeça; aqui o ângulo vem da física da flecha e o jogador é
-     * antecipado pelo tempo de voo.
+     * passava 1,5 a 2,5 blocos acima da cabeça; aqui a velocidade vem da puxada, o ângulo da física da
+     * flecha (com o desnível) e o jogador é antecipado pelo tempo de voo.
      */
-    private static void shootArrow(Bot bot, Player player, Vec3 playerVelocity) {
+    private static void shootArrow(Bot bot, Player player, Vec3 playerVelocity, double speed) {
         Mannequin e = bot.entity();
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        Vec3 from = new Vec3(e.getX(), e.getEyeLocation().getY() - 0.1, e.getZ());
-        Vec3 point = new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+        Vec3 from = arrowOrigin(bot);
+        Vec3 point = arrowTarget(player);
         double dist = point.horizontalDistance(from);
         double spread = Math.min(0.22, 0.02 + dist * 0.005) * bot.settings().projInaccuracy.value();
         point = point.add((r.nextDouble() - 0.5) * spread, (r.nextDouble() - 0.5) * spread * 0.35, (r.nextDouble() - 0.5) * spread);
-        Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, 1.8);
-        Vector vel = shootVector(aim.toVector(), 1.8f, 0.25f * (float) bot.settings().projInaccuracy.value());
+        Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, speed);
+        Vector vel = shootVector(aim.toVector(), (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
         Arrow arrow = e.launchProjectile(Arrow.class, vel);
         dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), player);
         arrow.setShooter(e);
         arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
+        // como no jogo: flecha do arco todo puxado é crítica
+        arrow.setCritical(speed >= Ballistics.bowSpeed(BOW_MAX_DRAW));
         e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+    }
+
+    private static Vec3 arrowOrigin(Bot bot) {
+        Mannequin e = bot.entity();
+        return new Vec3(e.getX(), e.getEyeLocation().getY() - 0.1, e.getZ());
+    }
+
+    private static Vec3 arrowTarget(Player player) {
+        return new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+    }
+
+    /**
+     * Quantos ticks puxar o arco: entre as puxadas que alcançam o jogador (o desnível conta, e a trajetória
+     * não pode bater em bloco), a que acerta mais cedo somando o tempo de puxar e o de voo. Perto puxa pouco
+     * e atira rápido; longe puxa até o fim. -1 se nem o arco todo puxado chega.
+     */
+    private static int bowDraw(Bot bot, Player player, Vec3 playerVelocity) {
+        Vec3 from = arrowOrigin(bot);
+        Vec3 to = arrowTarget(player);
+        List<double[]> options = new ArrayList<>();
+        for (int draw = BOW_MIN_DRAW; draw <= BOW_MAX_DRAW; draw++) {
+            Ballistics.Shot shot = Ballistics.shotArrow(from, to, playerVelocity, Ballistics.bowSpeed(draw));
+            if (shot.reachable()) {
+                options.add(new double[]{draw + shot.ticks(), draw});
+            }
+        }
+        options.sort(Comparator.comparingDouble(o -> o[0]));
+        for (double[] o : options) {
+            int draw = (int) o[1];
+            Ballistics.Shot shot = Ballistics.shotArrow(from, to, playerVelocity, Ballistics.bowSpeed(draw));
+            if (arrowPathClear(bot.world(), from, shot.velocity(), shot.ticks())) {
+                return draw;
+            }
+        }
+        return -1;
+    }
+
+    /** A flecha com esta velocidade alcança o jogador sem bater em bloco no caminho. */
+    private static boolean arrowReaches(Bot bot, Player player, Vec3 playerVelocity, double speed) {
+        Vec3 from = arrowOrigin(bot);
+        Ballistics.Shot shot = Ballistics.shotArrow(from, arrowTarget(player), playerVelocity, speed);
+        return shot.reachable() && arrowPathClear(bot.world(), from, shot.velocity(), shot.ticks());
+    }
+
+    /** Segue a trajetória da flecha tick a tick (anda, perde 1% e cai 0,05) até o tempo de voo, sem bater em bloco. */
+    private static boolean arrowPathClear(World w, Vec3 from, Vec3 velocity, double ticks) {
+        Vec3 p = from;
+        Vec3 v = velocity;
+        for (int t = 0; t < ticks; t++) {
+            Vec3 next = p.add(v.scale(Math.min(1.0, ticks - t)));
+            if (!WorldUtil.clearLine(w, p, next)) {
+                return false;
+            }
+            p = next;
+            v = new Vec3(v.x() * Ballistics.ARROW_DRAG, v.y() * Ballistics.ARROW_DRAG - Ballistics.ARROW_GRAVITY, v.z() * Ballistics.ARROW_DRAG);
+        }
+        return true;
     }
 
     /** O {@code shoot} do jogo: normaliza, soma ruído gaussiano * 0,0075 * imprecisão e escala. */

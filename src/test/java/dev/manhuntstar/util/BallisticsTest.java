@@ -1,5 +1,6 @@
 package dev.manhuntstar.util;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,25 @@ class BallisticsTest {
         Vec3 v = Ballistics.aim(from, target, Vec3.ZERO, 1.65, 0, 1);
         Vec3 dir = target.subtract(from).normalize().scale(1.65);
         assertTrue(v.subtract(dir).length() < 1.0E-6);
+    }
+
+    @Test
+    void bowDrawSetsTheArrowSpeedLikeTheGame() {
+        assertTrue(Math.abs(Ballistics.bowSpeed(20) - 3.0) < 1.0E-9);
+        assertTrue(Math.abs(Ballistics.bowSpeed(40) - 3.0) < 1.0E-9);
+        assertTrue(Math.abs(Ballistics.bowSpeed(10) - 1.25) < 1.0E-9);
+    }
+
+    @Test
+    void fromAMountainTheArrowReachesFurther() {
+        // arco todo puxado: no mesmo nível a flecha não chega a 150 blocos; de 60 blocos de altura chega e acerta
+        Vec3 from = new Vec3(0, 125.5, 0);
+        assertFalse(Ballistics.shotArrow(from, new Vec3(90, 125.5, 120), Vec3.ZERO, 3.0).reachable());
+        Vec3 below = new Vec3(90, 65.5, 120);
+        Ballistics.Shot shot = Ballistics.shotArrow(from, below, Vec3.ZERO, 3.0);
+        assertTrue(shot.reachable());
+        assertTrue(closestApproach(from, shot.velocity(), below, Vec3.ZERO) < 0.25);
+        assertTrue(shot.velocity().subtract(Ballistics.aimArrow(from, below, Vec3.ZERO, 3.0)).length() < 1.0E-9);
     }
 
     @Test

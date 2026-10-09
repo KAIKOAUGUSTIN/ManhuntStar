@@ -9,7 +9,7 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
-1. Coloque `ManhuntStar-1.5.2.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
+1. Coloque `ManhuntStar-1.5.3.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
 3. Entre como operador e use `/manhunt create Cacador 3` perto de você, ou abra `/manhunt menu`.
 
@@ -108,6 +108,10 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 
 - **Mira**: besta, arco, tridente e besta com fogos calculam o ângulo pela física real do projétil no servidor e
   antecipam o alvo pelo tempo de voo.
+- **Rajada de arco**: o bot puxa o arco o quanto precisa, como no jogo (a força da flecha depende do tempo
+  puxando, até 3,0 bloco/tick com o arco todo puxado, que sai crítica). Escolhe a puxada que acerta mais cedo,
+  somando o tempo de puxar e o de voo, e só atira se a flecha alcança o jogador sem bater em bloco; de cima de
+  um morro a flecha vai bem mais longe.
 - **Besta com fogos**: o foguete sai a 1,6 bloco/tick, como na besta do jogo, com duração de voo 3 (explode
   entre 40 e 51 ticks, uns 64 blocos). O bot só
   atira se o foguete chega ao jogador antes de explodir e sem bloco no caminho; com a besta carregada, espera
@@ -145,7 +149,7 @@ Precisa do JDK 25.
 ./gradlew build
 ```
 
-O jar sai em `build/libs/ManhuntStar-1.5.2.jar`. O `build` também roda os testes e compila o código contra a
+O jar sai em `build/libs/ManhuntStar-1.5.3.jar`. O `build` também roda os testes e compila o código contra a
 API do Paper 26.3 (`compileAgainst263`) para avisar de quebras de compatibilidade.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou

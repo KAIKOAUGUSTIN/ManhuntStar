@@ -151,6 +151,7 @@ capacidade:
   fora-da-caverna: "<red>Você não está numa caverna (Y abaixo de 60, sem luz do céu).</red>"
   sem-bot-elegivel: "<red>Nenhum bot elegível (vivo, mirando você, no mesmo mundo, livre e na fase necessária).</red>"
   foguete-fora-do-alcance: "<red>Nenhum bot tem você ao alcance do foguete (uns 64 blocos, sem bloco no caminho).</red>"
+  flecha-fora-do-alcance: "<red>Nenhum bot alcança você com a flecha, nem com o arco todo puxado (longe demais para o desnível, ou bloco na trajetória).</red>"
   sem-posicao-emboscada: "<red>Não achei um ponto da mesma caverna para a emboscada.</red>"
   capacidade-desconhecida: "<red>Capacidade desconhecida. Use tnt-craft, bow-burst ou firework-crossbow.</red>"
 

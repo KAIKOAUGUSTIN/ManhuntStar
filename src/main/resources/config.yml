@@ -130,7 +130,8 @@ taticas:
   # Besta com fogos (experimental no mod). Foguete de duração 3; o bot só atira com o jogador ao alcance
   # (uns 64 blocos, sem bloco no caminho). [fireworkcrossbow]
   besta-com-fogos: false
-  # Rajada de arco quando o bot fica muito tempo sem acertar o jogador. [bowpressure]
+  # Rajada de arco quando o bot fica muito tempo sem acertar o jogador. Ele puxa o arco o quanto precisa e só
+  # atira se a flecha alcança o jogador (o desnível conta). [bowpressure]
   pressao-de-arco: true
   # O bot mais longe de cada jogador (200+ blocos) some e renasce mais perto. [silentdeaths]
   mortes-silenciosas: true
