@@ -128,7 +128,7 @@ taticas:
   # Emboscada de TNT e besta com fogos automáticas (no mod ficavam travadas). [autocapacities]
   capacidades-automaticas: false
   # Besta com fogos (experimental no mod). Foguete de duração 3; o bot só atira com o jogador ao alcance
-  # (uns 66 blocos, sem bloco no caminho). [fireworkcrossbow]
+  # (uns 64 blocos, sem bloco no caminho). [fireworkcrossbow]
   besta-com-fogos: false
   # Rajada de arco quando o bot fica muito tempo sem acertar o jogador. [bowpressure]
   pressao-de-arco: true

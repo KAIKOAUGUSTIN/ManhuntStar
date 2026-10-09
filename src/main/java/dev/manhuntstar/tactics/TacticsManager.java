@@ -57,7 +57,8 @@ public final class TacticsManager {
     private static final int FIREWORK_FLIGHT = 3;
     /** Menor tempo de vida do foguete no jogo: 10·(1 + duração) ticks, mais um sorteio de 0 a 11. */
     private static final int FIREWORK_MIN_LIFETIME = 10 * (1 + FIREWORK_FLIGHT);
-    private static final double FIREWORK_SPEED = 1.65;
+    /** Velocidade do foguete disparado pela besta do jogo (CrossbowItem.getShootingPower). */
+    private static final double FIREWORK_SPEED = 1.6;
     /** Com a besta carregada, quanto tempo espera o jogador entrar no alcance antes de desistir. */
     private static final int FIREWORK_HOLD_TICKS = 20;
 
