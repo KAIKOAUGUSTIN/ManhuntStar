@@ -29,7 +29,7 @@ import org.bukkit.entity.Player;
 /**
  * Rodas de bots antes da caçada. A roda não tem dono: o primeiro jogador que estava dentro dela e
  * sai começa a contagem de vantagem (barra no topo, títulos 3-2-1 e som), e no fim os bots dessa roda
- * são soltos. Roda criada longe de todos espera alguém entrar e sair, ou o /bot start. Com
+ * são soltos. Roda criada longe de todos espera alguém entrar e sair, ou o /manhunt start. Com
  * "contagem-ao-sair-da-roda" desligado a contagem começa assim que os bots nascem; com 0 segundos
  * os bots soltam assim que alguém sai. Cada roda tem a sua contagem; bots fora de roda seguem caçando.
  */
@@ -114,7 +114,7 @@ public final class RingService {
         return true;
     }
 
-    /** /bot start: solta todas as rodas na hora. @return quantos bots foram soltos */
+    /** /manhunt start: solta todas as rodas na hora. @return quantos bots foram soltos */
     public int releaseAll() {
         int n = 0;
         for (Ring r : new ArrayList<>(rings.values())) {

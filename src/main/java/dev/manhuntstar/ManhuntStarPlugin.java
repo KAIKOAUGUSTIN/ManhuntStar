@@ -2,8 +2,7 @@ package dev.manhuntstar;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
-import dev.manhuntstar.command.BotCommand;
-import dev.manhuntstar.command.MansaveCommand;
+import dev.manhuntstar.command.ManhuntCommand;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
@@ -22,9 +21,15 @@ import dev.manhuntstar.skin.SkinService;
 import dev.manhuntstar.util.ChunkTickets;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import java.io.File;
-import java.util.List;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -89,10 +94,8 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         pm.registerEvents(menus, this);
         dev.manhuntstar.debug.AimDebug.install(this);
 
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            event.registrar().register(new BotCommand(this).build(), "Bots caçadores do Manhunt*", List.of("manhuntstar"));
-            event.registrar().register(new MansaveCommand(this).build(), "Protetores Mansave do Manhunt*");
-        });
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
+                event -> event.registrar().register(new ManhuntCommand(this).build(), "Bots caçadores do Manhunt*"));
 
         removeOrphans();
         BotStorage.LoadResult saved = storage.load();
@@ -170,10 +173,44 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     private void loadConfigFiles() {
         settings.load(new File(getDataFolder(), "config.yml"), getLogger());
+        upgradeMessages();
         messages.load(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"), getLogger());
     }
 
-    /** /bot reload: relê config.yml e messages.yml e aplica. */
+    /**
+     * messages.yml de uma versão anterior (os textos padrão mudaram, por exemplo os nomes dos
+     * comandos): guarda o antigo como messages-v<versão>.yml e grava o novo no lugar.
+     */
+    private void upgradeMessages() {
+        File file = new File(getDataFolder(), "messages.yml");
+        if (!file.exists()) {
+            return;
+        }
+        int bundled;
+        try (InputStream in = getResource("messages.yml")) {
+            if (in == null) {
+                return;
+            }
+            bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8)).getInt("versao", 1);
+        } catch (IOException e) {
+            return;
+        }
+        int current = YamlConfiguration.loadConfiguration(file).getInt("versao", 1);
+        if (current >= bundled) {
+            return;
+        }
+        File backup = new File(getDataFolder(), "messages-v" + current + ".yml");
+        try {
+            Files.move(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            getLogger().warning("Não foi possível atualizar o messages.yml: " + e.getMessage());
+            return;
+        }
+        saveResource("messages.yml", false);
+        getLogger().info("messages.yml atualizado para a versão " + bundled + "; o anterior ficou em " + backup.getName() + ".");
+    }
+
+    /** /manhunt reload: relê config.yml e messages.yml e aplica. */
     public void reloadAll() {
         loadConfigFiles();
         for (Setting<?> s : settings.all()) {

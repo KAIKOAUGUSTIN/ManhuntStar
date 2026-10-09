@@ -126,6 +126,15 @@ public final class MansaveBot {
 
     // ------------------------------------------------------------------ tick
 
+    /** Caçada pausada: parado (a pausa o segura), só continua ativo e com os chunks. */
+    void tickPaused() {
+        age++;
+        if (age % 20 == 1) {
+            updateTickets();
+        }
+        dev.manhuntstar.bot.Bot.keepActive(entity);
+    }
+
     void tick() {
         age++;
         if (age % 20 == 1) {

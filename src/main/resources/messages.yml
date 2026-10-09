@@ -1,24 +1,33 @@
 # ==============================================================================
 #  Manhunt* — mensagens (formato MiniMessage: https://docs.advntr.dev/minimessage/format.html)
 #  Os textos entre <...> como <bot>, <fase>, <quantidade> são preenchidos pelo plugin.
+#  "versao" muda quando os textos padrão mudam: um arquivo mais antigo é guardado como
+#  messages-v<versão>.yml e trocado pelo novo.
 # ==============================================================================
+
+versao: 2
 
 prefixo: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
 ajuda: |-
-  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(bots caçadores de ManHunt)</gray>
-  <yellow>/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]</yellow> <gray>— cria bots aqui</gray>
-  <yellow>/bot create <nome> <qtd> <dificuldade> skin <jogador> [fase] [agr]</yellow> <gray>— com skin de outro jogador</gray>
-  <yellow>/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]</yellow> <gray>— cria em coordenadas</gray>
-  <yellow>/bot start</yellow> <gray>— começa a caçada agora (solta as rodas e pula a contagem)</gray>
-  <yellow>/bot roda [ponto [x y z] | ponto limpar]</yellow> <gray>— ponto fixo da roda</gray>
-  <yellow>/bot lista [add|remove <jogador> | modo desligada|permitidos|bloqueados]</yellow> <gray>— quem é caçado</gray>
-  <yellow>/bot menu</yellow> <gray>— menu com tudo</gray>
-  <yellow>/bot list · info · remove · tp · tpall · target · cleartarget</yellow>
-  <yellow>/bot settings <chave> <valor></yellow> <gray>— opções (sem argumentos mostra todas)</gray>
-  <yellow>/bot group role|enemy|spawnpoint|phaseprogression|trackplayers|delete</yellow>
-  <yellow>/bot skin <bot> <jogador> · give <item> · armor <tier> · execute <capacidade></yellow>
-  <yellow>/bot deleteall confirm · reload</yellow> <gray>— e /mansave spawn|clear</gray>
+  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(bots caçadores de ManHunt) ·</gray> <yellow>/manhunt menu</yellow> <gray>abre o menu</gray>
+  <gold>Partida</gold>
+  <yellow>/manhunt start</yellow> <gray>— solta as rodas e começa a caçada já</gray>
+  <yellow>/manhunt pause · resume</yellow> <gray>— congela os bots e os relógios / continua</gray>
+  <yellow>/manhunt target <jogador> · target clear</yellow> <gray>— todos atrás de um jogador / volta ao normal</gray>
+  <yellow>/manhunt ring · ring point [x y z | clear]</yellow> <gray>— a roda e o ponto fixo dela</gray>
+  <yellow>/manhunt players [add|remove <jogador> | mode off|allowlist|blocklist]</yellow> <gray>— quem é caçado</gray>
+  <gold>Bots</gold>
+  <yellow>/manhunt create <nome> [qtd] [dificuldade] [skin <jogador>] [at <x y z>] [fase] [agressividade]</yellow>
+  <yellow>/manhunt remove <bot> · remove all confirm</yellow> <gray>— remove bots / apaga tudo</gray>
+  <yellow>/manhunt list · info <bot> · tp <bot|all> [jogador]</yellow>
+  <yellow>/manhunt skin <bot> <jogador> · spawnpoint <bot> [x y z | clear]</yellow>
+  <yellow>/manhunt equip item <item> · equip armor <tipo> · test <capacidade></yellow>
+  <yellow>/manhunt mansave create [nome] [qtd] · mansave remove</yellow>
+  <gold>Grupos</gold>
+  <yellow>/manhunt group <grupo> role|enemy|spawnpoint|phases|chaseplayers|remove</yellow>
+  <gold>Opções</gold>
+  <yellow>/manhunt settings [opção] [valor] · reload</yellow> <gray>— sem opção mostra todas</gray>
 
 # --- fases ---
 fase:
@@ -46,13 +55,13 @@ fase:
 
 # --- roda e contagem antes da caçada ---
 contagem:
-  roda-criada: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, começa a contagem de</gray> <yellow><segundos></yellow> <gray>segundos. Use /bot start para começar já.</gray>"
-  roda-criada-sem-contagem: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, a caçada começa. Use /bot start para começar já.</gray>"
+  roda-criada: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, começa a contagem de</gray> <yellow><segundos></yellow> <gray>segundos. Use /manhunt start para começar já.</gray>"
+  roda-criada-sem-contagem: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, a caçada começa. Use /manhunt start para começar já.</gray>"
   barra-esperando: "<yellow>Saia da roda para começar</yellow> <gray>(<segundos>s de vantagem)</gray>"
   barra-esperando-sem-contagem: "<yellow>Saia da roda para começar a caçada</yellow>"
   saiu: "<yellow><jogador></yellow> <gold>saiu da roda!</gold>"
   saiu-e-contando: "<yellow><jogador></yellow> <gold>saiu da roda! A caçada começa em</gold> <yellow><segundos></yellow> <gold>segundos.</gold>"
-  iniciada: "<gold>A caçada começa em <yellow><segundos></yellow> segundos!</gold> <gray>Use /bot start para começar já.</gray>"
+  iniciada: "<gold>A caçada começa em <yellow><segundos></yellow> segundos!</gold> <gray>Use /manhunt start para começar já.</gray>"
   barra: "<red>A caçada começa em</red> <yellow><segundos>s</yellow>"
   titulo-numero: "<red><bold><segundos></bold></red>"
   subtitulo: "<gray>Prepare-se...</gray>"
@@ -64,10 +73,10 @@ contagem:
 roda:
   info: |-
     <gold>Roda</gold> <gray>· raio</gray> <white><raio></white> <gray>· centro</gray> <white><centro></white> <gray>· ponto</gray> <white><ponto></white>
-    <gray>Rodas esperando agora:</gray> <white><rodas></white> <gray>(raio: /bot settings ringradius, em blocos ou auto)</gray>
+    <gray>Rodas esperando agora:</gray> <white><rodas></white> <gray>(raio: /manhunt settings ringradius <blocos|auto>)</gray>
   ponto-marcado: "<green>Ponto da roda marcado em <white><pos></white> (<white><mundo></white>). As próximas rodas nascem aqui (centro da roda: manual).</green>"
   ponto-limpo: "<green>Ponto da roda apagado. As rodas voltam a nascer onde são criadas (centro da roda: automático).</green>"
-  sem-ponto: "<yellow>O centro da roda está em manual, mas não há ponto marcado (ou o mundo dele não está carregado): a roda fica onde você está. Marque com /bot roda ponto.</yellow>"
+  sem-ponto: "<yellow>O centro da roda está em manual, mas não há ponto marcado (ou o mundo dele não está carregado): a roda fica onde você está. Marque com /manhunt ring point.</yellow>"
 
 # --- quem é caçado: lista de jogadores e quem entra no meio ---
 lista:
@@ -77,7 +86,7 @@ lista:
   ja-esta: "<yellow><white><jogador></white> já está na lista.</yellow>"
   removido: "<green><white><jogador></white> saiu da lista.</green>"
   nao-esta: "<yellow><white><jogador></white> não está na lista.</yellow>"
-  aviso-desligada: "<gray>A lista está desligada: use /bot lista modo permitidos ou bloqueados para ela valer.</gray>"
+  aviso-desligada: "<gray>A lista está desligada: use /manhunt players mode allowlist ou blocklist para ela valer.</gray>"
   modo: "<green>Lista de jogadores: <yellow><modo></yellow>.</green> <gray><explicacao></gray>"
   explicacao:
     desligada: "Todos podem ser caçados e disparar a roda."
@@ -92,16 +101,25 @@ cacada:
   protecao-acabou-barra: "<red>Sua proteção acabou!</red>"
   protecao-acabou: "<red>Sua proteção acabou: os caçadores agora vêm atrás de você!</red>"
 
+# --- pausa ---
+pausa:
+  barra: "<yellow><bold>Caçada pausada</bold></yellow> <gray>· os bots estão congelados</gray>"
+  pausada: "<yellow>Caçada pausada:</yellow> <gray>os bots estão congelados e invencíveis, e a contagem, a proteção e as fases pararam.</gray>"
+  continuada: "<green>A caçada continua!</green>"
+  ja-pausada: "<gray>A caçada já está pausada. Use /manhunt resume para continuar.</gray>"
+  nao-pausada: "<gray>A caçada não está pausada.</gray>"
+  estado: "pausado"
+
 # --- comandos ---
 comando:
   criando: "<gray>Criando</gray> <yellow><quantidade></yellow> <gray>bot(s)</gray> <white><nome></white> <gray>(<dificuldade>)... buscando a skin.</gray>"
   criados: "<green><quantidade> bot(s) <white><nome></white> criados.</green>"
   erro-criar: "<red>Não foi possível criar os bots. Veja o console.</red>"
-  dificuldade-invalida: "<red>Dificuldade inválida. Use difficulty.easy, difficulty.medium, difficulty.hard ou difficulty.terminator.</red>"
-  sem-local: "<red>Este comando precisa de um local (use no jogo ou /bot spawn com coordenadas).</red>"
+  dificuldade-invalida: "<red>Dificuldade inválida. Use easy, medium, hard ou terminator.</red>"
+  sem-local: "<red>Este comando precisa de um local (use no jogo ou informe as coordenadas).</red>"
   removidos: "<yellow><quantidade> bot(s) com o nome <white><nome></white> removidos.</yellow>"
   todos-removidos: "<yellow><quantidade> bot(s) apagados permanentemente.</yellow>"
-  confirmar-deleteall: "<red>Isso apaga todos os bots e o salvamento. Digite <white>/bot deleteall confirm</white> para confirmar.</red>"
+  confirmar-remover-todos: "<red>Isso apaga todos os bots e o salvamento. Digite <white>/manhunt remove all confirm</white> para confirmar.</red>"
   lista-titulo: "<gold>Bots: <yellow><quantidade></yellow> (<green><vivos> vivos</green>)</gold>"
   lista-linha: "<gray>-</gray> <white><visivel></white> <dark_gray>(<nome>)</dark_gray> <gray>fase</gray> <yellow><fase></yellow> <gray><dificuldade> · vida</gray> <red><vida></red> <gray>· grupo</gray> <aqua><grupo></aqua> <gray>· alvo</gray> <white><alvo></white> <gray>· <local> · abates</gray> <yellow><abates></yellow> <dark_gray>[<estado>]</dark_gray>"
   lista-morto: "morto (renascendo)"
@@ -120,8 +138,9 @@ comando:
   tier-invalido: "<red>Tipo de armadura desconhecido: <white><tier></white>. Use leather, chainmail, iron, gold, diamond ou netherite.</red>"
   armadura: "<green>Armadura <white><tier></white> colocada em todos os bots.</green>"
   tp-ok: "<green><white><bot></white> foi até <white><jogador></white>.</green>"
-  tpall: "<green><quantidade> bot(s) trazidos até você.</green>"
+  tp-todos: "<green><quantidade> bot(s) levados até <white><jogador></white>.</green>"
   spawnpoint-bot: "<green>Ponto de respawn de <white><bot></white> definido em <white><pos></white>.</green>"
+  spawnpoint-bot-limpo: "<green>Ponto de respawn de <white><bot></white> removido.</green>"
   skin-ok: "<green>Skin de <white><jogador></white> aplicada em <white><bot></white>.</green>"
   skin-falhou: "<red>Não encontrei a skin de <white><jogador></white>.</red>"
   recarregado: "<green>config.yml e messages.yml recarregados.</green>"
@@ -138,6 +157,7 @@ capacidade:
 grupo:
   nao-existe: "<red>O grupo <white><grupo></white> não existe.</red>"
   papel: "<green>Grupo <white><grupo></white> agora é <yellow><papel></yellow>.</green>"
+  papel-invalido: "<red>Papel desconhecido: <white><papel></white>. Use hunter ou escape.</red>"
   apagado: "<yellow>Grupo <white><grupo></white> apagado (<quantidade> bot(s) removidos).</yellow>"
   progressao: "<green>Progressão de fase <yellow><valor></yellow> para <white><grupo></white> (<quantidade> bot(s)).</green>"
   rastrear: "<green>Grupo <white><grupo></white> persegue jogadores: <yellow><valor></yellow>.</green>"
@@ -147,13 +167,12 @@ grupo:
   inimigo-remove: "<green><white><grupo></white> não é mais inimigo de <white><inimigo></white>.</green>"
 
 opcoes:
-  titulo: "<gold>Opções do Manhunt*</gold> <gray>(/bot settings <chave> <valor>)</gray>"
+  titulo: "<gold>Opções do Manhunt*</gold> <gray>(/manhunt settings <opção> <valor>)</gray>"
   linha: "<gray>-</gray> <yellow><chave></yellow> <gray>=</gray> <white><valor></white> <dark_gray>(<caminho>)</dark_gray>"
   alterada: "<green><white><chave></white> = <yellow><valor></yellow></green>"
   valor-atual: "<gray><white><chave></white> está em <yellow><valor></yellow>.</gray>"
-  desconhecida: "<red>Opção desconhecida: <white><chave></white>. Use /bot settings para ver todas.</red>"
+  desconhecida: "<red>Opção desconhecida: <white><chave></white>. Use /manhunt settings para ver todas.</red>"
   invalido: "<red><white><chave></white>: <erro></red>"
-  persistencia-limpa: "<green>Salvamento dos bots apagado.</green>"
 
 mansave:
   criados: "<green><quantidade> protetor(es) Mansave <white><nome></white> criados.</green>"
@@ -161,11 +180,18 @@ mansave:
 
 menu:
   titulo-principal: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Menu</dark_gray>"
+  titulo-partida: "<dark_gray>Partida</dark_gray>"
+  titulo-alvo: "<dark_gray>Alvo forçado</dark_gray>"
+  titulo-regras: "<dark_gray>Regras da caçada</dark_gray>"
+  titulo-lista: "<dark_gray>Lista de jogadores</dark_gray>"
+  titulo-secao-bots: "<dark_gray>Bots</dark_gray>"
   titulo-criar: "<dark_gray>Criar bots</dark_gray>"
-  titulo-bots: "<dark_gray>Bots</dark_gray>"
+  titulo-bots: "<dark_gray>Gerenciar bots</dark_gray>"
   titulo-grupos: "<dark_gray>Grupos</dark_gray>"
+  titulo-configuracoes: "<dark_gray>Configurações</dark_gray>"
   titulo-opcoes: "<dark_gray>Opções</dark_gray>"
   titulo-confirmar: "<dark_red>Apagar todos os bots?</dark_red>"
   digite-nome: "<yellow>Digite no chat o nome dos bots (use % para o número). Digite <white>cancelar</white> para desistir.</yellow>"
   digite-skin: "<yellow>Digite no chat o nome do jogador da skin (ou <white>-</white> para usar o nome do bot).</yellow>"
+  digite-jogador: "<yellow>Digite no chat o nome do jogador para pôr na lista. Digite <white>cancelar</white> para desistir.</yellow>"
   cancelado: "<gray>Cancelado.</gray>"

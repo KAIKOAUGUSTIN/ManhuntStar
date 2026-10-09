@@ -93,7 +93,7 @@ public final class Brain {
         this.elytra = new ElytraFlight(bot);
     }
 
-    /** O que a IA decidiu no último tick (mostrado no /bot info). */
+    /** O que a IA decidiu no último tick (mostrado no /manhunt info). */
     public String state() {
         return state;
     }

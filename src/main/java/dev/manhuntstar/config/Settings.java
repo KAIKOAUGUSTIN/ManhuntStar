@@ -30,8 +30,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 
 /**
- * Todas as opções do plugin. As chaves de comando seguem as do mod original
- * ({@code /bot settings <chave>} e {@code /bot gameplay <chave>}); o config.yml usa nomes em português.
+ * Todas as opções do plugin. As chaves de comando são em inglês ({@code /manhunt settings <chave>});
+ * o config.yml usa nomes em português.
  */
 public final class Settings {
 
@@ -59,8 +59,8 @@ public final class Settings {
     public final Setting.Bool autoEat = bool("bots.comer-automaticamente", "autoeat", "Comer sozinho", Category.BOTS, true);
     public final Setting.Bool autoGapple = bool("bots.maca-dourada-automatica", "autogapple", "Maçã dourada em combate", Category.BOTS, true);
     public final Setting.Bool fireWaterEscape = bool("bots.fugir-do-fogo-com-agua", "firewaterescape", "Apagar fogo com água", Category.BOTS, true);
-    public final Setting.Bool mobsAttackBots = bool("bots.mobs-atacam-bots", "mobtarget", "Mobs atacam os bots", Category.BOTS, true);
-    public final Setting.Int aimSmoothness = integer("bots.suavidade-mira-ms", "smoothness", "Suavidade da mira (ms)", Category.BOTS, 0, 0, 200);
+    public final Setting.Bool mobsAttackBots = bool("bots.mobs-atacam-bots", "mobsattackbots", "Mobs atacam os bots", Category.BOTS, true);
+    public final Setting.Int aimSmoothness = integer("bots.suavidade-mira-ms", "aimsmoothness", "Suavidade da mira (ms)", Category.BOTS, 0, 0, 200);
 
     // --- Combate ---
     public final Setting.Dbl targetPriority = dbl("combate.prioridade-alvo", "targetpriority", "Prioridade jogador × mob", Category.COMBATE, 2.0, -5.0, 5.0, 0.5);
@@ -68,7 +68,7 @@ public final class Settings {
     public final Setting.Bool allowTrident = bool("combate.tridente", "allowtrident", "Tridente", Category.COMBATE, true);
     public final Setting.Bool allowCrossbow = bool("combate.besta", "allowcrossbow", "Besta", Category.COMBATE, true);
     public final Setting.Bool allowSpear = bool("combate.lanca-a-cavalo", "allowspear", "Lança a cavalo", Category.COMBATE, true);
-    public final Setting.Dbl projInaccuracy = dbl("combate.imprecisao-projeteis", "projaccuracy", "Imprecisão de flechas e tridente", Category.COMBATE, 1.0, 0.0, 2.0, 0.1);
+    public final Setting.Dbl projInaccuracy = dbl("combate.imprecisao-projeteis", "projinaccuracy", "Imprecisão de flechas e tridente", Category.COMBATE, 1.0, 0.0, 2.0, 0.1);
     public final Setting.Dbl humanize = dbl("combate.humanizacao", "humanize", "Humanização", Category.COMBATE, 0.0, 0.0, 1.0, 0.1);
     public final Setting.Dbl meleeMissChance = dbl("combate.chance-errar-golpe", "meleemisschance", "Chance de errar o golpe", Category.COMBATE, 0.12, 0.0, 0.6, 0.02);
     public final Setting.Dbl meleeDelayJitter = dbl("combate.atraso-aleatorio-golpe", "meleedelayjitter", "Atraso aleatório entre golpes", Category.COMBATE, 4.0, 0.0, 12.0, 1.0);
@@ -83,20 +83,20 @@ public final class Settings {
     public final Setting.Enumerated<PearlDimension> pearlDimension = choice("mobilidade.dimensao-perolas", "pearldimension", "Onde usar pérolas", Category.MOBILIDADE, PearlDimension.class, PearlDimension.NETHER_ONLY);
     public final Setting.Bool allowHorse = bool("mobilidade.cavalos", "allowhorse", "Cavalos", Category.MOBILIDADE, true);
     public final Setting.Bool allowBoat = bool("mobilidade.barcos", "allowboat", "Barcos", Category.MOBILIDADE, true);
-    public final Setting.Bool useElytra = bool("mobilidade.elytra", "botuseelytra", "Elytra", Category.MOBILIDADE, false);
+    public final Setting.Bool useElytra = bool("mobilidade.elytra", "allowelytra", "Elytra", Category.MOBILIDADE, false);
     public final Setting.Bool allowRedistribution = bool("mobilidade.redistribuir", "allowredistribution", "Trazer bots que ficaram longe", Category.MOBILIDADE, true);
     public final Setting.Dbl redistDistance = dbl("mobilidade.distancia-redistribuicao", "redistdistance", "Distância para trazer bots", Category.MOBILIDADE, 200.0, 20.0, 500.0, 10.0);
-    public final Setting.Int minNetherDelay = integer("mobilidade.atraso-min-dimensao-segundos", "min_sec_range_nether_entering", "Atraso mínimo para trocar de dimensão (s)", Category.MOBILIDADE, 30, 0, 600);
-    public final Setting.Int maxNetherDelay = integer("mobilidade.atraso-max-dimensao-segundos", "max_sec_range_nether_entering", "Atraso máximo para trocar de dimensão (s)", Category.MOBILIDADE, 60, 0, 600);
+    public final Setting.Int minNetherDelay = integer("mobilidade.atraso-min-dimensao-segundos", "minnetherdelay", "Atraso mínimo para trocar de dimensão (s)", Category.MOBILIDADE, 30, 0, 600);
+    public final Setting.Int maxNetherDelay = integer("mobilidade.atraso-max-dimensao-segundos", "maxnetherdelay", "Atraso máximo para trocar de dimensão (s)", Category.MOBILIDADE, 60, 0, 600);
 
     // --- Pathfinding ---
     public final Setting.Enumerated<PathMode> pathMode = choice("pathfinding.modo", "pathmode", "Planejador de caminho", Category.PATHFINDING, PathMode.class, PathMode.ASTAR);
-    public final Setting.Dbl greediness = dbl("pathfinding.gulosidade", "greediness", "Gulosidade do A*", Category.PATHFINDING, 1.5, 1.0, 10.0, 0.1);
-    public final Setting.Int nodeCap = integer("pathfinding.limite-nos", "nodes", "Limite de nós do A*", Category.PATHFINDING, 2500, 50, 5000);
-    public final Setting.Bool dynamicNodes = bool("pathfinding.limite-dinamico", "dynamic", "Limite de nós automático", Category.PATHFINDING, true);
-    public final Setting.Bool fallbackDumb = bool("pathfinding.fallback-dumb", "fallback", "Andar direto sem caminho", Category.PATHFINDING, true);
-    public final Setting.Bool asyncPaths = bool("pathfinding.assincrono", "async", "Calcular caminhos em paralelo", Category.PATHFINDING, true);
-    public final Setting.Bool debugPaths = bool("pathfinding.debug-particulas", "debugastar", "Caminho em partículas", Category.PATHFINDING, false);
+    public final Setting.Dbl greediness = dbl("pathfinding.gulosidade", "pathgreediness", "Gulosidade do A*", Category.PATHFINDING, 1.5, 1.0, 10.0, 0.1);
+    public final Setting.Int nodeCap = integer("pathfinding.limite-nos", "pathnodes", "Limite de nós do A*", Category.PATHFINDING, 2500, 50, 5000);
+    public final Setting.Bool dynamicNodes = bool("pathfinding.limite-dinamico", "pathdynamicnodes", "Limite de nós automático", Category.PATHFINDING, true);
+    public final Setting.Bool fallbackDumb = bool("pathfinding.fallback-dumb", "pathfallback", "Andar direto sem caminho", Category.PATHFINDING, true);
+    public final Setting.Bool asyncPaths = bool("pathfinding.assincrono", "pathasync", "Calcular caminhos em paralelo", Category.PATHFINDING, true);
+    public final Setting.Bool debugPaths = bool("pathfinding.debug-particulas", "pathdebug", "Caminho em partículas", Category.PATHFINDING, false);
 
     // --- Táticas ---
     public final Setting.Bool caveAmbush = bool("taticas.emboscada-caverna", "caveambush", "Emboscada em caverna", Category.TATICAS, true);
@@ -109,19 +109,19 @@ public final class Settings {
 
     // --- Manhunt ---
     public final Setting.Enumerated<SpawnMode> spawnMode = choice("manhunt.modo-spawn", "spawnmode", "Modo de spawn", Category.MANHUNT, SpawnMode.class, SpawnMode.MANHUNT);
-    public final Setting.Int startCountdown = integer("manhunt.contagem-segundos", "starttime", "Contagem antes da caçada (s)", Category.MANHUNT, 20, 0, 600);
+    public final Setting.Int startCountdown = integer("manhunt.contagem-segundos", "countdown", "Contagem antes da caçada (s)", Category.MANHUNT, 20, 0, 600);
     public final Setting.Bool countdownOnLeave = bool("manhunt.contagem-ao-sair-da-roda", "countdownonleave", "Contar só depois de sair da roda", Category.MANHUNT, true);
     public final Setting.Bool countdownInvulnerable = bool("manhunt.invulneravel-na-contagem", "countdowninvulnerable", "Bots invulneráveis na roda", Category.MANHUNT, true);
     public final Setting.Dbl ringRadius = dbl("manhunt.raio-roda", "ringradius", "Raio da roda (0 = automático)", Category.MANHUNT, 0.0, 0.0, 64.0, 1.0);
     public final Setting.Enumerated<RingCenter> ringCenter = choice("manhunt.centro-roda", "ringcenter", "Centro da roda", Category.MANHUNT, RingCenter.class, RingCenter.AUTOMATICO);
     public final Setting.Enumerated<LateJoin> lateJoin = choice("manhunt.quem-entra-no-meio", "latejoin", "Quem entra no meio da caçada", Category.MANHUNT, LateJoin.class, LateJoin.PROTEGIDO);
-    public final Setting.Enumerated<PlayerListMode> playerListMode = choice("manhunt.lista-modo", "listmode", "Lista de jogadores", Category.MANHUNT, PlayerListMode.class, PlayerListMode.DESLIGADA);
+    public final Setting.Enumerated<PlayerListMode> playerListMode = choice("manhunt.lista-modo", "playerlistmode", "Lista de jogadores", Category.MANHUNT, PlayerListMode.class, PlayerListMode.DESLIGADA);
 
     // --- Aparência ---
-    public final Setting.Bool glowHunters = bool("aparencia.brilho-cacadores", "glowing", "Brilho nos caçadores", Category.APARENCIA, false);
-    public final Setting.Enumerated<GlowColor> glowHuntersColor = choice("aparencia.cor-brilho-cacadores", "glowcolor", "Cor do brilho dos caçadores", Category.APARENCIA, GlowColor.class, GlowColor.RED);
-    public final Setting.Bool glowEscapers = bool("aparencia.brilho-fugitivos", "glowingescape", "Brilho nos fugitivos", Category.APARENCIA, false);
-    public final Setting.Enumerated<GlowColor> glowEscapersColor = choice("aparencia.cor-brilho-fugitivos", "glowcolorescape", "Cor do brilho dos fugitivos", Category.APARENCIA, GlowColor.class, GlowColor.AQUA);
+    public final Setting.Bool glowHunters = bool("aparencia.brilho-cacadores", "glowhunters", "Brilho nos caçadores", Category.APARENCIA, false);
+    public final Setting.Enumerated<GlowColor> glowHuntersColor = choice("aparencia.cor-brilho-cacadores", "glowhunterscolor", "Cor do brilho dos caçadores", Category.APARENCIA, GlowColor.class, GlowColor.RED);
+    public final Setting.Bool glowEscapers = bool("aparencia.brilho-fugitivos", "glowescapers", "Brilho nos fugitivos", Category.APARENCIA, false);
+    public final Setting.Enumerated<GlowColor> glowEscapersColor = choice("aparencia.cor-brilho-fugitivos", "glowescaperscolor", "Cor do brilho dos fugitivos", Category.APARENCIA, GlowColor.class, GlowColor.AQUA);
     public final Setting.Bool showNameTag = bool("aparencia.mostrar-nome", "nametag", "Nome em cima do bot", Category.APARENCIA, true);
 
     /** Opções que já existiram e saem do config.yml ao salvar. */
@@ -136,10 +136,25 @@ public final class Settings {
     }
 
     public Settings() {
-        alias("astar nodes", "nodes");
-        alias("astar dynamic", "dynamic");
-        alias("astar fallback", "fallback");
-        alias("astar async", "async");
+        // nomes antigos (do mod e das versões anteriores): continuam valendo, mas não aparecem no Tab
+        alias("mobtarget", "mobsattackbots");
+        alias("smoothness", "aimsmoothness");
+        alias("projaccuracy", "projinaccuracy");
+        alias("botuseelytra", "allowelytra");
+        alias("min_sec_range_nether_entering", "minnetherdelay");
+        alias("max_sec_range_nether_entering", "maxnetherdelay");
+        alias("greediness", "pathgreediness");
+        alias("nodes", "pathnodes");
+        alias("dynamic", "pathdynamicnodes");
+        alias("fallback", "pathfallback");
+        alias("async", "pathasync");
+        alias("debugastar", "pathdebug");
+        alias("starttime", "countdown");
+        alias("listmode", "playerlistmode");
+        alias("glowing", "glowhunters");
+        alias("glowcolor", "glowhunterscolor");
+        alias("glowingescape", "glowescapers");
+        alias("glowcolorescape", "glowescaperscolor");
         alias("meleerangejitter", "meleereachvariance");
         alias("allowhorseriding", "allowhorse");
         alias("allowboatriding", "allowboat");

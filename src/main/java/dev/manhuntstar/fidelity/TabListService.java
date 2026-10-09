@@ -129,7 +129,7 @@ public final class TabListService {
         }
     }
 
-    /** Atualiza nome/skin (ex.: depois de /bot skin). */
+    /** Atualiza nome/skin (ex.: depois de /manhunt skin). */
     public void refresh(Bot bot) {
         if (!active() || !listed.containsKey(bot.id())) {
             return;

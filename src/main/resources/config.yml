@@ -1,7 +1,7 @@
 # ==============================================================================
 #  Manhunt* — configuração
 #  Tudo aqui também pode ser mudado no jogo com
-#  /bot settings <chave> <valor> (ou /bot gameplay ...) e pelo /bot menu.
+#  /manhunt settings <chave> <valor> e pelo /manhunt menu.
 #  A chave de comando de cada opção está entre colchetes.
 # ==============================================================================
 
@@ -47,11 +47,11 @@ bots:
   maca-dourada-automatica: true
   # Bots apagam o fogo com balde de água (fase 3+). [firewaterescape]
   fugir-do-fogo-com-agua: true
-  # Mobs hostis atacam os bots como atacam jogadores. [mobtarget]
+  # Mobs hostis atacam os bots como atacam jogadores. [mobsattackbots]
   mobs-atacam-bots: true
   # Tipos de mob que nunca miram nos bots (ex.: CREEPER, PHANTOM).
   mobs-que-nao-atacam-bots: []
-  # Suavidade da mira em milissegundos (0 = instantânea, como no mod por padrão). [smoothness]
+  # Suavidade da mira em milissegundos (0 = instantânea, como no mod por padrão). [aimsmoothness]
   suavidade-mira-ms: 0
 
 combate:
@@ -65,7 +65,7 @@ combate:
   besta: true
   # Lança a cavalo (fase 4+): montado, o bot carrega contra o alvo com a lança da fase, passa por ele, dá a volta e carrega de novo. A pé ele usa a espada. [allowspear]
   lanca-a-cavalo: true
-  # Multiplicador da imprecisão de flechas/tridente. [projaccuracy]
+  # Multiplicador da imprecisão de flechas/tridente. [projinaccuracy]
   imprecisao-projeteis: 1.0
   # Humanização (0 a 1): erros de mira, golpes perdidos e ritmo irregular. [humanize]
   humanizacao: 0.0
@@ -93,31 +93,31 @@ mobilidade:
   cavalos: true
   # Barcos: perseguir quem está de barco ou nadando, e atravessar lagos de barco quando é mais rápido que contornar. [allowboat]
   barcos: true
-  # Elytra para alcançar alvos longe. [botuseelytra]
+  # Elytra para alcançar alvos longe. [allowelytra]
   elytra: false
   # Bots muito longe do alvo reaparecem escondidos perto dele. [allowredistribution]
   redistribuir: true
   # Distância (blocos) a partir da qual o bot é redistribuído. [redistdistance]
   distancia-redistribuicao: 200
-  # Tempo mínimo até os bots seguirem o alvo para outra dimensão. [min_sec_range_nether_entering]
+  # Tempo mínimo até os bots seguirem o alvo para outra dimensão. [minnetherdelay]
   atraso-min-dimensao-segundos: 30
-  # Tempo máximo até os bots seguirem o alvo para outra dimensão. [max_sec_range_nether_entering]
+  # Tempo máximo até os bots seguirem o alvo para outra dimensão. [maxnetherdelay]
   atraso-max-dimensao-segundos: 60
 
 pathfinding:
   # Planejador: ASTAR ou DUMB. [pathmode]
   modo: ASTAR
-  # Gulosidade do A* (maior = mais rápido, caminhos piores). [greediness]
+  # Gulosidade do A* (maior = mais rápido, caminhos piores). [pathgreediness]
   gulosidade: 1.5
-  # Limite de nós do A*. [nodes / astar nodes]
+  # Limite de nós do A*. [pathnodes]
   limite-nos: 2500
-  # Ajusta o limite de nós sozinho conforme o tempo de cálculo. [dynamic]
+  # Ajusta o limite de nós sozinho conforme o tempo de cálculo. [pathdynamicnodes]
   limite-dinamico: true
-  # Sem caminho, anda direto para o alvo. [fallback]
+  # Sem caminho, anda direto para o alvo. [pathfallback]
   fallback-dumb: true
-  # Calcula os caminhos fora da thread principal. [async]
+  # Calcula os caminhos fora da thread principal. [pathasync]
   assincrono: true
-  # Mostra o caminho em partículas para quem tem manhuntstar.admin. [debugastar]
+  # Mostra o caminho em partículas para quem tem manhuntstar.admin. [pathdebug]
   debug-particulas: false
 
 taticas:
@@ -139,7 +139,7 @@ taticas:
 manhunt:
   # NORMAL: nasce no ponto. MANHUNT: nasce em roda e espera a caçada começar. [spawnmode]
   modo-spawn: MANHUNT
-  # Contagem (segundos) antes da caçada começar. 0 = soltam assim que alguém sai da roda. [starttime]
+  # Contagem (segundos) antes da caçada começar. 0 = soltam assim que alguém sai da roda. [countdown]
   contagem-segundos: 20
   # A contagem só começa quando um jogador que estava dentro da roda sai dela (vale o primeiro);
   # até lá os bots esperam. false = a contagem começa assim que os bots são criados. [countdownonleave]
@@ -148,27 +148,27 @@ manhunt:
   invulneravel-na-contagem: true
   # Raio da roda em blocos. 0 = automático (5 blocos + 1 a cada 5 bots). [ringradius]
   raio-roda: 0
-  # automatico = a roda fica onde é criada (sua posição ou as coordenadas do /bot spawn);
-  # manual = no ponto marcado com /bot roda ponto. [ringcenter]
+  # automatico = a roda fica onde é criada (sua posição ou o "at x y z" do /manhunt create);
+  # manual = no ponto marcado com /manhunt ring point. [ringcenter]
   centro-roda: automatico
   # Quem entra no servidor com a caçada em andamento: cacado = vira alvo na hora;
   # protegido = fica sem ser alvo pelo tempo da contagem da roda (no mínimo 5 s);
   # fora = não é caçado até a próxima caçada. [latejoin]
   quem-entra-no-meio: protegido
   # desligada = todos podem ser caçados; permitidos = só os da lista são caçados e disparam a roda;
-  # bloqueados = os da lista não são caçados nem disparam a roda. [listmode]
+  # bloqueados = os da lista não são caçados nem disparam a roda. [playerlistmode]
   lista-modo: desligada
-  # Nomes da lista de jogadores. Edite com /bot lista add|remove <jogador>.
+  # Nomes da lista de jogadores. Edite com /manhunt players add|remove <jogador>.
   lista-jogadores: []
 
 aparencia:
-  # Brilho (contorno visível através das paredes) nos caçadores. [glowing]
+  # Brilho (contorno visível através das paredes) nos caçadores. [glowhunters]
   brilho-cacadores: false
-  # Cor do brilho dos caçadores. [glowcolor]
+  # Cor do brilho dos caçadores. [glowhunterscolor]
   cor-brilho-cacadores: red
-  # Brilho nos bots de grupos fugitivos. [glowingescape]
+  # Brilho nos bots de grupos fugitivos. [glowescapers]
   brilho-fugitivos: false
-  # Cor do brilho dos fugitivos. [glowcolorescape]
+  # Cor do brilho dos fugitivos. [glowescaperscolor]
   cor-brilho-fugitivos: aqua
   # Nome visível em cima do bot. [nametag]
   mostrar-nome: true

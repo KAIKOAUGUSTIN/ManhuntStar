@@ -10,6 +10,7 @@ import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
+import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
@@ -74,6 +75,7 @@ public final class BotManager {
     private final TemporaryBlocks temporaryBlocks;
     private final RingService rings;
     private final HuntPolicy policy;
+    private final PauseService pause;
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
@@ -91,6 +93,7 @@ public final class BotManager {
         this.temporaryBlocks = new TemporaryBlocks(plugin::pathService);
         this.rings = new RingService(plugin);
         this.policy = new HuntPolicy(plugin);
+        this.pause = new PauseService(plugin);
         this.tactics = new TacticsManager(this);
         this.caveAmbush = new CaveAmbush(this);
     }
@@ -116,6 +119,11 @@ public final class BotManager {
     /** Quem pode ser caçado (lista de jogadores e quem entra no meio). */
     public HuntPolicy policy() {
         return policy;
+    }
+
+    /** Pausa da caçada e o relógio que para junto com ela. */
+    public PauseService pause() {
+        return pause;
     }
 
     public TacticsManager tactics() {
@@ -265,7 +273,7 @@ public final class BotManager {
 
     /**
      * Jogador que os bots podem caçar agora: vivo, fora do espectador e liberado pela lista de
-     * jogadores e pela regra de quem entra no meio. O alvo forçado (/bot target) passa sempre.
+     * jogadores e pela regra de quem entra no meio. O alvo forçado (/manhunt target) passa sempre.
      */
     public boolean isEligibleTarget(Player p) {
         return isActivePlayer(p) && (p.getUniqueId().equals(forcedTarget) || policy.canBeHunted(p));
@@ -482,7 +490,7 @@ public final class BotManager {
 
     /**
      * Centro da roda para bots criados em {@code given} (posição de quem criou): no modo manual, o
-     * ponto marcado com /bot roda ponto; sem ponto (ou com o mundo dele descarregado), o próprio local.
+     * ponto marcado com /manhunt ring point; sem ponto (ou com o mundo dele descarregado), o próprio local.
      */
     public Location ringCenterFor(Location given) {
         if (!manualRingPointInUse()) {
@@ -728,7 +736,7 @@ public final class BotManager {
         }
         Vec3 pos = deathLoc == null ? bot.lastKnownPos() : Vec3.of(deathLoc);
         String world = deathLoc == null || deathLoc.getWorld() == null ? bot.lastKnownWorld() : deathLoc.getWorld().getName();
-        pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), Bukkit.getCurrentTick() + RESPAWN_DELAY_TICKS, world, pos));
+        pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + RESPAWN_DELAY_TICKS, world, pos));
     }
 
     public boolean isPendingRespawn(Bot bot) {
@@ -739,7 +747,7 @@ public final class BotManager {
         if (pendingRespawns.isEmpty()) {
             return;
         }
-        long now = Bukkit.getCurrentTick();
+        long now = pause.clock();
         Iterator<PendingRespawn> it = pendingRespawns.values().iterator();
         List<Runnable> actions = new ArrayList<>();
         while (it.hasNext()) {
@@ -910,6 +918,7 @@ public final class BotManager {
         tactics.clear();
         rings.cancelAll();
         policy.end();
+        pause.reset();
         globalMaxPhase = 0;
         dirty = true;
         flush(false);
@@ -943,6 +952,10 @@ public final class BotManager {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        if (pause.isPaused()) {
+            tickPaused();
+            return;
+        }
         rings.tick();
         policy.tick();
         for (Bot bot : new ArrayList<>(bots.values())) {
@@ -982,6 +995,29 @@ public final class BotManager {
         }
     }
 
+    /**
+     * Caçada pausada: cada bot fica parado onde estava e não pensa; rodas, caçada, táticas,
+     * renascimentos e chegadas por portal esperam. Seguem só os blocos temporários, a checagem dos
+     * cavalos e o salvamento.
+     */
+    private void tickPaused() {
+        for (Bot bot : bots.values()) {
+            if (bot.isAlive()) {
+                bot.tickPaused();
+                pause.hold(bot);
+            }
+        }
+        pause.tick();
+        temporaryBlocks.tick();
+        int now = Bukkit.getCurrentTick();
+        if (now % 10 == 0) {
+            tickControlledHorses();
+        }
+        if (now % PERSIST_INTERVAL_TICKS == 0) {
+            flush(true);
+        }
+    }
+
     private void tickEntrances() {
         if (entrances.isEmpty()) {
             return;
@@ -1003,7 +1039,7 @@ public final class BotManager {
 
     /** Mortes silenciosas: o bot mais longe de cada jogador (≥ 200 blocos) some e renasce mais perto. */
     private void tickDistanceManagement() {
-        long now = Bukkit.getCurrentTick();
+        long now = pause.clock();
         if (!pendingSilentDeaths.isEmpty()) {
             Iterator<Map.Entry<UUID, Long>> it = pendingSilentDeaths.entrySet().iterator();
             List<Bot> toKill = new ArrayList<>();
@@ -1021,7 +1057,7 @@ public final class BotManager {
             toKill.forEach(this::killSilently);
         }
         // bots da roda ficam de fora (b.idle() != null); os outros seguem com as mortes silenciosas
-        if (now % 20 != 0 || !settings().silentDeaths.on()) {
+        if (Bukkit.getCurrentTick() % 20 != 0 || !settings().silentDeaths.on()) {
             return;
         }
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -1109,16 +1145,21 @@ public final class BotManager {
         dirty = false;
     }
 
-    /** Rodas esperando e a caçada em andamento (participantes, protegidos, quem ficou de fora). */
+    /** Pausa, rodas esperando e a caçada em andamento (participantes, protegidos, quem ficou de fora). */
     private void saveManhunt(ConfigurationSection s) {
+        s.set("pausada", pause.isPaused());
         policy.save(s.createSection("cacada"));
         rings.save(s.createSection("rodas"));
     }
 
-    /** Recria as rodas e a caçada salvas; chamado depois de {@link #restore}. */
+    /** Recria a pausa, as rodas e a caçada salvas; chamado depois de {@link #restore}. */
     public void restoreManhunt(ConfigurationSection s) {
         if (s == null || !settings().persistentBots.on()) {
             return;
+        }
+        if (s.getBoolean("pausada")) {
+            // antes da caçada: o relógio parado vale para a proteção que ela recria
+            pause.pause();
         }
         policy.load(s.getConfigurationSection("cacada"));
         rings.load(s.getConfigurationSection("rodas"));
@@ -1159,7 +1200,7 @@ public final class BotManager {
                     bot.progression().updateGear();
                 } else if (s.shouldRespawn() && settings().respawn.on()) {
                     // morto ao desligar: só volta se o respawn estiver ligado, como numa morte normal
-                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), Bukkit.getCurrentTick() + 40, w.getName(), Vec3.of(loc)));
+                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.getName(), Vec3.of(loc)));
                 }
                 notePhaseReached(bot.progression().phase());
                 n++;
@@ -1173,6 +1214,7 @@ public final class BotManager {
     /** Desligamento: salva tudo e tira as entidades do mundo (elas não são salvas com o mundo). */
     public void shutdown() {
         flush(false);
+        pause.shutdown();
         releaseAllHorses();
         for (Bot b : bots.values()) {
             plugin.glow().remove(b);

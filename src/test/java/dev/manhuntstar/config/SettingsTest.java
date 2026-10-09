@@ -40,18 +40,47 @@ class SettingsTest {
     @Test
     void keysAndAliasesResolve() {
         Settings s = new Settings();
-        assertSame(s.nodeCap, s.byKey("nodes"));
-        assertSame(s.nodeCap, s.byKey("astar nodes"));
-        assertSame(s.mobsAttackBots, s.byKey("MobTarget"));
-        assertSame(s.minNetherDelay, s.byKey("min_sec_range_nether_entering"));
-        assertSame(s.startCountdown, s.byKey("starttime"));
-        assertSame(s.glowHunters, s.byKey("glowing"));
+        assertSame(s.nodeCap, s.byKey("pathnodes"));
+        assertSame(s.mobsAttackBots, s.byKey("MobsAttackBots"));
+        assertSame(s.minNetherDelay, s.byKey("minnetherdelay"));
+        assertSame(s.useElytra, s.byKey("allowelytra"));
+        assertSame(s.startCountdown, s.byKey("countdown"));
+        assertSame(s.glowHunters, s.byKey("glowhunters"));
+        assertSame(s.glowEscapersColor, s.byKey("glowescaperscolor"));
         assertSame(s.countdownOnLeave, s.byKey("countdownonleave"));
         assertSame(s.ringRadius, s.byKey("ringradius"));
         assertSame(s.ringCenter, s.byKey("ringcenter"));
         assertSame(s.lateJoin, s.byKey("latejoin"));
-        assertSame(s.playerListMode, s.byKey("listmode"));
+        assertSame(s.playerListMode, s.byKey("playerlistmode"));
         assertNotNull(s.byKey("allowhorseriding"));
+    }
+
+    /** Os nomes antigos (do mod e das versões anteriores) continuam valendo, fora do Tab. */
+    @Test
+    void oldKeysStillWork() {
+        Settings s = new Settings();
+        assertSame(s.nodeCap, s.byKey("nodes"));
+        assertSame(s.mobsAttackBots, s.byKey("MobTarget"));
+        assertSame(s.minNetherDelay, s.byKey("min_sec_range_nether_entering"));
+        assertSame(s.useElytra, s.byKey("botuseelytra"));
+        assertSame(s.startCountdown, s.byKey("starttime"));
+        assertSame(s.glowHunters, s.byKey("glowing"));
+        assertSame(s.playerListMode, s.byKey("listmode"));
+        for (Setting<?> each : s.all()) {
+            assertFalse(each.key().contains("_"), "chave fora do padrão: " + each.key());
+        }
+    }
+
+    /** O comando de lista usa off/allowlist/blocklist; o config.yml guarda os nomes em português. */
+    @Test
+    void playerListModeEnglishWords() {
+        Settings s = new Settings();
+        s.playerListMode.setFromText("allowlist");
+        assertSame(PlayerListMode.PERMITIDOS, s.playerListMode.get());
+        s.playerListMode.setFromText("blocklist");
+        assertSame(PlayerListMode.BLOQUEADOS, s.playerListMode.get());
+        s.playerListMode.setFromText("off");
+        assertSame(PlayerListMode.DESLIGADA, s.playerListMode.get());
     }
 
     @Test

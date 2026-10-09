@@ -1110,6 +1110,15 @@ public final class Bot {
         motor.endTick();
     }
 
+    /** Caçada pausada: o bot não pensa nem se move (a pausa o segura); só continua ativo e com os chunks. */
+    void tickPaused() {
+        if (entity == null) {
+            return;
+        }
+        keepActive(entity);
+        updateChunkTickets(false);
+    }
+
     /**
      * O Paper deixa de atualizar entidades comuns a mais de 16 blocos de um jogador
      * (entity-activation-range): o bot parava de andar e ficava congelado. Jogadores nunca ficam

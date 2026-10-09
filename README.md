@@ -11,43 +11,65 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 1. Coloque `ManhuntStar-1.4.0.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
-3. Entre como operador e use `/bot create Cacador 3` perto de você, ou abra `/bot menu`.
+3. Entre como operador e use `/manhunt create Cacador 3` perto de você, ou abra `/manhunt menu`.
 
 Requisitos: Java 25 (o mesmo do Paper 26.x). Não depende de outros plugins.
 
 ## Comandos
 
-Todos exigem a permissão `manhuntstar.admin` (operadores têm por padrão). `/manhuntstar` é um apelido de `/bot`.
+Tudo fica em `/manhunt` e exige a permissão `manhuntstar.admin` (operadores têm por padrão). Os verbos são
+os mesmos em tudo: `create`/`remove` para bots, grupos e protetores, `add`/`remove` para listas e `clear` para
+apagar um valor. Posições aceitam `~ ~ ~`; sem posição vale onde você está.
+
+**Partida**
 
 | Comando | O que faz |
 |---|---|
-| `/bot create <nome> [qtd] [dificuldade] [fase] [agressividade]` | Cria bots onde você está (ou no ponto da roda, com o centro em manual). No modo MANHUNT eles nascem em roda. |
-| `/bot create <nome> <qtd> <dificuldade> skin <jogador> [fase] [agr]` | Igual, com a skin de outro jogador. |
-| `/bot spawn <nome> <qtd> <dificuldade> <x> <y> <z> [fase] [agr]` | Cria em coordenadas (a roda fica nelas). |
-| `/bot start` | Começa a caçada na hora (solta todas as rodas e pula a contagem). |
-| `/bot roda` · `/bot roda ponto [x y z]` · `/bot roda ponto limpar` | Mostra a roda; marca um ponto fixo para as rodas (centro em manual) ou apaga o ponto (volta ao automático). |
-| `/bot lista` · `/bot lista add\|remove <jogador>` · `/bot lista modo <desligada\|permitidos\|bloqueados>` | Lista de jogadores que podem (ou não) ser caçados e disparar a roda. |
-| `/bot menu` | Menu em baú: criar, gerenciar, opções, grupos e ações. |
-| `/bot list` · `/bot info <bot>` | Lista os bots (vida, fase, alvo, local, o que a IA está fazendo). |
-| `/bot remove <nome>` · `/bot deleteall confirm` | Remove bots (o segundo apaga tudo, inclusive o salvamento). |
-| `/bot tp <bot> <jogador>` · `/bot tpall` | Teleporta bots. |
-| `/bot target <jogador>` · `/bot cleartarget` | Força todos a perseguirem um jogador / volta ao normal. |
-| `/bot settings [chave] [valor]` | Mostra ou muda opções (`pathmode`, `nodes`, `allowtowering`, `targetmode`, `glowing true red`, `starttime 20`...). `/bot gameplay` é igual. |
-| `/bot group role <grupo> <hunter\|escape>` | Papel do grupo (caçador ou fugitivo). |
-| `/bot group enemy add\|remove <grupo> <inimigo>` | Grupos inimigos lutam entre si. |
-| `/bot group spawnpoint set\|clear <grupo> [x y z]` · `phaseprogression` · `trackplayers` · `delete` | Outras opções de grupo. |
-| `/bot gamerule min_sec_range_nether_entering\|max_sec_range_nether_entering <s>` | Atraso para seguirem o jogador a outra dimensão. |
-| `/bot setspawnpoint <x> <y> <z> <bot>` | Ponto de respawn de um bot. |
-| `/bot skin <bot> <jogador>` | Troca a skin. |
-| `/bot give <item>` · `/bot armor <tier>` | Dá item / armadura a todos os bots. |
-| `/bot execute <tnt-craft\|bow-burst\|firework-crossbow>` | Testa uma capacidade especial contra você. |
-| `/bot reload` | Relê `config.yml` e `messages.yml`. |
-| `/mansave spawn [nome] [qtd]` · `/mansave clear` | Protetores Mansave. |
+| `/manhunt start` | Começa a caçada na hora (solta todas as rodas e pula a contagem). |
+| `/manhunt pause` · `/manhunt resume` | Pausa: congela cada bot onde está (até no ar, montado ou de barco), invencível e sem pensar, e para a contagem da roda, a proteção de quem entrou no meio, o tempo das fases e o renascimento. A pausa continua se o servidor reiniciar. |
+| `/manhunt target <jogador>` · `/manhunt target clear` | Força todos a perseguirem um jogador / volta ao normal. |
+| `/manhunt ring` · `/manhunt ring point [x y z \| clear]` | Mostra a roda; marca um ponto fixo para as rodas (centro em manual) ou apaga o ponto (volta ao automático). |
+| `/manhunt players` · `players add\|remove <jogador>` · `players mode <off\|allowlist\|blocklist>` | Lista de jogadores que podem (ou não) ser caçados e disparar a roda. |
 
-Dificuldades: `difficulty.easy`, `difficulty.medium`, `difficulty.hard`, `difficulty.terminator` (ou `facil`, `medio`, `dificil`, `terminator`).
+**Bots**
 
-Nomes com `%`, acento ou espaço vão entre aspas nos comandos, por exemplo `/bot create "Caçador%" 5` e
-`/bot group role "Caçador%" escape`. O Tab já completa os nomes com as aspas.
+| Comando | O que faz |
+|---|---|
+| `/manhunt create <nome> [qtd] [dificuldade] [skin <jogador>] [at <x y z>] [fase] [agressividade]` | Cria bots onde você está (ou no ponto da roda, com o centro em manual), ou em `at x y z`. No modo MANHUNT eles nascem em roda. |
+| `/manhunt remove <bot>` · `/manhunt remove all confirm` | Remove os bots com esse nome / apaga todos, inclusive o salvamento. |
+| `/manhunt list` · `/manhunt info <bot>` | Lista os bots (vida, fase, alvo, local, o que a IA está fazendo). |
+| `/manhunt tp <bot\|all> [jogador]` | Leva bots até um jogador (ou até você). |
+| `/manhunt skin <bot> <jogador>` | Troca a skin. |
+| `/manhunt spawnpoint <bot> [x y z \| clear]` | Ponto de renascimento de um bot. |
+| `/manhunt equip item <item>` · `/manhunt equip armor <tipo>` | Dá item / armadura a todos os bots. |
+| `/manhunt test <tnt-craft\|bow-burst\|firework-crossbow>` | Testa uma capacidade especial contra você. |
+| `/manhunt mansave create [nome] [qtd]` · `/manhunt mansave remove` | Protetores Mansave. |
+
+**Grupos** (o nome do grupo vem antes da ação)
+
+| Comando | O que faz |
+|---|---|
+| `/manhunt group <grupo> role <hunter\|escape>` | Papel do grupo (caçador ou fugitivo). |
+| `/manhunt group <grupo> enemy add\|remove <outro>` | Grupos inimigos lutam entre si. |
+| `/manhunt group <grupo> spawnpoint [x y z \| clear]` | Ponto de renascimento do grupo. |
+| `/manhunt group <grupo> phases <true\|false>` · `chaseplayers <true\|false>` | Fases e perseguir jogadores. |
+| `/manhunt group <grupo> remove` | Remove o grupo e os bots dele. |
+
+**Opções e menu**
+
+| Comando | O que faz |
+|---|---|
+| `/manhunt settings [opção] [valor]` | Mostra ou muda opções (`pathmode`, `pathnodes`, `allowtowering`, `targetmode`, `glowhunters true red`, `countdown 20`, `ringradius auto`...). |
+| `/manhunt reload` | Relê `config.yml` e `messages.yml`. |
+| `/manhunt menu` | Menu em baú em quatro seções: Partida, Regras da caçada, Bots e Configurações. |
+
+Dificuldades: `easy`, `medium`, `hard`, `terminator`.
+
+Nomes com `%`, acento ou espaço vão entre aspas nos comandos, por exemplo `/manhunt create "Caçador%" 5` e
+`/manhunt group "Caçador%" role escape`. O Tab já completa os nomes com as aspas.
+
+Os nomes antigos das opções (`starttime`, `glowing`, `nodes`, `min_sec_range_nether_entering`, `botuseelytra`...)
+continuam valendo no `/manhunt settings`, mas não aparecem no Tab.
 
 ## O que dá para configurar
 
@@ -56,18 +78,18 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 - **Roda e contagem antes da caçada** (`manhunt.contagem-segundos`, padrão 20): a roda não tem dono. Os
   bots esperam nela até um jogador que estava dentro sair (vale o primeiro); aí começa a contagem de
   vantagem, com barra no topo e títulos 3-2-1, e só então eles começam a caçar. Roda criada longe de todos
-  espera alguém entrar e sair (ou o `/bot start`). Cada roda tem a sua contagem, e a roda é salva se o
+  espera alguém entrar e sair (ou o `/manhunt start`). Cada roda tem a sua contagem, e a roda é salva se o
   servidor reiniciar. Com `manhunt.contagem-ao-sair-da-roda: false` a contagem começa assim que os bots
   são criados; `0` = os bots soltam assim que alguém sai da roda.
 - **Raio e centro da roda**: `manhunt.raio-roda` (0 = automático, cresce com a quantidade de bots) e
-  `manhunt.centro-roda` (`automatico` = onde a roda é criada; `manual` = no ponto marcado com `/bot roda ponto`).
+  `manhunt.centro-roda` (`automatico` = onde a roda é criada; `manual` = no ponto marcado com `/manhunt ring point`).
 - **Quem entra no meio da caçada** (`manhunt.quem-entra-no-meio`): `protegido` (padrão) fica sem ser alvo
   pelo tempo da contagem da roda, no mínimo 5 s; `cacado` vira alvo na hora; `fora` não é caçado até a
   próxima caçada. Quem já estava na caçada, cai e volta continua sendo caçado.
-- **Lista de jogadores** (`manhunt.lista-modo` e `/bot lista`): `permitidos` = só os da lista são caçados e
-  disparam a roda; `bloqueados` = os da lista não são caçados nem disparam a roda. O `/bot target` passa por cima.
+- **Lista de jogadores** (`manhunt.lista-modo` e `/manhunt players`): `permitidos` (allowlist) = só os da lista são caçados e
+  disparam a roda; `bloqueados` (blocklist) = os da lista não são caçados nem disparam a roda. O `/manhunt target` passa por cima.
 - **Brilho** nos caçadores (`aparencia.brilho-cacadores`, com cor) e, separado, nos fugitivos. Vem desligado;
-  liga e troca a cor direto no `/bot menu` ou com `/bot settings glowing true red`.
+  liga e troca a cor direto no `/manhunt menu` (Configurações) ou com `/manhunt settings glowhunters true red`.
 - **Fidelidade de jogador**: bots no TAB com skin e ping, contando no número de jogadores da lista de
   servidores e no `/list`, mensagens "entrou/saiu do jogo" e mensagens de morte do jogo.
 - **Mobs hostis atacam os bots** (zumbis, esqueletos, creepers, aranhas no escuro, slimes por contato,
@@ -79,7 +101,7 @@ Tudo está comentado no `config.yml` e pode ser mudado no jogo. Destaques:
 - Outros plugins que procuram "jogadores" (por exemplo a bússola de outro plugin de ManHunt) não enxergam
   os bots: eles aparecem no TAB, no `/list` e na contagem, mas não são jogadores para a API do servidor.
 - Nomes de bots e grupos no menu são digitados no chat.
-- As linhas de debug do A* são partículas (`/bot settings debugastar true`), visíveis para quem tem `manhuntstar.admin`.
+- As linhas de debug do A* são partículas (`/manhunt settings pathdebug true`), visíveis para quem tem `manhuntstar.admin`.
 - A lista do TAB usa os pacotes internos do servidor; se uma versão futura do Paper mudar esse pacote,
   só essa função se desliga (com aviso no console) e o resto do plugin continua.
 
@@ -124,7 +146,7 @@ O jar sai em `build/libs/ManhuntStar-1.4.0.jar`. O `build` também roda os teste
 API do Paper 26.3 (`compileAgainst263`) para avisar de quebras de compatibilidade.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou
-erro de cada projétil dos bots; `-Dmanhuntstar.teste.cavalo=true` mostra detalhes do cavalo no `/bot info`.
+erro de cada projétil dos bots; `-Dmanhuntstar.teste.cavalo=true` mostra detalhes do cavalo no `/manhunt info`.
 
 ## Créditos
 

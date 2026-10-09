@@ -86,7 +86,7 @@ public final class SkinService {
         }, executor).exceptionally(t -> null);
     }
 
-    /** Só a skin de um jogador real (usado por /bot skin). */
+    /** Só a skin de um jogador real (usado por /manhunt skin). */
     public CompletableFuture<SkinData> fetchPlayerSkin(String name) {
         String key = name.trim().toLowerCase(Locale.ROOT);
         return CompletableFuture.supplyAsync(() -> {

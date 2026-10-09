@@ -49,7 +49,7 @@ public final class Mining {
             return;
         }
         if (bot.eyePos().distanceTo(Vec3.center(miningPos)) > MAX_REACH) {
-            // teleportado (/bot tp, pérola, redistribuição) no meio da quebra: não quebra de longe
+            // teleportado (/manhunt tp, pérola, redistribuição) no meio da quebra: não quebra de longe
             clear(true);
             return;
         }

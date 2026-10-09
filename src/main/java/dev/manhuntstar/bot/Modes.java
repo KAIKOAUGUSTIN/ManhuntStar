@@ -48,7 +48,7 @@ public final class Modes {
         }
     }
 
-    /** Centro da roda: AUTOMATICO = onde a roda é criada; MANUAL = ponto marcado com /bot roda ponto. */
+    /** Centro da roda: AUTOMATICO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
     public enum RingCenter implements Setting.Choice {
         AUTOMATICO("automatico", "automático", "auto"), MANUAL("manual", "fixo");
 

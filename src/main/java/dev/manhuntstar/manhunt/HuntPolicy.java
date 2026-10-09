@@ -20,7 +20,8 @@ import org.bukkit.entity.Player;
  * sobra nenhum bot. Quem está online nessa hora participa; quem entra depois é caçado na hora, fica
  * protegido pelo tempo da contagem da roda (no mínimo 5 s) ou fica de fora até a próxima caçada,
  * conforme a opção "quem-entra-no-meio". Quem participa, cai e volta continua sendo caçado. Caçada
- * que começou sem ninguém online trata o primeiro a entrar como participante.
+ * que começou sem ninguém online trata o primeiro a entrar como participante. A proteção conta no
+ * relógio da caçada, que para durante a pausa.
  */
 public final class HuntPolicy {
 
@@ -32,10 +33,14 @@ public final class HuntPolicy {
     private int protectionSeconds = MIN_PROTECTION_SECONDS;
     private final Set<UUID> participants = new HashSet<>();
     private final Set<UUID> excluded = new HashSet<>();
-    private final Map<UUID, Integer> protectedUntil = new HashMap<>();
+    private final Map<UUID, Long> protectedUntil = new HashMap<>();
 
     public HuntPolicy(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
+    }
+
+    private long clock() {
+        return plugin.botManager().pause().clock();
     }
 
     /** Tempo de proteção de quem entra no meio: o da contagem da roda, no mínimo 5 s. */
@@ -93,8 +98,8 @@ public final class HuntPolicy {
         if (!participants.contains(id)) {
             return false;
         }
-        Integer until = protectedUntil.get(id);
-        return until == null || until <= Bukkit.getCurrentTick();
+        Long until = protectedUntil.get(id);
+        return until == null || until <= clock();
     }
 
     /** Jogador que entrou (ou passou a valer pela lista) com a caçada em andamento. */
@@ -117,7 +122,7 @@ public final class HuntPolicy {
             }
             case PROTEGIDO -> {
                 participants.add(id);
-                protectedUntil.put(id, Bukkit.getCurrentTick() + protectionSeconds * 20);
+                protectedUntil.put(id, clock() + protectionSeconds * 20L);
                 m.send(p, "cacada.entrou-protegido", Messages.p("segundos", protectionSeconds));
             }
             case FORA -> {
@@ -130,10 +135,10 @@ public final class HuntPolicy {
 
     /** A cada segundo: encerra a caçada sem bots, admite quem passou a valer e mostra a proteção. */
     public void tick() {
-        int now = Bukkit.getCurrentTick();
-        if (now % 20 != 0 || !active) {
+        if (Bukkit.getCurrentTick() % 20 != 0 || !active) {
             return;
         }
+        long now = clock();
         if (plugin.botManager().allBots().isEmpty()) {
             end();
             return;
@@ -142,11 +147,11 @@ public final class HuntPolicy {
             admit(p);
         }
         Messages m = plugin.messages();
-        Iterator<Map.Entry<UUID, Integer>> it = protectedUntil.entrySet().iterator();
+        Iterator<Map.Entry<UUID, Long>> it = protectedUntil.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<UUID, Integer> e = it.next();
+            Map.Entry<UUID, Long> e = it.next();
             Player p = Bukkit.getPlayer(e.getKey());
-            int left = (e.getValue() - now + 19) / 20;
+            long left = (e.getValue() - now + 19) / 20;
             if (left <= 0) {
                 it.remove();
                 if (p != null) {
@@ -169,9 +174,9 @@ public final class HuntPolicy {
         s.set("protecao-segundos", protectionSeconds);
         s.set("participantes", ids(participants));
         s.set("fora", ids(excluded));
-        int now = Bukkit.getCurrentTick();
-        for (Map.Entry<UUID, Integer> e : protectedUntil.entrySet()) {
-            int left = e.getValue() - now;
+        long now = clock();
+        for (Map.Entry<UUID, Long> e : protectedUntil.entrySet()) {
+            long left = e.getValue() - now;
             if (left > 0) {
                 s.set("protegidos." + e.getKey(), left);
             }
@@ -191,7 +196,7 @@ public final class HuntPolicy {
         readIds(s.getStringList("fora"), excluded);
         ConfigurationSection prot = s.getConfigurationSection("protegidos");
         if (prot != null) {
-            int now = Bukkit.getCurrentTick();
+            long now = clock();
             for (String k : prot.getKeys(false)) {
                 try {
                     protectedUntil.put(UUID.fromString(k), now + prot.getInt(k));

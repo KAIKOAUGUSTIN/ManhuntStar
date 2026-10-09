@@ -272,7 +272,7 @@ public final class TacticsManager {
         bot.mining().cancel();
     }
 
-    // ------------------------------------------------------------------ comando de teste (/bot execute capacity)
+    // ------------------------------------------------------------------ comando de teste (/manhunt test)
 
     /** @return mensagem de erro ou null se iniciou. */
     public String debugExecute(Player player, String capacity) {

@@ -71,7 +71,7 @@ public final class HorseRoutine {
     /** Atraso da carga das lanças do jogo, caso o item não traga o componente. */
     private static final int DEFAULT_LANCE_DELAY = 12;
 
-    /** Só nos testes em servidor ({@code -Dmanhuntstar.teste.cavalo=true}): mais detalhes no /bot info. */
+    /** Só nos testes em servidor ({@code -Dmanhuntstar.teste.cavalo=true}): mais detalhes no /manhunt info. */
     private static final boolean TEST_DETAIL = Boolean.getBoolean("manhuntstar.teste.cavalo");
 
     private final Bot bot;
@@ -100,7 +100,7 @@ public final class HorseRoutine {
         this.bot = bot;
     }
 
-    /** Detalhe para o /bot info (velocidade do cavalo, distância ao próximo ponto, domação). */
+    /** Detalhe para o /manhunt info (velocidade do cavalo, distância ao próximo ponto, domação). */
     public String detail() {
         return detail;
     }
