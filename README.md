@@ -164,6 +164,9 @@ PR, commita isso na `main`, cria a tag `vX.Y.Z` e a release com o jar, e leva a 
 A versão sobe no patch (1.5.3 → 1.5.4). Para subir mais, ponha uma etiqueta no PR antes do merge: `minor`
 (1.5.3 → 1.6.0) ou `major` (1.5.3 → 2.0.0). Com a etiqueta `sem-release` o merge não gera versão.
 
+O workflow faz os pushes com o secret `RELEASE_TOKEN`: um token de quem está no bypass das rulesets da `main`
+e da `dev`, com permissão **Contents: Read and write** neste repositório.
+
 ## Créditos
 
 Baseado no mod Fabric **T\* (Terminator Star)** de **OpaleMC**, licença CC0: o comportamento foi estudado
