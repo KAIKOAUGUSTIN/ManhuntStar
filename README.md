@@ -1,6 +1,6 @@
 # Manhunt*
 
-Bots caçadores de **ManHunt** para servidores **Paper 26.2** (e 26.3 beta).
+Bots caçadores de **ManHunt** para servidores **Paper 26.3**.
 
 Os bots são entidades **Mannequin** (o "boneco com skin de jogador" do jogo) controladas pelo plugin
 para agir como jogadores: correm, pulam, nadam, cavam, constroem torres e pontes, lutam com recarga de
@@ -9,7 +9,8 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
-1. Coloque `ManhuntStar-1.5.3.jar` na pasta `plugins/` de um servidor **Paper 26.2** (ou 26.3).
+1. Coloque `ManhuntStar-1.6.0.jar` na pasta `plugins/` de um servidor **Paper 26.3**. Para o Paper 26.2, use a
+   versão 1.5.3.
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
 3. Entre como operador e use `/manhunt create Cacador 3` perto de você, ou abra `/manhunt menu`.
 
@@ -149,8 +150,7 @@ Precisa do JDK 25.
 ./gradlew build
 ```
 
-O jar sai em `build/libs/ManhuntStar-1.5.3.jar`. O `build` também roda os testes e compila o código contra a
-API do Paper 26.3 (`compileAgainst263`) para avisar de quebras de compatibilidade.
+O jar sai em `build/libs/ManhuntStar-1.6.0.jar`. O `build` também roda os testes.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou
 erro de cada projétil dos bots; `-Dmanhuntstar.teste.cavalo=true` mostra detalhes do cavalo no `/manhunt info`.
