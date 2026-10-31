@@ -116,18 +116,18 @@ public final class HuntPolicy {
         }
         Messages m = plugin.messages();
         switch (plugin.settings().lateJoin.get()) {
-            case CACADO -> {
+            case HUNTED -> {
                 participants.add(id);
-                m.send(p, "cacada.entrou-cacado");
+                m.send(p, "hunt.joined-hunted");
             }
-            case PROTEGIDO -> {
+            case PROTECTED -> {
                 participants.add(id);
                 protectedUntil.put(id, clock() + protectionSeconds * 20L);
-                m.send(p, "cacada.entrou-protegido", Messages.p("segundos", protectionSeconds));
+                m.send(p, "hunt.joined-protected", Messages.p("seconds", protectionSeconds));
             }
-            case FORA -> {
+            case OUT -> {
                 excluded.add(id);
-                m.send(p, "cacada.entrou-fora");
+                m.send(p, "hunt.joined-out");
             }
         }
         plugin.botManager().markDirty();
@@ -155,11 +155,11 @@ public final class HuntPolicy {
             if (left <= 0) {
                 it.remove();
                 if (p != null) {
-                    p.sendActionBar(m.get("cacada.protecao-acabou-barra"));
-                    m.send(p, "cacada.protecao-acabou");
+                    p.sendActionBar(m.get("hunt.protection-ended-bar"));
+                    m.send(p, "hunt.protection-ended");
                 }
             } else if (p != null) {
-                p.sendActionBar(m.get("cacada.protecao-barra", Messages.p("segundos", left)));
+                p.sendActionBar(m.get("hunt.protection-bar", Messages.p("seconds", left)));
             }
         }
     }

@@ -48,9 +48,9 @@ public final class Modes {
         }
     }
 
-    /** Centro da roda: AUTOMATICO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
+    /** Centro da roda: AUTO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
     public enum RingCenter implements Setting.Choice {
-        AUTOMATICO("automatico", "automático", "auto"), MANUAL("manual", "fixo");
+        AUTO("auto", "automatic", "automatico", "automático"), MANUAL("manual", "fixed", "fixo");
 
         private final List<String> aliases;
 
@@ -71,7 +71,7 @@ public final class Modes {
 
     /** Quem entra no servidor com a caçada em andamento. */
     public enum LateJoin implements Setting.Choice {
-        CACADO("cacado", "caçado", "hunted"), PROTEGIDO("protegido", "protected", "protecao", "proteção"), FORA("fora", "ignorado", "ignored");
+        HUNTED("hunted", "cacado", "caçado"), PROTECTED("protected", "protegido", "protecao", "proteção"), OUT("out", "ignored", "fora", "ignorado");
 
         private final List<String> aliases;
 
@@ -90,9 +90,9 @@ public final class Modes {
         }
     }
 
-    /** Lista de jogadores: DESLIGADA = todos; PERMITIDOS = só os da lista; BLOQUEADOS = todos menos os da lista. */
+    /** Lista de jogadores: OFF = todos; ALLOWLIST = só os da lista; BLOCKLIST = todos menos os da lista. */
     public enum PlayerListMode implements Setting.Choice {
-        DESLIGADA("desligada", "off", "nenhuma"), PERMITIDOS("permitidos", "allowlist", "whitelist"), BLOQUEADOS("bloqueados", "blacklist", "blocklist");
+        OFF("off", "false", "desligada", "nenhuma"), ALLOWLIST("allowlist", "whitelist", "permitidos"), BLOCKLIST("blocklist", "blacklist", "bloqueados");
 
         private final List<String> aliases;
 
@@ -154,7 +154,7 @@ public final class Modes {
 
     /** Em quais dimensões os bots podem jogar pérolas do End. */
     public enum PearlDimension implements Setting.Choice {
-        NETHER_ONLY("nether", "0"), BOTH("ambas", "both", "1"), OVERWORLD_ONLY("overworld", "2");
+        NETHER_ONLY("nether", "0"), BOTH("both", "ambas", "1"), OVERWORLD_ONLY("overworld", "2");
 
         private final List<String> aliases;
 

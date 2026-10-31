@@ -163,7 +163,7 @@ public final class BotStorage {
                 Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException e) {
-            logger.warning("Não foi possível salvar bots.yml: " + e.getMessage());
+            logger.warning("Could not save bots.yml: " + e.getMessage());
         }
     }
 
@@ -218,7 +218,7 @@ public final class BotStorage {
                 try {
                     bots.add(readBot(UUID.fromString(k), s));
                 } catch (RuntimeException e) {
-                    logger.warning("Bot salvo inválido (" + k + "): " + e.getMessage());
+                    logger.warning("Invalid saved bot (" + k + "): " + e.getMessage());
                 }
             }
         }

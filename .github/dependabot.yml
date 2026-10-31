@@ -6,10 +6,10 @@ registries:
     url: https://repo.papermc.io/repository/maven-public/
 
 updates:
-  # Dependências do Gradle (gradle/libs.versions.toml) e o próprio Gradle Wrapper.
+  # Gradle dependencies (gradle/libs.versions.toml) and the Gradle Wrapper itself.
   - package-ecosystem: gradle
     directory: /
-    # PRs vão para a dev; a main só recebe da dev (e cada merge na main vira uma release)
+    # PRs go to dev; main only receives from dev (and every merge into main becomes a release)
     target-branch: dev
     registries:
       - papermc

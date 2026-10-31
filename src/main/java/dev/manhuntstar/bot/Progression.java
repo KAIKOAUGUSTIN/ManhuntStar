@@ -144,27 +144,27 @@ public final class Progression {
         String reasonKey = null;
         if (p.getWorld().getEnvironment() == World.Environment.NETHER) {
             boostPhase = 5;
-            reasonKey = "fase.motivo.nether";
+            reasonKey = "phase.reason.nether";
         } else if (countDiamonds(p) >= 5) {
             boostPhase = 5;
-            reasonKey = "fase.motivo.diamantes";
+            reasonKey = "phase.reason.diamonds";
         } else if (ironCount > 20) {
             boostPhase = 5;
-            reasonKey = "fase.motivo.muito-ferro";
+            reasonKey = "phase.reason.lots-of-iron";
         } else if (ironCount >= 1) {
             boostPhase = 4;
-            reasonKey = "fase.motivo.ferro";
+            reasonKey = "phase.reason.iron";
         } else if (holdingWoodenWeapon(p)) {
             boostPhase = 2;
-            reasonKey = "fase.motivo.arma-madeira";
+            reasonKey = "phase.reason.wooden-weapon";
         }
         if (boostPhase > phase) {
             int old = phase;
             setPhaseSilently(boostPhase);
             Messages m = bot.manager().plugin().messages();
-            bot.manager().plugin().getServer().broadcast(m.get("fase.salto",
-                    Messages.p("bot", bot.visualName()), Messages.p("de", old), Messages.p("para", boostPhase),
-                    Messages.c("motivo", m.get(reasonKey)), Messages.p("jogador", p.getName())));
+            bot.manager().plugin().getServer().broadcast(m.get("phase.jump",
+                    Messages.p("bot", bot.visualName()), Messages.p("from", old), Messages.p("to", boostPhase),
+                    Messages.c("reason", m.get(reasonKey)), Messages.p("player", p.getName())));
         }
     }
 
@@ -216,8 +216,8 @@ public final class Progression {
         updateGear();
         if (bot.manager().notePhaseReached(newPhase)) {
             Messages m = bot.manager().plugin().messages();
-            bot.manager().plugin().getServer().broadcast(m.get("fase.upgrade", Messages.p("fase", newPhase)));
-            bot.manager().plugin().getServer().broadcast(m.get("fase.descricao." + newPhase));
+            bot.manager().plugin().getServer().broadcast(m.get("phase.upgrade", Messages.p("phase", newPhase)));
+            bot.manager().plugin().getServer().broadcast(m.get("phase.description." + newPhase));
         }
     }
 

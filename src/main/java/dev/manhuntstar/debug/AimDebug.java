@@ -35,7 +35,7 @@ public final class AimDebug implements Listener {
         }
         logger = plugin.getLogger();
         Bukkit.getPluginManager().registerEvents(new AimDebug(), plugin);
-        logger.info("[mira] diagnóstico de mira ligado");
+        logger.info("[aim] aim diagnostics on");
     }
 
     /** Chance de sacar besta/tridente por tick; no diagnóstico é maior para gerar vários tiros. */
@@ -60,21 +60,21 @@ public final class AimDebug implements Listener {
             return;
         }
         Entity target = Bukkit.getEntity(shot.target());
-        String head = String.format(Locale.ROOT, "[mira] %s %s a %.1f blocos: ", event.getEntity().getType().name().toLowerCase(Locale.ROOT), shot.shooter(), shot.distance());
+        String head = String.format(Locale.ROOT, "[aim] %s %s at %.1f blocks: ", event.getEntity().getType().name().toLowerCase(Locale.ROOT), shot.shooter(), shot.distance());
         if (event.getHitEntity() != null && event.getHitEntity().getUniqueId().equals(shot.target())) {
-            logger.info(head + "ACERTOU");
+            logger.info(head + "HIT");
             return;
         }
         Location at = event.getEntity().getLocation();
         if (target == null || !target.getWorld().equals(at.getWorld())) {
-            logger.info(head + "errou (alvo sumiu)");
+            logger.info(head + "missed (target gone)");
             return;
         }
         Location t = target.getLocation();
         double horizontal = Math.hypot(at.getX() - t.getX(), at.getZ() - t.getZ());
         double dy = at.getY() - (t.getY() + target.getHeight() * 0.5);
-        String what = event.getHitEntity() != null ? "acertou outro: " + event.getHitEntity().getType().name().toLowerCase(Locale.ROOT) : "bateu num bloco";
-        logger.info(head + String.format(Locale.ROOT, "errou (%s), %.2f blocos ao lado do alvo, %.2f %s do meio dele",
-                what, horizontal, Math.abs(dy), dy >= 0 ? "acima" : "abaixo"));
+        String what = event.getHitEntity() != null ? "hit another: " + event.getHitEntity().getType().name().toLowerCase(Locale.ROOT) : "hit a block";
+        logger.info(head + String.format(Locale.ROOT, "missed (%s), %.2f blocks beside the target, %.2f %s its middle",
+                what, horizontal, Math.abs(dy), dy >= 0 ? "above" : "below"));
     }
 }

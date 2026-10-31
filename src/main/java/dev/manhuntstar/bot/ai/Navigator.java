@@ -332,8 +332,8 @@ public final class Navigator {
             if (p != null && p.hasPermission("manhuntstar.admin")) {
                 var ps = bot.manager().plugin().pathService();
                 String msg = current == null
-                        ? String.format("[A*] FALHOU | cópia: %dms | fila: %d", ps.lastCaptureMs(), ps.activeTasks())
-                        : String.format("[A*] %s | %dms | %d nós | cópia: %dms | fila: %d", current.complete() ? "COMPLETO" : "TRECHO",
+                        ? String.format("[A*] FAILED | snapshot: %dms | queue: %d", ps.lastCaptureMs(), ps.activeTasks())
+                        : String.format("[A*] %s | %dms | %d nodes | snapshot: %dms | queue: %d", current.complete() ? "COMPLETE" : "PARTIAL",
                         current.timeMs(), current.nodesExplored(), ps.lastCaptureMs(), ps.activeTasks());
                 p.sendActionBar(Component.text(msg));
             }
@@ -791,7 +791,7 @@ public final class Navigator {
                     if (surfaceWater && straight && boatsAllowed()) {
                         // de barco, atravessar em linha reta costuma ganhar de procurar terra para os lados
                         keptStep = null;
-                        stepNote = "(barco)";
+                        stepNote = "(boat)";
                         return top;
                     }
                     if (water == null && surfaceWater) {
@@ -801,12 +801,12 @@ public final class Navigator {
             }
         }
         if (water != null) {
-            stepNote = "(água)";
+            stepNote = "(water)";
             keep(water, target, 0);
             return water;
         }
         keptStep = null;
-        stepNote = lava ? "(lava)" : "(sem chão)";
+        stepNote = lava ? "(lava)" : "(no floor)";
         return null;
     }
 
@@ -1320,7 +1320,7 @@ public final class Navigator {
         int horizontal = (int) Math.round(Math.hypot(real.x() - botPos.x(), real.z() - botPos.z()));
         int range = resolved == null ? -1 : botPos.manhattan(resolved);
         String label = resolved == null ? "null" : resolved.x() + "," + resolved.y() + "," + resolved.z();
-        p.sendActionBar(Component.text(String.format("[A*] modo:%s | colocar:%s | dist:%d | alcance:%d | nó:%s",
-                lastResolveMode, allowPlacement ? "SIM" : "NÃO", horizontal, range, label)));
+        p.sendActionBar(Component.text(String.format("[A*] mode:%s | place:%s | dist:%d | range:%d | node:%s",
+                lastResolveMode, allowPlacement ? "YES" : "NO", horizontal, range, label)));
     }
 }

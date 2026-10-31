@@ -120,7 +120,7 @@ public final class SkinService {
                 }
             }
         } catch (IOException | RuntimeException e) {
-            logger.fine("Skin de " + name + " não encontrada: " + e.getMessage());
+            logger.fine("Skin of " + name + " not found: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -193,9 +193,9 @@ public final class SkinService {
             if (texture != null && texture.has("value") && texture.has("signature")) {
                 return new SkinData(texture.get("value").getAsString(), texture.get("signature").getAsString());
             }
-            logger.warning("MineSkin não devolveu a skin de reserva (HTTP " + r.statusCode() + ").");
+            logger.warning("MineSkin did not return the fallback skin (HTTP " + r.statusCode() + ").");
         } catch (IOException | RuntimeException e) {
-            logger.warning("Não foi possível gerar a skin de reserva no MineSkin: " + e.getMessage());
+            logger.warning("Could not generate the fallback skin on MineSkin: " + e.getMessage());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -244,7 +244,7 @@ public final class SkinService {
         try {
             y.save(cacheFile);
         } catch (IOException e) {
-            logger.warning("Não foi possível salvar o cache de skins: " + e.getMessage());
+            logger.warning("Could not save the skin cache: " + e.getMessage());
         }
     }
 

@@ -87,7 +87,7 @@ public final class PathService {
         try {
             return AStar.get().findPath(grid, start, target, cap, budget, greed, place, boat);
         } catch (RuntimeException e) {
-            logger.log(Level.WARNING, "Erro no A*", e);
+            logger.log(Level.WARNING, "A* error", e);
             return null;
         }
     }
