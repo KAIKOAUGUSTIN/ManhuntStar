@@ -5,6 +5,9 @@
 # 2. Compila e testa com a versão nova.
 # 3. Commita a versão e o CHANGELOG.md na main, cria a tag vX.Y.Z e a release com o jar.
 # 4. Leva a main de volta para a dev, para a dev já começar na versão nova.
+#
+# Os pushes na main e na dev usam o secret RELEASE_TOKEN (token de quem está no bypass das
+# rulesets): o token padrão do Actions é barrado pelas regras de PR e de verificação.
 name: Release
 
 on:
@@ -28,10 +31,20 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.pull_request.number }}
     steps:
+      - name: Conferir o RELEASE_TOKEN
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$RELEASE_TOKEN" ]; then
+            echo "::error::Falta o secret RELEASE_TOKEN (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
       - uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Calcular a versão
         id: versao
