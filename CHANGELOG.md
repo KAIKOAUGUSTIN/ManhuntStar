@@ -2,6 +2,19 @@
 
 Generated automatically on every merge into main.
 
+## 1.5.5 - 2026-10-31
+
+### Changes
+
+- Release faz os pushes com o RELEASE_TOKEN (499ba0b)
+- Add GNU General Public License v3 to LICENSE.md (e2331fb)
+- Sistema de idiomas, config e README em inglês (de303c2)
+- Build workflow and GitHub files in English (0fc1c03)
+
+**Paper:** 26.3 · **Java:** 25
+
+**Full changelog since 1.5.4:** https://github.com/KAIKOAUGUSTIN/ManhuntStar/compare/v1.5.4...v1.5.5
+
 ## 1.5.4 - 2026-10-31
 
 ### Changes
