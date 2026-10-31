@@ -173,6 +173,9 @@ Needs JDK 25.
 The jar ends up in `build/libs/ManhuntStar-<version>.jar`. `build` also runs the tests, including one that checks
 every language file has the same keys and placeholders as `en.yml`.
 
+The `Build` workflow does the same on every PR and on every push to `dev` and `main`, and keeps the jar as an
+artifact for 14 days (on the run's Summary page, under Artifacts), so you can test a PR without building it.
+
 Test server diagnostics (JVM flags): `-Dmanhuntstar.teste.mira=true` logs whether each bot projectile hit or missed;
 `-Dmanhuntstar.teste.cavalo=true` shows horse details in `/manhunt info`.
 
@@ -183,7 +186,7 @@ bumps the version in `gradle.properties`, builds and tests, updates `CHANGELOG.m
 that to `main`, creates the `vX.Y.Z` tag and the release with the jar, and brings `main` back into `dev`.
 
 The version goes up by a patch (1.5.3 → 1.5.4). To go up more, add a label to the PR before merging: `minor`
-(1.5.3 → 1.6.0) or `major` (1.5.3 → 2.0.0). With the `sem-release` label the merge doesn't make a release.
+(1.5.3 → 1.6.0) or `major` (1.5.3 → 2.0.0). With the `skip-release` label the merge doesn't make a release.
 
 The workflow pushes with the `RELEASE_TOKEN` secret: a token from someone in the bypass list of the `main` and
 `dev` rulesets, with **Contents: Read and write** permission on this repository.

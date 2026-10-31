@@ -1,5 +1,5 @@
 [versions]
-# Versão da API do Paper (compilação e testes).
+# Paper API version (compile and tests).
 paper-api = "26.3.build.231-stable"
 junit = "6.1.3"
 

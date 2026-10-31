@@ -1,13 +1,13 @@
-# Release automática: cada PR que entra na main gera uma versão nova.
+# Automatic release: every PR merged into main makes a new version.
 #
-# 1. Sobe a versão do gradle.properties (patch; etiqueta "minor" ou "major" no PR muda isso,
-#    "sem-release" pula tudo).
-# 2. Compila e testa com a versão nova.
-# 3. Commita a versão e o CHANGELOG.md na main, cria a tag vX.Y.Z e a release com o jar.
-# 4. Leva a main de volta para a dev, para a dev já começar na versão nova.
+# 1. Bumps the version in gradle.properties (patch; a "minor" or "major" label on the PR changes that,
+#    "skip-release" skips everything).
+# 2. Builds and tests with the new version.
+# 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jar.
+# 4. Brings main back into dev, so dev starts from the new version.
 #
-# Os pushes na main e na dev usam o secret RELEASE_TOKEN (token de quem está no bypass das
-# rulesets): o token padrão do Actions é barrado pelas regras de PR e de verificação.
+# The pushes to main and dev use the RELEASE_TOKEN secret (a token from someone in the rulesets'
+# bypass list): the default Actions token is blocked by the PR and status check rules.
 name: Release
 
 on:
@@ -25,18 +25,22 @@ concurrency:
 
 jobs:
   release:
-    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'sem-release')
+    # "sem-release" is the old name of the skip-release label
+    if: >-
+      github.event.pull_request.merged == true
+      && !contains(github.event.pull_request.labels.*.name, 'skip-release')
+      && !contains(github.event.pull_request.labels.*.name, 'sem-release')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
       PR: ${{ github.event.pull_request.number }}
     steps:
-      - name: Conferir o RELEASE_TOKEN
+      - name: Check RELEASE_TOKEN
         env:
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           if [ -z "$RELEASE_TOKEN" ]; then
-            echo "::error::Falta o secret RELEASE_TOKEN (Settings > Secrets and variables > Actions)."
+            echo "::error::The RELEASE_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
             exit 1
           fi
 
@@ -46,29 +50,29 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
-      - name: Calcular a versão
-        id: versao
+      - name: Compute the version
+        id: version
         env:
-          ETIQUETAS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
-          atual=$(sed -n 's/^version=//p' gradle.properties)
-          IFS=. read -r major minor patch <<< "$atual"
-          if jq -e 'index("major")' <<< "$ETIQUETAS" > /dev/null; then
+          current=$(sed -n 's/^version=//p' gradle.properties)
+          IFS=. read -r major minor patch <<< "$current"
+          if jq -e 'index("major")' <<< "$LABELS" > /dev/null; then
             major=$((major + 1)); minor=0; patch=0
-          elif jq -e 'index("minor")' <<< "$ETIQUETAS" > /dev/null; then
+          elif jq -e 'index("minor")' <<< "$LABELS" > /dev/null; then
             minor=$((minor + 1)); patch=0
           else
             patch=$((patch + 1))
           fi
-          nova="$major.$minor.$patch"
-          if git rev-parse -q --verify "refs/tags/v$nova" > /dev/null; then
-            echo "::error::A tag v$nova já existe."
+          next="$major.$minor.$patch"
+          if git rev-parse -q --verify "refs/tags/v$next" > /dev/null; then
+            echo "::error::The tag v$next already exists."
             exit 1
           fi
-          sed -i "s/^version=.*/version=$nova/" gradle.properties
-          echo "anterior=$atual" >> "$GITHUB_OUTPUT"
-          echo "nova=$nova" >> "$GITHUB_OUTPUT"
-          echo "Versão $atual -> $nova"
+          sed -i "s/^version=.*/version=$next/" gradle.properties
+          echo "previous=$current" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+          echo "Version $current -> $next"
 
       - uses: actions/setup-java@v5
         with:
@@ -77,39 +81,41 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: Compilar e testar
+      - name: Build and test
         run: ./gradlew build
 
-      - name: Notas da versão e CHANGELOG
+      - name: Release notes and CHANGELOG
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
         run: |
           gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/commits" \
             --jq '.[] | select((.parents | length) == 1) | [.sha, (.author.login // ""), (.commit.message | split("\n")[0])] | @tsv' \
             > "$RUNNER_TEMP/commits.tsv"
-          bash .github/scripts/notas-da-versao.sh "${{ steps.versao.outputs.nova }}" "${{ steps.versao.outputs.anterior }}" \
-            "$RUNNER_TEMP/commits.tsv" "$RUNNER_TEMP/notas.md"
-          cat "$RUNNER_TEMP/notas.md"
+          bash .github/scripts/release-notes.sh "$NEXT" "$PREVIOUS" "$RUNNER_TEMP/commits.tsv" "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
 
-      - name: Commit e tag na main
+      - name: Commit and tag on main
         env:
-          VERSAO: ${{ steps.versao.outputs.nova }}
+          VERSION: ${{ steps.version.outputs.next }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add gradle.properties CHANGELOG.md
-          git commit -m "Versão $VERSAO"
-          git tag "v$VERSAO"
-          git push origin HEAD:main "v$VERSAO"
+          git commit -m "Version $VERSION"
+          git tag "v$VERSION"
+          git push origin HEAD:main "v$VERSION"
 
-      - name: Criar a release
+      - name: Create the release
         env:
-          VERSAO: ${{ steps.versao.outputs.nova }}
+          VERSION: ${{ steps.version.outputs.next }}
         run: |
-          gh release create "v$VERSAO" "build/libs/ManhuntStar-$VERSAO.jar" \
-            --title "ManhuntStar $VERSAO" \
-            --notes-file "$RUNNER_TEMP/notas.md" \
+          gh release create "v$VERSION" "build/libs/ManhuntStar-$VERSION.jar" \
+            --title "ManhuntStar $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
             --verify-tag
 
-      - name: Levar a versão para a dev
+      - name: Bring the version into dev
         run: |
           git fetch origin dev
           if git merge-base --is-ancestor origin/dev HEAD; then
@@ -117,8 +123,8 @@ jobs:
           else
             git checkout -B dev origin/dev
             if git merge --no-edit main && git push origin dev; then
-              echo "main mesclada na dev."
+              echo "main merged into dev."
             else
-              echo "::warning::Não deu para mesclar a main na dev sozinho; faça o merge à mão."
+              echo "::warning::Could not merge main into dev automatically; merge it by hand."
             fi
           fi
