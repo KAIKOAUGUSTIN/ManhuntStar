@@ -1,0 +1,594 @@
+# ==============================================================================
+#  Manhunt* - Português (Brasil)
+#  Formato MiniMessage: https://docs.advntr.dev/minimessage/format.html
+#  As tags como <bot>, <phase> e <amount> são preenchidas pelo plugin; mantenha-as ao traduzir.
+#  Chaves que faltarem usam o texto em inglês (en.yml). "version" muda quando os textos padrão
+#  mudam: um arquivo mais antigo vai para lang/old/ e é trocado pelo novo.
+# ==============================================================================
+
+version: 1
+
+prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
+
+help: |-
+  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(bots caçadores de ManHunt) ·</gray> <yellow>/manhunt menu</yellow> <gray>abre o menu</gray>
+  <gold>Partida</gold>
+  <yellow>/manhunt start</yellow> <gray>- solta as rodas e começa a caçada já</gray>
+  <yellow>/manhunt pause · resume</yellow> <gray>- congela os bots e os relógios / continua</gray>
+  <yellow>/manhunt target <player> · target clear</yellow> <gray>- todos atrás de um jogador / volta ao normal</gray>
+  <yellow>/manhunt ring · ring point [x y z | clear]</yellow> <gray>- a roda e o ponto fixo dela</gray>
+  <yellow>/manhunt players [add|remove <player> | mode off|allowlist|blocklist]</yellow> <gray>- quem é caçado</gray>
+  <gold>Bots</gold>
+  <yellow>/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]</yellow>
+  <yellow>/manhunt remove <bot> · remove all confirm</yellow> <gray>- remove bots / apaga tudo</gray>
+  <yellow>/manhunt list · info <bot> · tp <bot|all> [player]</yellow>
+  <yellow>/manhunt skin <bot> <player> · spawnpoint <bot> [x y z | clear]</yellow>
+  <yellow>/manhunt equip item <item> · equip armor <tier> · test <ability></yellow>
+  <gold>Grupos</gold>
+  <yellow>/manhunt group <group> role|enemy|spawnpoint|phases|chaseplayers|remove</yellow>
+  <gold>Opções</gold>
+  <yellow>/manhunt settings [option] [value] · reload</yellow> <gray>- sem opção mostra todas</gray>
+
+common:
+  "yes": "sim"
+  "no": "não"
+  "on": "ligado"
+  "off": "desligado"
+  none: "nenhum"
+  automatic: "automático"
+
+difficulty:
+  easy: "Fácil"
+  medium: "Médio"
+  hard: "Difícil"
+  terminator: "Terminator"
+
+role:
+  hunter: "caçador"
+  escape: "fugitivo"
+
+# --- fases ---
+phase:
+  jump: "<red>[SALTO DE FASE]</red> <white><bot></white> <gray>fase</gray> <yellow><from></yellow> <gray>→</gray> <gold><to></gold> <gray>(<reason> de <white><player></white>).</gray>"
+  reason:
+    nether: "entrou no Nether"
+    diamonds: "5+ diamantes no inventário"
+    lots-of-iron: "mais de 20 de ferro"
+    iron: "ferro no inventário"
+    wooden-weapon: "arma de madeira"
+  upgrade: "<dark_red><bold>[BOTS MAIS FORTES]</bold></dark_red> <gold>Fase <phase> alcançada!</gold>"
+  description:
+    "1": "<gray>Bot básico: sem equipamento de fase; persegue, cava, faz pontes e se vira.</gray>"
+    "2": "<gray>Espada de madeira e comida básica. Arma de madeira do jogador força esta fase.</gray>"
+    "3": "<gray>Liberam a besta e o balde de água contra fogo; comida melhor.</gray>"
+    "4": "<gray>Armadura de couro, espada de pedra, escudo, tridente com lealdade, cavalos e rajada de arco.</gray>"
+    "5": "<gray>Armadura e espada de ferro, balde de lava e maçãs douradas.</gray>"
+    "6": "<gray>Ferro com Proteção I, drops melhores e barcos contra alvos na água.</gray>"
+    "7": "<gray>Espada de diamante, parte da armadura de diamante e drops mais fortes.</gray>"
+    "8": "<gray>Diamante completo com Proteção II e espada com Afiação II.</gray>"
+    "9": "<gray>Mantém o diamante encantado e a recarga da pérola cai 50%.</gray>"
+    "10": "<gray>Mantém o diamante encantado e a recarga da pérola cai 75%.</gray>"
+    "11": "<gray>Os bots ficaram mais fortes.</gray>"
+    "12": "<dark_red>Fase final (só Terminator): armadura de netherite e espada de netherite com Repulsão.</dark_red>"
+
+# --- roda e contagem antes da caçada ---
+countdown:
+  ring-created: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, começa a contagem de</gray> <yellow><seconds></yellow> <gray>segundos. Use /manhunt start para começar já.</gray>"
+  ring-created-no-countdown: "<gold>Os caçadores estão na roda.</gold> <gray>Quando um jogador sair dela, a caçada começa. Use /manhunt start para começar já.</gray>"
+  bar-waiting: "<yellow>Saia da roda para começar</yellow> <gray>(<seconds>s de vantagem)</gray>"
+  bar-waiting-no-countdown: "<yellow>Saia da roda para começar a caçada</yellow>"
+  left: "<yellow><player></yellow> <gold>saiu da roda!</gold>"
+  left-and-counting: "<yellow><player></yellow> <gold>saiu da roda! A caçada começa em</gold> <yellow><seconds></yellow> <gold>segundos.</gold>"
+  started: "<gold>A caçada começa em <yellow><seconds></yellow> segundos!</gold> <gray>Use /manhunt start para começar já.</gray>"
+  bar: "<red>A caçada começa em</red> <yellow><seconds>s</yellow>"
+  title-number: "<red><bold><seconds></bold></red>"
+  subtitle: "<gray>Prepare-se...</gray>"
+  begun-title: "<dark_red><bold>A caçada começou!</bold></dark_red>"
+  begun-subtitle: "<gray>Corra.</gray>"
+  begun: "<dark_red>A caçada começou!</dark_red>"
+  nothing: "<gray>Não há bots esperando na roda.</gray>"
+
+ring:
+  info: |-
+    <gold>Roda</gold> <gray>· raio</gray> <white><radius></white> <gray>· centro</gray> <white><center></white> <gray>· ponto</gray> <white><point></white>
+    <gray>Rodas esperando agora:</gray> <white><rings></white> <gray>(raio: /manhunt settings ringradius <blocos|auto>)</gray>
+  point-set: "<green>Ponto da roda marcado em <white><pos></white> (<white><world></white>). As próximas rodas nascem aqui (centro da roda: manual).</green>"
+  point-cleared: "<green>Ponto da roda apagado. As rodas voltam a nascer onde são criadas (centro da roda: auto).</green>"
+  no-point: "<yellow>O centro da roda está em manual, mas não há ponto marcado (ou o mundo dele não está carregado): a roda fica onde você está. Marque com /manhunt ring point.</yellow>"
+
+# --- quem é caçado: lista de jogadores e quem entra no meio ---
+player-list:
+  info: "<gold>Lista de jogadores</gold> <gray>(<mode>):</gray> <white><names></white>"
+  empty: "ninguém"
+  added: "<green><white><player></white> entrou na lista.</green>"
+  already-listed: "<yellow><white><player></white> já está na lista.</yellow>"
+  removed: "<green><white><player></white> saiu da lista.</green>"
+  not-listed: "<yellow><white><player></white> não está na lista.</yellow>"
+  off-warning: "<gray>A lista está desligada: use /manhunt players mode allowlist ou blocklist para ela valer.</gray>"
+  mode: "<green>Lista de jogadores: <yellow><mode></yellow>.</green> <gray><explanation></gray>"
+  explanation:
+    "off": "Todos podem ser caçados e disparar a roda."
+    allowlist: "Só os da lista são caçados e disparam a roda."
+    blocklist: "Os da lista não são caçados nem disparam a roda."
+
+hunt:
+  joined-hunted: "<red>A caçada está em andamento: você já é um alvo!</red>"
+  joined-protected: "<gold>A caçada está em andamento.</gold> <gray>Você fica</gray> <yellow><seconds></yellow> <gray>segundos protegido dos caçadores.</gray>"
+  joined-out: "<gray>A caçada está em andamento. Você não será caçado até a próxima.</gray>"
+  protection-bar: "<green>Protegido dos caçadores:</green> <yellow><seconds>s</yellow>"
+  protection-ended-bar: "<red>Sua proteção acabou!</red>"
+  protection-ended: "<red>Sua proteção acabou: os caçadores agora vêm atrás de você!</red>"
+
+# --- pausa ---
+pause:
+  bar: "<yellow><bold>Caçada pausada</bold></yellow> <gray>· os bots estão congelados</gray>"
+  paused: "<yellow>Caçada pausada:</yellow> <gray>os bots estão congelados e invencíveis, e a contagem, a proteção e as fases pararam.</gray>"
+  resumed: "<green>A caçada continua!</green>"
+  already-paused: "<gray>A caçada já está pausada. Use /manhunt resume para continuar.</gray>"
+  not-paused: "<gray>A caçada não está pausada.</gray>"
+  state: "pausado"
+
+# --- comandos ---
+command:
+  creating: "<gray>Criando</gray> <yellow><amount></yellow> <gray>bot(s)</gray> <white><name></white> <gray>(<difficulty>)... buscando a skin.</gray>"
+  created: "<green><amount> bot(s) <white><name></white> criados.</green>"
+  create-error: "<red>Não foi possível criar os bots. Veja o console.</red>"
+  invalid-difficulty: "<red>Dificuldade inválida. Use easy, medium, hard ou terminator.</red>"
+  no-location: "<red>Este comando precisa de um local (use no jogo ou informe as coordenadas).</red>"
+  removed: "<yellow><amount> bot(s) com o nome <white><name></white> removidos.</yellow>"
+  all-removed: "<yellow><amount> bot(s) apagados permanentemente.</yellow>"
+  confirm-remove-all: "<red>Isso apaga todos os bots e o salvamento. Digite <white>/manhunt remove all confirm</white> para confirmar.</red>"
+  list-title: "<gold>Bots: <yellow><amount></yellow> (<green><alive> vivos</green>)</gold>"
+  list-line: "<gray>-</gray> <white><display-name></white> <dark_gray>(<name>)</dark_gray> <gray>fase</gray> <yellow><phase></yellow> <gray><difficulty> · vida</gray> <red><health></red> <gray>· grupo</gray> <aqua><group></aqua> <gray>· alvo</gray> <white><target></white> <gray>· <location> · abates</gray> <yellow><kills></yellow> <dark_gray>[<state>]</dark_gray>"
+  list-dead: "morto (renascendo)"
+  info: |-
+    <gold><display-name></gold> <dark_gray>(<name>)</dark_gray>
+    <gray>Vivo: <white><alive></white> · Fase <yellow><phase></yellow> · <difficulty></gray>
+    <gray>Vida <red><health></red> · Fome <white><hunger></white> · Abates <yellow><kills></yellow> · Agressividade <white><aggression></white></gray>
+    <gray>Grupo <aqua><group></aqua> · Alvo <white><target></white></gray>
+    <gray>Local <white><location></white> · Velocidade <white><speed></white> blocos/s · No chão <white><on-ground></white></gray>
+    <gray>IA: <yellow><state></yellow></gray>
+  bot-not-found: "<red>Bot não encontrado.</red>"
+  players-only: "<red>Só jogadores podem usar isso.</red>"
+  target-set: "<green>Todos os bots agora perseguem <white><player></white>.</green>"
+  target-cleared: "<green>Alvo forçado removido: os bots voltam a escolher sozinhos.</green>"
+  item-given: "<green>Item <white><item></white> dado a todos os bots.</green>"
+  invalid-tier: "<red>Tipo de armadura desconhecido: <white><tier></white>. Use leather, chainmail, iron, gold, diamond ou netherite.</red>"
+  armor: "<green>Armadura <white><tier></white> colocada em todos os bots.</green>"
+  tp-one: "<green><white><bot></white> foi até <white><player></white>.</green>"
+  tp-all: "<green><amount> bot(s) levados até <white><player></white>.</green>"
+  spawnpoint-bot: "<green>Ponto de respawn de <white><bot></white> definido em <white><pos></white>.</green>"
+  spawnpoint-bot-cleared: "<green>Ponto de respawn de <white><bot></white> removido.</green>"
+  skin-ok: "<green>Skin de <white><player></white> aplicada em <white><bot></white>.</green>"
+  skin-failed: "<red>Não encontrei a skin de <white><player></white>.</red>"
+  reloaded: "<green>config.yml e arquivos de idioma recarregados (idioma: <white><language></white>).</green>"
+
+ability:
+  started: "<green>Capacidade <white><ability></white> iniciada.</green>"
+  must-be-alive: "<red>Você precisa estar vivo.</red>"
+  already-active: "<red>Já há uma capacidade ativa contra você.</red>"
+  not-in-cave: "<red>Você não está numa caverna (Y abaixo de 60, sem luz do céu).</red>"
+  no-eligible-bot: "<red>Nenhum bot elegível (vivo, mirando você, no mesmo mundo, livre e na fase necessária).</red>"
+  firework-out-of-range: "<red>Nenhum bot tem você ao alcance do foguete (uns 64 blocos, sem bloco no caminho).</red>"
+  arrow-out-of-range: "<red>Nenhum bot alcança você com a flecha, nem com o arco todo puxado (longe demais para o desnível, ou bloco na trajetória).</red>"
+  no-ambush-spot: "<red>Não achei um ponto da mesma caverna para a emboscada.</red>"
+  unknown: "<red>Capacidade desconhecida. Use tnt-craft, bow-burst ou firework-crossbow.</red>"
+
+group:
+  not-found: "<red>O grupo <white><group></white> não existe.</red>"
+  role: "<green>Grupo <white><group></white> agora é <yellow><role></yellow>.</green>"
+  invalid-role: "<red>Papel desconhecido: <white><role></white>. Use hunter ou escape.</red>"
+  deleted: "<yellow>Grupo <white><group></white> apagado (<amount> bot(s) removidos).</yellow>"
+  phases: "<green>Progressão de fase <yellow><value></yellow> para <white><group></white> (<amount> bot(s)).</green>"
+  chase: "<green>Grupo <white><group></white> persegue jogadores: <yellow><value></yellow>.</green>"
+  spawnpoint: "<green>Ponto de respawn do grupo <white><group></white> em <white><pos></white>.</green>"
+  spawnpoint-cleared: "<green>Ponto de respawn do grupo <white><group></white> removido.</green>"
+  enemy-added: "<green><white><group></white> agora é inimigo de <white><enemy></white>.</green>"
+  enemy-removed: "<green><white><group></white> não é mais inimigo de <white><enemy></white>.</green>"
+
+settings:
+  title: "<gold>Opções do Manhunt*</gold> <gray>(/manhunt settings <option> <value>)</gray>"
+  line: "<gray>-</gray> <yellow><key></yellow> <gray>=</gray> <white><value></white> <dark_gray>(<path>)</dark_gray>"
+  effective-nodes: "pathnodes (efetivo)"
+  changed: "<green><white><key></white> = <yellow><value></yellow></green>"
+  current: "<gray><white><key></white> está em <yellow><value></yellow>.</gray>"
+  unknown: "<red>Opção desconhecida: <white><key></white>. Use /manhunt settings para ver todas.</red>"
+  invalid: "<red><white><key></white>: <error></red>"
+  error:
+    boolean: "valor inválido: use true ou false."
+    integer: "número inteiro inválido (<min> a <max>)."
+    number: "número inválido (<min> a <max>)."
+    choice: "valor inválido. Opções: <options>"
+
+# --- o que a IA está fazendo (/manhunt info e list) ---
+state:
+  none: "-"
+  ability: "capacidade especial"
+  knockback: "repulsão"
+  stabilizing: "estabilizando"
+  eating: "comendo"
+  extinguishing: "apagando fogo"
+  suffocating: "preso dentro de bloco"
+  countdown: "contagem"
+  waiting-in-ring: "esperando na roda"
+  target-in-other-dimension: "alvo em outra dimensão"
+  sneaky: "jogo furtivo"
+  no-target: "sem alvo"
+  fleeing: "fugindo de <target>"
+  boat-crossing: "atravessando de barco"
+  boat: "barco"
+  riding: "cavalgando até <target> (<detail>)"
+  getting-horse: "indo pegar um cavalo"
+  bow-burst: "rajada de arco"
+  shooting: "atirando em <target>"
+  fleeing-low-health: "fugindo (vida baixa)"
+  tunneling: "cavando túnel"
+  speed-bridging: "ponte rápida"
+  breaking-through: "abrindo passagem até <target>"
+  fighting: "lutando com <target>"
+  stuck-digging: "preso, cavando"
+  towering: "torre/ponte até <target>"
+  parkour: "parkour"
+  following-path: "seguindo caminho até <target> (<detail> blocos)"
+  walking-straight: "indo direto até <target> (<detail> blocos)"
+
+category:
+  general: "Geral"
+  bots: "Bots"
+  combat: "Combate"
+  mobility: "Mobilidade"
+  pathfinding: "Pathfinding"
+  tactics: "Táticas"
+  manhunt: "Regras da caçada"
+  appearance: "Aparência"
+
+# --- nome e descrição de cada opção no menu (a chave é a do /manhunt settings) ---
+options:
+  language:
+    name: "Idioma"
+    description: "Idioma das mensagens e do menu: um arquivo da pasta lang/. Texto que faltar fica em inglês."
+  tablist:
+    name: "Bots na lista do TAB"
+    description: "Bots aparecem na lista do TAB como jogadores (com skin e ping)."
+  joinmessages:
+    name: "Mensagens de entrada e saída"
+    description: "\"X entrou no jogo\" / \"X saiu do jogo\" quando um bot é criado ou removido."
+  deathmessages:
+    name: "Mensagens de morte"
+    description: "Mensagens de morte dos bots no padrão do jogo (respeita a gamerule de mensagens de morte)."
+  serverlistcount:
+    name: "Contar na lista de servidores"
+    description: "Bots somam no número de jogadores online e nos nomes da lista de servidores."
+  listcommand:
+    name: "Bots no /list"
+    description: "O /list inclui os bots (mesmo formato do jogo)."
+  respectpvp:
+    name: "Respeitar PvP desligado"
+    description: "Com pvp desligado no mundo, os bots não batem em jogadores."
+  mineskin:
+    name: "Skin reserva pelo MineSkin"
+    description: "Sem skin para o nome escolhido, usa a primeira imagem .png da pasta skins/ (ou o robô do mod), enviada uma vez ao MineSkin para ganhar assinatura."
+  bothealth:
+    name: "Vida máxima"
+    description: "Vida máxima dos bots."
+  botinvincible:
+    name: "Bots invencíveis"
+    description: "Bots não levam dano (só do void e /kill)."
+  respawn:
+    name: "Renascer depois de morrer"
+    description: "Bots renascem 5 s depois de morrer."
+  persistentbots:
+    name: "Manter bots ao reiniciar"
+    description: "Bots continuam existindo depois de reiniciar o servidor (bots.yml)."
+  dropinventory:
+    name: "Derrubar inventário ao morrer"
+    description: "Bots derrubam o inventário ao morrer."
+  gearpersistence:
+    name: "Equipamento ao morrer"
+    description: "O que acontece com a melhor espada/picareta/armadura quando o bot morre: mantém, mantém e derruba uma cópia, ou derruba e perde."
+  phasemultiplier:
+    name: "Duração das fases"
+    description: "Multiplica a duração de cada fase de progressão."
+  defaultdifficulty:
+    name: "Dificuldade padrão"
+    description: "Dificuldade usada quando o comando não informa: easy, medium, hard, terminator."
+  autoeat:
+    name: "Comer sozinho"
+    description: "Bots comem quando ficam com fome."
+  autogapple:
+    name: "Maçã dourada em combate"
+    description: "Bots comem maçã dourada em combate (fase 5+)."
+  firewaterescape:
+    name: "Apagar fogo com água"
+    description: "Bots apagam o fogo com balde de água (fase 3+)."
+  mobsattackbots:
+    name: "Mobs atacam os bots"
+    description: "Mobs hostis atacam os bots como atacam jogadores."
+  aimsmoothness:
+    name: "Suavidade da mira (ms)"
+    description: "Suavidade da mira em milissegundos (0 = instantânea, como no mod por padrão)."
+  targetpriority:
+    name: "Prioridade jogador × mob"
+    description: "Preferência entre jogador e mob: 5 = só jogadores, -5 = só mobs."
+  targetmode:
+    name: "Divisão dos alvos"
+    description: "Como os bots dividem os jogadores: closest, equal, farthest."
+  allowtrident:
+    name: "Tridente"
+    description: "Tridente (fase 4+)."
+  allowcrossbow:
+    name: "Besta"
+    description: "Besta (fase 3+)."
+  allowspear:
+    name: "Lança a cavalo"
+    description: "Lança a cavalo (fase 4+): montado, o bot carrega contra o alvo com a lança da fase, passa por ele, dá a volta e carrega de novo. A pé ele usa a espada."
+  projinaccuracy:
+    name: "Imprecisão de flechas e tridente"
+    description: "Multiplicador da imprecisão de flechas/tridente."
+  humanize:
+    name: "Humanização"
+    description: "Humanização (0 a 1): erros de mira, golpes perdidos e ritmo irregular."
+  meleemisschance:
+    name: "Chance de errar o golpe"
+    description: "Chance de errar o golpe (multiplicada pela humanização)."
+  meleedelayjitter:
+    name: "Atraso aleatório entre golpes"
+    description: "Atraso aleatório entre golpes, em ticks."
+  meleereachvariance:
+    name: "Variação do alcance"
+    description: "Quanto o alcance do golpe pode variar."
+  meleeaimoffset:
+    name: "Desvio da mira no golpe"
+    description: "Desvio da mira no golpe."
+  meleespamvariance:
+    name: "Variação do ritmo de golpes"
+    description: "Variação do ritmo de golpes."
+  allowtowering:
+    name: "Torres e pontes"
+    description: "Torres e pontes perto do alvo (até 3 blocos na horizontal)."
+  allowpearl:
+    name: "Pérolas do End"
+    description: "Pérolas do End."
+  pearlcooldownmult:
+    name: "Recarga das pérolas"
+    description: "Multiplicador da recarga das pérolas."
+  pearldimension:
+    name: "Onde usar pérolas"
+    description: "Onde os bots usam pérolas: nether, both (ambas), overworld."
+  allowhorse:
+    name: "Cavalos"
+    description: "Cavalos (fase 4+)."
+  allowboat:
+    name: "Barcos"
+    description: "Barcos: perseguir quem está de barco ou nadando, e atravessar lagos de barco quando é mais rápido que contornar."
+  allowelytra:
+    name: "Elytra"
+    description: "Elytra para alcançar alvos longe."
+  allowredistribution:
+    name: "Trazer bots que ficaram longe"
+    description: "Bots muito longe do alvo reaparecem escondidos perto dele."
+  redistdistance:
+    name: "Distância para trazer bots"
+    description: "Distância (blocos) a partir da qual o bot é redistribuído."
+  minnetherdelay:
+    name: "Atraso mínimo para trocar de dimensão (s)"
+    description: "Tempo mínimo até os bots seguirem o alvo para outra dimensão."
+  maxnetherdelay:
+    name: "Atraso máximo para trocar de dimensão (s)"
+    description: "Tempo máximo até os bots seguirem o alvo para outra dimensão."
+  pathmode:
+    name: "Planejador de caminho"
+    description: "Planejador: ASTAR ou DUMB."
+  pathgreediness:
+    name: "Gulosidade do A*"
+    description: "Gulosidade do A* (maior = mais rápido, caminhos piores)."
+  pathnodes:
+    name: "Limite de nós do A*"
+    description: "Limite de nós do A*."
+  pathdynamicnodes:
+    name: "Limite de nós automático"
+    description: "Ajusta o limite de nós sozinho conforme o tempo de cálculo."
+  pathfallback:
+    name: "Andar direto sem caminho"
+    description: "Sem caminho, anda direto para o alvo."
+  pathasync:
+    name: "Calcular caminhos em paralelo"
+    description: "Calcula os caminhos fora da thread principal."
+  pathdebug:
+    name: "Caminho em partículas"
+    description: "Mostra o caminho em partículas para quem tem manhuntstar.admin."
+  caveambush:
+    name: "Emboscada em caverna"
+    description: "Emboscada em caverna com cama (o bot renasce perto da cama)."
+  caveambushcooldown:
+    name: "Intervalo entre emboscadas (s)"
+    description: "Segundos entre um bot e o próximo ir para a emboscada (1 = como no mod)."
+  autocapacities:
+    name: "TNT e fogos automáticos"
+    description: "Emboscada de TNT e besta com fogos automáticas (no mod ficavam travadas)."
+  fireworkcrossbow:
+    name: "Besta com fogos"
+    description: "Besta com fogos (experimental no mod). O bot só atira com o jogador ao alcance (uns 64 blocos, sem bloco no caminho)."
+  bowpressure:
+    name: "Rajada de arco"
+    description: "Rajada de arco quando o bot fica muito tempo sem acertar o jogador. Ele só atira se a flecha alcança o jogador."
+  silentdeaths:
+    name: "Mortes silenciosas"
+    description: "O bot mais longe de cada jogador (200+ blocos) some e renasce mais perto."
+  portalentrance:
+    name: "Chegar por portal"
+    description: "Bots chegam em outra dimensão saindo de um portal que o jogador vê."
+  spawnmode:
+    name: "Modo de spawn"
+    description: "NORMAL: nasce no ponto. MANHUNT: nasce em roda e espera a caçada começar."
+  countdown:
+    name: "Contagem antes da caçada (s)"
+    description: "Contagem (segundos) antes da caçada começar. 0 = soltam assim que alguém sai da roda."
+  countdownonleave:
+    name: "Contar só depois de sair da roda"
+    description: "A contagem só começa quando um jogador que estava dentro da roda sai dela; até lá os bots esperam. Desligado = a contagem começa assim que os bots são criados."
+  countdowninvulnerable:
+    name: "Bots invulneráveis na roda"
+    description: "Bots da roda não levam dano enquanto esperam e durante a contagem."
+  ringradius:
+    name: "Raio da roda (0 = automático)"
+    description: "Raio da roda em blocos. 0 = automático (5 blocos + 1 a cada 5 bots)."
+  ringcenter:
+    name: "Centro da roda"
+    description: "auto = a roda fica onde é criada; manual = no ponto marcado com /manhunt ring point."
+  latejoin:
+    name: "Quem entra no meio da caçada"
+    description: "Quem entra com a caçada em andamento: hunted = vira alvo na hora; protected = fica sem ser alvo pelo tempo da contagem (no mínimo 5 s); out = não é caçado até a próxima caçada."
+  playerlistmode:
+    name: "Lista de jogadores"
+    description: "off = todos podem ser caçados; allowlist = só os da lista são caçados e disparam a roda; blocklist = os da lista não são caçados nem disparam a roda."
+  glowhunters:
+    name: "Brilho nos caçadores"
+    description: "Brilho (contorno visível através das paredes) nos caçadores."
+  glowhunterscolor:
+    name: "Cor do brilho dos caçadores"
+    description: "Cor do brilho dos caçadores."
+  glowescapers:
+    name: "Brilho nos fugitivos"
+    description: "Brilho nos bots de grupos fugitivos."
+  glowescaperscolor:
+    name: "Cor do brilho dos fugitivos"
+    description: "Cor do brilho dos fugitivos."
+  nametag:
+    name: "Nome em cima do bot"
+    description: "Nome visível em cima do bot."
+
+# --- /manhunt menu (texto sem cor fica na cor padrão do menu) ---
+menu:
+  title:
+    main: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Menu</dark_gray>"
+    match: "<dark_gray>Partida</dark_gray>"
+    target: "<dark_gray>Alvo forçado</dark_gray>"
+    rules: "<dark_gray>Regras da caçada</dark_gray>"
+    player-list: "<dark_gray>Lista de jogadores</dark_gray>"
+    bots-section: "<dark_gray>Bots</dark_gray>"
+    create: "<dark_gray>Criar bots</dark_gray>"
+    bots: "<dark_gray>Gerenciar bots</dark_gray>"
+    groups: "<dark_gray>Grupos</dark_gray>"
+    config: "<dark_gray>Configurações</dark_gray>"
+    options: "<dark_gray>Opções</dark_gray>"
+    confirm: "<dark_red>Apagar todos os bots?</dark_red>"
+  type-name: "<yellow>Digite no chat o nome dos bots (use % para o número). Digite <white>cancelar</white> para desistir.</yellow>"
+  type-skin: "<yellow>Digite no chat o nome do jogador da skin (ou <white>-</white> para usar o nome do bot).</yellow>"
+  type-player: "<yellow>Digite no chat o nome do jogador para pôr na lista. Digite <white>cancelar</white> para desistir.</yellow>"
+  cancel-word: "cancelar"
+  cancelled: "<gray>Cancelado.</gray>"
+  back: "Voltar"
+  close: "Fechar"
+  main:
+    status-bots: "Bots: <alive> vivos de <total>"
+    status-hunt: "Caçada: <state>"
+    status-target: "Alvo forçado: <target>"
+    status-list: "Lista de jogadores: <mode>"
+    hunt-paused: "pausada"
+    hunt-rings: "<rings> roda(s) esperando"
+    hunt-running: "em andamento"
+    hunt-no-bots: "sem bots"
+    hunt-stopped: "parada"
+    match: "Partida"
+    match-lore: "Começar, pausar e alvo forçado"
+    rules: "Regras da caçada"
+    rules-lore: |-
+      Roda, contagem, quem entra no meio
+      e lista de jogadores
+    bots: "Bots"
+    bots-lore: "Criar, gerenciar, grupos, trazer e apagar"
+    config: "Configurações"
+    config-lore: "Combate, mobilidade, caminhos, aparência..."
+  match:
+    start: "Começar a caçada agora"
+    start-none: "Nenhuma roda esperando"
+    start-rings: "<rings> roda(s) esperando: solta todas"
+    pause: "Pausar a caçada"
+    pause-lore: |-
+      Congela os bots onde estão, invencíveis,
+      e para contagem, proteção e fases
+    resume: "Continuar a caçada"
+    resume-lore: |-
+      Os bots voltam a se mover
+      e os relógios voltam a contar
+    target: "Alvo forçado: <target>"
+    target-lore: "Todos os bots atrás de um jogador"
+  target:
+    pick: "Clique: todos os bots atrás dele"
+    clear: "Sem alvo forçado"
+    clear-lore: "Os bots voltam a escolher sozinhos"
+  rules:
+    ring-point: "Ponto da roda"
+    ring-point-none: "Nenhum ponto marcado"
+    ring-point-lore: |-
+      Esquerdo: marcar onde você está (centro manual)
+      Direito: apagar (centro automático)
+    player-list: "Lista de jogadores"
+    player-list-mode: "Modo: <mode>"
+    player-list-empty: "Ninguém na lista"
+    player-list-count: "<amount> jogador(es) na lista"
+    click-to-edit: "Clique para editar"
+  player-list:
+    listed: "Na lista"
+    not-listed: "Fora da lista"
+    click-remove: "Clique para tirar"
+    click-add: "Clique para pôr"
+    mode: "Modo: <mode>"
+    click-to-change: "Clique para trocar"
+    add-by-name: "Pôr um jogador pelo nome"
+    add-by-name-lore: "Para quem não está online"
+  bots-section:
+    create: "Criar bots"
+    create-lore: "Nome, quantidade, dificuldade e fase"
+    manage: "Gerenciar bots"
+    manage-lore: "<alive> vivos de <total>"
+    groups: "Grupos"
+    groups-lore: "Papel, perseguir jogadores e apagar"
+    bring: "Trazer todos os bots até mim"
+    delete: "Apagar todos os bots"
+    delete-lore: "Pede confirmação"
+  confirm:
+    "yes": "Sim, apagar todos"
+    "no": "Cancelar"
+  create:
+    name: "Nome: <name>"
+    name-lore: "Clique e digite no chat (use % para o número)"
+    skin: "Skin: <skin>"
+    skin-same: "(mesmo nome)"
+    skin-lore: "Clique e digite o nome de um jogador"
+    amount: "Quantidade: <amount>"
+    amount-lore: "Esquerdo +1, direito -1, shift ±5"
+    difficulty: "Dificuldade: <difficulty>"
+    difficulty-lore: "Clique para trocar"
+    phase: "Fase inicial: <phase>"
+    phase-default: "padrão"
+    phase-lore: "Esquerdo +1, direito -1"
+    aggression: "Agressividade: <aggression>"
+    aggression-lore: "Usada pelas capacidades especiais"
+    spawn: "Criar aqui"
+    spawn-lore: "Modo de spawn: <mode>"
+  bots:
+    phase: "Fase <phase> • <difficulty>"
+    health: "Vida <health> • Abates <kills>"
+    target: "Alvo: <target>"
+    help: "Esquerdo: ir até ele • Direito: trazer • Shift+direito: remover"
+    previous: "Página anterior"
+    next: "Próxima página"
+  groups:
+    role: "Papel: <role>"
+    chase: "Persegue jogadores: <value>"
+    enemies: "Inimigos: <enemies>"
+    help: |-
+      Esquerdo: trocar papel • Direito: perseguir jogadores
+      Shift+direito: remover o grupo e os bots
+  config:
+    category-lore: "<amount> opções • clique para editar"
+    glow: "<name>: <value>"
+    glow-color: "Cor: <color>"
+    glow-help: "Esquerdo: ligar/desligar • Direito: trocar a cor"
+  option:
+    value: "Valor: <value>"
+    toggle: "Clique para ligar/desligar"
+    next: "Clique para a próxima opção"
+    adjust: "Esquerdo +, direito -, shift = passo maior"

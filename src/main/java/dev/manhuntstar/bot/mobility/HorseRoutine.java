@@ -324,11 +324,11 @@ public final class HorseRoutine {
         boolean stalled = lastSetVelocity != null && current.equals(lastSetVelocity)
                 && lastSetVelocity.getX() * lastSetVelocity.getX() + lastSetVelocity.getZ() * lastSetVelocity.getZ() > 1.0E-8;
         Vec3 to = new Vec3(navTarget.x() - hl.getX(), 0, navTarget.z() - hl.getZ());
-        detail = String.format(java.util.Locale.ROOT, "cavalo a %.1f blocos/s, próximo ponto a %.1f (dy %.1f)%s%s%s",
+        detail = String.format(java.util.Locale.ROOT, "horse at %.1f blocks/s, next point at %.1f (dy %.1f)%s%s%s",
                 Math.hypot(current.getX(), current.getZ()) * 20, to.length(), navTarget.y() - hl.getY(),
-                noMoveTicks > 0 ? ", travado " + noMoveTicks : "", stalled ? ", sem física" : "",
-                bot.mining().isMining() ? ", cavando" : "")
-                + (TEST_DETAIL ? " ticks=" + horse.getTicksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ia=" + horse.isAware() : "");
+                noMoveTicks > 0 ? ", stuck " + noMoveTicks : "", stalled ? ", no physics" : "",
+                bot.mining().isMining() ? ", digging" : "")
+                + (TEST_DETAIL ? " ticks=" + horse.getTicksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ai=" + horse.isAware() : "");
         if (stalled) {
             noMoveTicks++; // conta como travado: depois de 3 s o bot desce e segue a pé
             return;
@@ -437,7 +437,7 @@ public final class HorseRoutine {
         if (lanceRaisedTicks > 0) {
             lanceRaisedTicks++;
             bot.lookAt(tp.add(0, target.getHeight() * 0.5, 0));
-            detail += ", lança erguida";
+            detail += ", lance raised";
             if (lanceHit || (facing < 0 && dist < 5.0)) {
                 endPass(hl, fx, fz);
             } else if (lanceRaisedTicks > LANCE_MAX_RAISED_TICKS) {

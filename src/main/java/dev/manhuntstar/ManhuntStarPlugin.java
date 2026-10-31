@@ -21,14 +21,10 @@ import dev.manhuntstar.util.ChunkTickets;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -68,8 +64,10 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        migrateLegacyFiles();
         saveDefaultConfig();
-        saveResourceIfMissing("messages.yml");
+        Messages.install(langFolder(), this::getResource, getLogger());
+        settings.setLanguages(() -> Messages.available(langFolder()));
         loadConfigFiles();
 
         pathService = new PathService(settings, getLogger());
@@ -92,18 +90,18 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         dev.manhuntstar.debug.AimDebug.install(this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
-                event -> event.registrar().register(new ManhuntCommand(this).build(), "Bots caçadores do Manhunt*"));
+                event -> event.registrar().register(new ManhuntCommand(this).build(), "Manhunt* hunter bots"));
 
         removeOrphans();
         BotStorage.LoadResult saved = storage.load();
         int restored = botManager.restore(saved.bots(), saved.groups());
         botManager.restoreManhunt(saved.manhunt());
         if (restored > 0) {
-            getLogger().info(restored + " bot(s) restaurado(s) do bots.yml.");
+            getLogger().info(restored + " bot(s) restored from bots.yml.");
         }
         mobTargeting.installAll();
         tickTask = getServer().getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
-        getLogger().info("Manhunt* ligado (Paper " + Bukkit.getMinecraftVersion() + ").");
+        getLogger().info("Manhunt* enabled (Paper " + Bukkit.getMinecraftVersion() + ", language " + messages.language() + ").");
     }
 
     @Override
@@ -158,52 +156,51 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     // ------------------------------------------------------------------ configuração
 
-    private void saveResourceIfMissing(String name) {
-        if (!new File(getDataFolder(), name).exists()) {
-            saveResource(name, false);
-        }
+    private File langFolder() {
+        return new File(getDataFolder(), Messages.FOLDER);
     }
 
     private void loadConfigFiles() {
         settings.load(new File(getDataFolder(), "config.yml"), getLogger());
-        upgradeMessages();
-        messages.load(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"), getLogger());
+        loadMessages();
+    }
+
+    private void loadMessages() {
+        messages.load(langFolder(), settings.language.get(), this::getResource, getLogger());
     }
 
     /**
-     * messages.yml de uma versão anterior (os textos padrão mudaram, por exemplo os nomes dos
-     * comandos): guarda o antigo como messages-v<versão>.yml e grava o novo no lugar.
+     * Arquivos das versões até a 1.5, com as chaves em português: o config.yml antigo vira
+     * config-old.yml e os valores dele vão para um config.yml novo (com o idioma em pt-br, que era o
+     * único); o messages.yml vira messages-old.yml, porque os textos agora ficam na pasta lang/.
      */
-    private void upgradeMessages() {
-        File file = new File(getDataFolder(), "messages.yml");
-        if (!file.exists()) {
-            return;
-        }
-        int bundled;
-        try (InputStream in = getResource("messages.yml")) {
-            if (in == null) {
-                return;
+    private void migrateLegacyFiles() {
+        File config = new File(getDataFolder(), "config.yml");
+        if (config.exists() && Settings.isLegacy(config)) {
+            settings.loadLegacy(config, getLogger());
+            File backup = new File(getDataFolder(), "config-old.yml");
+            try {
+                Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                saveResource("config.yml", false);
+                settings.save(config, getLogger());
+                getLogger().info("config.yml moved to the new English keys (language pt-br); the old file is config-old.yml.");
+            } catch (IOException e) {
+                getLogger().warning("Could not migrate config.yml: " + e.getMessage());
             }
-            bundled = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8)).getInt("versao", 1);
-        } catch (IOException e) {
-            return;
         }
-        int current = YamlConfiguration.loadConfiguration(file).getInt("versao", 1);
-        if (current >= bundled) {
-            return;
+        File oldMessages = new File(getDataFolder(), "messages.yml");
+        if (oldMessages.exists()) {
+            try {
+                Files.move(oldMessages.toPath(), new File(getDataFolder(), "messages-old.yml").toPath(), StandardCopyOption.REPLACE_EXISTING);
+                getLogger().info("messages.yml is no longer used: texts now live in the " + Messages.FOLDER
+                        + "/ folder (the old file is messages-old.yml).");
+            } catch (IOException e) {
+                getLogger().warning("Could not rename messages.yml: " + e.getMessage());
+            }
         }
-        File backup = new File(getDataFolder(), "messages-v" + current + ".yml");
-        try {
-            Files.move(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            getLogger().warning("Não foi possível atualizar o messages.yml: " + e.getMessage());
-            return;
-        }
-        saveResource("messages.yml", false);
-        getLogger().info("messages.yml atualizado para a versão " + bundled + "; o anterior ficou em " + backup.getName() + ".");
     }
 
-    /** /manhunt reload: relê config.yml e messages.yml e aplica. */
+    /** /manhunt reload: relê o config.yml e os arquivos de idioma e aplica. */
     public void reloadAll() {
         loadConfigFiles();
         for (Setting<?> s : settings.all()) {
@@ -223,7 +220,9 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     }
 
     private void applySideEffects(Setting<?> s) {
-        if (s == settings.glowHunters || s == settings.glowEscapers || s == settings.glowHuntersColor || s == settings.glowEscapersColor) {
+        if (s == settings.language) {
+            loadMessages();
+        } else if (s == settings.glowHunters || s == settings.glowEscapers || s == settings.glowHuntersColor || s == settings.glowEscapersColor) {
             glow.applyAll(botManager.aliveBots());
         } else if (s == settings.tabList) {
             tabList.resync();

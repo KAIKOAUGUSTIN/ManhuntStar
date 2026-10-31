@@ -31,7 +31,7 @@ import io.papermc.paper.command.brigadier.argument.resolvers.FinePositionResolve
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
 import java.util.List;
 import java.util.Locale;
-import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -167,7 +167,7 @@ public final class ManhuntCommand {
                                 createOptions(Commands.argument("difficulty", StringArgumentType.word()).suggests(words(DIFFICULTIES)), true, true, true)))));
         root.then(Commands.literal("remove")
                 .then(Commands.literal("all").executes(ctx -> {
-                    msg().send(sender(ctx), "comando.confirmar-remover-todos");
+                    msg().send(sender(ctx), "command.confirm-remove-all");
                     return Command.SINGLE_SUCCESS;
                 }).then(Commands.literal("confirm").executes(this::removeAll)))
                 .then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames()).executes(this::remove)));
@@ -208,7 +208,7 @@ public final class ManhuntCommand {
         root.then(settingsNode());
         root.then(Commands.literal("reload").executes(ctx -> {
             plugin.reloadAll();
-            msg().send(sender(ctx), "comando.recarregado");
+            msg().send(sender(ctx), "command.reloaded", Messages.p("language", msg().language()));
             return Command.SINGLE_SUCCESS;
         }));
         return root.build();
@@ -259,22 +259,22 @@ public final class ManhuntCommand {
     }
 
     private int noLocation(CommandContext<CommandSourceStack> ctx) {
-        msg().send(sender(ctx), "comando.sem-local");
+        msg().send(sender(ctx), "command.no-location");
         return 0;
     }
 
     // ------------------------------------------------------------------ geral
 
     private int help(CommandContext<CommandSourceStack> ctx) {
-        for (String line : msg().raw("ajuda").split("\n")) {
-            sender(ctx).sendMessage(MiniMessage.miniMessage().deserialize(line));
+        for (Component line : msg().lines("help")) {
+            sender(ctx).sendMessage(line);
         }
         return Command.SINGLE_SUCCESS;
     }
 
     private int menu(CommandContext<CommandSourceStack> ctx) {
         if (!(sender(ctx) instanceof Player p)) {
-            msg().send(sender(ctx), "comando.apenas-jogador");
+            msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         plugin.menus().openMain(p);
@@ -285,26 +285,26 @@ public final class ManhuntCommand {
 
     private int start(CommandContext<CommandSourceStack> ctx) {
         if (manager().rings().releaseAll() == 0) {
-            msg().send(sender(ctx), "contagem.nada");
+            msg().send(sender(ctx), "countdown.nothing");
         }
         return Command.SINGLE_SUCCESS;
     }
 
     private int pause(CommandContext<CommandSourceStack> ctx) {
         if (!manager().pause().pause()) {
-            msg().send(sender(ctx), "pausa.ja-pausada");
+            msg().send(sender(ctx), "pause.already-paused");
             return 0;
         }
-        Bukkit.broadcast(msg().prefixed("pausa.pausada"));
+        Bukkit.broadcast(msg().prefixed("pause.paused"));
         return Command.SINGLE_SUCCESS;
     }
 
     private int resume(CommandContext<CommandSourceStack> ctx) {
         if (!manager().pause().resume()) {
-            msg().send(sender(ctx), "pausa.nao-pausada");
+            msg().send(sender(ctx), "pause.not-paused");
             return 0;
         }
-        Bukkit.broadcast(msg().prefixed("pausa.continuada"));
+        Bukkit.broadcast(msg().prefixed("pause.resumed"));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -314,23 +314,23 @@ public final class ManhuntCommand {
         for (Bot b : manager().aliveBots()) {
             b.setTargetPlayer(p.getUniqueId());
         }
-        msg().send(sender(ctx), "comando.alvo-definido", Messages.p("jogador", p.getName()));
+        msg().send(sender(ctx), "command.target-set", Messages.p("player", p.getName()));
         return Command.SINGLE_SUCCESS;
     }
 
     private int targetClear(CommandContext<CommandSourceStack> ctx) {
         manager().setForcedTarget(null);
-        msg().send(sender(ctx), "comando.alvo-limpo");
+        msg().send(sender(ctx), "command.target-cleared");
         return Command.SINGLE_SUCCESS;
     }
 
     private int ringInfo(CommandContext<CommandSourceStack> ctx) {
         Settings.RingPoint pt = settings().ringPoint();
-        msg().send(sender(ctx), "roda.info",
-                Messages.p("raio", settings().ringRadius.value() <= 0 ? "automático" : settings().ringRadius.display()),
-                Messages.p("centro", settings().ringCenter.display()),
-                Messages.p("ponto", pt == null ? "nenhum" : String.format(Locale.ROOT, "%.1f %.1f %.1f (%s)", pt.x(), pt.y(), pt.z(), pt.world())),
-                Messages.p("rodas", manager().rings().count()));
+        msg().send(sender(ctx), "ring.info",
+                Messages.p("radius", settings().ringRadius.value() <= 0 ? msg().raw("common.automatic") : settings().ringRadius.display()),
+                Messages.p("center", settings().ringCenter.display()),
+                Messages.p("point", pt == null ? msg().raw("common.none") : String.format(Locale.ROOT, "%.1f %.1f %.1f (%s)", pt.x(), pt.y(), pt.z(), pt.world())),
+                Messages.p("rings", manager().rings().count()));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -342,7 +342,7 @@ public final class ManhuntCommand {
         settings().setRingPoint(new Settings.RingPoint(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ()));
         settings().ringCenter.set(RingCenter.MANUAL);
         plugin.onSettingChanged(settings().ringCenter);
-        msg().send(sender(ctx), "roda.ponto-marcado", Messages.p("mundo", loc.getWorld().getName()),
+        msg().send(sender(ctx), "ring.point-set", Messages.p("world", loc.getWorld().getName()),
                 Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
         return Command.SINGLE_SUCCESS;
     }
@@ -350,16 +350,16 @@ public final class ManhuntCommand {
     /** Apaga o ponto da roda e volta o centro para automático. */
     private int ringPointClear(CommandContext<CommandSourceStack> ctx) {
         settings().setRingPoint(null);
-        settings().ringCenter.set(RingCenter.AUTOMATICO);
+        settings().ringCenter.set(RingCenter.AUTO);
         plugin.onSettingChanged(settings().ringCenter);
-        msg().send(sender(ctx), "roda.ponto-limpo");
+        msg().send(sender(ctx), "ring.point-cleared");
         return Command.SINGLE_SUCCESS;
     }
 
     private int playersInfo(CommandContext<CommandSourceStack> ctx) {
         List<String> names = settings().playerList();
-        msg().send(sender(ctx), "lista.info", Messages.p("modo", settings().playerListMode.display()),
-                Messages.p("nomes", names.isEmpty() ? msg().raw("lista.vazia") : String.join(", ", names)));
+        msg().send(sender(ctx), "player-list.info", Messages.p("mode", settings().playerListMode.display()),
+                Messages.p("names", names.isEmpty() ? msg().raw("player-list.empty") : String.join(", ", names)));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -367,13 +367,13 @@ public final class ManhuntCommand {
         String name = StringArgumentType.getString(ctx, "player");
         boolean changed = add ? settings().addListedPlayer(name) : settings().removeListedPlayer(name);
         if (!changed) {
-            msg().send(sender(ctx), add ? "lista.ja-esta" : "lista.nao-esta", Messages.p("jogador", name));
+            msg().send(sender(ctx), add ? "player-list.already-listed" : "player-list.not-listed", Messages.p("player", name));
             return 0;
         }
         plugin.saveSettings();
-        msg().send(sender(ctx), add ? "lista.adicionado" : "lista.removido", Messages.p("jogador", name));
-        if (settings().playerListMode.get() == PlayerListMode.DESLIGADA) {
-            msg().send(sender(ctx), "lista.aviso-desligada");
+        msg().send(sender(ctx), add ? "player-list.added" : "player-list.removed", Messages.p("player", name));
+        if (settings().playerListMode.get() == PlayerListMode.OFF) {
+            msg().send(sender(ctx), "player-list.off-warning");
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -384,7 +384,7 @@ public final class ManhuntCommand {
         }
         plugin.onSettingChanged(settings().playerListMode);
         String mode = settings().playerListMode.display();
-        msg().send(sender(ctx), "lista.modo", Messages.p("modo", mode), Messages.p("explicacao", msg().raw("lista.explicacao." + mode)));
+        msg().send(sender(ctx), "player-list.mode", Messages.p("mode", mode), Messages.p("explanation", msg().raw("player-list.explanation." + mode)));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -400,7 +400,7 @@ public final class ManhuntCommand {
         Integer aggression = opt(ctx, "aggression", Integer.class);
         BotDifficulty difficulty = diffRaw == null ? settings().defaultDifficulty.get() : BotDifficulty.parse(diffRaw);
         if (difficulty == null) {
-            msg().send(s, "comando.dificuldade-invalida");
+            msg().send(s, "command.invalid-difficulty");
             return 0;
         }
         Location loc;
@@ -408,7 +408,7 @@ public final class ManhuntCommand {
             loc = pos(ctx);
         } else {
             if (manager().manualRingPointMissing()) {
-                msg().send(s, "roda.sem-ponto");
+                msg().send(s, "ring.no-point");
             }
             loc = manager().ringCenterFor(ctx.getSource().getLocation());
         }
@@ -417,13 +417,13 @@ public final class ManhuntCommand {
         }
         String name = StringArgumentType.getString(ctx, "name");
         int count = amount == null ? 1 : amount;
-        msg().send(s, "comando.criando", Messages.p("quantidade", count), Messages.p("dificuldade", difficulty.label()), Messages.p("nome", name));
+        msg().send(s, "command.creating", Messages.p("amount", count), Messages.p("difficulty", msg().difficulty(difficulty)), Messages.p("name", name));
         manager().createBots(loc, name, skin, count, difficulty, phase == null ? 0 : phase, aggression == null ? 0 : aggression).whenComplete((bots, err) -> {
             if (err != null) {
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Falha ao criar bots", err);
-                msg().send(s, "comando.erro-criar");
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create bots", err);
+                msg().send(s, "command.create-error");
             } else {
-                msg().send(s, "comando.criados", Messages.p("quantidade", bots.size()), Messages.p("nome", name));
+                msg().send(s, "command.created", Messages.p("amount", bots.size()), Messages.p("name", name));
             }
         });
         return Command.SINGLE_SUCCESS;
@@ -433,62 +433,66 @@ public final class ManhuntCommand {
         String name = StringArgumentType.getString(ctx, "bot");
         List<Bot> list = manager().botsNamed(name);
         if (list.isEmpty()) {
-            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
         for (Bot b : list) {
             manager().removeBot(b);
         }
-        msg().send(sender(ctx), "comando.removidos", Messages.p("quantidade", list.size()), Messages.p("nome", name));
+        msg().send(sender(ctx), "command.removed", Messages.p("amount", list.size()), Messages.p("name", name));
         return Command.SINGLE_SUCCESS;
     }
 
     private int removeAll(CommandContext<CommandSourceStack> ctx) {
         int n = manager().deleteAll();
-        msg().send(sender(ctx), "comando.todos-removidos", Messages.p("quantidade", n));
+        msg().send(sender(ctx), "command.all-removed", Messages.p("amount", n));
         return Command.SINGLE_SUCCESS;
     }
 
     private int list(CommandContext<CommandSourceStack> ctx) {
         CommandSender s = sender(ctx);
-        msg().send(s, "comando.lista-titulo", Messages.p("quantidade", manager().allBots().size()), Messages.p("vivos", manager().aliveCount()));
+        msg().send(s, "command.list-title", Messages.p("amount", manager().allBots().size()), Messages.p("alive", manager().aliveCount()));
         for (Bot b : manager().allBots()) {
             String where = b.isAlive() ? String.format(Locale.ROOT, "%s %.0f %.0f %.0f", b.world().getName(), b.pos().x(), b.pos().y(), b.pos().z())
-                    : msg().raw("comando.lista-morto");
+                    : msg().raw("command.list-dead");
             Player t = b.target();
-            s.sendMessage(msg().get("comando.lista-linha", Messages.p("nome", b.name()), Messages.p("visivel", b.visualName()),
-                    Messages.p("fase", b.progression().phase()), Messages.p("dificuldade", b.difficulty().label()),
-                    Messages.p("vida", String.format(Locale.ROOT, "%.0f", b.health())), Messages.p("grupo", b.groupName() == null ? "-" : b.groupName()),
-                    Messages.p("alvo", t == null ? "-" : t.getName()), Messages.p("local", where), Messages.p("abates", b.kills()),
-                    Messages.p("estado", stateOf(b))));
+            s.sendMessage(msg().get("command.list-line", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
+                    Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
+                    Messages.p("health", String.format(Locale.ROOT, "%.0f", b.health())), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
+                    Messages.p("target", t == null ? "-" : t.getName()), Messages.p("location", where), Messages.p("kills", b.kills()),
+                    Messages.c("state", stateOf(b))));
         }
         return Command.SINGLE_SUCCESS;
     }
 
     /** O que a IA está fazendo, ou "pausado" com a caçada pausada. */
-    private String stateOf(Bot b) {
+    private Component stateOf(Bot b) {
         if (!b.isAlive()) {
-            return "-";
+            return Component.text("-");
         }
-        return manager().pause().isPaused() ? msg().raw("pausa.estado") : b.brain().state();
+        return manager().pause().isPaused() ? msg().get("pause.state") : brainState(b);
+    }
+
+    private Component brainState(Bot b) {
+        return msg().get("state." + b.brain().state(), Messages.p("target", b.brain().stateTarget()), Messages.p("detail", b.brain().stateDetail()));
     }
 
     private int info(CommandContext<CommandSourceStack> ctx) {
         Bot b = manager().bot(StringArgumentType.getString(ctx, "bot"));
         if (b == null) {
-            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
         Player t = b.target();
-        sender(ctx).sendMessage(msg().get("comando.info", Messages.p("nome", b.name()), Messages.p("visivel", b.visualName()),
-                Messages.p("fase", b.progression().phase()), Messages.p("dificuldade", b.difficulty().label()),
-                Messages.p("vida", String.format(Locale.ROOT, "%.1f/%.0f", b.health(), b.maxHealth())),
-                Messages.p("fome", b.hunger().foodLevel()), Messages.p("grupo", b.groupName() == null ? "-" : b.groupName()),
-                Messages.p("alvo", t == null ? "-" : t.getName()), Messages.p("abates", b.kills()), Messages.p("agressividade", b.aggression()),
-                Messages.p("vivo", b.isAlive() ? "sim" : "não"), Messages.p("estado", b.isAlive() ? stateOf(b) : b.brain().state()),
-                Messages.p("local", b.isAlive() ? String.format(Locale.ROOT, "%s %.1f %.1f %.1f", b.world().getName(), b.pos().x(), b.pos().y(), b.pos().z()) : "-"),
-                Messages.p("velocidade", String.format(Locale.ROOT, "%.2f", b.velocity().horizontalLength() * 20)),
-                Messages.p("chao", b.onGround() ? "sim" : "não")));
+        sender(ctx).sendMessage(msg().get("command.info", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
+                Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
+                Messages.p("health", String.format(Locale.ROOT, "%.1f/%.0f", b.health(), b.maxHealth())),
+                Messages.p("hunger", b.hunger().foodLevel()), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
+                Messages.p("target", t == null ? "-" : t.getName()), Messages.p("kills", b.kills()), Messages.p("aggression", b.aggression()),
+                Messages.p("alive", msg().yesNo(b.isAlive())), Messages.c("state", b.isAlive() ? stateOf(b) : brainState(b)),
+                Messages.p("location", b.isAlive() ? String.format(Locale.ROOT, "%s %.1f %.1f %.1f", b.world().getName(), b.pos().x(), b.pos().y(), b.pos().z()) : "-"),
+                Messages.p("speed", String.format(Locale.ROOT, "%.2f", b.velocity().horizontalLength() * 20)),
+                Messages.p("on-ground", msg().yesNo(b.onGround()))));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -496,28 +500,28 @@ public final class ManhuntCommand {
     private int tp(CommandContext<CommandSourceStack> ctx, Player to) {
         Player dest = to != null ? to : ctx.getSource().getExecutor() instanceof Player p ? p : null;
         if (dest == null) {
-            msg().send(sender(ctx), "comando.apenas-jogador");
+            msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         String name = StringArgumentType.getString(ctx, "bot");
         int n = manager().teleportBotsToPlayer(name, dest);
         if (n == 0) {
-            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
-        msg().send(sender(ctx), n == 1 ? "comando.tp-ok" : "comando.tp-todos", Messages.p("bot", name), Messages.p("quantidade", n),
-                Messages.p("jogador", dest.getName()));
+        msg().send(sender(ctx), n == 1 ? "command.tp-one" : "command.tp-all", Messages.p("bot", name), Messages.p("amount", n),
+                Messages.p("player", dest.getName()));
         return Command.SINGLE_SUCCESS;
     }
 
     private int tpAll(CommandContext<CommandSourceStack> ctx, Player to) {
         Player dest = to != null ? to : ctx.getSource().getExecutor() instanceof Player p ? p : null;
         if (dest == null) {
-            msg().send(sender(ctx), "comando.apenas-jogador");
+            msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         int n = manager().teleportAllTo(dest);
-        msg().send(sender(ctx), "comando.tp-todos", Messages.p("quantidade", n), Messages.p("jogador", dest.getName()));
+        msg().send(sender(ctx), "command.tp-all", Messages.p("amount", n), Messages.p("player", dest.getName()));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -526,13 +530,13 @@ public final class ManhuntCommand {
         String player = StringArgumentType.getString(ctx, "player");
         List<Bot> list = manager().botsNamed(name);
         if (list.isEmpty()) {
-            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
         CommandSender s = sender(ctx);
         plugin.skins().fetchPlayerSkin(player).thenAccept(skin -> plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (skin == null) {
-                msg().send(s, "comando.skin-falhou", Messages.p("jogador", player));
+                msg().send(s, "command.skin-failed", Messages.p("player", player));
                 return;
             }
             for (Bot b : list) {
@@ -540,7 +544,7 @@ public final class ManhuntCommand {
                 plugin.tabList().refresh(b);
             }
             manager().markDirty();
-            msg().send(s, "comando.skin-ok", Messages.p("bot", name), Messages.p("jogador", player));
+            msg().send(s, "command.skin-ok", Messages.p("bot", name), Messages.p("player", player));
         }));
         return Command.SINGLE_SUCCESS;
     }
@@ -550,7 +554,7 @@ public final class ManhuntCommand {
         String name = StringArgumentType.getString(ctx, "bot");
         List<Bot> list = manager().botsNamed(name);
         if (list.isEmpty()) {
-            msg().send(sender(ctx), "comando.bot-nao-encontrado");
+            msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
         if (!clear && (loc == null || loc.getWorld() == null)) {
@@ -560,9 +564,9 @@ public final class ManhuntCommand {
             manager().setCustomSpawnpoint(b, clear ? null : loc);
         }
         if (clear) {
-            msg().send(sender(ctx), "comando.spawnpoint-bot-limpo", Messages.p("bot", name));
+            msg().send(sender(ctx), "command.spawnpoint-bot-cleared", Messages.p("bot", name));
         } else {
-            msg().send(sender(ctx), "comando.spawnpoint-bot", Messages.p("bot", name),
+            msg().send(sender(ctx), "command.spawnpoint-bot", Messages.p("bot", name),
                     Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
         }
         return Command.SINGLE_SUCCESS;
@@ -574,7 +578,7 @@ public final class ManhuntCommand {
             b.setItem(EquipmentSlot.HAND, stack.clone());
             b.inventory().add(stack.clone());
         }
-        msg().send(sender(ctx), "comando.item-dado", Messages.p("item", stack.getType().getKey().getKey()));
+        msg().send(sender(ctx), "command.item-given", Messages.p("item", stack.getType().getKey().getKey()));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -590,7 +594,7 @@ public final class ManhuntCommand {
             default -> null;
         };
         if (prefix == null) {
-            msg().send(sender(ctx), "comando.tier-invalido", Messages.p("tier", tier));
+            msg().send(sender(ctx), "command.invalid-tier", Messages.p("tier", tier));
             return 0;
         }
         for (Bot b : manager().aliveBots()) {
@@ -599,22 +603,22 @@ public final class ManhuntCommand {
             b.setItem(EquipmentSlot.LEGS, new ItemStack(Material.valueOf(prefix + "_LEGGINGS")));
             b.setItem(EquipmentSlot.FEET, new ItemStack(Material.valueOf(prefix + "_BOOTS")));
         }
-        msg().send(sender(ctx), "comando.armadura", Messages.p("tier", tier));
+        msg().send(sender(ctx), "command.armor", Messages.p("tier", tier));
         return Command.SINGLE_SUCCESS;
     }
 
     private int test(CommandContext<CommandSourceStack> ctx) {
         if (!(sender(ctx) instanceof Player p)) {
-            msg().send(sender(ctx), "comando.apenas-jogador");
+            msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         String cap = StringArgumentType.getString(ctx, "ability");
         String err = manager().tactics().debugExecute(p, cap);
         if (err == null) {
-            msg().send(p, "capacidade.iniciada", Messages.p("capacidade", cap));
+            msg().send(p, "ability.started", Messages.p("ability", cap));
             return Command.SINGLE_SUCCESS;
         }
-        msg().send(p, "capacidade." + err, Messages.p("capacidade", cap));
+        msg().send(p, "ability." + err, Messages.p("ability", cap));
         return 0;
     }
 
@@ -624,7 +628,7 @@ public final class ManhuntCommand {
         String name = StringArgumentType.getString(ctx, "group");
         BotGroup g = manager().group(name);
         if (g == null) {
-            msg().send(sender(ctx), "grupo.nao-existe", Messages.p("grupo", name));
+            msg().send(sender(ctx), "group.not-found", Messages.p("group", name));
         }
         return g;
     }
@@ -641,13 +645,13 @@ public final class ManhuntCommand {
         } else if (raw.equals("escape")) {
             role = BotRole.ESCAPE;
         } else {
-            msg().send(sender(ctx), "grupo.papel-invalido", Messages.p("papel", raw));
+            msg().send(sender(ctx), "group.invalid-role", Messages.p("role", raw));
             return 0;
         }
         g.setRole(role);
         plugin.glow().applyAll(manager().aliveBots());
         manager().markDirty();
-        msg().send(sender(ctx), "grupo.papel", Messages.p("grupo", g.name()), Messages.p("papel", role == BotRole.ESCAPE ? "fugitivo" : "caçador"));
+        msg().send(sender(ctx), "group.role", Messages.p("group", g.name()), Messages.p("role", msg().raw(role == BotRole.ESCAPE ? "role.escape" : "role.hunter")));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -663,7 +667,7 @@ public final class ManhuntCommand {
             g.removeEnemy(enemy);
         }
         manager().markDirty();
-        msg().send(sender(ctx), add ? "grupo.inimigo-add" : "grupo.inimigo-remove", Messages.p("grupo", g.name()), Messages.p("inimigo", enemy));
+        msg().send(sender(ctx), add ? "group.enemy-added" : "group.enemy-removed", Messages.p("group", g.name()), Messages.p("enemy", enemy));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -674,12 +678,12 @@ public final class ManhuntCommand {
         }
         if (clear) {
             g.setSpawnpoint(null, null);
-            msg().send(sender(ctx), "grupo.spawnpoint-limpo", Messages.p("grupo", g.name()));
+            msg().send(sender(ctx), "group.spawnpoint-cleared", Messages.p("group", g.name()));
         } else if (loc == null || loc.getWorld() == null) {
             return noLocation(ctx);
         } else {
             g.setSpawnpoint(loc.getWorld().getName(), Vec3.of(loc));
-            msg().send(sender(ctx), "grupo.spawnpoint", Messages.p("grupo", g.name()),
+            msg().send(sender(ctx), "group.spawnpoint", Messages.p("group", g.name()),
                     Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
         }
         manager().markDirty();
@@ -693,7 +697,7 @@ public final class ManhuntCommand {
         }
         boolean on = BoolArgumentType.getBool(ctx, "enabled");
         int n = manager().setPhaseProgressionForGroup(g.name(), on);
-        msg().send(sender(ctx), "grupo.progressao", Messages.p("grupo", g.name()), Messages.p("valor", on ? "ligada" : "desligada"), Messages.p("quantidade", n));
+        msg().send(sender(ctx), "group.phases", Messages.p("group", g.name()), Messages.p("value", msg().onOff(on)), Messages.p("amount", n));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -704,7 +708,7 @@ public final class ManhuntCommand {
         }
         g.setTrackPlayers(BoolArgumentType.getBool(ctx, "enabled"));
         manager().markDirty();
-        msg().send(sender(ctx), "grupo.rastrear", Messages.p("grupo", g.name()), Messages.p("valor", g.trackPlayers() ? "sim" : "não"));
+        msg().send(sender(ctx), "group.chase", Messages.p("group", g.name()), Messages.p("value", msg().yesNo(g.trackPlayers())));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -714,7 +718,7 @@ public final class ManhuntCommand {
             return 0;
         }
         int n = manager().deleteGroup(g.name());
-        msg().send(sender(ctx), "grupo.apagado", Messages.p("grupo", g.name()), Messages.p("quantidade", n));
+        msg().send(sender(ctx), "group.deleted", Messages.p("group", g.name()), Messages.p("amount", n));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -760,12 +764,12 @@ public final class ManhuntCommand {
 
     private int listSettings(CommandContext<CommandSourceStack> ctx) {
         CommandSender s = sender(ctx);
-        msg().send(s, "opcoes.titulo");
+        msg().send(s, "settings.title");
         for (Setting<?> st : settings().all()) {
-            s.sendMessage(msg().get("opcoes.linha", Messages.p("chave", st.key()), Messages.p("valor", st.display()), Messages.p("caminho", st.path())));
+            s.sendMessage(msg().get("settings.line", Messages.p("key", st.key()), Messages.p("value", st.display()), Messages.p("path", st.path())));
         }
-        s.sendMessage(msg().get("opcoes.linha", Messages.p("chave", "pathnodes (efetivo)"),
-                Messages.p("valor", plugin.pathService().effectiveNodeCap()), Messages.p("caminho", "pathfinding.limite-nos")));
+        s.sendMessage(msg().get("settings.line", Messages.p("key", msg().raw("settings.effective-nodes")),
+                Messages.p("value", plugin.pathService().effectiveNodeCap()), Messages.p("path", settings().nodeCap.path())));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -773,7 +777,7 @@ public final class ManhuntCommand {
         String key = StringArgumentType.getString(ctx, "key");
         Setting<?> s = settings().byKey(key);
         if (s == null) {
-            msg().send(sender(ctx), "opcoes.desconhecida", Messages.p("chave", key));
+            msg().send(sender(ctx), "settings.unknown", Messages.p("key", key));
         }
         return s;
     }
@@ -783,7 +787,7 @@ public final class ManhuntCommand {
         if (s == null) {
             return 0;
         }
-        msg().send(sender(ctx), "opcoes.valor-atual", Messages.p("chave", s.key()), Messages.p("valor", s.display()));
+        msg().send(sender(ctx), "settings.current", Messages.p("key", s.key()), Messages.p("value", s.display()));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -811,7 +815,7 @@ public final class ManhuntCommand {
             return 0;
         }
         plugin.onSettingChanged(s);
-        msg().send(sender(ctx), "opcoes.alterada", Messages.p("chave", s.key()), Messages.p("valor", s.display()));
+        msg().send(sender(ctx), "settings.changed", Messages.p("key", s.key()), Messages.p("value", s.display()));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -819,8 +823,8 @@ public final class ManhuntCommand {
         try {
             s.setFromText(raw);
             return Command.SINGLE_SUCCESS;
-        } catch (IllegalArgumentException e) {
-            msg().send(sender(ctx), "opcoes.invalido", Messages.p("chave", s.key()), Messages.p("erro", e.getMessage()));
+        } catch (Setting.InvalidValue e) {
+            msg().send(sender(ctx), "settings.invalid", Messages.p("key", s.key()), Messages.c("error", msg().invalidValue(e)));
             return 0;
         }
     }

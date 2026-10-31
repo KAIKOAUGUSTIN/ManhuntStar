@@ -1,176 +1,180 @@
 # ==============================================================================
-#  Manhunt* — configuração
-#  Tudo aqui também pode ser mudado no jogo com
-#  /manhunt settings <chave> <valor> e pelo /manhunt menu.
-#  A chave de comando de cada opção está entre colchetes.
+#  Manhunt* configuration
+#  Everything here can also be changed in game with
+#  /manhunt settings <key> <value> and in /manhunt menu.
+#  The command key of each option is in square brackets.
 # ==============================================================================
 
-geral:
-  # Bots aparecem na lista do TAB como jogadores (com skin e ping). [tablist]
+general:
+  # Language of the plugin's messages and menu: a file name from the lang/ folder (en, pt-br, fr, ru, zh-cn
+  # or one you add). Missing texts fall back to English. [language]
+  language: en
+  # Bots show up in the TAB list as players (with skin and ping). [tablist]
   tab-list: true
-  # "X entrou no jogo" / "X saiu do jogo" quando um bot é criado ou removido. [joinmessages]
-  mensagens-entrada-saida: true
-  # Mensagens de morte dos bots no padrão do jogo (respeita a gamerule de mensagens de morte). [deathmessages]
-  mensagens-morte: true
-  # Bots somam no número de jogadores online e nos nomes da lista de servidores. [serverlistcount]
-  contar-na-lista-de-servidores: true
-  # O /list inclui os bots (mesmo formato do jogo). [listcommand]
-  incluir-no-comando-list: true
-  # Com pvp desligado no mundo, os bots não batem em jogadores. [respectpvp]
-  respeitar-pvp-desligado: false
-  # Sem skin para o nome escolhido, usa a primeira imagem .png da pasta skins/ (ou o robô do mod),
-  # enviada uma vez ao MineSkin para ganhar assinatura, como o mod fazia. [mineskin]
-  skin-robo-mineskin: true
+  # "X joined the game" / "X left the game" when a bot is created or removed. [joinmessages]
+  join-leave-messages: true
+  # Bot death messages in the vanilla format (follows the death messages gamerule). [deathmessages]
+  death-messages: true
+  # Bots count towards the online players and the names in the server list. [serverlistcount]
+  count-in-server-list: true
+  # /list includes the bots (same format as vanilla). [listcommand]
+  include-in-list-command: true
+  # With pvp off in the world, bots don't hit players. [respectpvp]
+  respect-disabled-pvp: false
+  # With no skin for the chosen name, use the first .png in the skins/ folder (or the mod's robot),
+  # uploaded once to MineSkin to get a signature, like the mod did. [mineskin]
+  mineskin-fallback-skin: true
 
 bots:
-  # Vida máxima dos bots. [bothealth]
-  vida-maxima: 20
-  # Bots não levam dano (só do void e /kill). [botinvincible]
-  invenciveis: false
-  # Bots renascem 5 s depois de morrer. [respawn]
+  # Bot max health. [bothealth]
+  max-health: 20
+  # Bots take no damage (only from the void and /kill). [botinvincible]
+  invincible: false
+  # Bots respawn 5 s after dying. [respawn]
   respawn: true
-  # Bots continuam existindo depois de reiniciar o servidor (bots.yml). [persistentbots]
-  persistentes: true
-  # Bots derrubam o inventário ao morrer. [dropinventory]
-  dropar-inventario: true
-  # O que acontece com a melhor espada/picareta/armadura quando o bot morre: [gearpersistence]
-  #   keep_on_respawn_no_drop = mantém e não derruba | keep_and_drop = mantém e derruba uma cópia
-  #   drop_and_lose = derruba e perde
-  persistencia-equipamento: keep_on_respawn_no_drop
-  # Multiplica a duração de cada fase de progressão. [phasemultiplier]
-  multiplicador-duracao-fase: 1.0
-  # Dificuldade usada quando o comando não informa: easy, medium, hard, terminator. [defaultdifficulty]
-  dificuldade-padrao: terminator
-  # Bots comem quando ficam com fome. [autoeat]
-  comer-automaticamente: true
-  # Bots comem maçã dourada em combate (fase 5+). [autogapple]
-  maca-dourada-automatica: true
-  # Bots apagam o fogo com balde de água (fase 3+). [firewaterescape]
-  fugir-do-fogo-com-agua: true
-  # Mobs hostis atacam os bots como atacam jogadores. [mobsattackbots]
-  mobs-atacam-bots: true
-  # Tipos de mob que nunca miram nos bots (ex.: CREEPER, PHANTOM).
-  mobs-que-nao-atacam-bots: []
-  # Suavidade da mira em milissegundos (0 = instantânea, como no mod por padrão). [aimsmoothness]
-  suavidade-mira-ms: 0
+  # Bots keep existing after a server restart (bots.yml). [persistentbots]
+  persistent: true
+  # Bots drop their inventory when they die. [dropinventory]
+  drop-inventory: true
+  # What happens to the best sword/pickaxe/armor when the bot dies: [gearpersistence]
+  #   keep_on_respawn_no_drop = keeps it, no drop | keep_and_drop = keeps it and drops a copy
+  #   drop_and_lose = drops it and loses it
+  gear-persistence: keep_on_respawn_no_drop
+  # Multiplies the length of each progression phase. [phasemultiplier]
+  phase-duration-multiplier: 1.0
+  # Difficulty used when the command doesn't give one: easy, medium, hard, terminator. [defaultdifficulty]
+  default-difficulty: terminator
+  # Bots eat when they get hungry. [autoeat]
+  auto-eat: true
+  # Bots eat golden apples in combat (phase 5+). [autogapple]
+  auto-golden-apple: true
+  # Bots put out fire with a water bucket (phase 3+). [firewaterescape]
+  extinguish-with-water: true
+  # Hostile mobs attack the bots like they attack players. [mobsattackbots]
+  mobs-attack-bots: true
+  # Mob types that never target the bots (e.g. CREEPER, PHANTOM).
+  mobs-that-ignore-bots: []
+  # Aim smoothing in milliseconds (0 = instant, the mod's default). [aimsmoothness]
+  aim-smoothness-ms: 0
 
-combate:
-  # Preferência entre jogador e mob: 5 = só jogadores, -5 = só mobs. [targetpriority]
-  prioridade-alvo: 2.0
-  # Como os bots dividem os jogadores: closest, equal, farthest. [targetmode]
-  modo-alvo: equal
-  # Tridente (fase 4+). [allowtrident]
-  tridente: true
-  # Besta (fase 3+). [allowcrossbow]
-  besta: true
-  # Lança a cavalo (fase 4+): montado, o bot carrega contra o alvo com a lança da fase, passa por ele, dá a volta e carrega de novo. A pé ele usa a espada. [allowspear]
-  lanca-a-cavalo: true
-  # Multiplicador da imprecisão de flechas/tridente. [projinaccuracy]
-  imprecisao-projeteis: 1.0
-  # Humanização (0 a 1): erros de mira, golpes perdidos e ritmo irregular. [humanize]
-  humanizacao: 0.0
-  # Chance de errar o golpe (multiplicada pela humanização). [meleemisschance]
-  chance-errar-golpe: 0.12
-  # Atraso aleatório entre golpes, em ticks. [meleedelayjitter]
-  atraso-aleatorio-golpe: 4
-  # Quanto o alcance do golpe pode variar. [meleereachvariance]
-  variacao-alcance: 0.35
-  # Desvio da mira no golpe. [meleeaimoffset]
-  desvio-mira: 0.25
-  # Variação do ritmo de golpes. [meleespamvariance]
-  variacao-ritmo-golpes: 3
+combat:
+  # Preference between players and mobs: 5 = players only, -5 = mobs only. [targetpriority]
+  target-priority: 2.0
+  # How the bots split the players: closest, equal, farthest. [targetmode]
+  target-mode: equal
+  # Trident (phase 4+). [allowtrident]
+  trident: true
+  # Crossbow (phase 3+). [allowcrossbow]
+  crossbow: true
+  # Mounted spear (phase 4+): on horseback the bot charges the target with the phase's spear, rides past,
+  # turns around and charges again. On foot it uses the sword. [allowspear]
+  mounted-spear: true
+  # Inaccuracy multiplier for arrows/tridents. [projinaccuracy]
+  projectile-inaccuracy: 1.0
+  # Humanization (0 to 1): aim mistakes, missed hits and an irregular rhythm. [humanize]
+  humanization: 0.0
+  # Chance to miss a hit (multiplied by the humanization). [meleemisschance]
+  melee-miss-chance: 0.12
+  # Random delay between hits, in ticks. [meleedelayjitter]
+  melee-delay-jitter: 4
+  # How much the hit reach can vary. [meleereachvariance]
+  melee-reach-variance: 0.35
+  # Aim offset on hits. [meleeaimoffset]
+  melee-aim-offset: 0.25
+  # Variation in the hit rhythm. [meleespamvariance]
+  melee-rhythm-variance: 3
 
-mobilidade:
-  # Torres e pontes perto do alvo (até 3 blocos na horizontal). [allowtowering]
-  construir-torres: true
-  # Pérolas do End. [allowpearl]
-  perolas: true
-  # Multiplicador da recarga das pérolas. [pearlcooldownmult]
-  multiplicador-recarga-perola: 1.0
-  # Onde os bots usam pérolas: nether, ambas, overworld. [pearldimension]
-  dimensao-perolas: nether
-  # Cavalos (fase 4+). [allowhorse]
-  cavalos: true
-  # Barcos: perseguir quem está de barco ou nadando, e atravessar lagos de barco quando é mais rápido que contornar. [allowboat]
-  barcos: true
-  # Elytra para alcançar alvos longe. [allowelytra]
+mobility:
+  # Towers and bridges near the target (up to 3 blocks horizontally). [allowtowering]
+  towering: true
+  # Ender pearls. [allowpearl]
+  ender-pearls: true
+  # Ender pearl cooldown multiplier. [pearlcooldownmult]
+  pearl-cooldown-multiplier: 1.0
+  # Where the bots use ender pearls: nether, both, overworld. [pearldimension]
+  pearl-dimension: nether
+  # Horses (phase 4+). [allowhorse]
+  horses: true
+  # Boats: chase whoever is in a boat or swimming, and cross lakes by boat when it beats walking around. [allowboat]
+  boats: true
+  # Elytra to reach far targets. [allowelytra]
   elytra: false
-  # Bots muito longe do alvo reaparecem escondidos perto dele. [allowredistribution]
-  redistribuir: true
-  # Distância (blocos) a partir da qual o bot é redistribuído. [redistdistance]
-  distancia-redistribuicao: 200
-  # Tempo mínimo até os bots seguirem o alvo para outra dimensão. [minnetherdelay]
-  atraso-min-dimensao-segundos: 30
-  # Tempo máximo até os bots seguirem o alvo para outra dimensão. [maxnetherdelay]
-  atraso-max-dimensao-segundos: 60
+  # Bots very far from the target reappear hidden near it. [allowredistribution]
+  redistribute: true
+  # Distance (blocks) from which a bot gets redistributed. [redistdistance]
+  redistribute-distance: 200
+  # Minimum time until the bots follow the target to another dimension. [minnetherdelay]
+  min-dimension-delay-seconds: 30
+  # Maximum time until the bots follow the target to another dimension. [maxnetherdelay]
+  max-dimension-delay-seconds: 60
 
 pathfinding:
-  # Planejador: ASTAR ou DUMB. [pathmode]
-  modo: ASTAR
-  # Gulosidade do A* (maior = mais rápido, caminhos piores). [pathgreediness]
-  gulosidade: 1.5
-  # Limite de nós do A*. [pathnodes]
-  limite-nos: 2500
-  # Ajusta o limite de nós sozinho conforme o tempo de cálculo. [pathdynamicnodes]
-  limite-dinamico: true
-  # Sem caminho, anda direto para o alvo. [pathfallback]
-  fallback-dumb: true
-  # Calcula os caminhos fora da thread principal. [pathasync]
-  assincrono: true
-  # Mostra o caminho em partículas para quem tem manhuntstar.admin. [pathdebug]
-  debug-particulas: false
+  # Planner: ASTAR or DUMB. [pathmode]
+  mode: ASTAR
+  # A* greediness (higher = faster, worse paths). [pathgreediness]
+  greediness: 1.5
+  # A* node limit. [pathnodes]
+  node-limit: 2500
+  # Adjusts the node limit by itself based on the computation time. [pathdynamicnodes]
+  dynamic-node-limit: true
+  # With no path, walk straight to the target. [pathfallback]
+  dumb-fallback: true
+  # Computes paths off the main thread. [pathasync]
+  async: true
+  # Shows the path as particles to whoever has manhuntstar.admin. [pathdebug]
+  debug-particles: false
 
-taticas:
-  # Emboscada em caverna com cama (o bot renasce perto da cama). [caveambush]
-  emboscada-caverna: true
-  # Segundos entre um bot e o próximo ir para a emboscada (1 = como no mod). [caveambushcooldown]
-  recarga-emboscada-caverna-segundos: 1
-  # Emboscada de TNT e besta com fogos automáticas (no mod ficavam travadas). [autocapacities]
-  capacidades-automaticas: false
-  # Besta com fogos (experimental no mod). Foguete de duração 3; o bot só atira com o jogador ao alcance
-  # (uns 64 blocos, sem bloco no caminho). [fireworkcrossbow]
-  besta-com-fogos: false
-  # Rajada de arco quando o bot fica muito tempo sem acertar o jogador. Ele puxa o arco o quanto precisa e só
-  # atira se a flecha alcança o jogador (o desnível conta). [bowpressure]
-  pressao-de-arco: true
-  # O bot mais longe de cada jogador (200+ blocos) some e renasce mais perto. [silentdeaths]
-  mortes-silenciosas: true
-  # Bots chegam em outra dimensão saindo de um portal que o jogador vê. [portalentrance]
-  entrada-por-portal: true
+tactics:
+  # Cave ambush with a bed (the bot respawns near the bed). [caveambush]
+  cave-ambush: true
+  # Seconds between one bot and the next going for the ambush (1 = like the mod). [caveambushcooldown]
+  cave-ambush-cooldown-seconds: 1
+  # Automatic TNT ambush and firework crossbow (locked in the mod). [autocapacities]
+  auto-abilities: false
+  # Firework crossbow (experimental in the mod). Flight duration 3 rocket; the bot only shoots with the player
+  # in range (about 64 blocks, no block in the way). [fireworkcrossbow]
+  firework-crossbow: false
+  # Bow burst when the bot goes too long without hitting the player. It draws the bow as much as it needs and
+  # only shoots if the arrow reaches the player (height difference counts). [bowpressure]
+  bow-pressure: true
+  # The bot farthest from each player (200+ blocks) vanishes and respawns closer. [silentdeaths]
+  silent-deaths: true
+  # Bots arrive in another dimension through a portal the player can see. [portalentrance]
+  portal-entrance: true
 
 manhunt:
-  # NORMAL: nasce no ponto. MANHUNT: nasce em roda e espera a caçada começar. [spawnmode]
-  modo-spawn: MANHUNT
-  # Contagem (segundos) antes da caçada começar. 0 = soltam assim que alguém sai da roda. [countdown]
-  contagem-segundos: 20
-  # A contagem só começa quando um jogador que estava dentro da roda sai dela (vale o primeiro);
-  # até lá os bots esperam. false = a contagem começa assim que os bots são criados. [countdownonleave]
-  contagem-ao-sair-da-roda: true
-  # Bots da roda não levam dano enquanto esperam e durante a contagem. [countdowninvulnerable]
-  invulneravel-na-contagem: true
-  # Raio da roda em blocos. 0 = automático (5 blocos + 1 a cada 5 bots). [ringradius]
-  raio-roda: 0
-  # automatico = a roda fica onde é criada (sua posição ou o "at x y z" do /manhunt create);
-  # manual = no ponto marcado com /manhunt ring point. [ringcenter]
-  centro-roda: automatico
-  # Quem entra no servidor com a caçada em andamento: cacado = vira alvo na hora;
-  # protegido = fica sem ser alvo pelo tempo da contagem da roda (no mínimo 5 s);
-  # fora = não é caçado até a próxima caçada. [latejoin]
-  quem-entra-no-meio: protegido
-  # desligada = todos podem ser caçados; permitidos = só os da lista são caçados e disparam a roda;
-  # bloqueados = os da lista não são caçados nem disparam a roda. [playerlistmode]
-  lista-modo: desligada
-  # Nomes da lista de jogadores. Edite com /manhunt players add|remove <jogador>.
-  lista-jogadores: []
+  # NORMAL: spawns at the point. MANHUNT: spawns in a ring and waits for the hunt to start. [spawnmode]
+  spawn-mode: MANHUNT
+  # Countdown (seconds) before the hunt starts. 0 = released as soon as someone leaves the ring. [countdown]
+  countdown-seconds: 20
+  # The countdown only starts when a player who was inside the ring leaves it (the first one counts);
+  # until then the bots wait. false = the countdown starts as soon as the bots are created. [countdownonleave]
+  countdown-on-ring-leave: true
+  # Ring bots take no damage while waiting and during the countdown. [countdowninvulnerable]
+  invulnerable-during-countdown: true
+  # Ring radius in blocks. 0 = automatic (5 blocks + 1 every 5 bots). [ringradius]
+  ring-radius: 0
+  # auto = the ring stays where it's created (your position or the "at x y z" of /manhunt create);
+  # manual = at the point set with /manhunt ring point. [ringcenter]
+  ring-center: auto
+  # Who joins the server while the hunt is running: hunted = becomes a target right away;
+  # protected = isn't a target for the ring's countdown time (at least 5 s);
+  # out = isn't hunted until the next hunt. [latejoin]
+  late-join: protected
+  # off = everyone can be hunted; allowlist = only the listed players are hunted and trigger the ring;
+  # blocklist = the listed players aren't hunted and don't trigger the ring. [playerlistmode]
+  player-list-mode: "off"
+  # Names in the player list. Edit with /manhunt players add|remove <player>.
+  player-list: []
 
-aparencia:
-  # Brilho (contorno visível através das paredes) nos caçadores. [glowhunters]
-  brilho-cacadores: false
-  # Cor do brilho dos caçadores. [glowhunterscolor]
-  cor-brilho-cacadores: red
-  # Brilho nos bots de grupos fugitivos. [glowescapers]
-  brilho-fugitivos: false
-  # Cor do brilho dos fugitivos. [glowescaperscolor]
-  cor-brilho-fugitivos: aqua
-  # Nome visível em cima do bot. [nametag]
-  mostrar-nome: true
+appearance:
+  # Glow (outline visible through walls) on the hunters. [glowhunters]
+  glow-hunters: false
+  # Hunters' glow color. [glowhunterscolor]
+  glow-hunters-color: red
+  # Glow on the bots of escape groups. [glowescapers]
+  glow-escapers: false
+  # Escapers' glow color. [glowescaperscolor]
+  glow-escapers-color: aqua
+  # Name visible above the bot. [nametag]
+  show-name-tag: true

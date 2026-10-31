@@ -1003,7 +1003,7 @@ public final class BotManager {
                 Long last = tickErrorLog.get(bot.id());
                 if (last == null || now - last > 60_000) {
                     tickErrorLog.put(bot.id(), now);
-                    plugin.getLogger().log(Level.WARNING, "Erro no tick do bot " + bot.name(), ex);
+                    plugin.getLogger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
                 }
             }
         }
@@ -1243,7 +1243,7 @@ public final class BotManager {
                 notePhaseReached(bot.progression().phase());
                 n++;
             } catch (RuntimeException ex) {
-                plugin.getLogger().log(Level.WARNING, "Não foi possível restaurar o bot " + s.name(), ex);
+                plugin.getLogger().log(Level.WARNING, "Could not restore bot " + s.name(), ex);
             }
         }
         return n;

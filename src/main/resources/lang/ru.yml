@@ -1,0 +1,594 @@
+# ==============================================================================
+#  Manhunt* - Русский
+#  Формат MiniMessage: https://docs.advntr.dev/minimessage/format.html
+#  Теги вроде <bot>, <phase> и <amount> заполняет плагин; при переводе их нужно сохранить.
+#  Отсутствующие ключи берутся из английского текста (en.yml). «version» меняется, когда меняются
+#  тексты по умолчанию: более старый файл переносится в lang/old/ и заменяется новым.
+# ==============================================================================
+
+version: 1
+
+prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
+
+help: |-
+  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(боты-охотники для ManHunt) ·</gray> <yellow>/manhunt menu</yellow> <gray>открывает меню</gray>
+  <gold>Матч</gold>
+  <yellow>/manhunt start</yellow> <gray>- отпускает круги и сразу начинает охоту</gray>
+  <yellow>/manhunt pause · resume</yellow> <gray>- замораживает ботов и таймеры / продолжает</gray>
+  <yellow>/manhunt target <player> · target clear</yellow> <gray>- все за одним игроком / обычный режим</gray>
+  <yellow>/manhunt ring · ring point [x y z | clear]</yellow> <gray>- круг и его фиксированная точка</gray>
+  <yellow>/manhunt players [add|remove <player> | mode off|allowlist|blocklist]</yellow> <gray>- на кого охотятся</gray>
+  <gold>Боты</gold>
+  <yellow>/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]</yellow>
+  <yellow>/manhunt remove <bot> · remove all confirm</yellow> <gray>- удаляет ботов / стирает всё</gray>
+  <yellow>/manhunt list · info <bot> · tp <bot|all> [player]</yellow>
+  <yellow>/manhunt skin <bot> <player> · spawnpoint <bot> [x y z | clear]</yellow>
+  <yellow>/manhunt equip item <item> · equip armor <tier> · test <ability></yellow>
+  <gold>Группы</gold>
+  <yellow>/manhunt group <group> role|enemy|spawnpoint|phases|chaseplayers|remove</yellow>
+  <gold>Настройки</gold>
+  <yellow>/manhunt settings [option] [value] · reload</yellow> <gray>- без опции показывает все</gray>
+
+common:
+  "yes": "да"
+  "no": "нет"
+  "on": "вкл."
+  "off": "выкл."
+  none: "нет"
+  automatic: "автоматически"
+
+difficulty:
+  easy: "Лёгкая"
+  medium: "Средняя"
+  hard: "Сложная"
+  terminator: "Терминатор"
+
+role:
+  hunter: "охотник"
+  escape: "беглец"
+
+# --- фазы ---
+phase:
+  jump: "<red>[СКАЧОК ФАЗЫ]</red> <white><bot></white> <gray>фаза</gray> <yellow><from></yellow> <gray>→</gray> <gold><to></gold> <gray>(<reason>: <white><player></white>).</gray>"
+  reason:
+    nether: "вошёл в Незер"
+    diamonds: "5+ алмазов в инвентаре"
+    lots-of-iron: "больше 20 железа"
+    iron: "железо в инвентаре"
+    wooden-weapon: "деревянное оружие"
+  upgrade: "<dark_red><bold>[БОТЫ СИЛЬНЕЕ]</bold></dark_red> <gold>Достигнута фаза <phase>!</gold>"
+  description:
+    "1": "<gray>Базовый бот: без снаряжения фазы; преследует, копает, строит мосты и выкручивается.</gray>"
+    "2": "<gray>Деревянный меч и простая еда. Деревянное оружие игрока включает эту фазу.</gray>"
+    "3": "<gray>Открываются арбалет и ведро воды против огня; еда лучше.</gray>"
+    "4": "<gray>Кожаная броня, каменный меч, щит, трезубец с Верностью, лошади и залпы из лука.</gray>"
+    "5": "<gray>Железные броня и меч, ведро лавы и золотые яблоки.</gray>"
+    "6": "<gray>Железо с Защитой I, лучшая добыча и лодки против целей в воде.</gray>"
+    "7": "<gray>Алмазный меч, часть алмазной брони и более сильная добыча.</gray>"
+    "8": "<gray>Полный алмаз с Защитой II и меч с Остротой II.</gray>"
+    "9": "<gray>Сохраняет зачарованный алмаз, перезарядка жемчуга меньше на 50%.</gray>"
+    "10": "<gray>Сохраняет зачарованный алмаз, перезарядка жемчуга меньше на 75%.</gray>"
+    "11": "<gray>Боты стали сильнее.</gray>"
+    "12": "<dark_red>Последняя фаза (только Терминатор): незеритовая броня и незеритовый меч с Отдачей.</dark_red>"
+
+# --- круг и отсчёт перед охотой ---
+countdown:
+  ring-created: "<gold>Охотники в круге.</gold> <gray>Когда игрок выйдет из него, начнётся отсчёт</gray> <yellow><seconds></yellow> <gray>секунд. /manhunt start начинает сразу.</gray>"
+  ring-created-no-countdown: "<gold>Охотники в круге.</gold> <gray>Когда игрок выйдет из него, начнётся охота. /manhunt start начинает сразу.</gray>"
+  bar-waiting: "<yellow>Выйдите из круга, чтобы начать</yellow> <gray>(<seconds> с форы)</gray>"
+  bar-waiting-no-countdown: "<yellow>Выйдите из круга, чтобы начать охоту</yellow>"
+  left: "<yellow><player></yellow> <gold>вышел из круга!</gold>"
+  left-and-counting: "<yellow><player></yellow> <gold>вышел из круга! Охота начнётся через</gold> <yellow><seconds></yellow> <gold>с.</gold>"
+  started: "<gold>Охота начнётся через <yellow><seconds></yellow> с!</gold> <gray>/manhunt start начинает сразу.</gray>"
+  bar: "<red>Охота начнётся через</red> <yellow><seconds> с</yellow>"
+  title-number: "<red><bold><seconds></bold></red>"
+  subtitle: "<gray>Приготовьтесь...</gray>"
+  begun-title: "<dark_red><bold>Охота началась!</bold></dark_red>"
+  begun-subtitle: "<gray>Бегите.</gray>"
+  begun: "<dark_red>Охота началась!</dark_red>"
+  nothing: "<gray>В кругах нет ждущих ботов.</gray>"
+
+ring:
+  info: |-
+    <gold>Круг</gold> <gray>· радиус</gray> <white><radius></white> <gray>· центр</gray> <white><center></white> <gray>· точка</gray> <white><point></white>
+    <gray>Ждущих кругов сейчас:</gray> <white><rings></white> <gray>(радиус: /manhunt settings ringradius <блоки|auto>)</gray>
+  point-set: "<green>Точка круга установлена в <white><pos></white> (<white><world></white>). Следующие круги появятся здесь (центр круга: manual).</green>"
+  point-cleared: "<green>Точка круга удалена. Круги снова появляются там, где их создают (центр круга: auto).</green>"
+  no-point: "<yellow>Центр круга задан вручную, но точка не установлена (или её мир не загружен): круг останется там, где вы. Установите её через /manhunt ring point.</yellow>"
+
+# --- на кого охотятся: список игроков и опоздавшие ---
+player-list:
+  info: "<gold>Список игроков</gold> <gray>(<mode>):</gray> <white><names></white>"
+  empty: "никого"
+  added: "<green><white><player></white> добавлен в список.</green>"
+  already-listed: "<yellow><white><player></white> уже в списке.</yellow>"
+  removed: "<green><white><player></white> убран из списка.</green>"
+  not-listed: "<yellow><white><player></white> нет в списке.</yellow>"
+  off-warning: "<gray>Список выключен: включите его через /manhunt players mode allowlist или blocklist.</gray>"
+  mode: "<green>Список игроков: <yellow><mode></yellow>.</green> <gray><explanation></gray>"
+  explanation:
+    "off": "На всех можно охотиться, и все запускают круг."
+    allowlist: "Охотятся только на игроков из списка, и только они запускают круг."
+    blocklist: "На игроков из списка не охотятся, и они не запускают круг."
+
+hunt:
+  joined-hunted: "<red>Охота идёт: вы уже цель!</red>"
+  joined-protected: "<gold>Охота идёт.</gold> <gray>Вы защищены от охотников на</gray> <yellow><seconds></yellow> <gray>с.</gray>"
+  joined-out: "<gray>Охота идёт. На вас не будут охотиться до следующей.</gray>"
+  protection-bar: "<green>Защита от охотников:</green> <yellow><seconds> с</yellow>"
+  protection-ended-bar: "<red>Ваша защита закончилась!</red>"
+  protection-ended: "<red>Ваша защита закончилась: охотники идут за вами!</red>"
+
+# --- пауза ---
+pause:
+  bar: "<yellow><bold>Охота на паузе</bold></yellow> <gray>· боты заморожены</gray>"
+  paused: "<yellow>Охота на паузе:</yellow> <gray>боты заморожены и неуязвимы, отсчёт, защита и фазы остановлены.</gray>"
+  resumed: "<green>Охота продолжается!</green>"
+  already-paused: "<gray>Охота уже на паузе. /manhunt resume продолжает её.</gray>"
+  not-paused: "<gray>Охота не на паузе.</gray>"
+  state: "на паузе"
+
+# --- команды ---
+command:
+  creating: "<gray>Создаю</gray> <yellow><amount></yellow> <gray>бот(ов)</gray> <white><name></white> <gray>(<difficulty>)... ищу скин.</gray>"
+  created: "<green>Создано ботов <white><name></white>: <amount>.</green>"
+  create-error: "<red>Не удалось создать ботов. Смотрите консоль.</red>"
+  invalid-difficulty: "<red>Неверная сложность. Используйте easy, medium, hard или terminator.</red>"
+  no-location: "<red>Этой команде нужно место (используйте её в игре или укажите координаты).</red>"
+  removed: "<yellow>Удалено ботов с именем <white><name></white>: <amount>.</yellow>"
+  all-removed: "<yellow>Ботов удалено навсегда: <amount>.</yellow>"
+  confirm-remove-all: "<red>Это удалит всех ботов и сохранение. Введите <white>/manhunt remove all confirm</white> для подтверждения.</red>"
+  list-title: "<gold>Боты: <yellow><amount></yellow> (<green>живых: <alive></green>)</gold>"
+  list-line: "<gray>-</gray> <white><display-name></white> <dark_gray>(<name>)</dark_gray> <gray>фаза</gray> <yellow><phase></yellow> <gray><difficulty> · здоровье</gray> <red><health></red> <gray>· группа</gray> <aqua><group></aqua> <gray>· цель</gray> <white><target></white> <gray>· <location> · убийства</gray> <yellow><kills></yellow> <dark_gray>[<state>]</dark_gray>"
+  list-dead: "мёртв (возрождается)"
+  info: |-
+    <gold><display-name></gold> <dark_gray>(<name>)</dark_gray>
+    <gray>Жив: <white><alive></white> · Фаза <yellow><phase></yellow> · <difficulty></gray>
+    <gray>Здоровье <red><health></red> · Голод <white><hunger></white> · Убийства <yellow><kills></yellow> · Агрессия <white><aggression></white></gray>
+    <gray>Группа <aqua><group></aqua> · Цель <white><target></white></gray>
+    <gray>Место <white><location></white> · Скорость <white><speed></white> блоков/с · На земле <white><on-ground></white></gray>
+    <gray>ИИ: <yellow><state></yellow></gray>
+  bot-not-found: "<red>Бот не найден.</red>"
+  players-only: "<red>Это могут использовать только игроки.</red>"
+  target-set: "<green>Все боты теперь преследуют <white><player></white>.</green>"
+  target-cleared: "<green>Принудительная цель убрана: боты снова выбирают сами.</green>"
+  item-given: "<green>Предмет <white><item></white> выдан всем ботам.</green>"
+  invalid-tier: "<red>Неизвестный тип брони: <white><tier></white>. Используйте leather, chainmail, iron, gold, diamond или netherite.</red>"
+  armor: "<green>Броня <white><tier></white> надета на всех ботов.</green>"
+  tp-one: "<green><white><bot></white> отправлен к <white><player></white>.</green>"
+  tp-all: "<green>Ботов перемещено к <white><player></white>: <amount>.</green>"
+  spawnpoint-bot: "<green>Точка возрождения <white><bot></white> установлена в <white><pos></white>.</green>"
+  spawnpoint-bot-cleared: "<green>Точка возрождения <white><bot></white> удалена.</green>"
+  skin-ok: "<green>Скин <white><player></white> применён к <white><bot></white>.</green>"
+  skin-failed: "<red>Не удалось найти скин <white><player></white>.</red>"
+  reloaded: "<green>config.yml и языковые файлы перезагружены (язык: <white><language></white>).</green>"
+
+ability:
+  started: "<green>Способность <white><ability></white> запущена.</green>"
+  must-be-alive: "<red>Вы должны быть живы.</red>"
+  already-active: "<red>Против вас уже действует способность.</red>"
+  not-in-cave: "<red>Вы не в пещере (Y ниже 60, без света неба).</red>"
+  no-eligible-bot: "<red>Нет подходящего бота (живого, нацеленного на вас, в том же мире, свободного и в нужной фазе).</red>"
+  firework-out-of-range: "<red>Ни один бот не достаёт вас фейерверком (около 64 блоков, без блоков на пути).</red>"
+  arrow-out-of-range: "<red>Ни один бот не достаёт вас стрелой, даже на полном натяжении (слишком далеко для перепада высот или блок на траектории).</red>"
+  no-ambush-spot: "<red>Не нашлось места в той же пещере для засады.</red>"
+  unknown: "<red>Неизвестная способность. Используйте tnt-craft, bow-burst или firework-crossbow.</red>"
+
+group:
+  not-found: "<red>Группы <white><group></white> не существует.</red>"
+  role: "<green>Группа <white><group></white> теперь: <yellow><role></yellow>.</green>"
+  invalid-role: "<red>Неизвестная роль: <white><role></white>. Используйте hunter или escape.</red>"
+  deleted: "<yellow>Группа <white><group></white> удалена (ботов убрано: <amount>).</yellow>"
+  phases: "<green>Развитие фаз <yellow><value></yellow> для <white><group></white> (ботов: <amount>).</green>"
+  chase: "<green>Группа <white><group></white> преследует игроков: <yellow><value></yellow>.</green>"
+  spawnpoint: "<green>Точка возрождения группы <white><group></white> в <white><pos></white>.</green>"
+  spawnpoint-cleared: "<green>Точка возрождения группы <white><group></white> удалена.</green>"
+  enemy-added: "<green><white><group></white> теперь враг для <white><enemy></white>.</green>"
+  enemy-removed: "<green><white><group></white> больше не враг для <white><enemy></white>.</green>"
+
+settings:
+  title: "<gold>Настройки Manhunt*</gold> <gray>(/manhunt settings <option> <value>)</gray>"
+  line: "<gray>-</gray> <yellow><key></yellow> <gray>=</gray> <white><value></white> <dark_gray>(<path>)</dark_gray>"
+  effective-nodes: "pathnodes (фактически)"
+  changed: "<green><white><key></white> = <yellow><value></yellow></green>"
+  current: "<gray><white><key></white> = <yellow><value></yellow>.</gray>"
+  unknown: "<red>Неизвестная опция: <white><key></white>. /manhunt settings показывает все.</red>"
+  invalid: "<red><white><key></white>: <error></red>"
+  error:
+    boolean: "неверное значение: используйте true или false."
+    integer: "неверное целое число (от <min> до <max>)."
+    number: "неверное число (от <min> до <max>)."
+    choice: "неверное значение. Варианты: <options>"
+
+# --- что делает ИИ (/manhunt info и list) ---
+state:
+  none: "-"
+  ability: "особая способность"
+  knockback: "отбрасывание"
+  stabilizing: "стабилизируется"
+  eating: "ест"
+  extinguishing: "тушит огонь"
+  suffocating: "застрял в блоке"
+  countdown: "отсчёт"
+  waiting-in-ring: "ждёт в круге"
+  target-in-other-dimension: "цель в другом измерении"
+  sneaky: "скрытная игра"
+  no-target: "без цели"
+  fleeing: "убегает от <target>"
+  boat-crossing: "переправляется на лодке"
+  boat: "лодка"
+  riding: "скачет к <target> (<detail>)"
+  getting-horse: "идёт за лошадью"
+  bow-burst: "залп из лука"
+  shooting: "стреляет в <target>"
+  fleeing-low-health: "убегает (мало здоровья)"
+  tunneling: "копает туннель"
+  speed-bridging: "быстрый мост"
+  breaking-through: "пробивается к <target>"
+  fighting: "сражается с <target>"
+  stuck-digging: "застрял, копает"
+  towering: "башня/мост к <target>"
+  parkour: "паркур"
+  following-path: "идёт по пути к <target> (<detail> блоков)"
+  walking-straight: "идёт напрямую к <target> (<detail> блоков)"
+
+category:
+  general: "Общие"
+  bots: "Боты"
+  combat: "Бой"
+  mobility: "Передвижение"
+  pathfinding: "Поиск пути"
+  tactics: "Тактика"
+  manhunt: "Правила охоты"
+  appearance: "Внешний вид"
+
+# --- название и описание каждой опции в меню (ключ - тот же, что в /manhunt settings) ---
+options:
+  language:
+    name: "Язык"
+    description: "Язык сообщений и меню: файл из папки lang/. Отсутствующие тексты остаются на английском."
+  tablist:
+    name: "Боты в списке TAB"
+    description: "Боты видны в списке TAB как игроки (со скином и пингом)."
+  joinmessages:
+    name: "Сообщения о входе и выходе"
+    description: "«X зашёл в игру» / «X вышел из игры», когда бот создаётся или удаляется."
+  deathmessages:
+    name: "Сообщения о смерти"
+    description: "Сообщения о смерти ботов в формате игры (учитывают gamerule сообщений о смерти)."
+  serverlistcount:
+    name: "Учитывать в списке серверов"
+    description: "Боты учитываются в числе игроков онлайн и в именах списка серверов."
+  listcommand:
+    name: "Боты в /list"
+    description: "/list включает ботов (в формате игры)."
+  respectpvp:
+    name: "Учитывать выключенный PvP"
+    description: "Если в мире выключен pvp, боты не бьют игроков."
+  mineskin:
+    name: "Запасной скин через MineSkin"
+    description: "Если для имени нет скина, берётся первая картинка .png из папки skins/ (или робот из мода), один раз отправленная в MineSkin для подписи."
+  bothealth:
+    name: "Максимальное здоровье"
+    description: "Максимальное здоровье ботов."
+  botinvincible:
+    name: "Неуязвимые боты"
+    description: "Боты не получают урон (кроме пустоты и /kill)."
+  respawn:
+    name: "Возрождение после смерти"
+    description: "Боты возрождаются через 5 с после смерти."
+  persistentbots:
+    name: "Сохранять ботов при перезапуске"
+    description: "Боты остаются после перезапуска сервера (bots.yml)."
+  dropinventory:
+    name: "Выбрасывать инвентарь при смерти"
+    description: "Боты выбрасывают инвентарь, когда умирают."
+  gearpersistence:
+    name: "Снаряжение при смерти"
+    description: "Что происходит с лучшими мечом/киркой/бронёй, когда бот умирает: сохранить, сохранить и выбросить копию или выбросить и потерять."
+  phasemultiplier:
+    name: "Длительность фаз"
+    description: "Умножает длительность каждой фазы развития."
+  defaultdifficulty:
+    name: "Сложность по умолчанию"
+    description: "Сложность, если команда её не указывает: easy, medium, hard, terminator."
+  autoeat:
+    name: "Есть самостоятельно"
+    description: "Боты едят, когда проголодаются."
+  autogapple:
+    name: "Золотые яблоки в бою"
+    description: "Боты едят золотые яблоки в бою (фаза 5+)."
+  firewaterescape:
+    name: "Тушить огонь водой"
+    description: "Боты тушат огонь ведром воды (фаза 3+)."
+  mobsattackbots:
+    name: "Мобы атакуют ботов"
+    description: "Враждебные мобы атакуют ботов так же, как игроков."
+  aimsmoothness:
+    name: "Плавность прицела (мс)"
+    description: "Плавность прицела в миллисекундах (0 = мгновенно, как в моде по умолчанию)."
+  targetpriority:
+    name: "Приоритет игрок × моб"
+    description: "Выбор между игроками и мобами: 5 = только игроки, -5 = только мобы."
+  targetmode:
+    name: "Распределение целей"
+    description: "Как боты делят игроков: closest, equal, farthest."
+  allowtrident:
+    name: "Трезубец"
+    description: "Трезубец (фаза 4+)."
+  allowcrossbow:
+    name: "Арбалет"
+    description: "Арбалет (фаза 3+)."
+  allowspear:
+    name: "Копьё верхом"
+    description: "Копьё верхом (фаза 4+): верхом бот атакует цель копьём своей фазы, проносится мимо, разворачивается и атакует снова. Пешком он использует меч."
+  projinaccuracy:
+    name: "Неточность стрел и трезубца"
+    description: "Множитель неточности стрел/трезубцев."
+  humanize:
+    name: "Очеловечивание"
+    description: "Очеловечивание (от 0 до 1): ошибки прицела, промахи и неровный ритм."
+  meleemisschance:
+    name: "Шанс промаха"
+    description: "Шанс промахнуться ударом (умножается на очеловечивание)."
+  meleedelayjitter:
+    name: "Случайная пауза между ударами"
+    description: "Случайная пауза между ударами, в тиках."
+  meleereachvariance:
+    name: "Разброс дальности"
+    description: "Насколько может меняться дальность удара."
+  meleeaimoffset:
+    name: "Смещение прицела при ударе"
+    description: "Смещение прицела при ударах."
+  meleespamvariance:
+    name: "Разброс ритма ударов"
+    description: "Разброс ритма ударов."
+  allowtowering:
+    name: "Башни и мосты"
+    description: "Башни и мосты рядом с целью (до 3 блоков по горизонтали)."
+  allowpearl:
+    name: "Жемчуг Края"
+    description: "Жемчуг Края."
+  pearlcooldownmult:
+    name: "Перезарядка жемчуга"
+    description: "Множитель перезарядки жемчуга."
+  pearldimension:
+    name: "Где использовать жемчуг"
+    description: "Где боты бросают жемчуг: nether, both (оба), overworld."
+  allowhorse:
+    name: "Лошади"
+    description: "Лошади (фаза 4+)."
+  allowboat:
+    name: "Лодки"
+    description: "Лодки: преследовать того, кто в лодке или плывёт, и переплывать озёра на лодке, когда это быстрее, чем обходить."
+  allowelytra:
+    name: "Элитры"
+    description: "Элитры, чтобы догонять далёкие цели."
+  allowredistribution:
+    name: "Возвращать далёких ботов"
+    description: "Боты, слишком далёкие от цели, появляются скрытно рядом с ней."
+  redistdistance:
+    name: "Расстояние для возврата ботов"
+    description: "Расстояние (в блоках), начиная с которого бот перераспределяется."
+  minnetherdelay:
+    name: "Мин. задержка смены измерения (с)"
+    description: "Минимальное время, через которое боты последуют за целью в другое измерение."
+  maxnetherdelay:
+    name: "Макс. задержка смены измерения (с)"
+    description: "Максимальное время, через которое боты последуют за целью в другое измерение."
+  pathmode:
+    name: "Планировщик пути"
+    description: "Планировщик: ASTAR или DUMB."
+  pathgreediness:
+    name: "Жадность A*"
+    description: "Жадность A* (больше = быстрее, но пути хуже)."
+  pathnodes:
+    name: "Лимит узлов A*"
+    description: "Лимит узлов A*."
+  pathdynamicnodes:
+    name: "Автоматический лимит узлов"
+    description: "Сам подстраивает лимит узлов под время расчёта."
+  pathfallback:
+    name: "Идти напрямую без пути"
+    description: "Если пути нет, идти прямо к цели."
+  pathasync:
+    name: "Считать пути параллельно"
+    description: "Считает пути вне основного потока."
+  pathdebug:
+    name: "Путь частицами"
+    description: "Показывает путь частицами тем, у кого есть manhuntstar.admin."
+  caveambush:
+    name: "Засада в пещере"
+    description: "Засада в пещере с кроватью (бот возрождается у кровати)."
+  caveambushcooldown:
+    name: "Интервал между засадами (с)"
+    description: "Секунды между тем, как один бот и следующий идут в засаду (1 = как в моде)."
+  autocapacities:
+    name: "Автоматические TNT и фейерверки"
+    description: "Автоматическая засада с TNT и арбалет с фейерверками (в моде были заблокированы)."
+  fireworkcrossbow:
+    name: "Арбалет с фейерверками"
+    description: "Арбалет с фейерверками (экспериментально в моде). Бот стреляет, только когда игрок в зоне досягаемости (около 64 блоков, без блоков на пути)."
+  bowpressure:
+    name: "Залп из лука"
+    description: "Залп из лука, когда бот слишком долго не попадает по игроку. Он стреляет, только если стрела долетит до игрока."
+  silentdeaths:
+    name: "Тихие смерти"
+    description: "Самый далёкий от каждого игрока бот (200+ блоков) исчезает и возрождается ближе."
+  portalentrance:
+    name: "Прибытие через портал"
+    description: "Боты прибывают в другое измерение через портал, который видит игрок."
+  spawnmode:
+    name: "Режим появления"
+    description: "NORMAL: появляется в точке. MANHUNT: появляется в круге и ждёт начала охоты."
+  countdown:
+    name: "Отсчёт до охоты (с)"
+    description: "Отсчёт (секунды) до начала охоты. 0 = боты отпускаются, как только кто-то выйдет из круга."
+  countdownonleave:
+    name: "Отсчёт только после выхода из круга"
+    description: "Отсчёт начинается, только когда игрок, бывший внутри круга, выходит из него; до этого боты ждут. Выкл. = отсчёт начинается сразу после создания ботов."
+  countdowninvulnerable:
+    name: "Неуязвимые боты в круге"
+    description: "Боты в круге не получают урон, пока ждут и во время отсчёта."
+  ringradius:
+    name: "Радиус круга (0 = авто)"
+    description: "Радиус круга в блоках. 0 = автоматически (5 блоков + 1 на каждые 5 ботов)."
+  ringcenter:
+    name: "Центр круга"
+    description: "auto = круг остаётся там, где создан; manual = в точке, заданной через /manhunt ring point."
+  latejoin:
+    name: "Опоздавшие игроки"
+    description: "Кто заходит во время охоты: hunted = сразу становится целью; protected = не цель на время отсчёта (минимум 5 с); out = на него не охотятся до следующей охоты."
+  playerlistmode:
+    name: "Список игроков"
+    description: "off = на всех можно охотиться; allowlist = охотятся только на игроков из списка, и только они запускают круг; blocklist = на игроков из списка не охотятся, и они не запускают круг."
+  glowhunters:
+    name: "Свечение охотников"
+    description: "Свечение (контур, видимый сквозь стены) на охотниках."
+  glowhunterscolor:
+    name: "Цвет свечения охотников"
+    description: "Цвет свечения охотников."
+  glowescapers:
+    name: "Свечение беглецов"
+    description: "Свечение на ботах групп беглецов."
+  glowescaperscolor:
+    name: "Цвет свечения беглецов"
+    description: "Цвет свечения беглецов."
+  nametag:
+    name: "Имя над ботом"
+    description: "Имя видно над ботом."
+
+# --- /manhunt menu (текст без цвета получает цвет меню по умолчанию) ---
+menu:
+  title:
+    main: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Меню</dark_gray>"
+    match: "<dark_gray>Матч</dark_gray>"
+    target: "<dark_gray>Принудительная цель</dark_gray>"
+    rules: "<dark_gray>Правила охоты</dark_gray>"
+    player-list: "<dark_gray>Список игроков</dark_gray>"
+    bots-section: "<dark_gray>Боты</dark_gray>"
+    create: "<dark_gray>Создать ботов</dark_gray>"
+    bots: "<dark_gray>Управление ботами</dark_gray>"
+    groups: "<dark_gray>Группы</dark_gray>"
+    config: "<dark_gray>Настройки</dark_gray>"
+    options: "<dark_gray>Опции</dark_gray>"
+    confirm: "<dark_red>Удалить всех ботов?</dark_red>"
+  type-name: "<yellow>Введите в чат имя ботов (% - для номера). Введите <white>отмена</white>, чтобы отказаться.</yellow>"
+  type-skin: "<yellow>Введите в чат имя игрока со скином (или <white>-</white>, чтобы взять имя бота).</yellow>"
+  type-player: "<yellow>Введите в чат имя игрока, которого нужно добавить в список. Введите <white>отмена</white>, чтобы отказаться.</yellow>"
+  cancel-word: "отмена"
+  cancelled: "<gray>Отменено.</gray>"
+  back: "Назад"
+  close: "Закрыть"
+  main:
+    status-bots: "Боты: живых <alive> из <total>"
+    status-hunt: "Охота: <state>"
+    status-target: "Принудительная цель: <target>"
+    status-list: "Список игроков: <mode>"
+    hunt-paused: "на паузе"
+    hunt-rings: "кругов ждёт: <rings>"
+    hunt-running: "идёт"
+    hunt-no-bots: "нет ботов"
+    hunt-stopped: "остановлена"
+    match: "Матч"
+    match-lore: "Старт, пауза и принудительная цель"
+    rules: "Правила охоты"
+    rules-lore: |-
+      Круг, отсчёт, опоздавшие
+      и список игроков
+    bots: "Боты"
+    bots-lore: "Создать, управлять, группы, собрать и удалить"
+    config: "Настройки"
+    config-lore: "Бой, передвижение, пути, внешний вид..."
+  match:
+    start: "Начать охоту сейчас"
+    start-none: "Нет ждущих кругов"
+    start-rings: "Кругов ждёт: <rings>, отпустить все"
+    pause: "Поставить охоту на паузу"
+    pause-lore: |-
+      Замораживает ботов на месте, неуязвимыми,
+      и останавливает отсчёт, защиту и фазы
+    resume: "Продолжить охоту"
+    resume-lore: |-
+      Боты снова двигаются,
+      а таймеры снова идут
+    target: "Принудительная цель: <target>"
+    target-lore: "Все боты за одним игроком"
+  target:
+    pick: "Клик: все боты за этим игроком"
+    clear: "Без принудительной цели"
+    clear-lore: "Боты снова выбирают сами"
+  rules:
+    ring-point: "Точка круга"
+    ring-point-none: "Точка не задана"
+    ring-point-lore: |-
+      ЛКМ: поставить там, где вы (центр вручную)
+      ПКМ: удалить (центр автоматически)
+    player-list: "Список игроков"
+    player-list-mode: "Режим: <mode>"
+    player-list-empty: "В списке никого"
+    player-list-count: "Игроков в списке: <amount>"
+    click-to-edit: "Нажмите, чтобы изменить"
+  player-list:
+    listed: "В списке"
+    not-listed: "Не в списке"
+    click-remove: "Нажмите, чтобы убрать"
+    click-add: "Нажмите, чтобы добавить"
+    mode: "Режим: <mode>"
+    click-to-change: "Нажмите, чтобы сменить"
+    add-by-name: "Добавить игрока по имени"
+    add-by-name-lore: "Для тех, кто не в сети"
+  bots-section:
+    create: "Создать ботов"
+    create-lore: "Имя, количество, сложность и фаза"
+    manage: "Управление ботами"
+    manage-lore: "Живых <alive> из <total>"
+    groups: "Группы"
+    groups-lore: "Роль, преследование игроков и удаление"
+    bring: "Собрать всех ботов ко мне"
+    delete: "Удалить всех ботов"
+    delete-lore: "Попросит подтверждение"
+  confirm:
+    "yes": "Да, удалить всех"
+    "no": "Отмена"
+  create:
+    name: "Имя: <name>"
+    name-lore: "Нажмите и введите в чат (% - для номера)"
+    skin: "Скин: <skin>"
+    skin-same: "(то же имя)"
+    skin-lore: "Нажмите и введите имя игрока"
+    amount: "Количество: <amount>"
+    amount-lore: "ЛКМ +1, ПКМ -1, shift ±5"
+    difficulty: "Сложность: <difficulty>"
+    difficulty-lore: "Нажмите, чтобы сменить"
+    phase: "Начальная фаза: <phase>"
+    phase-default: "по умолчанию"
+    phase-lore: "ЛКМ +1, ПКМ -1"
+    aggression: "Агрессия: <aggression>"
+    aggression-lore: "Используется особыми способностями"
+    spawn: "Создать здесь"
+    spawn-lore: "Режим появления: <mode>"
+  bots:
+    phase: "Фаза <phase> • <difficulty>"
+    health: "Здоровье <health> • Убийства <kills>"
+    target: "Цель: <target>"
+    help: "ЛКМ: к нему • ПКМ: притянуть • Shift+ПКМ: удалить"
+    previous: "Предыдущая страница"
+    next: "Следующая страница"
+  groups:
+    role: "Роль: <role>"
+    chase: "Преследует игроков: <value>"
+    enemies: "Враги: <enemies>"
+    help: |-
+      ЛКМ: сменить роль • ПКМ: преследовать игроков
+      Shift+ПКМ: удалить группу и её ботов
+  config:
+    category-lore: "Опций: <amount> • нажмите, чтобы изменить"
+    glow: "<name>: <value>"
+    glow-color: "Цвет: <color>"
+    glow-help: "ЛКМ: вкл./выкл. • ПКМ: сменить цвет"
+  option:
+    value: "Значение: <value>"
+    toggle: "Нажмите, чтобы включить/выключить"
+    next: "Нажмите для следующего варианта"
+    adjust: "ЛКМ +, ПКМ -, shift = больший шаг"

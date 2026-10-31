@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "dev.manhuntstar"
-description = "Manhunt* - bots caçadores de ManHunt para Paper"
+description = "Manhunt* - ManHunt hunter bots for Paper"
 
 // A versão do plugin fica em gradle.properties e é subida pelo workflow de release.
 // As versões das dependências ficam em gradle/libs.versions.toml (lidas pelo Dependabot).

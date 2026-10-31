@@ -302,48 +302,48 @@ public final class TacticsManager {
     /** @return mensagem de erro ou null se iniciou. */
     public String debugExecute(Player player, String capacity) {
         if (player.isDead()) {
-            return "voce-precisa-estar-vivo";
+            return "must-be-alive";
         }
         if (activeBotByPlayer.containsKey(player.getUniqueId())) {
-            return "capacidade-ja-ativa";
+            return "already-active";
         }
         long now = Bukkit.getCurrentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
                 if (!CaveAmbush.isInCave(player.getWorld(), Pos.of(player.getLocation()))) {
-                    return "fora-da-caverna";
+                    return "not-in-cave";
                 }
                 Bot bot = selectBot(player, now, true, 1);
                 if (bot == null) {
-                    return "sem-bot-elegivel";
+                    return "no-eligible-bot";
                 }
                 prepare(bot);
-                return startTntAmbush(player, bot, now, true) ? null : "sem-posicao-emboscada";
+                return startTntAmbush(player, bot, now, true) ? null : "no-ambush-spot";
             }
             case "bow-burst" -> {
                 if (selectBot(player, now, true, 4) == null) {
-                    return "sem-bot-elegivel";
+                    return "no-eligible-bot";
                 }
                 Bot bot = selectBot(player, now, true, 4, b -> bowDraw(b, player, Vec3.ZERO) >= 0);
                 if (bot == null) {
-                    return "flecha-fora-do-alcance";
+                    return "arrow-out-of-range";
                 }
                 startBowBurst(bot, player, now);
                 return null;
             }
             case "firework-crossbow" -> {
                 if (selectBot(player, now, true, 5) == null) {
-                    return "sem-bot-elegivel";
+                    return "no-eligible-bot";
                 }
                 Bot bot = selectBot(player, now, true, 5, b -> fireworkReaches(b, player, Vec3.ZERO));
                 if (bot == null) {
-                    return "foguete-fora-do-alcance";
+                    return "firework-out-of-range";
                 }
                 startFirework(player, bot, now);
                 return null;
             }
             default -> {
-                return "capacidade-desconhecida";
+                return "unknown";
             }
         }
     }

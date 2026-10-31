@@ -84,10 +84,10 @@ public final class TabListService {
             sendMethod = findMethod(connectionField.getType(), "send", packetIface);
             buildEntry(UUID.randomUUID(), "teste", null, Component.text("teste"), 0);
             available = true;
-            logger.info("Lista do TAB: bots aparecem como jogadores.");
+            logger.info("TAB list: bots show up as players.");
         } catch (Throwable t) {
             available = false;
-            logger.log(Level.WARNING, "Lista do TAB desativada: a estrutura do pacote mudou nesta versão (" + t + ").");
+            logger.log(Level.WARNING, "TAB list disabled: the packet structure changed in this version (" + t + ").");
         }
     }
 
@@ -332,7 +332,7 @@ public final class TabListService {
     private void disable(Throwable t) {
         if (available) {
             available = false;
-            logger.log(Level.WARNING, "Lista do TAB desativada por erro: " + t);
+            logger.log(Level.WARNING, "TAB list disabled after an error: " + t);
         }
     }
 }
