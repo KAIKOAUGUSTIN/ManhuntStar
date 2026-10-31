@@ -4,9 +4,9 @@ main: dev.manhuntstar.ManhuntStarPlugin
 api-version: '26.3'
 load: POSTWORLD
 prefix: Manhunt*
-description: Manhunt* - bots caçadores de ManHunt para Paper.
+description: Manhunt* - ManHunt hunter bots for Paper.
 folia-supported: false
 permissions:
   manhuntstar.admin:
-    description: Usar /manhunt, abrir o menu e ver o caminho dos bots em partículas.
+    description: Use /manhunt, open the menu and see the bots' paths as particles.
     default: op

@@ -16,8 +16,13 @@ import dev.manhuntstar.bot.Modes.TargetMode;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.logging.Logger;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /** Opções: chaves e apelidos do mod, faixas e conversão de texto. */
 class SettingsTest {
@@ -71,29 +76,29 @@ class SettingsTest {
         }
     }
 
-    /** O comando de lista usa off/allowlist/blocklist; o config.yml guarda os nomes em português. */
+    /** A lista usa off/allowlist/blocklist; os nomes em português das versões antigas ainda valem. */
     @Test
     void playerListModeEnglishWords() {
         Settings s = new Settings();
         s.playerListMode.setFromText("allowlist");
-        assertSame(PlayerListMode.PERMITIDOS, s.playerListMode.get());
+        assertSame(PlayerListMode.ALLOWLIST, s.playerListMode.get());
         s.playerListMode.setFromText("blocklist");
-        assertSame(PlayerListMode.BLOQUEADOS, s.playerListMode.get());
+        assertSame(PlayerListMode.BLOCKLIST, s.playerListMode.get());
         s.playerListMode.setFromText("off");
-        assertSame(PlayerListMode.DESLIGADA, s.playerListMode.get());
+        assertSame(PlayerListMode.OFF, s.playerListMode.get());
     }
 
     @Test
     void ringAndHuntDefaults() {
         Settings s = new Settings();
         assertEquals(0.0, s.ringRadius.value());
-        assertSame(RingCenter.AUTOMATICO, s.ringCenter.get());
-        assertSame(LateJoin.PROTEGIDO, s.lateJoin.get());
-        assertSame(PlayerListMode.DESLIGADA, s.playerListMode.get());
+        assertSame(RingCenter.AUTO, s.ringCenter.get());
+        assertSame(LateJoin.PROTECTED, s.lateJoin.get());
+        assertSame(PlayerListMode.OFF, s.playerListMode.get());
         s.lateJoin.setFromText("caçado");
-        assertSame(LateJoin.CACADO, s.lateJoin.get());
+        assertSame(LateJoin.HUNTED, s.lateJoin.get());
         s.playerListMode.setFromText("blacklist");
-        assertSame(PlayerListMode.BLOQUEADOS, s.playerListMode.get());
+        assertSame(PlayerListMode.BLOCKLIST, s.playerListMode.get());
         s.ringRadius.setFromText("200");
         assertEquals(64.0, s.ringRadius.value());
     }
@@ -105,10 +110,10 @@ class SettingsTest {
         assertTrue(s.addListedPlayer("Steve"));
         assertFalse(s.addListedPlayer("steve"));
         assertTrue(s.listAllows("Alex"));
-        s.playerListMode.set(PlayerListMode.PERMITIDOS);
+        s.playerListMode.set(PlayerListMode.ALLOWLIST);
         assertTrue(s.listAllows("STEVE"));
         assertFalse(s.listAllows("Alex"));
-        s.playerListMode.set(PlayerListMode.BLOQUEADOS);
+        s.playerListMode.set(PlayerListMode.BLOCKLIST);
         assertFalse(s.listAllows("steve"));
         assertTrue(s.listAllows("Alex"));
         assertTrue(s.removeListedPlayer("STEVE"));
@@ -131,25 +136,84 @@ class SettingsTest {
         assertSame(TargetMode.CLOSEST_PLAYER, s.targetMode.get());
         s.pearlDimension.setFromText("1");
         assertSame(PearlDimension.BOTH, s.pearlDimension.get());
-        assertThrows(IllegalArgumentException.class, () -> s.respawn.setFromText("talvez"));
+        Setting.InvalidValue e = assertThrows(Setting.InvalidValue.class, () -> s.respawn.setFromText("talvez"));
+        assertEquals("settings.error.boolean", e.getMessage());
     }
 
-    /** O menu mostra o nome e a descrição (comentário do config.yml) de cada opção. */
+    /** Toda opção do Settings está no config.yml do plugin, com o mesmo valor padrão. */
     @Test
-    void everyOptionHasLabelAndDescription() throws Exception {
+    void everyOptionIsInTheBundledConfig() throws Exception {
         Settings s = new Settings();
-        Map<String, String> descriptions;
+        YamlConfiguration cfg;
         try (InputStream in = SettingsTest.class.getResourceAsStream("/config.yml")) {
             assertNotNull(in, "config.yml não encontrado");
-            descriptions = s.descriptions(new InputStreamReader(in, StandardCharsets.UTF_8));
+            cfg = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
         for (Setting<?> each : s.all()) {
-            assertFalse(each.label().isBlank(), "sem nome: " + each.key());
-            String d = descriptions.get(each.path());
-            assertNotNull(d, "sem comentário no config.yml: " + each.path());
-            assertFalse(d.contains("["), "chave de comando sobrou na descrição: " + d);
+            assertTrue(cfg.contains(each.path()), "falta no config.yml: " + each.path());
+            Object def = each.get();
+            each.setFromText(String.valueOf(cfg.get(each.path())));
+            assertEquals(def, each.get(), "padrão diferente do config.yml: " + each.path());
         }
-        assertEquals("Brilho (contorno visível através das paredes) nos caçadores.", descriptions.get(s.glowHunters.path()));
+    }
+
+    /** Um config.yml das versões com chaves em português é lido pelos caminhos antigos. */
+    @Test
+    void legacyConfigIsMigrated(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.yml");
+        Files.writeString(file, """
+                geral:
+                  tab-list: false
+                bots:
+                  vida-maxima: 40
+                  mobs-que-nao-atacam-bots: [CREEPER]
+                combate:
+                  modo-alvo: closest
+                manhunt:
+                  centro-roda: manual
+                  quem-entra-no-meio: cacado
+                  lista-modo: permitidos
+                  lista-jogadores: [Steve]
+                  ponto-roda: {mundo: world, x: 1.0, y: 64.0, z: -2.0}
+                """);
+        assertTrue(Settings.isLegacy(file.toFile()));
+        Settings s = new Settings();
+        s.loadLegacy(file.toFile(), Logger.getAnonymousLogger());
+        assertFalse(s.tabList.on());
+        assertEquals(40.0, s.botHealth.value());
+        assertSame(TargetMode.CLOSEST_PLAYER, s.targetMode.get());
+        assertSame(RingCenter.MANUAL, s.ringCenter.get());
+        assertSame(LateJoin.HUNTED, s.lateJoin.get());
+        assertSame(PlayerListMode.ALLOWLIST, s.playerListMode.get());
+        assertTrue(s.isListed("steve"));
+        assertTrue(s.excludedMobs().contains(EntityType.CREEPER));
+        assertEquals(new Settings.RingPoint("world", 1.0, 64.0, -2.0), s.ringPoint());
+        assertEquals("pt-br", s.language.get());
+
+        Path migrated = dir.resolve("new.yml");
+        s.save(migrated.toFile(), Logger.getAnonymousLogger());
+        assertFalse(Settings.isLegacy(migrated.toFile()));
+        Settings again = new Settings();
+        again.load(migrated.toFile(), Logger.getAnonymousLogger());
+        assertEquals(40.0, again.botHealth.value());
+        assertSame(PlayerListMode.ALLOWLIST, again.playerListMode.get());
+        assertEquals(new Settings.RingPoint("world", 1.0, 64.0, -2.0), again.ringPoint());
+        assertTrue(again.excludedMobs().contains(EntityType.CREEPER));
+        assertEquals("pt-br", again.language.get());
+    }
+
+    /** O idioma só aceita um dos arquivos que existem, sem diferenciar "PT_BR" de "pt-br". */
+    @Test
+    void languageMustExist() {
+        Settings s = new Settings();
+        assertEquals("en", s.language.get());
+        s.language.setFromText("PT_BR");
+        assertEquals("pt-br", s.language.get());
+        Setting.InvalidValue e = assertThrows(Setting.InvalidValue.class, () -> s.language.setFromText("xx"));
+        assertEquals("settings.error.choice", e.getMessage());
+        s.setLanguages(() -> java.util.List.of("en", "de"));
+        s.language.setFromText("de");
+        assertEquals("de", s.language.get());
     }
 
     @Test

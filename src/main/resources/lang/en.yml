@@ -1,0 +1,594 @@
+# ==============================================================================
+#  Manhunt* - English (default language)
+#  MiniMessage format: https://docs.advntr.dev/minimessage/format.html
+#  Tags such as <bot>, <phase> and <amount> are filled in by the plugin; keep them when translating.
+#  Missing keys fall back to this file. "version" changes when the default texts change: an older
+#  file is moved to lang/old/ and replaced with the new one.
+# ==============================================================================
+
+version: 1
+
+prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
+
+help: |-
+  <dark_red><bold>Manhunt*</bold></dark_red> <gray>(ManHunt hunter bots) ·</gray> <yellow>/manhunt menu</yellow> <gray>opens the menu</gray>
+  <gold>Match</gold>
+  <yellow>/manhunt start</yellow> <gray>- releases the rings and starts the hunt now</gray>
+  <yellow>/manhunt pause · resume</yellow> <gray>- freezes the bots and the clocks / continues</gray>
+  <yellow>/manhunt target <player> · target clear</yellow> <gray>- every bot after one player / back to normal</gray>
+  <yellow>/manhunt ring · ring point [x y z | clear]</yellow> <gray>- the ring and its fixed point</gray>
+  <yellow>/manhunt players [add|remove <player> | mode off|allowlist|blocklist]</yellow> <gray>- who gets hunted</gray>
+  <gold>Bots</gold>
+  <yellow>/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]</yellow>
+  <yellow>/manhunt remove <bot> · remove all confirm</yellow> <gray>- removes bots / deletes everything</gray>
+  <yellow>/manhunt list · info <bot> · tp <bot|all> [player]</yellow>
+  <yellow>/manhunt skin <bot> <player> · spawnpoint <bot> [x y z | clear]</yellow>
+  <yellow>/manhunt equip item <item> · equip armor <tier> · test <ability></yellow>
+  <gold>Groups</gold>
+  <yellow>/manhunt group <group> role|enemy|spawnpoint|phases|chaseplayers|remove</yellow>
+  <gold>Settings</gold>
+  <yellow>/manhunt settings [option] [value] · reload</yellow> <gray>- with no option, shows them all</gray>
+
+common:
+  "yes": "yes"
+  "no": "no"
+  "on": "on"
+  "off": "off"
+  none: "none"
+  automatic: "automatic"
+
+difficulty:
+  easy: "Easy"
+  medium: "Medium"
+  hard: "Hard"
+  terminator: "Terminator"
+
+role:
+  hunter: "hunter"
+  escape: "escaper"
+
+# --- phases ---
+phase:
+  jump: "<red>[PHASE JUMP]</red> <white><bot></white> <gray>phase</gray> <yellow><from></yellow> <gray>→</gray> <gold><to></gold> <gray>(<reason> of <white><player></white>).</gray>"
+  reason:
+    nether: "entered the Nether"
+    diamonds: "5+ diamonds in the inventory"
+    lots-of-iron: "more than 20 iron"
+    iron: "iron in the inventory"
+    wooden-weapon: "wooden weapon"
+  upgrade: "<dark_red><bold>[STRONGER BOTS]</bold></dark_red> <gold>Phase <phase> reached!</gold>"
+  description:
+    "1": "<gray>Basic bot: no phase gear; chases, digs, bridges and gets by.</gray>"
+    "2": "<gray>Wooden sword and basic food. A player's wooden weapon forces this phase.</gray>"
+    "3": "<gray>Unlocks the crossbow and the water bucket against fire; better food.</gray>"
+    "4": "<gray>Leather armor, stone sword, shield, loyalty trident, horses and bow bursts.</gray>"
+    "5": "<gray>Iron armor and sword, lava bucket and golden apples.</gray>"
+    "6": "<gray>Iron with Protection I, better drops and boats against targets in the water.</gray>"
+    "7": "<gray>Diamond sword, part of the diamond armor and stronger drops.</gray>"
+    "8": "<gray>Full diamond with Protection II and a Sharpness II sword.</gray>"
+    "9": "<gray>Keeps the enchanted diamond and the ender pearl cooldown drops by 50%.</gray>"
+    "10": "<gray>Keeps the enchanted diamond and the ender pearl cooldown drops by 75%.</gray>"
+    "11": "<gray>The bots got stronger.</gray>"
+    "12": "<dark_red>Final phase (Terminator only): netherite armor and a netherite sword with Knockback.</dark_red>"
+
+# --- ring and countdown before the hunt ---
+countdown:
+  ring-created: "<gold>The hunters are in the ring.</gold> <gray>When a player leaves it, a</gray> <yellow><seconds></yellow> <gray>second countdown starts. Use /manhunt start to start now.</gray>"
+  ring-created-no-countdown: "<gold>The hunters are in the ring.</gold> <gray>When a player leaves it, the hunt starts. Use /manhunt start to start now.</gray>"
+  bar-waiting: "<yellow>Leave the ring to start</yellow> <gray>(<seconds>s head start)</gray>"
+  bar-waiting-no-countdown: "<yellow>Leave the ring to start the hunt</yellow>"
+  left: "<yellow><player></yellow> <gold>left the ring!</gold>"
+  left-and-counting: "<yellow><player></yellow> <gold>left the ring! The hunt starts in</gold> <yellow><seconds></yellow> <gold>seconds.</gold>"
+  started: "<gold>The hunt starts in <yellow><seconds></yellow> seconds!</gold> <gray>Use /manhunt start to start now.</gray>"
+  bar: "<red>The hunt starts in</red> <yellow><seconds>s</yellow>"
+  title-number: "<red><bold><seconds></bold></red>"
+  subtitle: "<gray>Get ready...</gray>"
+  begun-title: "<dark_red><bold>The hunt has begun!</bold></dark_red>"
+  begun-subtitle: "<gray>Run.</gray>"
+  begun: "<dark_red>The hunt has begun!</dark_red>"
+  nothing: "<gray>No bots are waiting in a ring.</gray>"
+
+ring:
+  info: |-
+    <gold>Ring</gold> <gray>· radius</gray> <white><radius></white> <gray>· center</gray> <white><center></white> <gray>· point</gray> <white><point></white>
+    <gray>Rings waiting now:</gray> <white><rings></white> <gray>(radius: /manhunt settings ringradius <blocks|auto>)</gray>
+  point-set: "<green>Ring point set at <white><pos></white> (<white><world></white>). The next rings spawn here (ring center: manual).</green>"
+  point-cleared: "<green>Ring point cleared. Rings spawn where they're created again (ring center: auto).</green>"
+  no-point: "<yellow>The ring center is manual, but there's no point set (or its world isn't loaded): the ring stays where you are. Set one with /manhunt ring point.</yellow>"
+
+# --- who gets hunted: player list and late joiners ---
+player-list:
+  info: "<gold>Player list</gold> <gray>(<mode>):</gray> <white><names></white>"
+  empty: "nobody"
+  added: "<green><white><player></white> was added to the list.</green>"
+  already-listed: "<yellow><white><player></white> is already on the list.</yellow>"
+  removed: "<green><white><player></white> was removed from the list.</green>"
+  not-listed: "<yellow><white><player></white> isn't on the list.</yellow>"
+  off-warning: "<gray>The list is off: use /manhunt players mode allowlist or blocklist to make it count.</gray>"
+  mode: "<green>Player list: <yellow><mode></yellow>.</green> <gray><explanation></gray>"
+  explanation:
+    "off": "Everyone can be hunted and trigger the ring."
+    allowlist: "Only the listed players are hunted and trigger the ring."
+    blocklist: "The listed players aren't hunted and don't trigger the ring."
+
+hunt:
+  joined-hunted: "<red>The hunt is on: you're already a target!</red>"
+  joined-protected: "<gold>The hunt is on.</gold> <gray>You're protected from the hunters for</gray> <yellow><seconds></yellow> <gray>seconds.</gray>"
+  joined-out: "<gray>The hunt is on. You won't be hunted until the next one.</gray>"
+  protection-bar: "<green>Protected from the hunters:</green> <yellow><seconds>s</yellow>"
+  protection-ended-bar: "<red>Your protection is over!</red>"
+  protection-ended: "<red>Your protection is over: the hunters are coming for you now!</red>"
+
+# --- pause ---
+pause:
+  bar: "<yellow><bold>Hunt paused</bold></yellow> <gray>· the bots are frozen</gray>"
+  paused: "<yellow>Hunt paused:</yellow> <gray>the bots are frozen and invincible, and the countdown, protection and phases are stopped.</gray>"
+  resumed: "<green>The hunt goes on!</green>"
+  already-paused: "<gray>The hunt is already paused. Use /manhunt resume to continue.</gray>"
+  not-paused: "<gray>The hunt isn't paused.</gray>"
+  state: "paused"
+
+# --- commands ---
+command:
+  creating: "<gray>Creating</gray> <yellow><amount></yellow> <gray>bot(s)</gray> <white><name></white> <gray>(<difficulty>)... fetching the skin.</gray>"
+  created: "<green><amount> bot(s) <white><name></white> created.</green>"
+  create-error: "<red>Could not create the bots. Check the console.</red>"
+  invalid-difficulty: "<red>Invalid difficulty. Use easy, medium, hard or terminator.</red>"
+  no-location: "<red>This command needs a location (use it in game or give the coordinates).</red>"
+  removed: "<yellow><amount> bot(s) named <white><name></white> removed.</yellow>"
+  all-removed: "<yellow><amount> bot(s) permanently deleted.</yellow>"
+  confirm-remove-all: "<red>This deletes every bot and the save. Type <white>/manhunt remove all confirm</white> to confirm.</red>"
+  list-title: "<gold>Bots: <yellow><amount></yellow> (<green><alive> alive</green>)</gold>"
+  list-line: "<gray>-</gray> <white><display-name></white> <dark_gray>(<name>)</dark_gray> <gray>phase</gray> <yellow><phase></yellow> <gray><difficulty> · health</gray> <red><health></red> <gray>· group</gray> <aqua><group></aqua> <gray>· target</gray> <white><target></white> <gray>· <location> · kills</gray> <yellow><kills></yellow> <dark_gray>[<state>]</dark_gray>"
+  list-dead: "dead (respawning)"
+  info: |-
+    <gold><display-name></gold> <dark_gray>(<name>)</dark_gray>
+    <gray>Alive: <white><alive></white> · Phase <yellow><phase></yellow> · <difficulty></gray>
+    <gray>Health <red><health></red> · Hunger <white><hunger></white> · Kills <yellow><kills></yellow> · Aggression <white><aggression></white></gray>
+    <gray>Group <aqua><group></aqua> · Target <white><target></white></gray>
+    <gray>Location <white><location></white> · Speed <white><speed></white> blocks/s · On ground <white><on-ground></white></gray>
+    <gray>AI: <yellow><state></yellow></gray>
+  bot-not-found: "<red>Bot not found.</red>"
+  players-only: "<red>Only players can use this.</red>"
+  target-set: "<green>Every bot now chases <white><player></white>.</green>"
+  target-cleared: "<green>Forced target removed: the bots choose on their own again.</green>"
+  item-given: "<green>Item <white><item></white> given to every bot.</green>"
+  invalid-tier: "<red>Unknown armor tier: <white><tier></white>. Use leather, chainmail, iron, gold, diamond or netherite.</red>"
+  armor: "<green><white><tier></white> armor put on every bot.</green>"
+  tp-one: "<green><white><bot></white> went to <white><player></white>.</green>"
+  tp-all: "<green><amount> bot(s) brought to <white><player></white>.</green>"
+  spawnpoint-bot: "<green>Respawn point of <white><bot></white> set at <white><pos></white>.</green>"
+  spawnpoint-bot-cleared: "<green>Respawn point of <white><bot></white> removed.</green>"
+  skin-ok: "<green>Skin of <white><player></white> applied to <white><bot></white>.</green>"
+  skin-failed: "<red>Couldn't find the skin of <white><player></white>.</red>"
+  reloaded: "<green>config.yml and the language files reloaded (language: <white><language></white>).</green>"
+
+ability:
+  started: "<green>Ability <white><ability></white> started.</green>"
+  must-be-alive: "<red>You need to be alive.</red>"
+  already-active: "<red>There's already an ability active against you.</red>"
+  not-in-cave: "<red>You're not in a cave (Y below 60, no sky light).</red>"
+  no-eligible-bot: "<red>No eligible bot (alive, targeting you, in the same world, free and in the needed phase).</red>"
+  firework-out-of-range: "<red>No bot has you in firework range (about 64 blocks, no block in the way).</red>"
+  arrow-out-of-range: "<red>No bot can reach you with an arrow, not even at full draw (too far for the height difference, or a block in the way).</red>"
+  no-ambush-spot: "<red>Couldn't find a spot in the same cave for the ambush.</red>"
+  unknown: "<red>Unknown ability. Use tnt-craft, bow-burst or firework-crossbow.</red>"
+
+group:
+  not-found: "<red>The group <white><group></white> doesn't exist.</red>"
+  role: "<green>Group <white><group></white> is now <yellow><role></yellow>.</green>"
+  invalid-role: "<red>Unknown role: <white><role></white>. Use hunter or escape.</red>"
+  deleted: "<yellow>Group <white><group></white> deleted (<amount> bot(s) removed).</yellow>"
+  phases: "<green>Phase progression <yellow><value></yellow> for <white><group></white> (<amount> bot(s)).</green>"
+  chase: "<green>Group <white><group></white> chases players: <yellow><value></yellow>.</green>"
+  spawnpoint: "<green>Respawn point of group <white><group></white> at <white><pos></white>.</green>"
+  spawnpoint-cleared: "<green>Respawn point of group <white><group></white> removed.</green>"
+  enemy-added: "<green><white><group></white> is now an enemy of <white><enemy></white>.</green>"
+  enemy-removed: "<green><white><group></white> is no longer an enemy of <white><enemy></white>.</green>"
+
+settings:
+  title: "<gold>Manhunt* settings</gold> <gray>(/manhunt settings <option> <value>)</gray>"
+  line: "<gray>-</gray> <yellow><key></yellow> <gray>=</gray> <white><value></white> <dark_gray>(<path>)</dark_gray>"
+  effective-nodes: "pathnodes (effective)"
+  changed: "<green><white><key></white> = <yellow><value></yellow></green>"
+  current: "<gray><white><key></white> is <yellow><value></yellow>.</gray>"
+  unknown: "<red>Unknown option: <white><key></white>. Use /manhunt settings to see them all.</red>"
+  invalid: "<red><white><key></white>: <error></red>"
+  error:
+    boolean: "invalid value: use true or false."
+    integer: "invalid whole number (<min> to <max>)."
+    number: "invalid number (<min> to <max>)."
+    choice: "invalid value. Options: <options>"
+
+# --- what the AI is doing (/manhunt info and list) ---
+state:
+  none: "-"
+  ability: "special ability"
+  knockback: "knocked back"
+  stabilizing: "stabilizing"
+  eating: "eating"
+  extinguishing: "putting out fire"
+  suffocating: "stuck inside a block"
+  countdown: "countdown"
+  waiting-in-ring: "waiting in the ring"
+  target-in-other-dimension: "target in another dimension"
+  sneaky: "sneaky play"
+  no-target: "no target"
+  fleeing: "fleeing from <target>"
+  boat-crossing: "crossing by boat"
+  boat: "boat"
+  riding: "riding to <target> (<detail>)"
+  getting-horse: "going to get a horse"
+  bow-burst: "bow burst"
+  shooting: "shooting at <target>"
+  fleeing-low-health: "fleeing (low health)"
+  tunneling: "digging a tunnel"
+  speed-bridging: "speed bridging"
+  breaking-through: "breaking through to <target>"
+  fighting: "fighting <target>"
+  stuck-digging: "stuck, digging"
+  towering: "tower/bridge to <target>"
+  parkour: "parkour"
+  following-path: "following a path to <target> (<detail> blocks)"
+  walking-straight: "walking straight to <target> (<detail> blocks)"
+
+category:
+  general: "General"
+  bots: "Bots"
+  combat: "Combat"
+  mobility: "Mobility"
+  pathfinding: "Pathfinding"
+  tactics: "Tactics"
+  manhunt: "Hunt rules"
+  appearance: "Appearance"
+
+# --- name and description of each option in the menu (the key is the /manhunt settings key) ---
+options:
+  language:
+    name: "Language"
+    description: "Language of the messages and the menu: a file from the lang/ folder. Missing texts fall back to English."
+  tablist:
+    name: "Bots in the TAB list"
+    description: "Bots show up in the TAB list as players (with skin and ping)."
+  joinmessages:
+    name: "Join and leave messages"
+    description: "\"X joined the game\" / \"X left the game\" when a bot is created or removed."
+  deathmessages:
+    name: "Death messages"
+    description: "Bot death messages in the vanilla format (follows the death messages gamerule)."
+  serverlistcount:
+    name: "Count in the server list"
+    description: "Bots count towards the online players and the names in the server list."
+  listcommand:
+    name: "Bots in /list"
+    description: "/list includes the bots (same format as vanilla)."
+  respectpvp:
+    name: "Respect disabled PvP"
+    description: "With pvp off in the world, bots don't hit players."
+  mineskin:
+    name: "MineSkin fallback skin"
+    description: "With no skin for the chosen name, use the first .png in the skins/ folder (or the mod's robot), uploaded once to MineSkin to get a signature."
+  bothealth:
+    name: "Max health"
+    description: "Bot max health."
+  botinvincible:
+    name: "Invincible bots"
+    description: "Bots take no damage (only from the void and /kill)."
+  respawn:
+    name: "Respawn after dying"
+    description: "Bots respawn 5 s after dying."
+  persistentbots:
+    name: "Keep bots on restart"
+    description: "Bots keep existing after a server restart (bots.yml)."
+  dropinventory:
+    name: "Drop inventory on death"
+    description: "Bots drop their inventory when they die."
+  gearpersistence:
+    name: "Gear on death"
+    description: "What happens to the best sword/pickaxe/armor when the bot dies: keep it, keep it and drop a copy, or drop it and lose it."
+  phasemultiplier:
+    name: "Phase duration"
+    description: "Multiplies the length of each progression phase."
+  defaultdifficulty:
+    name: "Default difficulty"
+    description: "Difficulty used when the command doesn't give one: easy, medium, hard, terminator."
+  autoeat:
+    name: "Eat on their own"
+    description: "Bots eat when they get hungry."
+  autogapple:
+    name: "Golden apples in combat"
+    description: "Bots eat golden apples in combat (phase 5+)."
+  firewaterescape:
+    name: "Put out fire with water"
+    description: "Bots put out fire with a water bucket (phase 3+)."
+  mobsattackbots:
+    name: "Mobs attack the bots"
+    description: "Hostile mobs attack the bots like they attack players."
+  aimsmoothness:
+    name: "Aim smoothing (ms)"
+    description: "Aim smoothing in milliseconds (0 = instant, the mod's default)."
+  targetpriority:
+    name: "Player × mob priority"
+    description: "Preference between players and mobs: 5 = players only, -5 = mobs only."
+  targetmode:
+    name: "Target split"
+    description: "How the bots split the players: closest, equal, farthest."
+  allowtrident:
+    name: "Trident"
+    description: "Trident (phase 4+)."
+  allowcrossbow:
+    name: "Crossbow"
+    description: "Crossbow (phase 3+)."
+  allowspear:
+    name: "Mounted spear"
+    description: "Mounted spear (phase 4+): on horseback the bot charges the target with the phase's spear, rides past, turns around and charges again. On foot it uses the sword."
+  projinaccuracy:
+    name: "Arrow and trident inaccuracy"
+    description: "Inaccuracy multiplier for arrows/tridents."
+  humanize:
+    name: "Humanization"
+    description: "Humanization (0 to 1): aim mistakes, missed hits and an irregular rhythm."
+  meleemisschance:
+    name: "Hit miss chance"
+    description: "Chance to miss a hit (multiplied by the humanization)."
+  meleedelayjitter:
+    name: "Random delay between hits"
+    description: "Random delay between hits, in ticks."
+  meleereachvariance:
+    name: "Reach variation"
+    description: "How much the hit reach can vary."
+  meleeaimoffset:
+    name: "Hit aim offset"
+    description: "Aim offset on hits."
+  meleespamvariance:
+    name: "Hit rhythm variation"
+    description: "Variation in the hit rhythm."
+  allowtowering:
+    name: "Towers and bridges"
+    description: "Towers and bridges near the target (up to 3 blocks horizontally)."
+  allowpearl:
+    name: "Ender pearls"
+    description: "Ender pearls."
+  pearlcooldownmult:
+    name: "Ender pearl cooldown"
+    description: "Ender pearl cooldown multiplier."
+  pearldimension:
+    name: "Where to use ender pearls"
+    description: "Where the bots use ender pearls: nether, both, overworld."
+  allowhorse:
+    name: "Horses"
+    description: "Horses (phase 4+)."
+  allowboat:
+    name: "Boats"
+    description: "Boats: chase whoever is in a boat or swimming, and cross lakes by boat when it beats walking around."
+  allowelytra:
+    name: "Elytra"
+    description: "Elytra to reach far targets."
+  allowredistribution:
+    name: "Bring back far bots"
+    description: "Bots very far from the target reappear hidden near it."
+  redistdistance:
+    name: "Distance to bring bots back"
+    description: "Distance (blocks) from which a bot gets redistributed."
+  minnetherdelay:
+    name: "Min delay to change dimension (s)"
+    description: "Minimum time until the bots follow the target to another dimension."
+  maxnetherdelay:
+    name: "Max delay to change dimension (s)"
+    description: "Maximum time until the bots follow the target to another dimension."
+  pathmode:
+    name: "Path planner"
+    description: "Planner: ASTAR or DUMB."
+  pathgreediness:
+    name: "A* greediness"
+    description: "A* greediness (higher = faster, worse paths)."
+  pathnodes:
+    name: "A* node limit"
+    description: "A* node limit."
+  pathdynamicnodes:
+    name: "Automatic node limit"
+    description: "Adjusts the node limit by itself based on the computation time."
+  pathfallback:
+    name: "Walk straight without a path"
+    description: "With no path, walk straight to the target."
+  pathasync:
+    name: "Compute paths in parallel"
+    description: "Computes paths off the main thread."
+  pathdebug:
+    name: "Path as particles"
+    description: "Shows the path as particles to whoever has manhuntstar.admin."
+  caveambush:
+    name: "Cave ambush"
+    description: "Cave ambush with a bed (the bot respawns near the bed)."
+  caveambushcooldown:
+    name: "Time between ambushes (s)"
+    description: "Seconds between one bot and the next going for the ambush (1 = like the mod)."
+  autocapacities:
+    name: "Automatic TNT and fireworks"
+    description: "Automatic TNT ambush and firework crossbow (locked in the mod)."
+  fireworkcrossbow:
+    name: "Firework crossbow"
+    description: "Firework crossbow (experimental in the mod). The bot only shoots with the player in range (about 64 blocks, no block in the way)."
+  bowpressure:
+    name: "Bow burst"
+    description: "Bow burst when the bot goes too long without hitting the player. It only shoots if the arrow reaches the player."
+  silentdeaths:
+    name: "Silent deaths"
+    description: "The bot farthest from each player (200+ blocks) vanishes and respawns closer."
+  portalentrance:
+    name: "Arrive through a portal"
+    description: "Bots arrive in another dimension through a portal the player can see."
+  spawnmode:
+    name: "Spawn mode"
+    description: "NORMAL: spawns at the point. MANHUNT: spawns in a ring and waits for the hunt to start."
+  countdown:
+    name: "Countdown before the hunt (s)"
+    description: "Countdown (seconds) before the hunt starts. 0 = released as soon as someone leaves the ring."
+  countdownonleave:
+    name: "Count only after leaving the ring"
+    description: "The countdown only starts when a player who was inside the ring leaves it; until then the bots wait. Off = the countdown starts as soon as the bots are created."
+  countdowninvulnerable:
+    name: "Invulnerable bots in the ring"
+    description: "Ring bots take no damage while waiting and during the countdown."
+  ringradius:
+    name: "Ring radius (0 = automatic)"
+    description: "Ring radius in blocks. 0 = automatic (5 blocks + 1 every 5 bots)."
+  ringcenter:
+    name: "Ring center"
+    description: "auto = the ring stays where it's created; manual = at the point set with /manhunt ring point."
+  latejoin:
+    name: "Late joiners"
+    description: "Who joins while the hunt is running: hunted = a target right away; protected = not a target for the countdown time (at least 5 s); out = not hunted until the next hunt."
+  playerlistmode:
+    name: "Player list"
+    description: "off = everyone can be hunted; allowlist = only the listed players are hunted and trigger the ring; blocklist = the listed players aren't hunted and don't trigger the ring."
+  glowhunters:
+    name: "Glow on the hunters"
+    description: "Glow (outline visible through walls) on the hunters."
+  glowhunterscolor:
+    name: "Hunters' glow color"
+    description: "Hunters' glow color."
+  glowescapers:
+    name: "Glow on the escapers"
+    description: "Glow on the bots of escape groups."
+  glowescaperscolor:
+    name: "Escapers' glow color"
+    description: "Escapers' glow color."
+  nametag:
+    name: "Name above the bot"
+    description: "Name visible above the bot."
+
+# --- /manhunt menu (texts without a color get the menu's default color) ---
+menu:
+  title:
+    main: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>Menu</dark_gray>"
+    match: "<dark_gray>Match</dark_gray>"
+    target: "<dark_gray>Forced target</dark_gray>"
+    rules: "<dark_gray>Hunt rules</dark_gray>"
+    player-list: "<dark_gray>Player list</dark_gray>"
+    bots-section: "<dark_gray>Bots</dark_gray>"
+    create: "<dark_gray>Create bots</dark_gray>"
+    bots: "<dark_gray>Manage bots</dark_gray>"
+    groups: "<dark_gray>Groups</dark_gray>"
+    config: "<dark_gray>Settings</dark_gray>"
+    options: "<dark_gray>Options</dark_gray>"
+    confirm: "<dark_red>Delete every bot?</dark_red>"
+  type-name: "<yellow>Type the bots' name in chat (use % for the number). Type <white>cancel</white> to give up.</yellow>"
+  type-skin: "<yellow>Type the name of the skin's player in chat (or <white>-</white> to use the bot's name).</yellow>"
+  type-player: "<yellow>Type the name of the player to add to the list in chat. Type <white>cancel</white> to give up.</yellow>"
+  cancel-word: "cancel"
+  cancelled: "<gray>Cancelled.</gray>"
+  back: "Back"
+  close: "Close"
+  main:
+    status-bots: "Bots: <alive> alive of <total>"
+    status-hunt: "Hunt: <state>"
+    status-target: "Forced target: <target>"
+    status-list: "Player list: <mode>"
+    hunt-paused: "paused"
+    hunt-rings: "<rings> ring(s) waiting"
+    hunt-running: "running"
+    hunt-no-bots: "no bots"
+    hunt-stopped: "stopped"
+    match: "Match"
+    match-lore: "Start, pause and forced target"
+    rules: "Hunt rules"
+    rules-lore: |-
+      Ring, countdown, late joiners
+      and player list
+    bots: "Bots"
+    bots-lore: "Create, manage, groups, bring and delete"
+    config: "Settings"
+    config-lore: "Combat, mobility, paths, appearance..."
+  match:
+    start: "Start the hunt now"
+    start-none: "No ring waiting"
+    start-rings: "<rings> ring(s) waiting: releases them all"
+    pause: "Pause the hunt"
+    pause-lore: |-
+      Freezes the bots where they are, invincible,
+      and stops countdown, protection and phases
+    resume: "Resume the hunt"
+    resume-lore: |-
+      The bots move again
+      and the clocks count again
+    target: "Forced target: <target>"
+    target-lore: "Every bot after one player"
+  target:
+    pick: "Click: every bot after this player"
+    clear: "No forced target"
+    clear-lore: "The bots choose on their own again"
+  rules:
+    ring-point: "Ring point"
+    ring-point-none: "No point set"
+    ring-point-lore: |-
+      Left: set where you are (manual center)
+      Right: clear (automatic center)
+    player-list: "Player list"
+    player-list-mode: "Mode: <mode>"
+    player-list-empty: "Nobody on the list"
+    player-list-count: "<amount> player(s) on the list"
+    click-to-edit: "Click to edit"
+  player-list:
+    listed: "On the list"
+    not-listed: "Not on the list"
+    click-remove: "Click to remove"
+    click-add: "Click to add"
+    mode: "Mode: <mode>"
+    click-to-change: "Click to change"
+    add-by-name: "Add a player by name"
+    add-by-name-lore: "For someone who isn't online"
+  bots-section:
+    create: "Create bots"
+    create-lore: "Name, amount, difficulty and phase"
+    manage: "Manage bots"
+    manage-lore: "<alive> alive of <total>"
+    groups: "Groups"
+    groups-lore: "Role, chase players and delete"
+    bring: "Bring every bot to me"
+    delete: "Delete every bot"
+    delete-lore: "Asks for confirmation"
+  confirm:
+    "yes": "Yes, delete them all"
+    "no": "Cancel"
+  create:
+    name: "Name: <name>"
+    name-lore: "Click and type in chat (use % for the number)"
+    skin: "Skin: <skin>"
+    skin-same: "(same name)"
+    skin-lore: "Click and type a player name"
+    amount: "Amount: <amount>"
+    amount-lore: "Left +1, right -1, shift ±5"
+    difficulty: "Difficulty: <difficulty>"
+    difficulty-lore: "Click to change"
+    phase: "Starting phase: <phase>"
+    phase-default: "default"
+    phase-lore: "Left +1, right -1"
+    aggression: "Aggression: <aggression>"
+    aggression-lore: "Used by the special abilities"
+    spawn: "Create here"
+    spawn-lore: "Spawn mode: <mode>"
+  bots:
+    phase: "Phase <phase> • <difficulty>"
+    health: "Health <health> • Kills <kills>"
+    target: "Target: <target>"
+    help: "Left: go to it • Right: bring • Shift+right: remove"
+    previous: "Previous page"
+    next: "Next page"
+  groups:
+    role: "Role: <role>"
+    chase: "Chases players: <value>"
+    enemies: "Enemies: <enemies>"
+    help: |-
+      Left: switch role • Right: chase players
+      Shift+right: remove the group and its bots
+  config:
+    category-lore: "<amount> options • click to edit"
+    glow: "<name>: <value>"
+    glow-color: "Color: <color>"
+    glow-help: "Left: on/off • Right: change the color"
+  option:
+    value: "Value: <value>"
+    toggle: "Click to turn on/off"
+    next: "Click for the next option"
+    adjust: "Left +, right -, shift = bigger step"

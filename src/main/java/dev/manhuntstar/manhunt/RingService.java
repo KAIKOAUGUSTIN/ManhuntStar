@@ -103,11 +103,11 @@ public final class RingService {
                 }
             }
             Bukkit.broadcast(seconds > 0
-                    ? m.prefixed("contagem.roda-criada", Messages.p("segundos", seconds))
-                    : m.prefixed("contagem.roda-criada-sem-contagem"));
+                    ? m.prefixed("countdown.ring-created", Messages.p("seconds", seconds))
+                    : m.prefixed("countdown.ring-created-no-countdown"));
         } else {
             r.phase = Ring.Phase.COUNTING;
-            Bukkit.broadcast(m.prefixed("contagem.iniciada", Messages.p("segundos", seconds)));
+            Bukkit.broadcast(m.prefixed("countdown.started", Messages.p("seconds", seconds)));
         }
         updateBar(r);
         manager().markDirty();
@@ -197,14 +197,14 @@ public final class RingService {
     private void trigger(Ring r, Player who) {
         Messages m = plugin.messages();
         if (r.seconds <= 0) {
-            Bukkit.broadcast(m.prefixed("contagem.saiu", Messages.p("jogador", who.getName())));
+            Bukkit.broadcast(m.prefixed("countdown.left", Messages.p("player", who.getName())));
             release(r);
             return;
         }
         r.phase = Ring.Phase.COUNTING;
         r.ticksLeft = r.seconds * 20;
         updateBar(r);
-        Bukkit.broadcast(m.prefixed("contagem.saiu-e-contando", Messages.p("jogador", who.getName()), Messages.p("segundos", r.seconds)));
+        Bukkit.broadcast(m.prefixed("countdown.left-and-counting", Messages.p("player", who.getName()), Messages.p("seconds", r.seconds)));
         manager().markDirty();
     }
 
@@ -216,7 +216,7 @@ public final class RingService {
             if (s > 0) {
                 updateBar(r);
                 if (s <= 3) {
-                    showTitle(r, m.get("contagem.titulo-numero", Messages.p("segundos", s)), m.get("contagem.subtitulo"), Sound.BLOCK_NOTE_BLOCK_PLING);
+                    showTitle(r, m.get("countdown.title-number", Messages.p("seconds", s)), m.get("countdown.subtitle"), Sound.BLOCK_NOTE_BLOCK_PLING);
                 } else if (s == 10) {
                     for (Player p : audience(r)) {
                         p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.MASTER, 1f, 1f);
@@ -234,8 +234,8 @@ public final class RingService {
         rings.remove(r.id);
         hideBar(r);
         Messages m = plugin.messages();
-        showTitle(r, m.get("contagem.comecou-titulo"), m.get("contagem.comecou-subtitulo"), Sound.ENTITY_ENDER_DRAGON_GROWL);
-        Bukkit.broadcast(m.prefixed("contagem.comecou"));
+        showTitle(r, m.get("countdown.begun-title"), m.get("countdown.begun-subtitle"), Sound.ENTITY_ENDER_DRAGON_GROWL);
+        Bukkit.broadcast(m.prefixed("countdown.begun"));
         for (UUID id : r.bots) {
             Bot b = manager().bot(id);
             if (b != null && b.idle() != null) {
@@ -268,11 +268,11 @@ public final class RingService {
     private void updateBar(Ring r) {
         Messages m = plugin.messages();
         if (r.phase == Ring.Phase.WAITING) {
-            r.bar.name(r.seconds > 0 ? m.get("contagem.barra-esperando", Messages.p("segundos", r.seconds)) : m.get("contagem.barra-esperando-sem-contagem"));
+            r.bar.name(r.seconds > 0 ? m.get("countdown.bar-waiting", Messages.p("seconds", r.seconds)) : m.get("countdown.bar-waiting-no-countdown"));
             r.bar.color(BossBar.Color.YELLOW);
             r.bar.progress(1f);
         } else {
-            r.bar.name(m.get("contagem.barra", Messages.p("segundos", r.secondsLeft())));
+            r.bar.name(m.get("countdown.bar", Messages.p("seconds", r.secondsLeft())));
             r.bar.color(BossBar.Color.RED);
             r.bar.progress(Math.max(0f, Math.min(1f, r.ticksLeft / (float) Math.max(1, r.seconds * 20))));
         }

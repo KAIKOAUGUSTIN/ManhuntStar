@@ -165,7 +165,7 @@ public final class PauseService {
     // ------------------------------------------------------------------ barra
 
     private void updateBar() {
-        bar.name(plugin.messages().get("pausa.barra"));
+        bar.name(plugin.messages().get("pause.bar"));
         Set<UUID> now = new HashSet<>();
         for (Player p : Bukkit.getOnlinePlayers()) {
             now.add(p.getUniqueId());

@@ -81,7 +81,9 @@ public final class Brain {
     private boolean sneakyChance;
     private int sneakyBehavior = -1;
     private Vec3 lastTargetPos;
-    private String state = "-";
+    private String state = "none";
+    private String stateTarget = "";
+    private String stateDetail = "";
 
     public Brain(Bot bot) {
         this.bot = bot;
@@ -93,9 +95,30 @@ public final class Brain {
         this.elytra = new ElytraFlight(bot);
     }
 
-    /** O que a IA decidiu no último tick (mostrado no /manhunt info). */
+    /**
+     * O que a IA decidiu no último tick (mostrado no /manhunt info): chave {@code state.<estado>} do
+     * arquivo de idioma, com o alvo ({@code <target>}) e um detalhe ({@code <detail>}).
+     */
     public String state() {
         return state;
+    }
+
+    public String stateTarget() {
+        return stateTarget;
+    }
+
+    public String stateDetail() {
+        return stateDetail;
+    }
+
+    private void state(String key) {
+        state(key, "", "");
+    }
+
+    private void state(String key, String target, String detail) {
+        state = key;
+        stateTarget = target;
+        stateDetail = detail;
     }
 
     public Navigator navigator() {
@@ -165,7 +188,7 @@ public final class Brain {
         bot.combat().tickTridentPickup();
         bot.combat().tickLavaCleanup();
         if (bot.capacityLocked()) {
-            state = "capacidade especial";
+            state("ability");
             bot.manager().tactics().tickControlled(bot);
             return;
         }
@@ -185,7 +208,7 @@ public final class Brain {
         }
         if (knockbackTicks > 0) {
             knockbackTicks--;
-            state = "repulsão";
+            state("knockback");
             return;
         }
         runAI();
@@ -222,7 +245,7 @@ public final class Brain {
         }
         if (stabilizeTicks > 0) {
             stabilizeTicks--;
-            state = "estabilizando";
+            state("stabilizing");
             bot.motor().stopWalk();
             bot.motor().setSprinting(false);
             if (!bot.isInWater() && bot.velocity().y() > 0) {
@@ -232,12 +255,12 @@ public final class Brain {
             return;
         }
         if (bot.survival().isBusy()) {
-            state = bot.survival().isEating() ? "comendo" : "apagando fogo";
+            state(bot.survival().isEating() ? "eating" : "extinguishing");
             bot.motor().stopWalk();
             return;
         }
         if (escapeSuffocation()) {
-            state = "preso dentro de bloco";
+            state("suffocating");
             return;
         }
         Player chosenTarget = playerTarget;
@@ -246,7 +269,7 @@ public final class Brain {
         }
         IdleBehavior idle = bot.idle();
         if (idle != null && idle.tick()) {
-            state = bot.manager().rings().isCounting(bot) ? "contagem" : "esperando na roda";
+            state(bot.manager().rings().isCounting(bot) ? "countdown" : "waiting-in-ring");
             return;
         }
         BotGroup group = bot.group();
@@ -255,7 +278,7 @@ public final class Brain {
         elytra.tick(escaping ? null : chosenTarget);
         if (playerTarget != null) {
             if (!playerTarget.getWorld().equals(bot.world())) {
-                state = "alvo em outra dimensão";
+                state("target-in-other-dimension");
                 dimensionStuckTimer++;
                 if (dimensionStuckTimer > 20 && !teleporting) {
                     bot.manager().requestDimensionChange(playerTarget, bot.world());
@@ -271,7 +294,7 @@ public final class Brain {
                 return;
             }
             if (handleSneakyPlay(playerTarget)) {
-                state = "jogo furtivo";
+                state("sneaky");
                 return;
             }
             if (!escaping && bot.distanceTo(playerTarget) > 75.0 && pearlCooldown <= 0 && PearlAbility.canUsePearl(bot)) {
@@ -285,7 +308,7 @@ public final class Brain {
         LivingEntity active = chooseTarget(playerTarget, mobTarget, enemyBotEntity);
         if (active == null) {
             horse.handle(null);
-            state = "sem alvo";
+            state("no-target");
             // sem isto o bot ficava parado segurando a besta "carregando" até achar outro alvo
             bot.combat().cancelChargeWithoutTarget();
             if (bot.idle() == null) {
@@ -296,12 +319,12 @@ public final class Brain {
         String who = active instanceof Player pl ? pl.getName() : bot.manager().byEntity(active) != null
                 ? bot.manager().byEntity(active).name() : active.getType().name().toLowerCase(java.util.Locale.ROOT);
         if (escaping) {
-            state = "fugindo de " + who;
+            state("fleeing", who, "");
             flee(active, plannerEnabled());
             return;
         }
         if (boat.handle()) {
-            state = boat.isCrossing() ? "atravessando de barco" : "barco";
+            state(boat.isCrossing() ? "boat-crossing" : "boat");
             return;
         }
         LivingEntity horseTarget = playerTarget;
@@ -309,13 +332,13 @@ public final class Brain {
             horseTarget = enemyBotEntity;
         }
         if (horse.handle(horseTarget)) {
-            state = bot.isRiding() ? "cavalgando até " + who + " (" + horse.detail() + ")" : "indo pegar um cavalo";
+            state(bot.isRiding() ? "riding" : "getting-horse", who, bot.isRiding() ? horse.detail() : "");
             return;
         }
         double dist = bot.distanceTo(active);
         boolean los = hasFullLineOfSight(active);
         if (active instanceof Player p && tryTriggerNonHitBowPressure(p, dist)) {
-            state = "rajada de arco";
+            state("bow-burst");
             return;
         }
         updateStrafe(dist);
@@ -325,21 +348,21 @@ public final class Brain {
         }
         if (bot.combat().handleCrossbowCombat(active, dist) || bot.combat().handleTridentCombat(active, dist)
                 || bot.combat().handleLavaBucketCombat(active, dist)) {
-            state = "atirando em " + who;
+            state("shooting", who, "");
             return;
         }
         if (bot.health() <= 6f) {
-            state = "fugindo (vida baixa)";
+            state("fleeing-low-health");
             bot.combat().stopBlock();
             flee(active, plannerEnabled());
             return;
         }
         if (active instanceof Player p && forceTunnelForLineOfSight(p, dist, los)) {
-            state = "cavando túnel";
+            state("tunneling");
             return;
         }
         if (towering.handleSpeedBridging(canPlaceToweringBlocksNearTarget())) {
-            state = "ponte rápida";
+            state("speed-bridging");
             return;
         }
         if (playerTarget != null) {
@@ -349,11 +372,11 @@ public final class Brain {
         // corrente que prende o bot. Ele sai nadando e pulando (melee faz isso).
         boolean inFluid = bot.isInWater() || bot.isInLava();
         if (dist < 4.5 && !los && !inFluid && openPassageTo(active)) {
-            state = "abrindo passagem até " + who;
+            state("breaking-through", who, "");
             return;
         }
         if (dist < 4.5) {
-            state = "lutando com " + who;
+            state("fighting", who, "");
             melee(active, dist);
             return;
         }
@@ -361,7 +384,7 @@ public final class Brain {
             bot.combat().stopBlock();
         }
         if (stuckMiningMode && active instanceof Player p) {
-            state = "preso, cavando";
+            state("stuck-digging");
             bot.mining().executeHardcodedMining(p);
             if (bot.isInWater()) {
                 bot.motor().setShouldBeSwimming(true);
@@ -375,7 +398,7 @@ public final class Brain {
             return;
         }
         if (active instanceof Player sky && towering.handle(sky, navigator)) {
-            state = "torre/ponte até " + who;
+            state("towering", who, "");
             return;
         }
         if (bot.isInWater()) {
@@ -401,7 +424,7 @@ public final class Brain {
         boolean hasPath = false;
         if (usePlanner) {
             if (navigator.isParkouring()) {
-                state = "parkour";
+                state("parkour");
                 navigator.executeParkourTick();
                 return;
             }
@@ -417,7 +440,7 @@ public final class Brain {
                 boat.requestCrossing(crossing, active);
             }
         }
-        state = (hasPath ? "seguindo caminho até " : "indo direto até ") + who + String.format(java.util.Locale.ROOT, " (%.0f blocos)", dist);
+        state(hasPath ? "following-path" : "walking-straight", who, String.format(java.util.Locale.ROOT, "%.0f", dist));
         dumbStarMove(targetLoc, hasPath, active);
         if (!stuckMiningMode && bot.distanceTo(active) > 6.0) {
             bot.motor().addVelocity(swarmSeparation());

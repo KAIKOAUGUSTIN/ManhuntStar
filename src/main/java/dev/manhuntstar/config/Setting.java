@@ -4,26 +4,28 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Uma opção do plugin: caminho no config.yml, chave usada nos comandos, nome mostrado no menu,
- * valor padrão e validação. O valor é volátil porque algumas opções (ex.: limite de nós do A*)
- * são lidas por threads de pathfinding.
+ * Uma opção do plugin: caminho no config.yml (e o caminho em português das versões antigas, lido na
+ * migração), chave usada nos comandos, valor padrão e validação. Nome e descrição ficam nos arquivos
+ * de idioma ({@code options.<chave>}). O valor é volátil porque algumas opções (ex.: limite de nós
+ * do A*) são lidas por threads de pathfinding.
  */
 public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setting.Dbl, Setting.Enumerated, Setting.Text {
 
     private final String path;
+    private final String legacyPath;
     private final String key;
-    private final String label;
     private final Category category;
     private final T defaultValue;
     private volatile T value;
 
-    protected Setting(String path, String key, String label, Category category, T defaultValue) {
+    protected Setting(String path, String legacyPath, String key, Category category, T defaultValue) {
         this.path = path;
+        this.legacyPath = legacyPath;
         this.key = key;
-        this.label = label;
         this.category = category;
         this.defaultValue = defaultValue;
         this.value = defaultValue;
@@ -33,13 +35,13 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         return path;
     }
 
-    public String key() {
-        return key;
+    /** Caminho da opção no config.yml das versões com chaves em português (null se não existia). */
+    public String legacyPath() {
+        return legacyPath;
     }
 
-    /** Nome curto em português para o menu. */
-    public String label() {
-        return label;
+    public String key() {
+        return key;
     }
 
     public Category category() {
@@ -58,7 +60,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         this.value = sanitize(newValue);
     }
 
-    /** Converte um texto digitado em comando; lança IllegalArgumentException com mensagem em PT-BR se inválido. */
+    /** Converte um texto digitado em comando; lança {@link InvalidValue} se inválido. */
     public abstract T parse(String raw);
 
     /** Define a partir de texto (comando ou menu). */
@@ -77,7 +79,12 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     void load(ConfigurationSection cfg) {
-        Object raw = cfg.get(path);
+        load(cfg, path);
+    }
+
+    /** Lê a opção de outro caminho (o antigo, na migração do config.yml). */
+    void load(ConfigurationSection cfg, String from) {
+        Object raw = from == null ? null : cfg.get(from);
         if (raw == null) {
             value = defaultValue;
             return;
@@ -102,12 +109,12 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     public enum Category {
-        GERAL, BOTS, COMBATE, MOBILIDADE, PATHFINDING, TATICAS, MANHUNT, APARENCIA
+        GENERAL, BOTS, COMBAT, MOBILITY, PATHFINDING, TACTICS, MANHUNT, APPEARANCE
     }
 
     public static final class Bool extends Setting<Boolean> {
-        public Bool(String path, String key, String label, Category category, boolean def) {
-            super(path, key, label, category, def);
+        public Bool(String path, String legacyPath, String key, Category category, boolean def) {
+            super(path, legacyPath, key, category, def);
         }
 
         @Override
@@ -116,7 +123,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
             return switch (s) {
                 case "true", "on", "sim", "s", "1", "yes", "ligado", "ativado" -> true;
                 case "false", "off", "nao", "não", "n", "0", "no", "desligado", "desativado" -> false;
-                default -> throw new IllegalArgumentException("Valor inválido: use true ou false.");
+                default -> throw new InvalidValue("settings.error.boolean");
             };
         }
 
@@ -134,8 +141,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         private final int min;
         private final int max;
 
-        public Int(String path, String key, String label, Category category, int def, int min, int max) {
-            super(path, key, label, category, def);
+        public Int(String path, String legacyPath, String key, Category category, int def, int min, int max) {
+            super(path, legacyPath, key, category, def);
             this.min = min;
             this.max = max;
         }
@@ -145,7 +152,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
             try {
                 return Integer.parseInt(raw.trim());
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Número inteiro inválido (" + min + " a " + max + ").");
+                throw new InvalidValue("settings.error.integer", "min", min, "max", max);
             }
         }
 
@@ -177,8 +184,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         private final double max;
         private final double step;
 
-        public Dbl(String path, String key, String label, Category category, double def, double min, double max, double step) {
-            super(path, key, label, category, def);
+        public Dbl(String path, String legacyPath, String key, Category category, double def, double min, double max, double step) {
+            super(path, legacyPath, key, category, def);
             this.min = min;
             this.max = max;
             this.step = step;
@@ -189,7 +196,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
             try {
                 return Double.parseDouble(raw.trim().replace(',', '.'));
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Número inválido (" + min + " a " + max + ").");
+                throw new InvalidValue("settings.error.number", "min", min, "max", max);
             }
         }
 
@@ -232,8 +239,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     public static final class Enumerated<E extends Enum<E> & Choice> extends Setting<E> {
         private final Class<E> type;
 
-        public Enumerated(String path, String key, String label, Category category, Class<E> type, E def) {
-            super(path, key, label, category, def);
+        public Enumerated(String path, String legacyPath, String key, Category category, Class<E> type, E def) {
+            super(path, legacyPath, key, category, def);
             this.type = type;
         }
 
@@ -245,7 +252,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
                     return e;
                 }
             }
-            throw new IllegalArgumentException("Valor inválido. Opções: " + String.join(", ", suggestions()));
+            throw new InvalidValue("settings.error.choice", "options", String.join(", ", suggestions()));
         }
 
         @Override
@@ -269,21 +276,60 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     public static final class Text extends Setting<String> {
-        private final List<String> suggestions;
+        private final Supplier<List<String>> suggestions;
+        private final boolean onlySuggestions;
 
-        public Text(String path, String key, String label, Category category, String def, String... suggestions) {
-            super(path, key, label, category, def);
-            this.suggestions = Arrays.asList(suggestions);
+        public Text(String path, String legacyPath, String key, Category category, String def, String... suggestions) {
+            super(path, legacyPath, key, category, def);
+            List<String> fixed = Arrays.asList(suggestions);
+            this.suggestions = () -> fixed;
+            this.onlySuggestions = false;
+        }
+
+        /**
+         * Texto que só aceita uma das sugestões, que mudam com o tempo (ex.: os idiomas da pasta
+         * lang/). Maiúsculas e "_" viram minúsculas e "-" ("PT_BR" = "pt-br").
+         */
+        public Text(String path, String legacyPath, String key, Category category, String def, Supplier<List<String>> suggestions) {
+            super(path, legacyPath, key, category, def);
+            this.suggestions = suggestions;
+            this.onlySuggestions = true;
         }
 
         @Override
         public String parse(String raw) {
-            return raw.trim();
+            String value = raw.trim();
+            if (!onlySuggestions) {
+                return value;
+            }
+            value = value.toLowerCase(Locale.ROOT).replace('_', '-');
+            List<String> options = suggestions.get();
+            if (!options.contains(value)) {
+                throw new InvalidValue("settings.error.choice", "options", String.join(", ", options));
+            }
+            return value;
         }
 
         @Override
         public List<String> suggestions() {
-            return suggestions;
+            return suggestions.get();
+        }
+    }
+
+    /**
+     * Valor inválido digitado num comando ou no menu: a mensagem é a chave do arquivo de idioma, com
+     * os placeholders em pares (nome, valor).
+     */
+    public static final class InvalidValue extends IllegalArgumentException {
+        private final transient Object[] placeholders;
+
+        public InvalidValue(String messageKey, Object... placeholders) {
+            super(messageKey);
+            this.placeholders = placeholders;
+        }
+
+        public Object[] placeholders() {
+            return placeholders;
         }
     }
 

@@ -6,32 +6,27 @@ import java.util.Locale;
 
 /**
  * Dificuldade do bot: fase inicial, chance de drop por fase, duração de cada fase,
- * multiplicador de dano recebido e de dano causado.
+ * multiplicador de dano recebido e de dano causado. O nome mostrado fica nos arquivos de idioma
+ * ({@code difficulty.<nome>}).
  */
 public enum BotDifficulty implements Setting.Choice {
-    EASY("Fácil", 1, 1.0f, 300, 1.0f, 1.0f),
-    MEDIUM("Médio", 2, 0.5f, 180, 0.95f, 1.0f),
-    HARD("Difícil", 4, 0.1f, 250, 0.9f, 1.1f),
-    TERMINATOR("Terminator", 8, 0.0f, 600, 0.85f, 1.15f);
+    EASY(1, 1.0f, 300, 1.0f, 1.0f),
+    MEDIUM(2, 0.5f, 180, 0.95f, 1.0f),
+    HARD(4, 0.1f, 250, 0.9f, 1.1f),
+    TERMINATOR(8, 0.0f, 600, 0.85f, 1.15f);
 
-    private final String label;
     private final int startPhase;
     private final float dropChance;
     private final int phaseDurationSeconds;
     private final float damageTakenMultiplier;
     private final float attackMultiplier;
 
-    BotDifficulty(String label, int startPhase, float dropChance, int phaseDurationSeconds, float damageTakenMultiplier, float attackMultiplier) {
-        this.label = label;
+    BotDifficulty(int startPhase, float dropChance, int phaseDurationSeconds, float damageTakenMultiplier, float attackMultiplier) {
         this.startPhase = startPhase;
         this.dropChance = dropChance;
         this.phaseDurationSeconds = phaseDurationSeconds;
         this.damageTakenMultiplier = damageTakenMultiplier;
         this.attackMultiplier = attackMultiplier;
-    }
-
-    public String label() {
-        return label;
     }
 
     public int startPhase() {

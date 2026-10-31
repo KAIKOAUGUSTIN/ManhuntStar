@@ -1,15 +1,15 @@
 # Changelog
 
-Gerado automaticamente a cada merge na main.
+Generated automatically on every merge into main.
 
 ## 1.5.4 - 2026-10-31
 
-### Novidades
+### Changes
 
-- Paper 26.3, versão 1.6.0 (a807b94)
-- Release automática a cada merge na main (c340437)
+- Paper 26.3 support (a807b94)
+- Automatic release on every merge into main (c340437)
 
-### Dependências
+### Dependencies
 
 - Bump io.papermc.paper:paper-api (3a31a3f)
 - Bump gradle-wrapper from 9.8.0 to 9.8.2 (3af64c4)
