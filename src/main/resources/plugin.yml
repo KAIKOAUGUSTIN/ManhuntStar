@@ -1,7 +1,7 @@
 name: ManhuntStar
 version: '${version}'
 main: dev.manhuntstar.ManhuntStarPlugin
-api-version: '26.2'
+api-version: '26.3'
 load: POSTWORLD
 prefix: Manhunt*
 description: Manhunt* - bots caçadores de ManHunt para Paper.
