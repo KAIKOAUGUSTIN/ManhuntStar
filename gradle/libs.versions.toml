@@ -1,9 +1,6 @@
 [versions]
-# Versão principal da API do Paper (compilação e testes).
-paper-api = "26.3.build.214-stable"
-# Versão beta usada só para checar compatibilidade (compileAgainst263). Fica fora de [libraries]
-# para o Dependabot não trocar a versão principal pela beta; atualize à mão.
-paper-compat = "26.3.build.159-beta"
+# Versão da API do Paper (compilação e testes).
+paper-api = "26.3.build.231-stable"
 junit = "6.1.3"
 
 [libraries]

@@ -1,0 +1,111 @@
+# Release automática: cada PR que entra na main gera uma versão nova.
+#
+# 1. Sobe a versão do gradle.properties (patch; etiqueta "minor" ou "major" no PR muda isso,
+#    "sem-release" pula tudo).
+# 2. Compila e testa com a versão nova.
+# 3. Commita a versão e o CHANGELOG.md na main, cria a tag vX.Y.Z e a release com o jar.
+# 4. Leva a main de volta para a dev, para a dev já começar na versão nova.
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && !contains(github.event.pull_request.labels.*.name, 'sem-release')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Calcular a versão
+        id: versao
+        env:
+          ETIQUETAS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          atual=$(sed -n 's/^version=//p' gradle.properties)
+          IFS=. read -r major minor patch <<< "$atual"
+          if jq -e 'index("major")' <<< "$ETIQUETAS" > /dev/null; then
+            major=$((major + 1)); minor=0; patch=0
+          elif jq -e 'index("minor")' <<< "$ETIQUETAS" > /dev/null; then
+            minor=$((minor + 1)); patch=0
+          else
+            patch=$((patch + 1))
+          fi
+          nova="$major.$minor.$patch"
+          if git rev-parse -q --verify "refs/tags/v$nova" > /dev/null; then
+            echo "::error::A tag v$nova já existe."
+            exit 1
+          fi
+          sed -i "s/^version=.*/version=$nova/" gradle.properties
+          echo "anterior=$atual" >> "$GITHUB_OUTPUT"
+          echo "nova=$nova" >> "$GITHUB_OUTPUT"
+          echo "Versão $atual -> $nova"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Compilar e testar
+        run: ./gradlew build
+
+      - name: Notas da versão e CHANGELOG
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/commits" \
+            --jq '.[] | select((.parents | length) == 1) | [.sha, (.author.login // ""), (.commit.message | split("\n")[0])] | @tsv' \
+            > "$RUNNER_TEMP/commits.tsv"
+          bash .github/scripts/notas-da-versao.sh "${{ steps.versao.outputs.nova }}" "${{ steps.versao.outputs.anterior }}" \
+            "$RUNNER_TEMP/commits.tsv" "$RUNNER_TEMP/notas.md"
+          cat "$RUNNER_TEMP/notas.md"
+
+      - name: Commit e tag na main
+        env:
+          VERSAO: ${{ steps.versao.outputs.nova }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties CHANGELOG.md
+          git commit -m "Versão $VERSAO"
+          git tag "v$VERSAO"
+          git push origin HEAD:main "v$VERSAO"
+
+      - name: Criar a release
+        env:
+          VERSAO: ${{ steps.versao.outputs.nova }}
+        run: |
+          gh release create "v$VERSAO" "build/libs/ManhuntStar-$VERSAO.jar" \
+            --title "ManhuntStar $VERSAO" \
+            --notes-file "$RUNNER_TEMP/notas.md" \
+            --verify-tag
+
+      - name: Levar a versão para a dev
+        run: |
+          git fetch origin dev
+          if git merge-base --is-ancestor origin/dev HEAD; then
+            git push origin HEAD:dev
+          else
+            git checkout -B dev origin/dev
+            if git merge --no-edit main && git push origin dev; then
+              echo "main mesclada na dev."
+            else
+              echo "::warning::Não deu para mesclar a main na dev sozinho; faça o merge à mão."
+            fi
+          fi
