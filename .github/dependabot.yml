@@ -9,6 +9,8 @@ updates:
   # Dependências do Gradle (gradle/libs.versions.toml) e o próprio Gradle Wrapper.
   - package-ecosystem: gradle
     directory: /
+    # PRs vão para a dev; a main só recebe da dev (e cada merge na main vira uma release)
+    target-branch: dev
     registries:
       - papermc
     schedule:

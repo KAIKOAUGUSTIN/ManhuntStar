@@ -9,8 +9,8 @@ de lança), barco e elytra, e seguem o jogador para o Nether e o End.
 
 ## Instalação
 
-1. Coloque `ManhuntStar-1.6.0.jar` na pasta `plugins/` de um servidor **Paper 26.3**. Para o Paper 26.2, use a
-   versão 1.5.3.
+1. Baixe o `ManhuntStar-<versão>.jar` da [última release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest)
+   e coloque na pasta `plugins/` de um servidor **Paper 26.3**. Para o Paper 26.2, use a versão 1.5.3.
 2. Inicie o servidor. São criados `plugins/ManhuntStar/config.yml`, `messages.yml` e a pasta `skins/`.
 3. Entre como operador e use `/manhunt create Cacador 3` perto de você, ou abra `/manhunt menu`.
 
@@ -150,10 +150,19 @@ Precisa do JDK 25.
 ./gradlew build
 ```
 
-O jar sai em `build/libs/ManhuntStar-1.6.0.jar`. O `build` também roda os testes.
+O jar sai em `build/libs/ManhuntStar-<versão>.jar`. O `build` também roda os testes.
 
 Diagnóstico em servidor de teste (flags de JVM): `-Dmanhuntstar.teste.mira=true` registra no console o acerto ou
 erro de cada projétil dos bots; `-Dmanhuntstar.teste.cavalo=true` mostra detalhes do cavalo no `/manhunt info`.
+
+## Versões e releases
+
+O trabalho vai para a branch `dev` (os PRs do Dependabot também). Quando um PR entra na `main`, o workflow
+`Release` sobe a versão em `gradle.properties`, compila e testa, atualiza o `CHANGELOG.md` com os commits do
+PR, commita isso na `main`, cria a tag `vX.Y.Z` e a release com o jar, e leva a `main` de volta para a `dev`.
+
+A versão sobe no patch (1.5.3 → 1.5.4). Para subir mais, ponha uma etiqueta no PR antes do merge: `minor`
+(1.5.3 → 1.6.0) ou `major` (1.5.3 → 2.0.0). Com a etiqueta `sem-release` o merge não gera versão.
 
 ## Créditos
 
