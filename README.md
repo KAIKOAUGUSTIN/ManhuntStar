@@ -1,6 +1,6 @@
 # Manhunt*
 
-**ManHunt** hunter bots for **Paper 26.3** servers.
+**ManHunt** hunter bots for Paper servers.
 
 The bots are **Mannequin** entities (the game's "player-skinned dummy") driven by the plugin to act like
 players: they run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields,
@@ -10,7 +10,7 @@ boats and elytra, and follow the player to the Nether and the End.
 ## Installation
 
 1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest)
-   and put it in the `plugins/` folder of a **Paper 26.3** server. For Paper 26.2, use version 1.5.3.
+   and put it in the `plugins/` folder of a Paper server. Only 26.2 and 26.3 are supported
 2. Start the server. It creates `plugins/ManhuntStar/config.yml`, the `lang/` folder and the `skins/` folder.
 3. Join as an operator and use `/manhunt create Hunter 3` near you, or open `/manhunt menu`.
 
