@@ -1,29 +1,27 @@
 # 🏹 ManhuntStar
 
-**ManHunt** hunter bots for Paper 26.2 and 26.3 servers.
+**ManHunt** hunter bots for Paper servers.
 
-The bots are **Mannequin** entities (the game's "player-skinned dummy") driven by the plugin to act like players: they run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, level up through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow the player to the Nether and the End.
+No friends online? Spawn a pack of hunters that play like real players and try to stop you from beating the game. They run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, get stronger through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow you to the Nether and the End.
+
+## ⭐ Support the project
+
+If you like ManhuntStar, consider giving the repository a ⭐ on GitHub! It helps the project gain visibility and motivates further development.
 
 ## 📦 Installation
 
-1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest) and put it in the `plugins/` folder of a Paper 26.2 or 26.3 server. The same jar works on both.
-2. Start the server. It creates `plugins/ManhuntStar/config.yml`, the `lang/` folder and the `skins/` folder.
-3. Join as an operator and use `/manhunt create Hunter 3` near you, or open `/manhunt menu`.
+1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest).
+2. Put it in your server's `plugins/` folder and start the server.
 
-Requirements: Paper 26.2 or 26.3 and Java 25 (the same as Paper 26.x). No other plugins needed.
+Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
 
-Version 1.5.5 had one jar per Paper version (`1.5.5-26.2` and `1.5.5-26.3`); from the next version on, a single jar covers both.
+## 🎯 Quick start
 
-## 🌍 Languages
+1. Join as an operator and run `/manhunt create Hunter 3` (or open `/manhunt menu`). Three hunters appear in a ring around you.
+2. Walk out of the ring. A countdown starts, with a bar at the top of the screen and 3-2-1 titles.
+3. When it ends, the hunters come after you. Run!
 
-Every message and the whole menu come from `plugins/ManhuntStar/lang/<language>.yml`. The plugin ships with **English** (`en`, the default), **Brazilian Portuguese** (`pt-br`), **French** (`fr`), **Russian** (`ru`) and **Simplified Chinese** (`zh-cn`).
-
-- Pick the language with `general.language` in `config.yml`, with `/manhunt settings language pt-br`, or in `/manhunt menu` (Settings → General). It switches right away.
-- The files use the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format and can be edited. Tags such as `<bot>`, `<player>` and `<amount>` are filled in by the plugin. Any text missing from a file falls back to English.
-- To add a language, copy `en.yml` to `lang/<name>.yml`, translate it and set `language: <name>`.
-- When the default texts change in a new version, the old file is moved to `lang/old/` and replaced.
-
-Commands and `config.yml` keys are always in English, whatever the language.
+Use `/manhunt pause` and `/manhunt resume` to stop and continue the hunt, and `/manhunt remove all confirm` to clear every bot.
 
 ## ⚙️ Commands
 
@@ -45,7 +43,7 @@ Everything lives under `/manhunt` and needs the `manhuntstar.admin` permission (
 |---|---|
 | `/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]` | Creates bots where you are (or at the ring point, with a manual center), or at `at x y z`. In MANHUNT mode they spawn in a ring. |
 | `/manhunt remove <bot>` · `/manhunt remove all confirm` | Removes the bots with that name / deletes them all, including the save. |
-| `/manhunt list` · `/manhunt info <bot>` | Lists the bots (health, phase, target, location, what the AI is doing). |
+| `/manhunt list` · `/manhunt info <bot>` | Lists the bots (health, phase, target, location, what each one is doing). |
 | `/manhunt tp <bot\|all> [player]` | Brings bots to a player (or to you). |
 | `/manhunt skin <bot> <player>` | Changes the skin. |
 | `/manhunt spawnpoint <bot> [x y z \| clear]` | A bot's respawn point. |
@@ -78,89 +76,59 @@ Names with `%`, accents or spaces go in quotes in commands, for example `/manhun
 
 The old option names (`starttime`, `glowing`, `nodes`, `min_sec_range_nether_entering`, `botuseelytra`...) still work in `/manhunt settings`, but don't show up in Tab completion.
 
-## 🔧 What you can configure
+## 🔧 Configuration
 
-Everything is commented in `config.yml` and can be changed in game. Highlights:
+Everything is commented in `plugins/ManhuntStar/config.yml` and can also be changed in game, with `/manhunt settings` or in `/manhunt menu`. Highlights:
 
-- ⏱️ **Ring and countdown before the hunt** (`manhunt.countdown-seconds`, default 20): the ring has no owner. The bots wait in it until a player who was inside leaves (the first one counts); then the head-start countdown begins, with a bar at the top and 3-2-1 titles, and only then do they start hunting. A ring created far from everyone waits for someone to walk in and out (or for `/manhunt start`). Each ring has its own countdown, and the ring is saved if the server restarts. With `manhunt.countdown-on-ring-leave: false` the countdown starts as soon as the bots are created; `0` = the bots are released as soon as someone leaves the ring.
+- ⏱️ **Ring and countdown before the hunt** (`manhunt.countdown-seconds`, default 20): the bots wait in the ring until a player who was inside leaves; then the head-start countdown begins, and only then do they start hunting. A ring created far from everyone waits for someone to walk in and out (or for `/manhunt start`). With `manhunt.countdown-on-ring-leave: false` the countdown starts as soon as the bots are created; `0` = the bots are released as soon as someone leaves the ring.
 - 📍 **Ring radius and center**: `manhunt.ring-radius` (`0` = automatic, grows with the number of bots) and `manhunt.ring-center` (`auto` = where the ring is created; `manual` = at the point set with `/manhunt ring point`).
 - 🛡️ **Late joiners** (`manhunt.late-join`): `protected` (default) isn't a target for the ring's countdown time, at least 5 s; `hunted` becomes a target right away; `out` isn't hunted until the next hunt. Someone who was already in the hunt, drops and comes back is still hunted.
 - 👤 **Player list** (`manhunt.player-list-mode` and `/manhunt players`): `allowlist` = only the listed players are hunted and trigger the ring; `blocklist` = the listed players aren't hunted and don't trigger the ring. `/manhunt target` overrides it.
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
-- 🎭 **Player fidelity**: bots in TAB with skin and ping, counted in the server list's player count and in `/list`, "joined/left the game" messages and vanilla death messages.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
-- Combat, mobility, pathfinding (A* or straight), tactics, persistence, default difficulty...
+- Combat, mobility, pathfinding, tactics, saving, default difficulty...
 
-Upgrading from 1.5.x or older: the old `config.yml` with Portuguese keys is converted to the new English keys on the first start (values kept, language set to `pt-br`) and saved as `config-old.yml`. The old `messages.yml` is no longer used and is renamed to `messages-old.yml`; texts now live in `lang/`.
+Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
 
-## ⚠️ Limitations
+## ✨ Features
 
-- Other plugins that look for "players" (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the count, but they aren't players to the server API.
-- Bot and group names in the menu are typed in chat.
-- The A* debug lines are particles (`/manhunt settings pathdebug true`), visible to whoever has `manhuntstar.admin`.
-- The TAB list uses the server's internal packets; if a future Paper version changes that packet, only that feature turns off (with a console warning) and the rest of the plugin keeps working.
+- 🎯 **Sharp aim**: bows, crossbows, tridents and firework crossbows lead moving targets, and the bots don't waste shots when a block is in the way.
+- 🐎 **Horses and spears**: mounted bots gallop, jump gaps and charge with spears; on foot they switch to swords.
+- 🚣 **Boats**: when crossing a lake is faster than walking around it, the bots place a boat and row across.
+- 🧭 **No idle bots**: bots far from every player keep moving and chasing.
+- 🎭 **They look like players**: shown in TAB with skin and ping, counted in the server list and in `/list`, with "joined/left the game" and vanilla death messages.
+- 🎨 **Skins**: from any Mojang account, from a `.png` in `plugins/ManhuntStar/skins/` or the default robot skin.
+- 💾 **Saved**: bots, groups and gear come back after a restart.
+- ⚡ **Light on the server**: in testing, 40 bots fighting each other kept the server at about 3 ms per tick (the limit is 50 ms).
 
-## 🧩 Plugin details
+## 🌍 Languages
 
-- 🎯 **Aim**: crossbow, bow, trident and firework crossbow compute the angle from the server's real projectile physics and lead the target by the flight time.
-- 🏹 **Bow burst**: the bot draws the bow as much as it needs, like in the game (the arrow's power depends on the draw time, up to 3.0 blocks/tick at full draw, which is a critical arrow). It picks the draw that hits soonest, adding the draw and flight times, and only shoots if the arrow reaches the player without hitting a block; from a hilltop the arrow goes much farther.
-- 🎆 **Firework crossbow**: the rocket leaves at 1.6 blocks/tick, like the game's crossbow, with flight duration 3 (explodes between 40 and 51 ticks, about 64 blocks). The bot only shoots if the rocket reaches the player before exploding and with no block in the way; with the crossbow loaded, it waits up to 1 s for the player to get in range and, if they don't, gives up without shooting.
-- 🐎 **Horse**: in the game only one player controls a horse; with a bot mounted, the horse's AI is turned off while it rides (the horse turns where the bot looks, gallops, jumps obstacles and gaps, floats on water) and back on when it dismounts.
-- 🗡️ **Mounted spear**: on horseback, the bot holds the phase's spear and does the game's charge against the target (the damage comes from the horse's speed, and at a gallop it knocks riders off). It rides past the target, keeps going, turns around and charges again; after 3 passes without a hit, it dismounts and fights with the sword. On foot it doesn't use the spear (`combat.mounted-spear`).
-- 🚣 **Boat on the path**: A* compares crossing a lake by boat with walking around it. When the crossing pays off, the bot places a boat at the shore, rows to the other side and breaks the boat when it gets off (`mobility.boats`).
-- 🧭 **Bots far from players** keep moving: the plugin keeps the chunks around each bot loaded (with counting, so one bot doesn't unload another's chunk) and stops Paper from making the bot "inactive" for being far from players.
-- 🎨 **Skins**: from the Mojang account of the name, from a `.png` in `plugins/ManhuntStar/skins/` or the default robot skin.
-- 💾 **Persistence**: bots, groups and gear are saved in `bots.yml` and restored on restart.
+ManhuntStar comes in **English** (`en`, the default), **Brazilian Portuguese** (`pt-br`), **French** (`fr`), **Russian** (`ru`) and **Simplified Chinese** (`zh-cn`). Every message and the whole menu are translated; commands and `config.yml` keys stay in English.
 
-## ⚡ Performance
+Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` (Settings → General) or with `general.language` in `config.yml`. It switches right away.
 
-A single tick for every bot; paths computed off the main thread on chunk snapshots shared between bots; heavy work spread across ticks. In testing, 40 bots fighting each other kept the server at ~3 ms per tick (the limit is 50 ms).
+### Translating the plugin
+
+1. Copy `plugins/ManhuntStar/lang/en.yml` to a new file in the same folder, named after your language, for example `es.yml`.
+2. Translate the texts between quotes. Keep the tags in `<...>`: `<bot>`, `<player>`, `<amount>` and the like are filled in by the plugin, and color tags such as `<red>` or `<bold>` follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format.
+3. Run `/manhunt reload`, then `/manhunt settings language es`.
+
+Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...), but when an update changes their default texts, your copy is moved to `lang/old/` and replaced; a file with your own name is never replaced.
+
+Want your translation in the plugin? Open a pull request adding it to `src/main/resources/lang/`.
 
 ## 🔌 API for other plugins
 
-`dev.manhuntstar.api.ManhuntStarAPI` (list the bots, find the bot of an entity) and the events `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
+`dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot behind an entity. Events: `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
 
 ## 🏗️ Building
 
-Needs JDK 25.
+Needs JDK 25. Run `./gradlew build`; the jar ends up in `build/libs/`.
 
-```bash
-./gradlew build
-```
+## ⚠️ Limitations
 
-The jar ends up in `build/libs/ManhuntStar-<version>.jar`. `build` also runs the tests, including one that checks every language file has the same keys and placeholders as `en.yml`, and `compileAgainstLatest` (see below).
-
-The `Build` workflow does the same on every PR and on every push to `dev` and `main`, and keeps the jar as an artifact for 14 days (on the run's Summary page, under Artifacts), so you can test a PR without building it.
-
-### 🧱 Supported Paper versions
-
-One jar runs on every supported version. The supported range lives in `gradle/libs.versions.toml`:
-
-- `paper-api-min` is the oldest supported version (now 26.2). The plugin is compiled against it, and `plugin.yml`'s `api-version` comes from it, so older servers refuse the jar and newer ones load it.
-- `paper-api` is the newest (now 26.3), kept up to date by Dependabot. The tests run on it, and the `compileAgainstLatest` task compiles the code against it to catch anything Paper removed or changed.
-- Whatever differs between the versions goes through `dev.manhuntstar.util.PaperCompat`: it checks once whether the server has the newer method and uses the older one when it doesn't. Today that's only `Entity#isMarkedInvulnerable()` (26.3), used by the pause.
-
-So code that calls something only the newest version has doesn't compile against `paper-api-min`, and the build fails until the call goes through `PaperCompat`. To drop the oldest version, set `paper-api-min` to a build of the next one (for example `26.3.build.231-stable`).
-
-### 🔔 Discord notifications
-
-Every push to `dev` that the `Build` workflow builds is posted to a Discord channel: an embed with the new commits, the commit, the last release, the supported Paper versions and links to the run, with the jar attached (a red embed with no jar when the build fails). Pushes made by the `Release` workflow aren't posted.
-
-To turn it on, create a webhook in the channel (channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL) and save the URL as the `DISCORD_WEBHOOK_URL` secret in **Settings → Secrets and variables → Actions**. Without the secret, the step is skipped.
-
-Test server diagnostics (JVM flags): `-Dmanhuntstar.teste.mira=true` logs whether each bot projectile hit or missed; `-Dmanhuntstar.teste.cavalo=true` shows horse details in `/manhunt info`.
-
-## 🚀 Versions and releases
-
-Work goes to the `dev` branch (Dependabot's PRs too). When a PR is merged into `main`, the `Release` workflow bumps the version in `gradle.properties`, builds and tests, updates `CHANGELOG.md` with the PR's commits, commits that to `main`, creates the `vX.Y.Z` tag and the release with the jar, and brings `main` back into `dev`.
-
-The version goes up by a patch (1.5.3 → 1.5.4). To go up more, add a label to the PR before merging: `minor` (1.5.3 → 1.6.0) or `major` (1.5.3 → 2.0.0). With the `skip-release` label the merge doesn't make a release.
-
-The workflow pushes with the `RELEASE_TOKEN` secret: a token from someone in the bypass list of the `main` and `dev` rulesets, with **Contents: Read and write** permission on this repository.
-
-## ⭐ Support the project
-
-If you like ManhuntStar, consider giving the repository a ⭐ on GitHub! It helps the project gain visibility and motivates further development.
+- Other plugins that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
+- Bot and group names in the menu are typed in chat.
 
 ## 🙏 Credits
 
