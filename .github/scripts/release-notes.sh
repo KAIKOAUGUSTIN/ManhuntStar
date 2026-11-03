@@ -39,7 +39,12 @@ while IFS=$'\t' read -r sha author message; do
         type=Updated
     fi
     shopt -u nocasematch
-    sections[$type]+="- ${text^} (${sha:0:7})"$'\n'
+    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case
+    first="${text%% *}"
+    if [[ "$first" == "${first,,}" ]]; then
+        text="${text^}"
+    fi
+    sections[$type]+="- ${text} (${sha:0:7})"$'\n'
 done < "$commits"
 
 paper=$(bash "$(dirname "$0")/paper-versions.sh")
