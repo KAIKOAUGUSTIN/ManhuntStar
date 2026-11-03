@@ -29,7 +29,7 @@ while IFS=$'\t' read -r sha author message; do
     fi
 done < "$commits"
 
-paper=$(sed -n "s/^api-version: *'\{0,1\}\([^']*\)'\{0,1\}$/\1/p" src/main/resources/plugin.yml)
+paper=$(bash "$(dirname "$0")/paper-versions.sh")
 
 {
     if [[ -n "$changes" ]]; then
