@@ -91,6 +91,7 @@ Everything is commented in `plugins/ManhuntStar/config.yml` and can also be chan
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
 - 🔔 **Update check** (`general.update-check`, on by default): looks for a new version when the server starts and every 6 hours. A new version is logged to the console and shown to admins when they join, with a download link.
+- 📊 **Anonymous statistics** on [bStats](https://bstats.org) (server count, Paper version, number of bots, language and default difficulty). To turn them off for every plugin, set `enabled: false` in `plugins/bStats/config.yml`.
 - Combat, mobility, pathfinding, tactics, saving, default difficulty...
 
 Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.

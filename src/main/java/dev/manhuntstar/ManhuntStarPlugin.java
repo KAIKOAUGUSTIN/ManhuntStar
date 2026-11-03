@@ -14,6 +14,7 @@ import dev.manhuntstar.gui.MenuManager;
 import dev.manhuntstar.listener.BotEntityListener;
 import dev.manhuntstar.listener.MobTargeting;
 import dev.manhuntstar.listener.WorldPlayerListener;
+import dev.manhuntstar.metrics.MetricsService;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.skin.SkinService;
@@ -52,6 +53,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private MenuManager menus;
     private MobTargeting mobTargeting;
     private UpdateChecker updates;
+    private MetricsService metrics;
     private final ChunkTickets chunkTickets = new ChunkTickets(this);
     private BukkitTask tickTask;
 
@@ -106,6 +108,8 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         mobTargeting.installAll();
         tickTask = getServer().getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
         updates.apply(settings.updateCheck.on());
+        metrics = new MetricsService(this);
+        metrics.start();
         getLogger().info("Manhunt* enabled (Paper " + Bukkit.getMinecraftVersion() + ", language " + messages.language() + ").");
     }
 
@@ -116,6 +120,9 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
         if (updates != null) {
             updates.shutdown();
+        }
+        if (metrics != null) {
+            metrics.shutdown();
         }
         if (botManager != null) {
             botManager.shutdown();
