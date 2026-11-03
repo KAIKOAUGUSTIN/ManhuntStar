@@ -13,6 +13,8 @@
 #   GITHUB_*             set by GitHub Actions (repository, sha, ref name, run id, event file)
 set -euo pipefail
 
+source "$(dirname "$0")/discord-lib.sh"
+
 if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
     echo "DISCORD_WEBHOOK_URL is not set; skipping the Discord notification."
     exit 0
@@ -27,7 +29,6 @@ branch="${GITHUB_REF_NAME:-dev}"
 run_url="$server/$repo/actions/runs/${GITHUB_RUN_ID:-0}"
 status="${STATUS:-success}"
 role="${DISCORD_ROLE_ID:-}"
-tmp="${RUNNER_TEMP:-/tmp}"
 
 # The release workflow's own pushes (the version commit brought into dev) aren't new builds.
 head_author=$(jq -r '.head_commit.author.name // ""' "$event")
@@ -51,17 +52,9 @@ fi
 
 jar="${JAR:-}"
 file=""
-if [[ "$status" == "success" && -n "$jar" && -f "$jar" ]]; then
-    # Discord webhooks take files up to 10 MB
-    if (( $(stat -c %s "$jar") < 10 * 1024 * 1024 )); then
-        file="ManhuntStar-$branch-$short.jar"
-    fi
+if [[ "$status" == "success" ]]; then
+    file="ManhuntStar-$branch-$short.jar"
 fi
-
-# with_components: webhooks only read "components" with it; wait: report errors in the response
-url="$DISCORD_WEBHOOK_URL"
-if [[ "$url" == *\?* ]]; then url+="&"; else url+="?"; fi
-url+="with_components=true&wait=true"
 
 # The card; $1 = name of the attached jar shown in it, or empty for no file
 card() {
@@ -114,46 +107,4 @@ card() {
         '
 }
 
-# post <payload file> [<file to upload> <its name>]; prints the HTTP status, the body goes to $tmp/discord-response.json
-post() {
-    local args=(-sS --retry 3 -o "$tmp/discord-response.json" -w '%{http_code}')
-    if [[ $# -ge 3 ]]; then
-        args+=(-F "payload_json=<$1;type=application/json" -F "files[0]=@$2;filename=$3;type=application/java-archive")
-    else
-        args+=(-H "Content-Type: application/json" --data-binary "@$1")
-    fi
-    curl "${args[@]}" "$url" || echo 000
-}
-
-ok() {
-    [[ "$1" == 2* ]]
-}
-
-# 1. The card with the jar inside it
-if [[ -n "$file" ]]; then
-    card "$file" > "$tmp/discord.json"
-    code=$(post "$tmp/discord.json" "$jar" "$file")
-    if ok "$code"; then
-        echo "Discord notification sent (with the jar)."
-        exit 0
-    fi
-    echo "Discord refused the card with the jar (HTTP $code): $(head -c 500 "$tmp/discord-response.json" 2> /dev/null)"
-    echo "Sending the card and the jar as separate messages."
-fi
-
-# 2. The card alone, then the jar in a plain message under it
-card "" > "$tmp/discord.json"
-code=$(post "$tmp/discord.json")
-if ! ok "$code"; then
-    echo "::warning::Could not send the Discord notification (HTTP $code): $(head -c 500 "$tmp/discord-response.json" 2> /dev/null)"
-    exit 0
-fi
-if [[ -n "$file" ]]; then
-    echo '{"allowed_mentions":{"parse":[]}}' > "$tmp/discord-file.json"
-    code=$(post "$tmp/discord-file.json" "$jar" "$file")
-    if ! ok "$code"; then
-        echo "::warning::Discord notification sent, but not the jar (HTTP $code): $(head -c 500 "$tmp/discord-response.json" 2> /dev/null)"
-        exit 0
-    fi
-fi
-echo "Discord notification sent."
+discord_send card "$jar" "$file"

@@ -4,7 +4,8 @@
 #    "skip-release" skips everything).
 # 2. Builds and tests with the new version.
 # 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jar.
-# 4. Brings main back into dev, so dev starts from the new version.
+# 4. Announces the release on Discord (when a webhook secret is set).
+# 5. Brings main back into dev, so dev starts from the new version.
 #
 # The pushes to main and dev use the RELEASE_TOKEN secret (a token from someone in the rulesets'
 # bypass list): the default Actions token is blocked by the PR and status check rules.
@@ -114,6 +115,15 @@ jobs:
             --title "ManhuntStar $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --verify-tag
+
+      # The DISCORD_RELEASE_WEBHOOK_URL secret (or DISCORD_WEBHOOK_URL, when there's no separate
+      # release channel); skipped when neither is set. A failed post doesn't fail the release.
+      - name: Announce on Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: "1566987694830260326"
+          VERSION: ${{ steps.version.outputs.next }}
+        run: bash .github/scripts/discord-release.sh "$VERSION" "$RUNNER_TEMP/notes.md" "build/libs/ManhuntStar-$VERSION.jar"
 
       - name: Bring the version into dev
         run: |
