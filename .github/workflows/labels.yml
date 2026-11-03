@@ -1,0 +1,33 @@
+# Labels: creates or updates the repository labels listed in .github/labels.yml.
+name: Labels
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/labels.yml
+      - .github/workflows/labels.yml
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create or update the labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          yq -o=json '.' .github/labels.yml | jq -c '.[]' | while read -r label; do
+            name=$(jq -r '.name' <<< "$label")
+            gh label create "$name" \
+              --repo "$GITHUB_REPOSITORY" \
+              --color "$(jq -r '.color' <<< "$label")" \
+              --description "$(jq -r '.description // ""' <<< "$label")" \
+              --force
+            echo "Label: $name"
+          done

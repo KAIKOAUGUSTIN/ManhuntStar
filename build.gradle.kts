@@ -1,5 +1,6 @@
 plugins {
     java
+    alias(libs.plugins.shadow)
 }
 
 group = "dev.manhuntstar"
@@ -26,6 +27,9 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperMin")
     add(paperLatest.name, libs.paper.api)
 
+    // bundled in the jar (relocated, see shadowJar)
+    implementation(libs.bstats.bukkit)
+
     testImplementation(libs.paper.api)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
@@ -39,10 +43,14 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.processResources {
-    val props = mapOf("version" to project.version.toString(), "apiVersion" to apiVersion)
+    val props = mapOf(
+        "version" to project.version.toString(),
+        "apiVersion" to apiVersion,
+        "bstatsId" to (findProperty("bstatsId")?.toString() ?: "0"),
+    )
     inputs.properties(props)
     filteringCharset = "UTF-8"
-    filesMatching("plugin.yml") {
+    filesMatching(listOf("plugin.yml", "manhuntstar.properties")) {
         expand(props)
     }
 }
@@ -52,7 +60,7 @@ val compileAgainstLatest = tasks.register<JavaCompile>("compileAgainstLatest") {
     description = "Compiles the plugin against the newest supported Paper API."
     group = "verification"
     source = sourceSets.main.get().java
-    classpath = paperLatest
+    classpath = files(paperLatest, configurations.runtimeClasspath)
     destinationDirectory.set(layout.buildDirectory.dir("compat/latest"))
 }
 
@@ -64,6 +72,14 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.jar {
+// The plugin jar is the shadow jar: the plugin plus bStats, moved into its own package so it doesn't
+// clash with other plugins' copies (bStats refuses to start when it isn't relocated).
+tasks.shadowJar {
     archiveFileName.set("ManhuntStar-${project.version}.jar")
+    relocate("org.bstats", "dev.manhuntstar.libs.bstats")
+    exclude("META-INF/maven/**", "META-INF/LICENSE*", "META-INF/NOTICE*")
+}
+
+tasks.jar {
+    enabled = false
 }

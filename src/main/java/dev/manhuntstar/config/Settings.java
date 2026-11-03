@@ -47,6 +47,7 @@ public final class Settings {
     public final Setting.Bool replaceListCommand = bool("general.include-in-list-command", "geral.incluir-no-comando-list", "listcommand", Category.GENERAL, true);
     public final Setting.Bool respectPvp = bool("general.respect-disabled-pvp", "geral.respeitar-pvp-desligado", "respectpvp", Category.GENERAL, false);
     public final Setting.Bool skinFallbackUpload = bool("general.mineskin-fallback-skin", "geral.skin-robo-mineskin", "mineskin", Category.GENERAL, true);
+    public final Setting.Bool updateCheck = bool("general.update-check", null, "updatecheck", Category.GENERAL, true);
 
     // --- Bots ---
     public final Setting.Dbl botHealth = dbl("bots.max-health", "bots.vida-maxima", "bothealth", Category.BOTS, 20.0, 1.0, 500.0, 1.0);

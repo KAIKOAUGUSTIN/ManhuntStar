@@ -1,0 +1,93 @@
+name: 🐛 Bug report
+description: Something in ManhuntStar doesn't work as it should.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! The more details you give, the faster it can be fixed.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem. Screenshots or videos help a lot.
+      placeholder: The hunters stop moving after I go through a Nether portal.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can the problem be seen again?
+      placeholder: |
+        1. /manhunt create Hunter 3
+        2. Walk out of the ring and wait for the countdown
+        3. Go through a Nether portal
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: The hunters follow me to the Nether.
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: ManhuntStar version
+      description: Shown by `/version ManhuntStar`.
+      placeholder: "1.6.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: paper-version
+    attributes:
+      label: Paper version
+      options:
+        - "26.3"
+        - "26.2"
+        - Other (tell us below)
+    validations:
+      required: true
+
+  - type: input
+    id: paper-build
+    attributes:
+      label: Paper build
+      description: Shown by `/version`.
+      placeholder: "231"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console errors
+      description: Paste any error from the console or `logs/latest.log`. It's formatted as code automatically.
+      render: shell
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Settings
+      description: The parts of `plugins/ManhuntStar/config.yml` you changed, if any.
+      render: yaml
+
+  - type: input
+    id: other-plugins
+    attributes:
+      label: Other plugins
+      description: The other plugins on the server (`/plugins`).
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I'm using the latest version of ManhuntStar.
+          required: true
+        - label: I searched the existing issues and this one isn't there yet.
+          required: true

@@ -1,0 +1,53 @@
+# Repository labels. The Labels workflow creates or updates them on every push to dev that changes this
+# file (or when started by hand in Actions). Labels that aren't listed here are left alone.
+
+# Issues
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+- name: enhancement
+  color: a2eeef
+  description: New feature or improvement
+- name: translation
+  color: 0e8a16
+  description: Language files and translations
+- name: question
+  color: d876e3
+  description: Further information is requested
+- name: duplicate
+  color: cfd3d7
+  description: This issue or pull request already exists
+- name: invalid
+  color: e4e669
+  description: This doesn't seem right
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
+- name: good first issue
+  color: 7057ff
+  description: Good for newcomers
+- name: help wanted
+  color: "008672"
+  description: Extra attention is needed
+
+# Pull requests into main (read by the Release workflow)
+- name: minor
+  color: 1d76db
+  description: "Release: bumps the minor version (1.5.3 -> 1.6.0)"
+- name: major
+  color: b60205
+  description: "Release: bumps the major version (1.5.3 -> 2.0.0)"
+- name: skip-release
+  color: ededed
+  description: "Release: merging into main doesn't make a release"
+
+# Dependabot
+- name: dependencies
+  color: 0366d6
+  description: Dependency updates
+- name: java
+  color: b07219
+  description: Gradle dependencies
+- name: github_actions
+  color: "000000"
+  description: GitHub Actions updates

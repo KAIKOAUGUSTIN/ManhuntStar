@@ -128,6 +128,12 @@ pause:
   not-paused: "<gray>La chasse n'est pas en pause.</gray>"
   state: "en pause"
 
+# --- update check ---
+update:
+  available: "<yellow>Une nouvelle version est sortie :</yellow> <green><version></green> <gray>(le serveur a la <current>)</gray> <link>"
+  download: "<aqua><u>Télécharger</u></aqua>"
+  hover: "Ouvrir la page de téléchargement"
+
 # --- commandes ---
 command:
   creating: "<gray>Création de</gray> <yellow><amount></yellow> <gray>bot(s)</gray> <white><name></white> <gray>(<difficulty>)... recherche du skin.</gray>"
@@ -268,6 +274,9 @@ options:
   mineskin:
     name: "Skin de secours via MineSkin"
     description: "Sans skin pour le nom choisi, utilise la première image .png du dossier skins/ (ou le robot du mod), envoyée une fois à MineSkin pour obtenir une signature."
+  updatecheck:
+    name: "Vérification des mises à jour"
+    description: "Cherche une nouvelle version sur GitHub au démarrage du serveur et toutes les 6 heures, et prévient les admins quand ils se connectent."
   bothealth:
     name: "Vie maximale"
     description: "Vie maximale des bots."
