@@ -1,3 +1,7 @@
+<p align="center">
+  <img src=".github/assets/icon.png" alt="ManhuntStar icon" width="160">
+</p>
+
 # 🏹 ManhuntStar
 
 **ManHunt** hunter bots for Paper servers.
