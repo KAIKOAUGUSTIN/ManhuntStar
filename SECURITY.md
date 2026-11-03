@@ -15,8 +15,8 @@ Please don't report security problems in public issues or public Discord channel
 
 Report them privately in one of these ways:
 
-- **GitHub**: go to the **Security** tab of this repository and click **Report a vulnerability**.
-- **Discord**: join the [Discord server](DISCORD_INVITE), open a staff ticket and choose the
+- **GitHub**: go to the **Security** tab of this repository and click **Report a vulnerability**. (Currently unavailable)
+- **Discord**: join the [Discord server](https://discord.gg/SmPcGTbgUM), open a staff ticket and choose the
   **CVE** option.
 
 Include the ManhuntStar and Paper versions, what can be done with the problem and the steps to
