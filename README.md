@@ -1,16 +1,18 @@
 # 🏹 ManhuntStar
 
-**ManHunt** hunter bots for Paper servers.
+**ManHunt** hunter bots for Paper 26.2 and 26.3 servers.
 
 The bots are **Mannequin** entities (the game's "player-skinned dummy") driven by the plugin to act like players: they run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, level up through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow the player to the Nether and the End.
 
 ## 📦 Installation
 
-1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest) and put it in the `plugins/` folder of a Paper server. For 26.2 use 1.5.5-26.2 and for 26.3 use 1.5.5-26.3.
+1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest) and put it in the `plugins/` folder of a Paper 26.2 or 26.3 server. The same jar works on both.
 2. Start the server. It creates `plugins/ManhuntStar/config.yml`, the `lang/` folder and the `skins/` folder.
 3. Join as an operator and use `/manhunt create Hunter 3` near you, or open `/manhunt menu`.
 
-Requirements: Java 25 (the same as Paper 26.x). No other plugins needed.
+Requirements: Paper 26.2 or 26.3 and Java 25 (the same as Paper 26.x). No other plugins needed.
+
+Version 1.5.5 had one jar per Paper version (`1.5.5-26.2` and `1.5.5-26.3`); from the next version on, a single jar covers both.
 
 ## 🌍 Languages
 
@@ -126,9 +128,25 @@ Needs JDK 25.
 ./gradlew build
 ```
 
-The jar ends up in `build/libs/ManhuntStar-<version>.jar`. `build` also runs the tests, including one that checks every language file has the same keys and placeholders as `en.yml`.
+The jar ends up in `build/libs/ManhuntStar-<version>.jar`. `build` also runs the tests, including one that checks every language file has the same keys and placeholders as `en.yml`, and `compileAgainstLatest` (see below).
 
 The `Build` workflow does the same on every PR and on every push to `dev` and `main`, and keeps the jar as an artifact for 14 days (on the run's Summary page, under Artifacts), so you can test a PR without building it.
+
+### 🧱 Supported Paper versions
+
+One jar runs on every supported version. The supported range lives in `gradle/libs.versions.toml`:
+
+- `paper-api-min` is the oldest supported version (now 26.2). The plugin is compiled against it, and `plugin.yml`'s `api-version` comes from it, so older servers refuse the jar and newer ones load it.
+- `paper-api` is the newest (now 26.3), kept up to date by Dependabot. The tests run on it, and the `compileAgainstLatest` task compiles the code against it to catch anything Paper removed or changed.
+- Whatever differs between the versions goes through `dev.manhuntstar.util.PaperCompat`: it checks once whether the server has the newer method and uses the older one when it doesn't. Today that's only `Entity#isMarkedInvulnerable()` (26.3), used by the pause.
+
+So code that calls something only the newest version has doesn't compile against `paper-api-min`, and the build fails until the call goes through `PaperCompat`. To drop the oldest version, set `paper-api-min` to a build of the next one (for example `26.3.build.231-stable`).
+
+### 🔔 Discord notifications
+
+Every push to `dev` that the `Build` workflow builds is posted to a Discord channel: an embed with the new commits, the commit, the last release, the supported Paper versions and links to the run, with the jar attached (a red embed with no jar when the build fails). Pushes made by the `Release` workflow aren't posted.
+
+To turn it on, create a webhook in the channel (channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL) and save the URL as the `DISCORD_WEBHOOK_URL` secret in **Settings → Secrets and variables → Actions**. Without the secret, the step is skipped.
 
 Test server diagnostics (JVM flags): `-Dmanhuntstar.teste.mira=true` logs whether each bot projectile hit or missed; `-Dmanhuntstar.teste.cavalo=true` shows horse details in `/manhunt info`.
 
