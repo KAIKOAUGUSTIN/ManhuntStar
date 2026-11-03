@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload the jar
         id: upload
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: build/libs/ManhuntStar-*.jar
@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload the test report
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name || 'ManhuntStar' }}-tests
           path: build/reports/tests/
