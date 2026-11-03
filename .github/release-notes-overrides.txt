@@ -5,3 +5,4 @@
 # matches that commit.
 17e7580 New: one jar for Paper 26.2 and 26.3
 1ce8986 New: Discord notification for dev builds
+6bf5a28 New: SECURITY.md

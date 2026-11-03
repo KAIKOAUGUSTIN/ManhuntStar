@@ -3,10 +3,10 @@
 # at the top of CHANGELOG.md. The same notes go to the GitHub release, Discord, Modrinth and Hangar.
 #
 # Each commit goes into a section by the prefix of its message, which is left out of the notes:
-#   "New: ..."      -> New
-#   "Changed: ..."  -> Changed (also commits with no prefix)
-#   "Updated: ..."  -> Updated (also Dependabot's "Bump ..." commits)
-#   "Removed: ..."  -> Removed
+#   "New: ..."      -> New      (also "Add:", "Added:")
+#   "Changed: ..."  -> Changed  (also "Change:", and commits with no prefix)
+#   "Updated: ..."  -> Updated  (also "Update:", and Dependabot's "Bump ..." commits)
+#   "Removed: ..."  -> Removed  (also "Remove:")
 # Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
 # (and so another section), for commits whose message can't be changed anymore.
 #
@@ -41,7 +41,7 @@ override_for() {
         fi
     done
 }
-prefix='^(new|changed|updated|removed):[[:space:]]*(.+)$'
+prefix='^(new|add|added|changed|change|updated|update|removed|remove):[[:space:]]*(.+)$'
 while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
     # the workflow's own version commits are left out
@@ -54,8 +54,12 @@ while IFS=$'\t' read -r sha author message; do
     text="$message"
     shopt -s nocasematch
     if [[ "$message" =~ $prefix ]]; then
-        type="${BASH_REMATCH[1],,}"
-        type="${type^}"
+        case "${BASH_REMATCH[1],,}" in
+            new | add | added) type=New ;;
+            changed | change) type=Changed ;;
+            updated | update) type=Updated ;;
+            removed | remove) type=Removed ;;
+        esac
         text="${BASH_REMATCH[2]}"
     elif [[ "$author" == "dependabot[bot]" || "$message" == Bump\ * ]]; then
         type=Updated

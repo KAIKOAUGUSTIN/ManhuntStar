@@ -6,6 +6,12 @@
 
 **ManHunt** hunter bots for Paper servers.
 
+<p align="center">
+  <a href="https://modrinth.com/plugin/manhuntstar"><img src="https://img.shields.io/badge/Modrinth-Download-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Download on Modrinth"></a>
+  <a href="https://hangar.papermc.io/KAIKOAUGUSTIN/ManhuntStar"><img src="https://img.shields.io/badge/Hangar-Download-3371ED?style=for-the-badge" alt="Download on Hangar"></a>
+  <a href="https://discord.gg/SmPcGTbgUM"><img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the Discord server"></a>
+</p>
+
 No friends online? Spawn a pack of hunters that play like real players and try to stop you from beating the game. They run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, get stronger through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow you to the Nether and the End.
 
 ## ⭐ Support the project
