@@ -1,5 +1,9 @@
 # Build: compiles, runs the tests and keeps the jar as an artifact, on every PR and on every push to
 # dev and main. The jar is on the run's Summary page (Artifacts) for 14 days.
+#
+# Every push to dev (a merged PR or a direct push; not PRs while open) is also posted to Discord as a
+# card with the commits and the jar, mentioning DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is
+# set (Settings > Secrets and variables > Actions).
 name: Build
 
 on:
@@ -27,6 +31,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
+      # build also runs the tests and compiles against the newest Paper API (compileAgainstLatest)
       - name: Build and test
         run: ./gradlew build
 
@@ -43,7 +48,8 @@ jobs:
           fi
 
       - name: Upload the jar
-        uses: actions/upload-artifact@v5
+        id: upload
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: build/libs/ManhuntStar-*.jar
@@ -52,8 +58,23 @@ jobs:
 
       - name: Upload the test report
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name || 'ManhuntStar' }}-tests
           path: build/reports/tests/
           retention-days: 14
+
+      - name: Discord notification
+        if: >-
+          (success() || failure())
+          && github.event_name == 'push'
+          && github.ref == 'refs/heads/dev'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: "1566987694830260326"
+          STATUS: ${{ job.status }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          JAR=$(ls build/libs/ManhuntStar-*.jar 2> /dev/null | head -n 1 || true)
+          export JAR
+          bash .github/scripts/discord-build.sh

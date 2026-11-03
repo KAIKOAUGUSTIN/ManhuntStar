@@ -128,6 +128,12 @@ pause:
   not-paused: "<gray>The hunt isn't paused.</gray>"
   state: "paused"
 
+# --- update check ---
+update:
+  available: "<yellow>A new version is out:</yellow> <green><version></green> <gray>(this server has <current>)</gray> <link>"
+  download: "<aqua><u>Download</u></aqua>"
+  hover: "Open the download page"
+
 # --- commands ---
 command:
   creating: "<gray>Creating</gray> <yellow><amount></yellow> <gray>bot(s)</gray> <white><name></white> <gray>(<difficulty>)... fetching the skin.</gray>"
@@ -268,6 +274,9 @@ options:
   mineskin:
     name: "MineSkin fallback skin"
     description: "With no skin for the chosen name, use the first .png in the skins/ folder (or the mod's robot), uploaded once to MineSkin to get a signature."
+  updatecheck:
+    name: "Update check"
+    description: "Looks for a new version on GitHub when the server starts and every 6 hours, and tells admins when they join."
   bothealth:
     name: "Max health"
     description: "Bot max health."

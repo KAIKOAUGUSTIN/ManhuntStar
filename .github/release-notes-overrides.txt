@@ -1,0 +1,7 @@
+# Release notes overrides: the text used in the release notes for a commit whose message can't be
+# changed anymore (it's already on dev or main), for example one written before the New:, Changed:,
+# Updated: and Removed: prefixes. One commit per line: the short or full SHA, a space, then the text,
+# with its prefix. Lines starting with # are ignored. A line can stay after its release; it only
+# matches that commit.
+17e7580 New: one jar for Paper 26.2 and 26.3
+1ce8986 New: Discord notification for dev builds

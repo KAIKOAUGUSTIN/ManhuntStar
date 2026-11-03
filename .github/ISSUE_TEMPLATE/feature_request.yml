@@ -1,0 +1,41 @@
+name: ✨ Feature request
+description: Suggest an idea or an improvement for ManhuntStar.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! Tell us what you'd like and why.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the idea?
+      description: What would you like ManhuntStar to do? If it solves a problem, describe the problem too.
+      placeholder: A compass that points to the nearest hunter, for the players being hunted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: how
+    attributes:
+      label: How would it work?
+      description: Commands, settings, menu options... anything that helps picture it.
+      placeholder: |
+        /manhunt compass gives a compass that updates every second.
+        A setting turns it on for everyone when the hunt starts.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways to get the same result, or plugins that already do something like it.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I searched the existing issues and this idea isn't there yet.
+          required: true

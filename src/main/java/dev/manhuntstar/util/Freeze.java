@@ -27,7 +27,7 @@ public final class Freeze {
         this.velocity = entity.getVelocity();
         this.gravity = entity.hasGravity();
         this.fallDistance = entity.getFallDistance();
-        this.wasInvulnerable = entity.isMarkedInvulnerable();
+        this.wasInvulnerable = PaperCompat.isMarkedInvulnerable(entity);
         this.protect = protect;
     }
 
