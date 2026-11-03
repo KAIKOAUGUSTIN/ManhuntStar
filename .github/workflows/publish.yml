@@ -1,0 +1,93 @@
+# Publish: sends a release that's already on GitHub to Modrinth and/or Hangar, by hand (Actions >
+# Publish > Run workflow). For a release made before the API keys were set, or one whose upload
+# failed. Versions that are already there are skipped.
+#
+# Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" scope) and HANGAR_API_KEY
+# (Hangar API key, "create_version" permission). Optional variables: MODRINTH_PROJECT and
+# HANGAR_PROJECT, the project slugs (defaults: manhuntstar and ManhuntStar).
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, e.g. 1.6.0 (empty: the latest release)"
+        required: false
+        default: ""
+      target:
+        description: "Where to publish"
+        type: choice
+        options: [both, modrinth, hangar]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check the secrets
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
+        run: |
+          missing=0
+          if [ "$TARGET" != hangar ] && [ -z "$MODRINTH_TOKEN" ]; then
+            echo "::error::The MODRINTH_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
+            missing=1
+          fi
+          if [ "$TARGET" != modrinth ] && [ -z "$HANGAR_API_KEY" ]; then
+            echo "::error::The HANGAR_API_KEY secret is missing (Settings > Secrets and variables > Actions)."
+            missing=1
+          fi
+          exit $missing
+
+      # the jar and the notes come from the GitHub release; the supported versions from that tag
+      - name: Download the release
+        id: release
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            tag="v${INPUT_VERSION#v}"
+          else
+            tag=$(gh release view --json tagName --jq .tagName)
+          fi
+          version="${tag#v}"
+          gh release download "$tag" --pattern "ManhuntStar-$version.jar" --dir "$RUNNER_TEMP"
+          gh release view "$tag" --json body --jq .body > "$RUNNER_TEMP/notes.md"
+          git show "$tag:gradle/libs.versions.toml" > "$RUNNER_TEMP/catalog.toml"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing ManhuntStar $version (Paper $(bash .github/scripts/paper-versions.sh "$RUNNER_TEMP/catalog.toml"))"
+
+      - name: Publish on Modrinth
+        if: inputs.target != 'hangar'
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT: ${{ vars.MODRINTH_PROJECT }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: >-
+          bash .github/scripts/publish-modrinth.sh "$VERSION" "$RUNNER_TEMP/notes.md"
+          "$RUNNER_TEMP/ManhuntStar-$VERSION.jar" "$RUNNER_TEMP/catalog.toml"
+
+      - name: Publish on Hangar
+        if: (success() || failure()) && steps.release.outcome == 'success' && inputs.target != 'modrinth'
+        env:
+          HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
+          HANGAR_PROJECT: ${{ vars.HANGAR_PROJECT }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: >-
+          bash .github/scripts/publish-hangar.sh "$VERSION" "$RUNNER_TEMP/notes.md"
+          "$RUNNER_TEMP/ManhuntStar-$VERSION.jar" "$RUNNER_TEMP/catalog.toml"
