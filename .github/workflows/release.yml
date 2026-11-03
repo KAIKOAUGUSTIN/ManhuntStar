@@ -4,6 +4,9 @@
 #    "skip-release" skips everything).
 # 2. Builds and tests with the new version.
 # 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jar.
+#    The release notes group the PR's commits by the prefix of their message: "New:", "Changed:",
+#    "Updated:" and "Removed:" (no prefix = Changed, Dependabot = Updated). The same notes go to
+#    CHANGELOG.md, the GitHub release, Modrinth, Hangar and Discord.
 # 4. Publishes it on Modrinth and Hangar (each one when its secret is set).
 # 5. Announces the release on Discord (when a webhook secret is set).
 # 6. Brings main back into dev, so dev starts from the new version.

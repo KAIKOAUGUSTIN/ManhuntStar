@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Builds a version's release notes from the commits of the PR merged into main and puts the version
-# at the top of CHANGELOG.md.
+# at the top of CHANGELOG.md. The same notes go to the GitHub release, Discord, Modrinth and Hangar.
+#
+# Each commit goes into a section by the prefix of its message, which is left out of the notes:
+#   "New: ..."      -> New
+#   "Changed: ..."  -> Changed (also commits with no prefix)
+#   "Updated: ..."  -> Updated (also Dependabot's "Bump ..." commits)
+#   "Removed: ..."  -> Removed
+# Empty sections are left out.
 #
 # Usage: release-notes.sh <version> <previous version> <commits.tsv> <output.md>
 # commits.tsv: one line per commit, "sha<TAB>author login<TAB>first line of the message".
@@ -12,33 +19,40 @@ commits="$3"
 output="$4"
 repo="${GITHUB_REPOSITORY:-}"
 
-changes=""
-dependencies=""
+declare -A sections=([New]="" [Changed]="" [Updated]="" [Removed]="")
 declare -A seen=()
+prefix='^(new|changed|updated|removed):[[:space:]]*(.+)$'
 while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
     # the workflow's own version commits are left out
     [[ "$author" == "github-actions[bot]" ]] && continue
     [[ -n "${seen[$message]:-}" ]] && continue
     seen[$message]=1
-    line="- ${message} (${sha:0:7})"
-    if [[ "$author" == "dependabot[bot]" || "$message" == Bump\ * ]]; then
-        dependencies+="${line}"$'\n'
-    else
-        changes+="${line}"$'\n'
+    type=Changed
+    text="$message"
+    shopt -s nocasematch
+    if [[ "$message" =~ $prefix ]]; then
+        type="${BASH_REMATCH[1],,}"
+        type="${type^}"
+        text="${BASH_REMATCH[2]}"
+    elif [[ "$author" == "dependabot[bot]" || "$message" == Bump\ * ]]; then
+        type=Updated
     fi
+    shopt -u nocasematch
+    sections[$type]+="- ${text^} (${sha:0:7})"$'\n'
 done < "$commits"
 
 paper=$(bash "$(dirname "$0")/paper-versions.sh")
 
 {
-    if [[ -n "$changes" ]]; then
-        printf '### Changes\n\n%s\n' "$changes"
-    fi
-    if [[ -n "$dependencies" ]]; then
-        printf '### Dependencies\n\n%s\n' "$dependencies"
-    fi
-    if [[ -z "$changes" && -z "$dependencies" ]]; then
+    listed=0
+    for type in New Changed Updated Removed; do
+        if [[ -n "${sections[$type]}" ]]; then
+            printf '### %s\n\n%s\n' "$type" "${sections[$type]}"
+            listed=1
+        fi
+    done
+    if [[ "$listed" == 0 ]]; then
         printf 'No changes listed.\n\n'
     fi
     printf '**Paper:** %s · **Java:** 25\n' "$paper"
