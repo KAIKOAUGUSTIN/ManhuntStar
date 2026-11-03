@@ -1,8 +1,9 @@
 # Build: compiles, runs the tests and keeps the jar as an artifact, on every PR and on every push to
 # dev and main. The jar is on the run's Summary page (Artifacts) for 14 days.
 #
-# Every push to dev is also posted to Discord (an embed with the commits and the jar attached) when the
-# DISCORD_WEBHOOK_URL secret is set (Settings > Secrets and variables > Actions).
+# Every push to dev (a merged PR or a direct push; not PRs while open) is also posted to Discord as a
+# card with the commits and the jar, mentioning DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is
+# set (Settings > Secrets and variables > Actions).
 name: Build
 
 on:
@@ -70,6 +71,7 @@ jobs:
           && github.ref == 'refs/heads/dev'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: "1566987694830260326"
           STATUS: ${{ job.status }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         run: |
