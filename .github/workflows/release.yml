@@ -145,7 +145,7 @@ jobs:
       - name: Announce on Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL || secrets.DISCORD_WEBHOOK_URL }}
-          DISCORD_ROLE_ID: "1566987694830260326"
+          DISCORD_ROLE_ID: "1566863017587511376"
           VERSION: ${{ steps.version.outputs.next }}
         run: bash .github/scripts/discord-release.sh "$VERSION" "$RUNNER_TEMP/notes.md" "build/libs/ManhuntStar-$VERSION.jar"
 
