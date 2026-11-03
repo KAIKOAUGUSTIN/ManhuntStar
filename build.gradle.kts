@@ -13,8 +13,18 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
 }
 
+// Supported Paper versions: compiled against the oldest (paper-api-min) and checked against the newest
+// (paper-api). One jar runs on both; src/main/java/dev/manhuntstar/util/PaperCompat.java handles
+// what differs between them.
+val paperMin = libs.versions.paper.api.min.get()
+val apiVersion = Regex("""^(\d+\.\d+)""").find(paperMin)?.groupValues?.get(1)
+    ?: error("Can't read the api-version from paper-api-min ($paperMin)")
+
+val paperLatest = configurations.create("paperLatest")
+
 dependencies {
-    compileOnly(libs.paper.api)
+    compileOnly("io.papermc.paper:paper-api:$paperMin")
+    add(paperLatest.name, libs.paper.api)
 
     testImplementation(libs.paper.api)
     testImplementation(platform(libs.junit.bom))
@@ -29,12 +39,25 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.processResources {
-    val props = mapOf("version" to project.version.toString())
+    val props = mapOf("version" to project.version.toString(), "apiVersion" to apiVersion)
     inputs.properties(props)
     filteringCharset = "UTF-8"
     filesMatching("plugin.yml") {
         expand(props)
     }
+}
+
+// Compiles the same code against the newest Paper API, to catch anything it removed or changed.
+val compileAgainstLatest = tasks.register<JavaCompile>("compileAgainstLatest") {
+    description = "Compiles the plugin against the newest supported Paper API."
+    group = "verification"
+    source = sourceSets.main.get().java
+    classpath = paperLatest
+    destinationDirectory.set(layout.buildDirectory.dir("compat/latest"))
+}
+
+tasks.check {
+    dependsOn(compileAgainstLatest)
 }
 
 tasks.test {

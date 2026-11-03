@@ -1,5 +1,9 @@
 [versions]
-# Paper API version (compile and tests).
+# Oldest supported Paper API: the plugin is compiled against it, and plugin.yml's api-version comes
+# from it (26.2.build.135-stable -> 26.2). Paper 26.2 is finished, so this one is updated by hand
+# and stays out of [libraries], where Dependabot would move it to the newest version.
+paper-api-min = "26.2.build.135-stable"
+# Newest supported Paper API: tests and the compileAgainstLatest check. Updated by Dependabot.
 paper-api = "26.3.build.231-stable"
 junit = "6.1.3"
 
