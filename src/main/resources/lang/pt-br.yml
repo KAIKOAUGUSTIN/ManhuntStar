@@ -128,6 +128,12 @@ pause:
   not-paused: "<gray>A caçada não está pausada.</gray>"
   state: "pausado"
 
+# --- update check ---
+update:
+  available: "<yellow>Saiu uma versão nova:</yellow> <green><version></green> <gray>(o servidor está na <current>)</gray> <link>"
+  download: "<aqua><u>Baixar</u></aqua>"
+  hover: "Abrir a página de download"
+
 # --- comandos ---
 command:
   creating: "<gray>Criando</gray> <yellow><amount></yellow> <gray>bot(s)</gray> <white><name></white> <gray>(<difficulty>)... buscando a skin.</gray>"
@@ -268,6 +274,9 @@ options:
   mineskin:
     name: "Skin reserva pelo MineSkin"
     description: "Sem skin para o nome escolhido, usa a primeira imagem .png da pasta skins/ (ou o robô do mod), enviada uma vez ao MineSkin para ganhar assinatura."
+  updatecheck:
+    name: "Aviso de atualização"
+    description: "Procura uma versão nova no GitHub quando o servidor liga e a cada 6 horas, e avisa os admins quando entram."
   bothealth:
     name: "Vida máxima"
     description: "Vida máxima dos bots."

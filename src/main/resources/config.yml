@@ -24,6 +24,9 @@ general:
   # With no skin for the chosen name, use the first .png in the skins/ folder (or the mod's robot),
   # uploaded once to MineSkin to get a signature, like the mod did. [mineskin]
   mineskin-fallback-skin: true
+  # Look for a new version on GitHub when the server starts and every 6 hours. A new version is
+  # logged to the console and shown to admins (manhuntstar.admin) when they join. [updatecheck]
+  update-check: true
 
 bots:
   # Bot max health. [bothealth]

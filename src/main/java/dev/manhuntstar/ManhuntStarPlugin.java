@@ -17,6 +17,7 @@ import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.skin.SkinService;
+import dev.manhuntstar.update.UpdateChecker;
 import dev.manhuntstar.util.ChunkTickets;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import java.io.File;
@@ -50,6 +51,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private BotManager botManager;
     private MenuManager menus;
     private MobTargeting mobTargeting;
+    private UpdateChecker updates;
     private final ChunkTickets chunkTickets = new ChunkTickets(this);
     private BukkitTask tickTask;
 
@@ -81,12 +83,14 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         deathMessages = new DeathMessages(botManager);
         menus = new MenuManager(this);
         mobTargeting = new MobTargeting(this);
+        updates = new UpdateChecker(this);
 
         var pm = getServer().getPluginManager();
         pm.registerEvents(new BotEntityListener(this), this);
         pm.registerEvents(new WorldPlayerListener(this), this);
         pm.registerEvents(mobTargeting, this);
         pm.registerEvents(menus, this);
+        pm.registerEvents(updates, this);
         dev.manhuntstar.debug.AimDebug.install(this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
@@ -101,6 +105,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
         mobTargeting.installAll();
         tickTask = getServer().getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
+        updates.apply(settings.updateCheck.on());
         getLogger().info("Manhunt* enabled (Paper " + Bukkit.getMinecraftVersion() + ", language " + messages.language() + ").");
     }
 
@@ -108,6 +113,9 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     public void onDisable() {
         if (tickTask != null) {
             tickTask.cancel();
+        }
+        if (updates != null) {
+            updates.shutdown();
         }
         if (botManager != null) {
             botManager.shutdown();
@@ -247,6 +255,8 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         } else if (s == settings.persistentBots) {
             botManager.markDirty();
             botManager.flush(true);
+        } else if (s == settings.updateCheck) {
+            updates.apply(settings.updateCheck.on());
         } else if (s == settings.debugPaths && !settings.debugPaths.on()) {
             debugRenderer.clearAll();
         }
@@ -296,5 +306,9 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     public MenuManager menus() {
         return menus;
+    }
+
+    public UpdateChecker updates() {
+        return updates;
     }
 }
