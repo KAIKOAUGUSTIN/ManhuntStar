@@ -7,7 +7,8 @@
 #   "Changed: ..."  -> Changed (also commits with no prefix)
 #   "Updated: ..."  -> Updated (also Dependabot's "Bump ..." commits)
 #   "Removed: ..."  -> Removed
-# Empty sections are left out.
+# Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
+# (and so another section), for commits whose message can't be changed anymore.
 #
 # Usage: release-notes.sh <version> <previous version> <commits.tsv> <output.md>
 # commits.tsv: one line per commit, "sha<TAB>author login<TAB>first line of the message".
@@ -21,6 +22,25 @@ repo="${GITHUB_REPOSITORY:-}"
 
 declare -A sections=([New]="" [Changed]="" [Updated]="" [Removed]="")
 declare -A seen=()
+
+# "<sha> <text>" lines from the overrides file
+overrides_file="$(dirname "$0")/../release-notes-overrides.txt"
+declare -A overrides=()
+if [[ -f "$overrides_file" ]]; then
+    while read -r key text; do
+        [[ -z "$key" || "$key" == \#* || -z "$text" ]] && continue
+        overrides[$key]="$text"
+    done < "$overrides_file"
+fi
+override_for() {
+    local key
+    for key in "${!overrides[@]}"; do
+        if [[ "$1" == "$key"* ]]; then
+            echo "${overrides[$key]}"
+            return
+        fi
+    done
+}
 prefix='^(new|changed|updated|removed):[[:space:]]*(.+)$'
 while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
@@ -28,6 +48,8 @@ while IFS=$'\t' read -r sha author message; do
     [[ "$author" == "github-actions[bot]" ]] && continue
     [[ -n "${seen[$message]:-}" ]] && continue
     seen[$message]=1
+    replacement=$(override_for "$sha")
+    [[ -n "$replacement" ]] && message="$replacement"
     type=Changed
     text="$message"
     shopt -s nocasematch
@@ -39,7 +61,12 @@ while IFS=$'\t' read -r sha author message; do
         type=Updated
     fi
     shopt -u nocasematch
-    sections[$type]+="- ${text^} (${sha:0:7})"$'\n'
+    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case
+    first="${text%% *}"
+    if [[ "$first" == "${first,,}" ]]; then
+        text="${text^}"
+    fi
+    sections[$type]+="- ${text} (${sha:0:7})"$'\n'
 done < "$commits"
 
 paper=$(bash "$(dirname "$0")/paper-versions.sh")
