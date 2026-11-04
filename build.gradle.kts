@@ -1,85 +1,29 @@
-plugins {
-    java
-    alias(libs.plugins.shadow)
-}
-
-group = "dev.manhuntstar"
-description = "Manhunt* - ManHunt hunter bots for Paper"
-
-// The plugin version lives in gradle.properties and is bumped by the release workflow.
+// Settings shared by every module (core, paper).
+//
+// The version lives in gradle.properties and is bumped by the release workflow.
 // Dependency versions live in gradle/libs.versions.toml (read by Dependabot).
+// The plugin jar ends up in build/libs/ here at the root (see paper/build.gradle.kts).
 
-repositories {
-    mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
+plugins {
+    // "clean" also removes build/libs/ at the root, where the plugin jar goes
+    base
 }
 
-// Supported Paper versions: compiled against the oldest (paper-api-min) and checked against the newest
-// (paper-api). One jar runs on both; src/main/java/dev/manhuntstar/util/PaperCompat.java handles
-// what differs between them.
-val paperMin = libs.versions.paper.api.min.get()
-val apiVersion = Regex("""^(\d+\.\d+)""").find(paperMin)?.groupValues?.get(1)
-    ?: error("Can't read the api-version from paper-api-min ($paperMin)")
+subprojects {
+    group = "dev.manhuntstar"
+    version = rootProject.version
 
-val paperLatest = configurations.create("paperLatest")
-
-dependencies {
-    compileOnly("io.papermc.paper:paper-api:$paperMin")
-    add(paperLatest.name, libs.paper.api)
-
-    // bundled in the jar (relocated, see shadowJar)
-    implementation(libs.bstats.bukkit)
-
-    testImplementation(libs.paper.api)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
-    options.release.set(25)
-    options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:removal"))
-}
-
-tasks.processResources {
-    val props = mapOf(
-        "version" to project.version.toString(),
-        "apiVersion" to apiVersion,
-        "bstatsId" to (findProperty("bstatsId")?.toString() ?: "0"),
-    )
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
-    filesMatching(listOf("plugin.yml", "manhuntstar.properties")) {
-        expand(props)
+    repositories {
+        mavenCentral()
     }
-}
 
-// Compiles the same code against the newest Paper API, to catch anything it removed or changed.
-val compileAgainstLatest = tasks.register<JavaCompile>("compileAgainstLatest") {
-    description = "Compiles the plugin against the newest supported Paper API."
-    group = "verification"
-    source = sourceSets.main.get().java
-    classpath = files(paperLatest, configurations.runtimeClasspath)
-    destinationDirectory.set(layout.buildDirectory.dir("compat/latest"))
-}
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        options.release.set(25)
+        options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:removal"))
+    }
 
-tasks.check {
-    dependsOn(compileAgainstLatest)
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-// The plugin jar is the shadow jar: the plugin plus bStats, moved into its own package so it doesn't
-// clash with other plugins' copies (bStats refuses to start when it isn't relocated).
-tasks.shadowJar {
-    archiveFileName.set("ManhuntStar-${project.version}.jar")
-    relocate("org.bstats", "dev.manhuntstar.libs.bstats")
-    exclude("META-INF/maven/**", "META-INF/LICENSE*", "META-INF/NOTICE*")
-}
-
-tasks.jar {
-    enabled = false
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+    }
 }
