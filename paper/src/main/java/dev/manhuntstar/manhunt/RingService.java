@@ -5,6 +5,7 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -88,7 +89,7 @@ public final class RingService {
         if (bots.isEmpty() || (!onLeave && seconds <= 0)) {
             return false;
         }
-        Ring r = new Ring(UUID.randomUUID(), center.getWorld().getUID(), Vec3.of(center), radius, seconds, radius + LEAVE_MARGIN);
+        Ring r = new Ring(UUID.randomUUID(), center.getWorld().getUID(), Locations.vec(center), radius, seconds, radius + LEAVE_MARGIN);
         for (Bot b : bots) {
             b.setIdle(new IdleBehavior(b, r.id));
             r.bots.add(b.id());
@@ -247,7 +248,7 @@ public final class RingService {
     }
 
     private static double distance(Player p, Ring r) {
-        return Vec3.of(p.getLocation()).distanceTo(r.center);
+        return Locations.vec(p.getLocation()).distanceTo(r.center);
     }
 
     // ------------------------------------------------------------------ barra e títulos

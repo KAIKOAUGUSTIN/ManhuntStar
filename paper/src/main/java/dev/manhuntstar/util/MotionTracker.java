@@ -19,7 +19,7 @@ public final class MotionTracker {
 
     public void observe(Entity e) {
         long now = Bukkit.getCurrentTick();
-        Vec3 p = Vec3.of(e.getLocation());
+        Vec3 p = Locations.vec(e.getLocation());
         if (last == null || !e.getUniqueId().equals(entity) || e.getWorld() != world || now - lastTick > 10) {
             entity = e.getUniqueId();
             world = e.getWorld();

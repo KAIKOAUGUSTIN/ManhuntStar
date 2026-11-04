@@ -5,6 +5,7 @@ import dev.manhuntstar.api.BotEvents;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
@@ -88,8 +89,8 @@ public final class BotEntityListener implements Listener {
             }
         }
         if (attacker instanceof LivingEntity le && le != bot.entity()) {
-            bot.rememberFireSource(Vec3.of(le.getLocation()));
-            Vec3 dir = Vec3.of(le.getLocation()).subtract(bot.pos());
+            bot.rememberFireSource(Locations.vec(le.getLocation()));
+            Vec3 dir = Locations.vec(le.getLocation()).subtract(bot.pos());
             bot.setYawNow(dir.yaw());
             if (!(le instanceof Player) && !(le instanceof EnderDragon) && manager().byEntity(le) == null) {
                 bot.combat().setMobAttacker(le);

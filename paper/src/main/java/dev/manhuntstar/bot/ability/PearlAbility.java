@@ -5,6 +5,7 @@ import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.PearlDimension;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,7 +51,7 @@ public final class PearlAbility {
         if (diff == BotDifficulty.TERMINATOR && isChasing()) {
             Player t = bot.target();
             if (t != null && t.getWorld().equals(bot.world()) && bot.distanceTo(t) > 15.0) {
-                Vec3 dir = Vec3.of(t.getLocation()).subtract(bot.pos()).normalize();
+                Vec3 dir = Locations.vec(t.getLocation()).subtract(bot.pos()).normalize();
                 double throwDist = Math.max(5.0, bot.distanceTo(t) - 7.0);
                 throwPearl(bot, Vec3.center(bot.pos().add(dir.scale(throwDist)).toPos()));
                 setCooldown(diff, false);
@@ -101,8 +102,8 @@ public final class PearlAbility {
                     Pos target = origin.offset(x, 0, z);
                     for (int y = -5; y <= 5; y++) {
                         Pos check = target.above(y);
-                        Material m = check.block(w).getType();
-                        if (!m.isAir() && m != Material.LAVA && check.above().block(w).getType().isAir()) {
+                        Material m = Locations.block(check, w).getType();
+                        if (!m.isAir() && m != Material.LAVA && Locations.block(check.above(), w).getType().isAir()) {
                             return check.above();
                         }
                     }

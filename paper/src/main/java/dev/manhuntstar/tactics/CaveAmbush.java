@@ -2,6 +2,7 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -69,7 +70,7 @@ public final class CaveAmbush {
         long now = Bukkit.getCurrentTick();
         long cooldown = manager.plugin().settings().caveAmbushCooldown.value() * 20L;
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!manager.isEligibleTarget(p) || !isInCave(p.getWorld(), Pos.of(p.getLocation()))) {
+            if (!manager.isEligibleTarget(p) || !isInCave(p.getWorld(), Locations.pos(p.getLocation()))) {
                 continue;
             }
             Long last = lastAmbushTick.get(p.getUniqueId());
@@ -99,7 +100,7 @@ public final class CaveAmbush {
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         World w = target.getWorld();
         // a caverna do jogador é varrida uma vez só; esconderijo e cama só consultam o resultado
-        Set<Long> cave = caveRegion(w, Pos.of(target.getLocation()));
+        Set<Long> cave = caveRegion(w, Locations.pos(target.getLocation()));
         if (cave == null) {
             return false;
         }
@@ -136,7 +137,7 @@ public final class CaveAmbush {
                 if (!isSafeRespawnSpot(w, c) || WorldUtil.skyLight(w, c) > 0) {
                     continue;
                 }
-                if (WorldUtil.clearLine(w, Vec3.of(target.getEyeLocation()), Vec3.center(c))) {
+                if (WorldUtil.clearLine(w, Locations.vec(target.getEyeLocation()), Vec3.center(c))) {
                     continue;
                 }
                 if (inRegion(cave, c)) {
@@ -157,7 +158,7 @@ public final class CaveAmbush {
                 for (int dx = -radius; dx <= radius; dx++) {
                     for (int dz = -radius; dz <= radius; dz++) {
                         Pos foot = near.offset(dx, 0, dz);
-                        Pos head = foot.relative(facing);
+                        Pos head = Locations.relative(foot, facing);
                         if (!canPlaceBed(w, foot, head) || !inRegion(cave, foot)) {
                             continue;
                         }
@@ -176,7 +177,7 @@ public final class CaveAmbush {
     }
 
     private static void placeBedHalf(World w, Pos p, BlockFace facing, Bed.Part part) {
-        Block b = p.block(w);
+        Block b = Locations.block(p, w);
         Bed data = (Bed) Material.RED_BED.createBlockData();
         data.setFacing(facing);
         data.setPart(part);
@@ -205,8 +206,8 @@ public final class CaveAmbush {
         if (w == null) {
             return false;
         }
-        return bed.foot().block(w).getBlockData() instanceof Bed f && f.getPart() == Bed.Part.FOOT
-                && bed.head().block(w).getBlockData() instanceof Bed h && h.getPart() == Bed.Part.HEAD;
+        return Locations.block(bed.foot(), w).getBlockData() instanceof Bed f && f.getPart() == Bed.Part.FOOT
+                && Locations.block(bed.head(), w).getBlockData() instanceof Bed h && h.getPart() == Bed.Part.HEAD;
     }
 
     /** Onde o bot deve renascer (perto da cama) ou null se a emboscada não vale mais. */
@@ -218,7 +219,7 @@ public final class CaveAmbush {
         Player target = Bukkit.getPlayer(bed.targetId());
         World w = Bukkit.getWorld(bed.worldId());
         if (target == null || target.isDead() || w == null || !target.getWorld().equals(w)
-                || !isInCave(w, Pos.of(target.getLocation())) || !isBedValid(bed) || !isSameCave(w, Pos.of(target.getLocation()), bed.foot())) {
+                || !isInCave(w, Locations.pos(target.getLocation())) || !isBedValid(bed) || !isSameCave(w, Locations.pos(target.getLocation()), bed.foot())) {
             removeBed(bot.id());
             botTargets.remove(bot.id());
             return null;
@@ -251,8 +252,8 @@ public final class CaveAmbush {
                 continue;
             }
             World w = target.getWorld();
-            boolean valid = w.getUID().equals(bed.worldId()) && isInCave(w, Pos.of(target.getLocation()))
-                    && isBedValid(bed) && isSameCave(w, Pos.of(target.getLocation()), bed.foot());
+            boolean valid = w.getUID().equals(bed.worldId()) && isInCave(w, Locations.pos(target.getLocation()))
+                    && isBedValid(bed) && isSameCave(w, Locations.pos(target.getLocation()), bed.foot());
             if (!valid) {
                 toCleanup.add(e.getKey());
             }
@@ -317,8 +318,8 @@ public final class CaveAmbush {
             return;
         }
         for (Pos p : new Pos[]{bed.foot(), bed.head()}) {
-            if (p.block(w).getType() == Material.RED_BED) {
-                p.block(w).setType(Material.AIR, false);
+            if (Locations.block(p, w).getType() == Material.RED_BED) {
+                Locations.block(p, w).setType(Material.AIR, false);
             }
         }
     }
@@ -450,7 +451,7 @@ public final class CaveAmbush {
         if (WorldUtil.isLava(w, p)) {
             return false;
         }
-        Block b = p.block(w);
+        Block b = Locations.block(p, w);
         if (b.getType().isAir() || b.isPassable()) {
             return true;
         }

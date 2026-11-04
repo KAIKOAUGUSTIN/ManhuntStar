@@ -3,6 +3,7 @@ package dev.manhuntstar.tactics;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.util.Ballistics;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -219,7 +220,7 @@ public final class TacticsManager {
             online.add(p.getUniqueId());
             Tracker t = trackers.computeIfAbsent(p.getUniqueId(), k -> new Tracker());
             if (now % 10 == 0) {
-                Vec3 cur = Vec3.of(p.getLocation());
+                Vec3 cur = Locations.vec(p.getLocation());
                 if (t.lastPos == null || cur.distanceToSqr(t.lastPos) > 0.04) {
                     t.lastMovedTick = now;
                     t.lastPos = cur;
@@ -240,7 +241,7 @@ public final class TacticsManager {
             if (playerCooldown.getOrDefault(p.getUniqueId(), Long.MIN_VALUE) > now) {
                 continue;
             }
-            if (CaveAmbush.isInCave(p.getWorld(), Pos.of(p.getLocation())) && isVulnerable(p, now)) {
+            if (CaveAmbush.isInCave(p.getWorld(), Locations.pos(p.getLocation())) && isVulnerable(p, now)) {
                 Bot bot = selectBot(p, now, false, 1);
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
@@ -310,7 +311,7 @@ public final class TacticsManager {
         long now = Bukkit.getCurrentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
-                if (!CaveAmbush.isInCave(player.getWorld(), Pos.of(player.getLocation()))) {
+                if (!CaveAmbush.isInCave(player.getWorld(), Locations.pos(player.getLocation()))) {
                     return "not-in-cave";
                 }
                 Bot bot = selectBot(player, now, true, 1);
@@ -380,7 +381,7 @@ public final class TacticsManager {
             cleanupBow(s, bot);
             return false;
         }
-        bot.lookAt(Vec3.of(p.getEyeLocation()));
+        bot.lookAt(Locations.vec(p.getEyeLocation()));
         bot.motor().stopWalk();
         s.aim.observe(p);
         if (now < s.nextAction) {
@@ -454,7 +455,7 @@ public final class TacticsManager {
         double spread = Math.min(0.22, 0.02 + dist * 0.005) * bot.settings().projInaccuracy.value();
         point = point.add((r.nextDouble() - 0.5) * spread, (r.nextDouble() - 0.5) * spread * 0.35, (r.nextDouble() - 0.5) * spread);
         Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, speed);
-        Vector vel = shootVector(aim.toVector(), (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
+        Vector vel = shootVector(Locations.vector(aim), (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
         Arrow arrow = e.launchProjectile(Arrow.class, vel);
         dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), player);
         arrow.setShooter(e);
@@ -544,7 +545,7 @@ public final class TacticsManager {
             cleanupFirework(s, bot);
             return false;
         }
-        bot.lookAt(Vec3.of(p.getEyeLocation()));
+        bot.lookAt(Locations.vec(p.getEyeLocation()));
         bot.motor().stopWalk();
         s.aim.observe(p);
         if (now < s.nextAction) {
@@ -605,8 +606,8 @@ public final class TacticsManager {
         double inacc = 0.04 + dist * 0.006;
         point = point.add((r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc);
         Vec3 aim = Ballistics.aim(from, point, playerVelocity, FIREWORK_SPEED, 0, 1);
-        Vector vel = shootVector(aim.toVector(), (float) FIREWORK_SPEED, 0.65f);
-        Location at = from.toLocation(e.getWorld());
+        Vector vel = shootVector(Locations.vector(aim), (float) FIREWORK_SPEED, 0.65f);
+        Location at = Locations.location(from, e.getWorld());
         e.getWorld().spawn(at, Firework.class, fw -> {
             // o Paper sorteia o tempo de vida pela duração de voo, como o jogo
             fw.setFireworkMeta((FireworkMeta) fireworkRocket().getItemMeta());
@@ -661,7 +662,7 @@ public final class TacticsManager {
         prepare(bot);
         activeBotByPlayer.put(player.getUniqueId(), bot.id());
         manager.teleportBot(bot, new Location(w, stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
-        bot.lookAt(Vec3.of(player.getEyeLocation()));
+        bot.lookAt(Locations.vec(player.getEyeLocation()));
         bot.setSneaking(true);
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.TNT));
         tnt.put(bot.id(), new TntAmbush(bot.id(), player.getUniqueId(), stand, now));
@@ -677,9 +678,9 @@ public final class TacticsManager {
         }
         World w = p.getWorld();
         if (!a.placed) {
-            bot.lookAt(Vec3.of(p.getEyeLocation()));
+            bot.lookAt(Locations.vec(p.getEyeLocation()));
             bot.setSneaking(true);
-            Vec3 dir = Vec3.of(p.getLocation()).subtract(bot.pos()).horizontal();
+            Vec3 dir = Locations.vec(p.getLocation()).subtract(bot.pos()).horizontal();
             if (dir.lengthSqr() > 1.0E-6) {
                 bot.motor().walk(dir.normalize());
                 if (bot.horizontalCollision() && bot.onGround()) {
@@ -692,10 +693,10 @@ public final class TacticsManager {
                     cancelTnt(a, bot);
                     return false;
                 }
-                tntPos.block(w).setType(Material.TNT);
+                Locations.block(tntPos, w).setType(Material.TNT);
                 // se a emboscada acabar antes de acender (bot morreu, jogador fugiu), a TNT some
                 manager.temporaryBlocks().add(w, tntPos, Material.TNT, 40);
-                w.playSound(tntPos.toLocation(w), Sound.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
+                w.playSound(Locations.location(tntPos, w), Sound.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
                 bot.swing();
                 a.tntPos = tntPos;
                 a.placed = true;
@@ -708,12 +709,12 @@ public final class TacticsManager {
             if (now < a.igniteAt) {
                 return true;
             }
-            if (a.tntPos == null || a.tntPos.block(w).getType() != Material.TNT) {
+            if (a.tntPos == null || Locations.block(a.tntPos, w).getType() != Material.TNT) {
                 cancelTnt(a, bot);
                 return false;
             }
             manager.temporaryBlocks().remove(w, a.tntPos);
-            a.tntPos.block(w).setType(Material.AIR);
+            Locations.block(a.tntPos, w).setType(Material.AIR);
             Location at = new Location(w, a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
             w.spawn(at, TNTPrimed.class, t -> {
                 t.setFuseTicks(40);
@@ -726,7 +727,7 @@ public final class TacticsManager {
             a.ignitedAt = now;
             return true;
         }
-        Vec3 away = bot.pos().subtract(Vec3.of(p.getLocation())).horizontal();
+        Vec3 away = bot.pos().subtract(Locations.vec(p.getLocation())).horizontal();
         away = away.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : away.normalize();
         bot.setSneaking(false);
         bot.motor().setSprinting(true);
@@ -749,7 +750,7 @@ public final class TacticsManager {
         if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.world().equals(p.getWorld())) {
             return false;
         }
-        Pos pp = Pos.of(p.getLocation());
+        Pos pp = Locations.pos(p.getLocation());
         if (!CaveAmbush.isInCave(p.getWorld(), pp) || !CaveAmbush.isSameCave(p.getWorld(), pp, a.stand)) {
             return false;
         }
@@ -766,11 +767,11 @@ public final class TacticsManager {
     }
 
     private static Pos findAmbushStart(World w, Player player) {
-        Vec3 look = Vec3.of(player.getLocation().getDirection()).horizontal();
+        Vec3 look = Locations.vec(player.getLocation().getDirection()).horizontal();
         look = look.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : look.normalize();
         Vec3 side = new Vec3(-look.z(), 0, look.x());
-        Vec3 pp = Vec3.of(player.getLocation());
-        Pos playerPos = Pos.of(player.getLocation());
+        Vec3 pp = Locations.vec(player.getLocation());
+        Pos playerPos = Locations.pos(player.getLocation());
         for (double dist : new double[]{8.0, 7.5, 8.5, 9.0}) {
             for (double s : new double[]{0, 1, -1, 2, -2}) {
                 for (int yOff : new int[]{0, 1, -1}) {
@@ -803,10 +804,10 @@ public final class TacticsManager {
     }
 
     private static Pos findTntPos(World w, Player player, Pos botPos) {
-        Vec3 flat = Vec3.of(player.getLocation()).subtract(Vec3.center(botPos)).horizontal();
-        BlockFace forward = Pos.faceFromYaw(flat.yaw());
-        Pos center = Pos.of(player.getLocation());
-        Pos[] candidates = {center, center.relative(forward), center.relative(forward.getOppositeFace()),
+        Vec3 flat = Locations.vec(player.getLocation()).subtract(Vec3.center(botPos)).horizontal();
+        BlockFace forward = Locations.faceFromYaw(flat.yaw());
+        Pos center = Locations.pos(player.getLocation());
+        Pos[] candidates = {center, Locations.relative(center, forward), Locations.relative(center, forward.getOppositeFace()),
                 center.offset(0, 0, -1), center.offset(0, 0, 1), center.offset(1, 0, 0), center.offset(-1, 0, 0)};
         for (Pos c : candidates) {
             if (WorldUtil.canBeReplaced(w, c) && WorldUtil.blocksMotion(w, c.below()) && !WorldUtil.isLava(w, c) && !WorldUtil.isLava(w, c.below())

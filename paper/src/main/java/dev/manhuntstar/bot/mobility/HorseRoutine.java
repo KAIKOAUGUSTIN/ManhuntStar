@@ -4,6 +4,7 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.bot.Progression;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.KineticWeapon;
@@ -174,11 +175,11 @@ public final class HorseRoutine {
         }
         double dist = bot.distanceTo(horse);
         if (dist > INTERACT_RANGE) {
-            moveToward(Vec3.of(horse.getLocation()), horse);
+            moveToward(Locations.vec(horse.getLocation()), horse);
             return true;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Vec3.of(horse.getEyeLocation()));
+        bot.lookAt(Locations.vec(horse.getEyeLocation()));
         if (!horse.isTamed()) {
             if (actionCooldown <= 0) {
                 mount(horse);
@@ -221,7 +222,7 @@ public final class HorseRoutine {
             joust(horse, target);
         } else {
             stowLance();
-            steer(horse, Vec3.of(target.getLocation()), true);
+            steer(horse, Locations.vec(target.getLocation()), true);
         }
         if (noMoveTicks >= 60) {
             bot.manager().markHorseInaccessible(horse, 600);
@@ -425,7 +426,7 @@ public final class HorseRoutine {
             detail += ", passando";
             return;
         }
-        Vec3 tp = Vec3.of(target.getLocation());
+        Vec3 tp = Locations.vec(target.getLocation());
         steer(horse, tp, true);
         double yawRad = Math.toRadians(hl.getYaw());
         double fx = -Math.sin(yawRad);
@@ -563,7 +564,7 @@ public final class HorseRoutine {
             return locked;
         }
         Vec3 me = bot.pos();
-        Vec3 goal = Vec3.of(target.getLocation());
+        Vec3 goal = Locations.vec(target.getLocation());
         double direct = me.distanceTo(goal);
         Horse best = null;
         double bestDetour = MAX_DETOUR;
@@ -571,7 +572,7 @@ public final class HorseRoutine {
             if (!eligible(h)) {
                 continue;
             }
-            Vec3 hp = Vec3.of(h.getLocation());
+            Vec3 hp = Locations.vec(h.getLocation());
             double detour = me.distanceTo(hp) + hp.distanceTo(goal) - direct;
             if (detour < bestDetour) {
                 bestDetour = detour;

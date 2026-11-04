@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.pathfinding.PathService;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.Iterator;
@@ -79,7 +80,7 @@ public final class TemporaryBlocks {
         if (w == null) {
             return;
         }
-        Block b = p.block(w);
+        Block b = Locations.block(p, w);
         if (b.getType() != material) {
             return;
         }

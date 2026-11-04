@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.survival;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -181,9 +182,9 @@ public final class Survival {
         ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.WATER_BUCKET));
         bot.setPitchNow(90f);
-        waterPos.block(w).setType(Material.WATER);
+        Locations.block(waterPos, w).setType(Material.WATER);
         bot.swing();
-        w.playSound(waterPos.toLocation(w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
         // se o bot morrer antes de recolher, a água some do mesmo jeito
         bot.manager().temporaryBlocks().add(w, waterPos, Material.WATER, FIRE_WATER_PICKUP_TICKS + 40);
         fireEscapeWaterPos = waterPos;
@@ -201,7 +202,7 @@ public final class Survival {
             return;
         }
         World w = fireEscapeWaterWorld;
-        Block b = fireEscapeWaterPos.block(w);
+        Block b = Locations.block(fireEscapeWaterPos, w);
         // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
         if (w.equals(bot.world()) && b.getType() == Material.WATER) {
             bot.manager().temporaryBlocks().remove(w, fireEscapeWaterPos);

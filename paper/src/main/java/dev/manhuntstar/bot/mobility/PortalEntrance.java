@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -111,11 +112,11 @@ public final class PortalEntrance {
             return;
         }
         World w = player.getWorld();
-        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, Pos.of(player.getLocation()));
+        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, Locations.pos(player.getLocation()));
         Location dest = new Location(w, spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
-        bot.lookAt(Vec3.of(player.getLocation()));
+        bot.lookAt(Locations.vec(player.getLocation()));
         w.playSound(dest, portalPos != null ? Sound.BLOCK_PORTAL_TRAVEL : Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
@@ -126,13 +127,13 @@ public final class PortalEntrance {
         portalPos = findPortalLocation(player);
         boolean end = w.getEnvironment() == World.Environment.THE_END;
         if (portalPos == null) {
-            portalPos = Pos.of(player.getLocation()).relative(Pos.faceFromYaw(player.getLocation().getYaw()), 15);
+            portalPos = Locations.relative(Locations.pos(player.getLocation()), Locations.faceFromYaw(player.getLocation().getYaw()), 15);
         }
         if (end) {
             if (!WorldUtil.blocksMotion(w, portalPos.below())) {
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
-                        Block b = portalPos.offset(x, -1, z).block(w);
+                        Block b = Locations.block(portalPos.offset(x, -1, z), w);
                         if (!b.getType().isSolid()) {
                             b.setType(Material.OBSIDIAN);
                         }
@@ -149,7 +150,7 @@ public final class PortalEntrance {
     public static void buildNetherPortal(World w, Pos pos) {
         for (int x = -1; x <= 2; x++) {
             for (int z = -1; z <= 2; z++) {
-                Block floor = pos.offset(x, -1, z).block(w);
+                Block floor = Locations.block(pos.offset(x, -1, z), w);
                 if (!floor.getType().isSolid() || floor.getType() == Material.LAVA) {
                     floor.setType(Material.OBSIDIAN);
                 }
@@ -157,15 +158,15 @@ public final class PortalEntrance {
         }
         for (int x = -1; x <= 2; x++) {
             for (int y = 0; y <= 3; y++) {
-                pos.offset(x, y, 0).block(w).setType(Material.AIR, false);
+                Locations.block(pos.offset(x, y, 0), w).setType(Material.AIR, false);
             }
         }
         for (int[] f : FRAME) {
-            pos.offset(f[0], f[1], 0).block(w).setType(Material.OBSIDIAN, false);
+            Locations.block(pos.offset(f[0], f[1], 0), w).setType(Material.OBSIDIAN, false);
         }
         for (int x = 0; x <= 1; x++) {
             for (int y = 0; y <= 2; y++) {
-                Block b = pos.offset(x, y, 0).block(w);
+                Block b = Locations.block(pos.offset(x, y, 0), w);
                 b.setType(Material.NETHER_PORTAL, false);
                 if (b.getBlockData() instanceof Orientable o) {
                     o.setAxis(Axis.X);
@@ -177,7 +178,7 @@ public final class PortalEntrance {
 
     private Pos findPortalLocation(Player player) {
         World w = player.getWorld();
-        Vec3 pp = Vec3.of(player.getLocation());
+        Vec3 pp = Locations.vec(player.getLocation());
         boolean nether = w.getEnvironment() == World.Environment.NETHER;
         boolean end = w.getEnvironment() == World.Environment.THE_END;
         for (int dist = 100; dist >= 10; dist -= 5) {
@@ -220,9 +221,9 @@ public final class PortalEntrance {
     }
 
     private static boolean visibleTo(Player player, Pos pos) {
-        Vec3 eye = Vec3.of(player.getEyeLocation());
+        Vec3 eye = Locations.vec(player.getEyeLocation());
         Vec3 center = Vec3.center(pos);
-        Vec3 look = Vec3.of(player.getLocation().getDirection());
+        Vec3 look = Locations.vec(player.getLocation().getDirection());
         if (look.dot(center.subtract(eye).normalize()) < 0.5) {
             return false;
         }
@@ -279,8 +280,8 @@ public final class PortalEntrance {
         if (!WorldUtil.isSafeStand(w, c)) {
             return false;
         }
-        Material feet = c.block(w).getType();
-        Material head = c.above().block(w).getType();
+        Material feet = Locations.block(c, w).getType();
+        Material head = Locations.block(c.above(), w).getType();
         if (feet == Material.NETHER_PORTAL || head == Material.NETHER_PORTAL) {
             return false;
         }

@@ -3,6 +3,7 @@ package dev.manhuntstar.bot.ai;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.manhunt.Ring;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -63,7 +64,7 @@ public final class IdleBehavior {
             return false;
         }
         Player watched = nearestPlayer();
-        Vec3 focus = watched != null ? Vec3.of(watched.getLocation()) : ring.center();
+        Vec3 focus = watched != null ? Locations.vec(watched.getLocation()) : ring.center();
         double eyeHeight = watched != null ? watched.getEyeHeight() : 1.6;
         executeBehavior(focus, eyeHeight);
         return true;
@@ -77,7 +78,7 @@ public final class IdleBehavior {
             if (!BotManager.isActivePlayer(pl)) {
                 continue;
             }
-            double d = p.distanceToSqr(Vec3.of(pl.getLocation()));
+            double d = p.distanceToSqr(Locations.vec(pl.getLocation()));
             if (d < bestDist) {
                 bestDist = d;
                 best = pl;

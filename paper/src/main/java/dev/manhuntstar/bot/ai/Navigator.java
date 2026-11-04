@@ -3,6 +3,7 @@ package dev.manhuntstar.bot.ai;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -399,7 +400,7 @@ public final class Navigator {
         Pos next = current.path().get(pathIndex);
         Vec3 centre = Vec3.bottomCenter(next);
         Entity vehicle = bot.vehicle();
-        Vec3 p = vehicle instanceof AbstractHorse ? Vec3.of(vehicle.getLocation()) : bot.pos();
+        Vec3 p = vehicle instanceof AbstractHorse ? Locations.vec(vehicle.getLocation()) : bot.pos();
         double dx = p.x() - centre.x();
         double dz = p.z() - centre.z();
         double dy = p.y() - centre.y();
@@ -603,7 +604,7 @@ public final class Navigator {
             if (!WorldUtil.isLoaded(w, check)) {
                 return false;
             }
-            Block b = check.block(w);
+            Block b = Locations.block(check, w);
             if (b.getType().isAir() || b.isPassable()) {
                 continue;
             }
@@ -846,7 +847,7 @@ public final class Navigator {
         int bottom = Math.max(w.getMinHeight() + 1, surface - 8);
         for (int y = top; y >= bottom; y--) {
             Pos feet = new Pos(x, y, z);
-            if (isStandableApproach(feet, false) && !Tag.LEAVES.isTagged(feet.below().block(w).getType())) {
+            if (isStandableApproach(feet, false) && !Tag.LEAVES.isTagged(Locations.block(feet.below(), w).getType())) {
                 return feet;
             }
         }
@@ -931,7 +932,7 @@ public final class Navigator {
         World w = world();
         for (int y = Math.min(targetY, w.getMaxHeight() - 2); y >= w.getMinHeight(); y--) {
             Pos p = new Pos(x, y, z);
-            Block b = p.block(w);
+            Block b = Locations.block(p, w);
             if (b.getType().isAir() || b.isReplaceable()) {
                 continue;
             }
@@ -948,7 +949,7 @@ public final class Navigator {
         boolean clearFeet = !WorldUtil.hasCollision(w, feet) && !WorldUtil.hasFluid(w, feet);
         boolean clearHead = !WorldUtil.hasCollision(w, feet.above()) && !WorldUtil.hasFluid(w, feet.above());
         Pos floor = feet.below();
-        Block fb = floor.block(w);
+        Block fb = Locations.block(floor, w);
         boolean safeFloor = !fb.getType().isAir() && !WorldUtil.hasFluid(w, floor)
                 && (fb.getType().isSolid() || WorldUtil.isSturdyTop(w, floor));
         if (!clearFeet || !clearHead || !safeFloor) {
@@ -992,7 +993,7 @@ public final class Navigator {
             if (p.y() < w.getMinHeight()) {
                 break;
             }
-            Block b = p.block(w);
+            Block b = Locations.block(p, w);
             boolean empty = b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
             if (empty || isPlayerPlaced(p)) {
                 continue;
@@ -1008,7 +1009,7 @@ public final class Navigator {
             if (p.y() < w.getMinHeight()) {
                 return null;
             }
-            Block b = p.block(w);
+            Block b = Locations.block(p, w);
             boolean empty = b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
             if (!empty && !isPlayerPlaced(p)) {
                 return p;
@@ -1020,7 +1021,7 @@ public final class Navigator {
     private static Pos firstSupportBelow(World w, Pos target) {
         for (int y = target.y() - 1; y >= Math.max(w.getMinHeight(), target.y() - 8); y--) {
             Pos p = new Pos(target.x(), y, target.z());
-            Block b = p.block(w);
+            Block b = Locations.block(p, w);
             if (b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p))) {
                 continue;
             }
@@ -1116,7 +1117,7 @@ public final class Navigator {
         if (WorldUtil.isWater(w, feet) || WorldUtil.isWater(w, feet.below())) {
             return false;
         }
-        Block below = feet.below().block(w);
+        Block below = Locations.block(feet.below(), w);
         return !below.getType().isAir() && !WorldUtil.hasFluid(w, feet.below()) && below.getType().isOccluding();
     }
 
@@ -1124,7 +1125,7 @@ public final class Navigator {
     private boolean isTargetOffSolidGround(Vec3 finalTarget) {
         World w = world();
         Pos below = finalTarget.toPos().below();
-        Block b = below.block(w);
+        Block b = Locations.block(below, w);
         return !(!b.getType().isAir() && !WorldUtil.hasFluid(w, below) && b.getType().isOccluding());
     }
 
@@ -1162,10 +1163,10 @@ public final class Navigator {
                     if (!WorldUtil.isWater(w, water) || WorldUtil.hasFluid(w, water.above())) {
                         continue;
                     }
-                    for (BlockFace face : Pos.HORIZONTALS) {
-                        Pos landFeet = water.relative(face);
+                    for (BlockFace face : Locations.HORIZONTALS) {
+                        Pos landFeet = Locations.relative(water, face);
                         Pos landBelow = landFeet.below();
-                        Block lb = landBelow.block(w);
+                        Block lb = Locations.block(landBelow, w);
                         if (lb.getType().isAir() || WorldUtil.hasFluid(w, landBelow)) {
                             continue;
                         }
@@ -1243,7 +1244,7 @@ public final class Navigator {
                         continue;
                     }
                     Pos air = water.above();
-                    if (!air.block(w).getType().isAir() || WorldUtil.hasFluid(w, air)) {
+                    if (!Locations.block(air, w).getType().isAir() || WorldUtil.hasFluid(w, air)) {
                         continue;
                     }
                     double score = water.distSqr(botPos);
@@ -1260,14 +1261,14 @@ public final class Navigator {
     private Pos anchorPos() {
         Entity v = bot.vehicle();
         if (v instanceof Boat boat) {
-            Pos p = Pos.of(boat.getLocation());
+            Pos p = Locations.pos(boat.getLocation());
             if (WorldUtil.isWater(world(), p)) {
                 return p;
             }
             return WorldUtil.isWater(world(), p.below()) ? p.below() : p;
         }
         if (v instanceof AbstractHorse horse) {
-            return Pos.of(horse.getLocation());
+            return Locations.pos(horse.getLocation());
         }
         Pos p = bot.blockPos();
         Mannequin e = bot.entity();

@@ -1,27 +1,9 @@
 package dev.manhuntstar.util;
 
-import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
-import org.bukkit.util.Vector;
-
-/** Vetor 3D imutável (evita os erros de mutabilidade do {@link Vector} do Bukkit). */
+/** Vetor 3D imutável (evita os erros de mutabilidade do {@code Vector} do Bukkit). */
 public record Vec3(double x, double y, double z) {
 
     public static final Vec3 ZERO = new Vec3(0, 0, 0);
-
-    public static Vec3 of(Location l) {
-        return new Vec3(l.getX(), l.getY(), l.getZ());
-    }
-
-    public static Vec3 of(Vector v) {
-        return new Vec3(v.getX(), v.getY(), v.getZ());
-    }
-
-    public static Vec3 of(Entity e) {
-        Location l = e.getLocation();
-        return new Vec3(l.getX(), l.getY(), l.getZ());
-    }
 
     public static Vec3 center(Pos p) {
         return new Vec3(p.x() + 0.5, p.y() + 0.5, p.z() + 0.5);
@@ -110,18 +92,6 @@ public record Vec3(double x, double y, double z) {
 
     public Pos toPos() {
         return new Pos((int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
-    }
-
-    public Vector toVector() {
-        return new Vector(x, y, z);
-    }
-
-    public Location toLocation(World world) {
-        return new Location(world, x, y, z);
-    }
-
-    public Location toLocation(World world, float yaw, float pitch) {
-        return new Location(world, x, y, z, yaw, pitch);
     }
 
     public boolean isFinite() {

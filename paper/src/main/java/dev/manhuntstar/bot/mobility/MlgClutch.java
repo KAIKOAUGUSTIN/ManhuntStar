@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -67,10 +68,10 @@ public final class MlgClutch {
         if (waterPos != null && ++waterTicks > 15) {
             World w = waterWorld;
             // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
-            if (w.equals(bot.world()) && waterPos.block(w).getType() == Material.WATER) {
+            if (w.equals(bot.world()) && Locations.block(waterPos, w).getType() == Material.WATER) {
                 bot.manager().temporaryBlocks().remove(w, waterPos);
-                waterPos.block(w).setType(Material.AIR);
-                w.playSound(waterPos.toLocation(w), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
+                Locations.block(waterPos, w).setType(Material.AIR);
+                w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
                 bot.manager().plugin().pathService().invalidate(w, waterPos);
             }
             waterPos = null;
@@ -166,11 +167,11 @@ public final class MlgClutch {
         }
         World w = bot.world();
         Vec3 p = bot.pos();
-        RayTraceResult r = w.rayTraceBlocks(p.toLocation(w), new Vector(0, -1, 0), 10, FluidCollisionMode.NEVER, true);
+        RayTraceResult r = w.rayTraceBlocks(Locations.location(p, w), new Vector(0, -1, 0), 10, FluidCollisionMode.NEVER, true);
         if (r == null || r.getHitBlock() == null) {
             return;
         }
-        Pos ground = Pos.of(r.getHitBlock());
+        Pos ground = Locations.pos(r.getHitBlock());
         double distToGround = p.y() - (ground.y() + 1.0);
         if (distToGround > 4.5 || distToGround < 0) {
             return;
@@ -206,8 +207,8 @@ public final class MlgClutch {
             return;
         }
         if (WorldUtil.canBeReplaced(w, water)) {
-            water.block(w).setType(Material.WATER);
-            w.playSound(water.toLocation(w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1f, 1f);
+            Locations.block(water, w).setType(Material.WATER);
+            w.playSound(Locations.location(water, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1f, 1f);
             bot.swing();
             bot.motor().resetFallTracking();
             bot.manager().plugin().pathService().invalidate(w, water);

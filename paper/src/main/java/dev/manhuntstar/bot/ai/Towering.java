@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -48,7 +49,7 @@ final class Towering {
     /** @return true se tomou o controle do movimento neste tick. */
     boolean handle(Player sky, Navigator nav) {
         Vec3 p = bot.pos();
-        Vec3 t = Vec3.of(sky.getLocation());
+        Vec3 t = Locations.vec(sky.getLocation());
         double yDiff = t.y() - p.y();
         double horizontal = Math.hypot(t.x() - p.x(), t.z() - p.z());
         double lookAngle = Math.toDegrees(Math.atan2(yDiff, horizontal));
@@ -94,7 +95,7 @@ final class Towering {
                     lastPlaceTick = Bukkit.getCurrentTick();
                     bot.setSneaking(false);
                     if (sky.isValid()) {
-                        bot.lookAt(Vec3.of(sky.getLocation()));
+                        bot.lookAt(Locations.vec(sky.getLocation()));
                     }
                 });
             }
@@ -174,7 +175,7 @@ final class Towering {
         if (hasStairLikeRouteAhead(target) || hasAStarAscendingRoute(target, nav)) {
             return false;
         }
-        Pos front = bot.blockPos().relative(bot.facing());
+        Pos front = Locations.relative(bot.blockPos(), bot.facing());
         if (solid(front) && !solid(front.above())) {
             return false;
         }
@@ -200,7 +201,7 @@ final class Towering {
     }
 
     private boolean hasStairLikeRouteAhead(Player target) {
-        Vec3 flat = Vec3.of(target.getLocation()).subtract(bot.pos()).horizontal();
+        Vec3 flat = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -258,7 +259,7 @@ final class Towering {
     }
 
     private boolean isDirectChaseUnsupported(Player target) {
-        Vec3 flat = Vec3.of(target.getLocation()).subtract(bot.pos()).horizontal();
+        Vec3 flat = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -269,7 +270,7 @@ final class Towering {
     }
 
     private boolean isTargetOnIsolatedSupport(Player target) {
-        Pos support = Pos.of(target.getLocation()).below();
+        Pos support = Locations.pos(target.getLocation()).below();
         if (!solid(support)) {
             return true;
         }

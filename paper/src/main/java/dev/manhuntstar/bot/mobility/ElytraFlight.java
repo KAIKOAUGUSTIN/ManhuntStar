@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
@@ -72,7 +73,7 @@ public final class ElytraFlight {
         }
         if (!pathing) {
             ThreadLocalRandom r = ThreadLocalRandom.current();
-            Vec3 dir = Vec3.of(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
+            Vec3 dir = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
             Vec3 perp = new Vec3(-dir.z(), 0, dir.x()).normalize();
             double forward = 45 + r.nextDouble() * 35;
             double lateral = (10 + r.nextDouble() * 40) * (r.nextBoolean() ? 1 : -1);

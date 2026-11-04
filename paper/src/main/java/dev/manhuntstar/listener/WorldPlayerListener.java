@@ -2,6 +2,7 @@ package dev.manhuntstar.listener;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import java.util.ArrayList;
@@ -51,14 +52,14 @@ public final class WorldPlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         Block b = event.getBlockPlaced();
-        plugin.botManager().blockTracker().markPlaced(b.getWorld(), Pos.of(b));
+        plugin.botManager().blockTracker().markPlaced(b.getWorld(), Locations.pos(b));
         plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
         Block b = event.getBlock();
-        Pos p = Pos.of(b);
+        Pos p = Locations.pos(b);
         plugin.botManager().blockTracker().unmark(b.getWorld(), p);
         plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
         if (b.getType().name().endsWith("_BED")) {

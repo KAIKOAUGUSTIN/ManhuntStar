@@ -15,6 +15,7 @@ import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -538,7 +539,7 @@ public final class BotManager {
                 spawn = pos.clone().add(Math.cos(angle) * radius + (r.nextDouble() - 0.5), 0, Math.sin(angle) * radius + (r.nextDouble() - 0.5));
                 spawn.setY(surfaceNear(world, spawn, pos.getY()));
                 // de frente para o centro da roda
-                spawn.setYaw(Vec3.of(pos).subtract(Vec3.of(spawn)).yaw());
+                spawn.setYaw(Locations.vec(pos).subtract(Locations.vec(spawn)).yaw());
             }
             String botName = name.contains("%") ? name.replace("%", String.valueOf(i)) : name + i;
             Bot bot = new Bot(this, UUID.randomUUID(), botName, visual, skin, difficulty);
@@ -565,7 +566,7 @@ public final class BotManager {
 
     /** Altura do chão perto de um ponto da roda (para não nascer dentro de blocos nem no ar). */
     private static double surfaceNear(World w, Location spawn, double refY) {
-        Pos p = Pos.of(spawn);
+        Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 4; dy++) {
             for (int sign : new int[]{1, -1}) {
                 Pos c = new Pos(p.x(), (int) Math.floor(refY) + dy * sign, p.z());
@@ -579,7 +580,7 @@ public final class BotManager {
 
     /** Se o ponto cair dentro de blocos, sobe até o primeiro espaço livre (até 16 blocos). */
     private static double freeSpaceAbove(World w, Location spawn) {
-        Pos p = Pos.of(spawn);
+        Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 16; dy++) {
             Pos c = p.above(dy);
             if (!WorldUtil.hasCollision(w, c) && !WorldUtil.hasCollision(w, c.above())) {
@@ -747,7 +748,7 @@ public final class BotManager {
         if (!settings().respawn.on() || !bot.shouldRespawn()) {
             return;
         }
-        Vec3 pos = deathLoc == null ? bot.lastKnownPos() : Vec3.of(deathLoc);
+        Vec3 pos = deathLoc == null ? bot.lastKnownPos() : Locations.vec(deathLoc);
         String world = deathLoc == null || deathLoc.getWorld() == null ? bot.lastKnownWorld() : deathLoc.getWorld().getName();
         pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + RESPAWN_DELAY_TICKS, world, pos));
     }
@@ -825,8 +826,8 @@ public final class BotManager {
     /** No chão, onde o bot morreu (para o bot da roda, a própria roda). */
     private static Location deathSpot(PendingRespawn p) {
         World w = deathWorld(p);
-        Vec3 pos = p.deathPos() == null ? Vec3.of(w.getSpawnLocation()) : p.deathPos();
-        return resolveSurface(pos.toLocation(w));
+        Vec3 pos = p.deathPos() == null ? Locations.vec(w.getSpawnLocation()) : p.deathPos();
+        return resolveSurface(Locations.location(pos, w));
     }
 
     private Location normalRespawnLocation(Bot bot, PendingRespawn p) {
@@ -839,7 +840,7 @@ public final class BotManager {
         if (g != null && g.spawnpoint() != null) {
             World gw = g.spawnWorld() == null ? deathWorld : Bukkit.getWorld(g.spawnWorld());
             if (gw != null) {
-                return resolveSurface(g.spawnpoint().toLocation(gw));
+                return resolveSurface(Locations.location(g.spawnpoint(), gw));
             }
         }
         Player target = bot.target();
@@ -866,8 +867,8 @@ public final class BotManager {
             }
             int y = w.getEnvironment() == World.Environment.NETHER ? (int) target.getY() : WorldUtil.surfaceY(w, x, z);
             Vec3 candidate = new Vec3(x + 0.5, y + 1, z + 0.5);
-            if (!WorldUtil.clearLine(w, Vec3.of(target.getEyeLocation()), candidate)) {
-                return candidate.toLocation(w);
+            if (!WorldUtil.clearLine(w, Locations.vec(target.getEyeLocation()), candidate)) {
+                return Locations.location(candidate, w);
             }
         }
         return null;
@@ -1238,7 +1239,7 @@ public final class BotManager {
                     bot.progression().updateGear();
                 } else if (s.shouldRespawn() && settings().respawn.on()) {
                     // morto ao desligar: só volta se o respawn estiver ligado, como numa morte normal
-                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.getName(), Vec3.of(loc)));
+                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.getName(), Locations.vec(loc)));
                 }
                 notePhaseReached(bot.progression().phase());
                 n++;

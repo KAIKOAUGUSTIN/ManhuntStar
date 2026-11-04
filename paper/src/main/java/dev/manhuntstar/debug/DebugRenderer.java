@@ -1,6 +1,7 @@
 package dev.manhuntstar.debug;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import java.util.HashMap;
 import java.util.List;
@@ -66,7 +67,7 @@ public final class DebugRenderer {
                 }
                 for (int i = 0; i < s.path().size(); i++) {
                     Pos n = s.path().get(i);
-                    if (p.getLocation().distanceSquared(n.toLocation(w)) > 64 * 64) {
+                    if (p.getLocation().distanceSquared(Locations.location(n, w)) > 64 * 64) {
                         continue;
                     }
                     p.spawnParticle(Particle.DUST, n.x() + 0.5, n.y() + 0.1, n.z() + 0.5, 1, 0, 0, 0, 0, i < s.index() ? DONE : PATH);

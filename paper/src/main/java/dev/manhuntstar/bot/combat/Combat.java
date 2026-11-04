@@ -6,6 +6,7 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -188,7 +189,7 @@ public final class Combat {
         if (from == null) {
             return false;
         }
-        Vec3 toSource = Vec3.of(from).subtract(bot.pos()).horizontal().normalize();
+        Vec3 toSource = Locations.vec(from).subtract(bot.pos()).horizontal().normalize();
         return bot.forwardVector().dot(toSource) > 0.0;
     }
 
@@ -239,7 +240,7 @@ public final class Combat {
             return;
         }
         prepareMainHand();
-        Vec3 targetPos = Vec3.of(target.getLocation()).add(0, target.getHeight() / 2.0, 0);
+        Vec3 targetPos = Locations.vec(target.getLocation()).add(0, target.getHeight() / 2.0, 0);
         double aimOffset = s.meleeAimOffset.value();
         if (humanize > 0 && aimOffset > 0) {
             double v = aimOffset * humanize;
@@ -411,7 +412,7 @@ public final class Combat {
 
     private void playSound(Sound s) {
         Vec3 p = bot.pos();
-        bot.world().playSound(p.toLocation(bot.world()), s, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(Locations.location(p, bot.world()), s, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     // ------------------------------------------------------------------ besta
@@ -425,14 +426,14 @@ public final class Combat {
             return false;
         }
         if (!chargingCrossbow) {
-            if (dist >= 12 && dist <= 20 && bot.canSee(Vec3.of(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 12 && dist <= 20 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
                 startCrossbowCharge();
                 return true;
             }
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Vec3.of(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
+        bot.lookAt(Locations.vec(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
         aimTracker.observe(target);
         swimWhileCharging(target);
         crossbowChargeTicks++;
@@ -480,7 +481,7 @@ public final class Combat {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         point = point.add((r.nextDouble() - 0.5) * scatter, (r.nextDouble() - 0.5) * scatter, (r.nextDouble() - 0.5) * scatter);
         Vec3 v = Ballistics.aimArrow(from, point, aimTracker.velocity(), speed);
-        return TacticsManager.shootVector(v.toVector(), (float) speed, (float) inaccuracy);
+        return TacticsManager.shootVector(Locations.vector(v), (float) speed, (float) inaccuracy);
     }
 
     private void performCrossbowShot(LivingEntity target) {
@@ -532,7 +533,7 @@ public final class Combat {
             if (db <= 1.2 || db >= 3.0) {
                 continue;
             }
-            Vec3 toPlayer = Vec3.of(player.getLocation()).subtract(me).normalize();
+            Vec3 toPlayer = Locations.vec(player.getLocation()).subtract(me).normalize();
             Vec3 fromBooster = me.subtract(booster.pos()).normalize();
             if (toPlayer.dot(fromBooster) <= 0.8) {
                 continue;
@@ -558,14 +559,14 @@ public final class Combat {
             return false;
         }
         if (!chargingTrident) {
-            if (dist >= 15 && dist <= 25 && bot.canSee(Vec3.of(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 15 && dist <= 25 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
                 startTridentCharge();
                 return true;
             }
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Vec3.of(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
+        bot.lookAt(Locations.vec(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
         aimTracker.observe(target);
         swimWhileCharging(target);
         tridentChargeTicks++;
@@ -636,8 +637,8 @@ public final class Combat {
         if (tridentFlightTicks < 20) {
             return;
         }
-        Vec3 toBot = bot.pos().subtract(Vec3.of(thrownTrident.getLocation()));
-        Vec3 vel = Vec3.of(thrownTrident.getVelocity());
+        Vec3 toBot = bot.pos().subtract(Locations.vec(thrownTrident.getLocation()));
+        Vec3 vel = Locations.vec(thrownTrident.getVelocity());
         double speed = vel.length();
         boolean stopped = thrownTrident.isOnGround() || speed < 0.1;
         boolean returning = toBot.lengthSqr() > 1.0E-6 && speed > 1.0E-6 && vel.normalize().dot(toBot.normalize()) > 0.35;
@@ -684,7 +685,7 @@ public final class Combat {
         if (!bot.progression().canUseLavaBucket() || !hasLavaBucket || lavaUsedThisRun || placedLavaPos != null) {
             return false;
         }
-        if (dist >= 3 && dist <= 6 && bot.canSee(Vec3.of(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < 0.005) {
+        if (dist >= 3 && dist <= 6 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < 0.005) {
             return attemptLavaPlace(target);
         }
         return false;
@@ -693,13 +694,13 @@ public final class Combat {
     private boolean attemptLavaPlace(LivingEntity target) {
         World w = bot.world();
         Vec3 eye = bot.eyePos();
-        Vec3 dir = Vec3.of(target.getLocation()).subtract(eye).normalize();
+        Vec3 dir = Locations.vec(target.getLocation()).subtract(eye).normalize();
         RayTraceResult hit = WorldUtil.rayBlocks(w, eye, eye.add(dir.scale(4.0)), true);
         if (hit == null || hit.getHitBlock() == null || hit.getHitBlockFace() == null) {
             return false;
         }
         Block placeAt = hit.getHitBlock().getRelative(hit.getHitBlockFace());
-        Pos p = Pos.of(placeAt);
+        Pos p = Locations.pos(placeAt);
         if (!placeAt.isReplaceable()) {
             return false;
         }
@@ -740,7 +741,7 @@ public final class Combat {
         boolean sameWorld = w.equals(bot.world());
         Vec3 c = Vec3.center(placedLavaPos);
         boolean canReach = sameWorld && bot.distanceTo(c) <= 5.0 && bot.canSee(c);
-        Block b = placedLavaPos.block(w);
+        Block b = Locations.block(placedLavaPos, w);
         // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
         if (sameWorld && b.getType() == Material.LAVA) {
             bot.manager().temporaryBlocks().remove(w, placedLavaPos);

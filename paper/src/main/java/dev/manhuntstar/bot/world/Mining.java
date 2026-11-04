@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -43,7 +44,7 @@ public final class Mining {
             return;
         }
         World w = bot.world();
-        Block b = miningPos.block(w);
+        Block b = Locations.block(miningPos, w);
         if (b.getType().isAir()) {
             clear(false);
             return;
@@ -114,7 +115,7 @@ public final class Mining {
         if (w == null || !WorldUtil.isLoaded(w, pos)) {
             return false;
         }
-        Block b = pos.block(w);
+        Block b = Locations.block(pos, w);
         if (b.getType().isAir() || b.getType() == Material.BEDROCK || b.getType().getHardness() < 0) {
             return false;
         }
@@ -154,7 +155,7 @@ public final class Mining {
 
     private Pos offsetToward(Pos origin, int sx, int sz) {
         if (sx == 0 && sz == 0) {
-            return origin.relative(bot.facing());
+            return Locations.relative(origin, bot.facing());
         }
         return origin.offset(sx, 0, sz);
     }
@@ -177,7 +178,7 @@ public final class Mining {
             return;
         }
         Pos botPos = bot.blockPos();
-        Pos targetPos = Pos.of(target.getLocation());
+        Pos targetPos = Locations.pos(target.getLocation());
         double yDiff = targetPos.y() - botPos.y();
         int dx = targetPos.x() - botPos.x();
         int dz = targetPos.z() - botPos.z();
@@ -185,7 +186,7 @@ public final class Mining {
         int sz = Integer.signum(dz);
         double horizontalDist = Math.hypot(dx, dz);
         bot.inventory().restorePreferredPickaxe();
-        bot.lookAt(Vec3.of(target.getLocation()));
+        bot.lookAt(Locations.vec(target.getLocation()));
         if (yDiff < -1.5) {
             Pos toward = offsetToward(botPos, sx, sz);
             Pos downPrimary = Math.abs(dx) >= Math.abs(dz) ? botPos.offset(sx, -1, 0) : botPos.offset(0, -1, sz);
@@ -217,7 +218,7 @@ public final class Mining {
             if (horizontalDist > 5.0) {
                 Vec3 towardVec = new Vec3(dx, 0, dz);
                 if (towardVec.lengthSqr() > 1.0E-4) {
-                    bot.lookAt(Vec3.of(target.getLocation()));
+                    bot.lookAt(Locations.vec(target.getLocation()));
                     bot.motor().walk(towardVec.normalize());
                     bot.motor().setSprinting(true);
                     if (bot.horizontalCollision() && bot.onGround()) {
@@ -248,7 +249,7 @@ public final class Mining {
             bot.motor().walk(new Vec3(sx, 0, sz).normalize());
             bot.motor().setSprinting(true);
         } else {
-            Pos front = botPos.relative(bot.facing());
+            Pos front = Locations.relative(botPos, bot.facing());
             if (solid(front.above())) {
                 start(front.above());
                 return;
@@ -273,9 +274,9 @@ public final class Mining {
             return;
         }
         Pos botPos = bot.blockPos();
-        Pos player = Pos.of(target.getLocation());
+        Pos player = Locations.pos(target.getLocation());
         bot.inventory().restorePreferredPickaxe();
-        Pos front = botPos.relative(bot.facing());
+        Pos front = Locations.relative(botPos, bot.facing());
         if (player.y() > botPos.y() + 1) {
             int sx = Integer.signum(player.x() - botPos.x());
             int sz = Integer.signum(player.z() - botPos.z());

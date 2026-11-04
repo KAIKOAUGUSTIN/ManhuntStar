@@ -1,5 +1,6 @@
 package dev.manhuntstar.bot;
 
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -477,7 +478,7 @@ public final class BotInventory {
             return;
         }
         Vec3 p = bot.pos();
-        Item item = bot.world().dropItemNaturally(p.add(0, 1.0, 0).toLocation(bot.world()), stack);
+        Item item = bot.world().dropItemNaturally(Locations.location(p.add(0, 1.0, 0), bot.world()), stack);
         item.setPickupDelay(40);
     }
 }

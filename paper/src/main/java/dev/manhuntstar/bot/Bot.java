@@ -9,6 +9,7 @@ import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.util.ChunkTickets;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -326,11 +327,11 @@ public final class Bot {
     }
 
     public Vec3 pos() {
-        return entity != null ? Vec3.of(entity.getLocation()) : (lastKnownPos == null ? Vec3.ZERO : lastKnownPos);
+        return entity != null ? Locations.vec(entity.getLocation()) : (lastKnownPos == null ? Vec3.ZERO : lastKnownPos);
     }
 
     public Location location() {
-        return entity != null ? entity.getLocation() : (lastKnownPos == null || world() == null ? null : lastKnownPos.toLocation(world()));
+        return entity != null ? entity.getLocation() : (lastKnownPos == null || world() == null ? null : Locations.location(lastKnownPos, world()));
     }
 
     public Pos blockPos() {
@@ -361,7 +362,7 @@ public final class Bot {
     }
 
     public BlockFace facing() {
-        return Pos.faceFromYaw(yaw());
+        return Locations.faceFromYaw(yaw());
     }
 
     public Vec3 lookVector() {
@@ -444,7 +445,7 @@ public final class Bot {
     }
 
     public double distanceTo(Entity e) {
-        return pos().distanceTo(Vec3.of(e.getLocation()));
+        return pos().distanceTo(Locations.vec(e.getLocation()));
     }
 
     /** Linha de visão dos olhos até o ponto, ignorando blocos sem colisão. */
@@ -496,7 +497,7 @@ public final class Bot {
             if (!manager.isEligibleTarget(pl)) {
                 continue;
             }
-            double d = pl.getWorld().equals(w) ? p.distanceTo(Vec3.of(pl.getLocation())) : 1.0E7;
+            double d = pl.getWorld().equals(w) ? p.distanceTo(Locations.vec(pl.getLocation())) : 1.0E7;
             if (d < bestDist) {
                 bestDist = d;
                 best = pl;
@@ -709,7 +710,7 @@ public final class Bot {
             setItem(EquipmentSlot.HAND, new ItemStack(material));
         }
         lookAt(Vec3.center(pos));
-        Block b = pos.block(w);
+        Block b = Locations.block(pos, w);
         BlockData data = material.createBlockData();
         if (data instanceof Leaves leaves) {
             // sem tronco perto as folhas apodreceriam sozinhas e derrubariam mudas e maçãs
@@ -736,8 +737,8 @@ public final class Bot {
         if (!WorldUtil.canBeReplaced(w, pos) || WorldUtil.hasFluid(w, pos)) {
             return false;
         }
-        for (Pos check : new Pos[]{pos.below(), pos.relative(BlockFace.NORTH), pos.relative(BlockFace.SOUTH), pos.relative(BlockFace.EAST), pos.relative(BlockFace.WEST)}) {
-            Block b = check.block(w);
+        for (Pos check : new Pos[]{pos.below(), Locations.relative(pos, BlockFace.NORTH), Locations.relative(pos, BlockFace.SOUTH), Locations.relative(pos, BlockFace.EAST), Locations.relative(pos, BlockFace.WEST)}) {
+            Block b = Locations.block(check, w);
             if (b.getType().isAir() || WorldUtil.hasFluid(w, check) || Tag.LEAVES.isTagged(b.getType())) {
                 continue;
             }
@@ -799,7 +800,7 @@ public final class Bot {
     /** Abre portas, portões e alçapões fechados como um jogador clicando com o botão direito. */
     public boolean tryOpen(Pos pos) {
         World w = world();
-        Block b = pos.block(w);
+        Block b = Locations.block(pos, w);
         Material m = b.getType();
         boolean openable = Tag.DOORS.isTagged(m) || Tag.FENCE_GATES.isTagged(m) || Tag.TRAPDOORS.isTagged(m);
         if (!openable || m == Material.IRON_DOOR || m == Material.IRON_TRAPDOOR) {
@@ -863,7 +864,7 @@ public final class Bot {
         sneaking = false;
         swimmingPose = false;
         lastKnownWorld = entity.getWorld().getName();
-        lastKnownPos = Vec3.of(entity.getLocation());
+        lastKnownPos = Locations.vec(entity.getLocation());
         motor.onRespawn();
         updateChunkTickets(true);
         manager.onEntitySpawned(this);
@@ -872,7 +873,7 @@ public final class Bot {
 
     private static Location adjustOutOfLava(Location loc) {
         World w = loc.getWorld();
-        Pos p = Pos.of(loc);
+        Pos p = Locations.pos(loc);
         if (WorldUtil.isLava(w, p) || WorldUtil.isLava(w, p.below())) {
             for (int i = 0; i < 20; i++) {
                 Pos check = p.above(i);
@@ -896,7 +897,7 @@ public final class Bot {
     /** Remove a entidade sem efeito de morte. */
     void despawnEntity() {
         if (entity != null) {
-            lastKnownPos = Vec3.of(entity.getLocation());
+            lastKnownPos = Locations.vec(entity.getLocation());
             lastKnownWorld = entity.getWorld().getName();
             mining.cancel();
             if (entity.isValid()) {
@@ -911,7 +912,7 @@ public final class Bot {
 
     void markDead() {
         if (entity != null) {
-            lastKnownPos = Vec3.of(entity.getLocation());
+            lastKnownPos = Locations.vec(entity.getLocation());
             lastKnownWorld = entity.getWorld().getName();
         }
         mining.cancel();
@@ -924,7 +925,7 @@ public final class Bot {
     public void onEntityTeleported() {
         if (entity != null) {
             lastKnownWorld = entity.getWorld().getName();
-            lastKnownPos = Vec3.of(entity.getLocation());
+            lastKnownPos = Locations.vec(entity.getLocation());
         }
         updateChunkTickets(true);
         brain.navigator().reset();
@@ -1086,7 +1087,7 @@ public final class Bot {
             return;
         }
         aliveTicks++;
-        lastKnownPos = Vec3.of(entity.getLocation());
+        lastKnownPos = Locations.vec(entity.getLocation());
         lastKnownWorld = entity.getWorld().getName();
         keepActive(entity);
         updateChunkTickets(false);

@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.motor;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -60,7 +61,7 @@ public final class Motor {
             return;
         }
         Vec3 pos = bot.pos();
-        velocity = Vec3.of(e.getVelocity());
+        velocity = Locations.vec(e.getVelocity());
         // Se a física da entidade não rodou (chunk ainda não ativo), a velocidade volta igual à aplicada;
         // somar a aceleração de novo faria o bot "disparar" quando a física voltasse.
         // (o atrito sempre muda a velocidade horizontal quando a física roda; parado no chão ela é zero)
@@ -110,7 +111,7 @@ public final class Motor {
             lastApplied = null;
         } else if (stalled) {
             // física parada: não reaplica (evita acumular) e espera o chunk voltar a tickar
-            lastApplied = Vec3.of(e.getVelocity());
+            lastApplied = Locations.vec(e.getVelocity());
         } else {
             e.setVelocity(new Vector(velocity.x(), velocity.y(), velocity.z()));
             lastApplied = velocity;
@@ -383,7 +384,7 @@ public final class Motor {
     /** Degrau de 1 bloco à frente com espaço acima: pula. */
     public void handleObstacles() {
         World w = bot.world();
-        Pos front = bot.blockPos().relative(bot.facing());
+        Pos front = Locations.relative(bot.blockPos(), bot.facing());
         if (WorldUtil.isTrulySolid(w, front) && !WorldUtil.isTrulySolid(w, front.above()) && onGround) {
             sprinting = true;
             jump();
@@ -392,7 +393,7 @@ public final class Motor {
 
     public boolean shouldHandleGapAhead() {
         World w = bot.world();
-        Pos ahead = bot.blockPos().relative(bot.facing());
+        Pos ahead = Locations.relative(bot.blockPos(), bot.facing());
         if (WorldUtil.isTrulySolid(w, ahead) && !WorldUtil.isTrulySolid(w, ahead.above())) {
             return false;
         }
@@ -405,7 +406,7 @@ public final class Motor {
         int now = Bukkit.getCurrentTick();
         Pos current = bot.blockPos();
         BlockFace facing = bot.facing();
-        Pos ahead = current.relative(facing);
+        Pos ahead = Locations.relative(current, facing);
         Pos placePos = ahead.below();
         if (handleGapLoopEscape(now, current)) {
             return;
@@ -424,7 +425,7 @@ public final class Motor {
         }
         boolean canJump = false;
         for (int i = 2; i <= 5; i++) {
-            Pos landing = current.relative(facing, i);
+            Pos landing = Locations.relative(current, facing, i);
             boolean hasLanding = WorldUtil.isTrulySolid(w, landing.below()) || WorldUtil.isTrulySolid(w, landing.below(2));
             if (hasLanding && WorldUtil.hasBodySpace(w, landing)) {
                 canJump = true;

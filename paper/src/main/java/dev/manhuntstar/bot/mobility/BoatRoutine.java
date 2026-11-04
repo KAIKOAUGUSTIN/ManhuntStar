@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -208,11 +209,11 @@ public final class BoatRoutine {
             if (!followGone && bot.tickDelay(10)) {
                 // o caminho é recalculado a partir do barco; o fim do trecho de água pode ter mudado
                 Navigator nav = bot.brain().navigator();
-                nav.waypoint(Vec3.of(follow.getLocation()));
+                nav.waypoint(Locations.vec(follow.getLocation()));
                 Pos next = nav.boatCrossingGoal(true);
                 if (next != null && !next.equals(crossingGoal)) {
                     crossingGoal = next;
-                    crossingBudget = budgetFor(Vec3.of(mounted.getLocation()), next);
+                    crossingBudget = budgetFor(Locations.vec(mounted.getLocation()), next);
                 }
             }
             Location bl = mounted.getLocation();
@@ -303,7 +304,7 @@ public final class BoatRoutine {
             }
             assaultActive = true;
             assaultTarget = boating.getUniqueId();
-            park(mounted, Vec3.of(boating.getLocation()));
+            park(mounted, Locations.vec(boating.getLocation()));
             if (bot.onGround()) {
                 bot.motor().jump();
             }
@@ -319,10 +320,10 @@ public final class BoatRoutine {
         }
         Vec3 steer = null;
         if (boating != null) {
-            steer = Vec3.of(boating.getVehicle() instanceof Boat tb ? tb.getLocation() : boating.getLocation());
+            steer = Locations.vec(boating.getVehicle() instanceof Boat tb ? tb.getLocation() : boating.getLocation());
         }
         if (steer == null && chase != null && !chase.isDead()) {
-            steer = Vec3.of(chase.getLocation());
+            steer = Locations.vec(chase.getLocation());
         }
         if (steer == null) {
             deltaRotation = 0;
@@ -382,7 +383,7 @@ public final class BoatRoutine {
     }
 
     private Vec3 surfaceWaypoint(Boat boat, Vec3 chaseTarget) {
-        Pos start = nearestSurfaceWater(Pos.of(boat.getLocation()), 2, 3);
+        Pos start = nearestSurfaceWater(Locations.pos(boat.getLocation()), 2, 3);
         Pos goal = nearestSurfaceWater(chaseTarget.toPos(), 3, 8);
         if (start == null || goal == null) {
             clearSurfacePath();
@@ -536,7 +537,7 @@ public final class BoatRoutine {
         if (!WorldUtil.isWater(w, p) || WorldUtil.hasFluid(w, p.above())) {
             return false;
         }
-        Block above = p.above().block(w);
+        Block above = Locations.block(p.above(), w);
         return above.getType().isAir() || above.isReplaceable();
     }
 
@@ -554,11 +555,11 @@ public final class BoatRoutine {
         if (!targetBoat.isValid() || target.getVehicle() != targetBoat || targetBoat.getPassengers().size() >= 2) {
             return false;
         }
-        if (bot.pos().distanceTo(Vec3.of(targetBoat.getLocation())) > 2.5) {
+        if (bot.pos().distanceTo(Locations.vec(targetBoat.getLocation())) > 2.5) {
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Vec3.of(targetBoat.getLocation()).add(0, 0.5, 0));
+        bot.lookAt(Locations.vec(targetBoat.getLocation()).add(0, 0.5, 0));
         boolean boarded = targetBoat.addPassenger(bot.entity());
         if (boarded) {
             passengerHost = target.getUniqueId();
@@ -596,15 +597,15 @@ public final class BoatRoutine {
         if (bot.distanceTo(target) < 7.0) {
             return false;
         }
-        if (bot.pos().distanceTo(Vec3.of(parked.getLocation())) <= 2.8) {
-            bot.lookAt(Vec3.of(parked.getLocation()).add(0, 0.5, 0));
+        if (bot.pos().distanceTo(Locations.vec(parked.getLocation())) <= 2.8) {
+            bot.lookAt(Locations.vec(parked.getLocation()).add(0, 0.5, 0));
             if (parked.addPassenger(bot.entity())) {
                 clearAssault();
                 actionCooldown = Math.max(actionCooldown, 6);
                 return true;
             }
         }
-        moveToward(Vec3.of(parked.getLocation()));
+        moveToward(Locations.vec(parked.getLocation()));
         return true;
     }
 
@@ -643,7 +644,7 @@ public final class BoatRoutine {
             }
             if (breakBoat) {
                 bot.motor().stopWalk();
-                bot.lookAt(Vec3.of(tracked.getLocation()));
+                bot.lookAt(Locations.vec(tracked.getLocation()));
                 bot.swing();
                 bot.swing();
                 bot.brain().mlg().breakBoat(tracked);
@@ -673,7 +674,7 @@ public final class BoatRoutine {
             if (p.isDead() || !(p.getVehicle() instanceof Boat) || !bot.manager().isEligibleTarget(p)) {
                 continue;
             }
-            double d = bot.pos().distanceToSqr(Vec3.of(p.getLocation()));
+            double d = bot.pos().distanceToSqr(Locations.vec(p.getLocation()));
             if (d <= SEARCH_RADIUS_SQ && d < bestDist) {
                 bestDist = d;
                 best = p;
@@ -733,7 +734,7 @@ public final class BoatRoutine {
         if (!isWaterSource(w, water)) {
             return false;
         }
-        Block above = water.above().block(w);
+        Block above = Locations.block(water.above(), w);
         if (!above.getType().isAir() && !above.isReplaceable()) {
             return false;
         }
@@ -741,7 +742,7 @@ public final class BoatRoutine {
     }
 
     private static boolean isWaterSource(World w, Pos p) {
-        Block b = p.block(w);
+        Block b = Locations.block(p, w);
         return b.getType() == Material.WATER && b.getBlockData() instanceof Levelled l && l.getLevel() == 0;
     }
 
@@ -754,7 +755,7 @@ public final class BoatRoutine {
                 if (!isWaterSource(w, water)) {
                     continue;
                 }
-                Block above = water.above().block(w);
+                Block above = Locations.block(water.above(), w);
                 if ((above.getType().isAir() || above.isReplaceable()) && !WorldUtil.hasFluid(w, water.above())) {
                     count++;
                 }
@@ -765,7 +766,7 @@ public final class BoatRoutine {
 
     private boolean shouldDismountNearShore(Boat boat) {
         World w = bot.world();
-        Pos center = Pos.of(boat.getLocation());
+        Pos center = Locations.pos(boat.getLocation());
         if (WorldUtil.isWater(w, center) || WorldUtil.isWater(w, center.below())) {
             return false;
         }
@@ -773,7 +774,7 @@ public final class BoatRoutine {
     }
 
     private boolean isBoatCloseToLand(Boat boat) {
-        return hasLandAround(bot.world(), Pos.of(boat.getLocation()), 0);
+        return hasLandAround(bot.world(), Locations.pos(boat.getLocation()), 0);
     }
 
     private static boolean hasLandAround(World w, Pos center, int maxDy) {
@@ -781,7 +782,7 @@ public final class BoatRoutine {
             for (int dz = -2; dz <= 2; dz++) {
                 for (int dy = -1; dy <= maxDy; dy++) {
                     Pos p = center.offset(dx, dy, dz);
-                    Block b = p.block(w);
+                    Block b = Locations.block(p, w);
                     if (b.getType().isAir() || WorldUtil.hasFluid(w, p)) {
                         continue;
                     }

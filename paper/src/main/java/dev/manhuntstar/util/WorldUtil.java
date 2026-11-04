@@ -117,8 +117,8 @@ public final class WorldUtil {
         if (len < 1.0E-4) {
             return true;
         }
-        Vector dir = d.scale(1.0 / len).toVector();
-        RayTraceResult r = w.rayTraceBlocks(from.toLocation(w), dir, len, FluidCollisionMode.NEVER, true);
+        Vector dir = Locations.vector(d.scale(1.0 / len));
+        RayTraceResult r = w.rayTraceBlocks(Locations.location(from, w), dir, len, FluidCollisionMode.NEVER, true);
         return r == null || r.getHitBlock() == null;
     }
 
@@ -128,7 +128,7 @@ public final class WorldUtil {
         if (len < 1.0E-4) {
             return null;
         }
-        return w.rayTraceBlocks(from.toLocation(w), d.scale(1.0 / len).toVector(), len, FluidCollisionMode.NEVER, !outline);
+        return w.rayTraceBlocks(Locations.location(from, w), Locations.vector(d.scale(1.0 / len)), len, FluidCollisionMode.NEVER, !outline);
     }
 
     public static int highestY(World w, int x, int z) {
@@ -171,8 +171,8 @@ public final class WorldUtil {
 
     public static int countOpenSides(World w, Pos feet) {
         int open = 0;
-        for (BlockFace f : Pos.HORIZONTALS) {
-            Pos side = feet.relative(f);
+        for (BlockFace f : Locations.HORIZONTALS) {
+            Pos side = Locations.relative(feet, f);
             if (!hasCollision(w, side) && !hasFluid(w, side) && !hasCollision(w, side.above()) && !hasFluid(w, side.above())) {
                 open++;
             }

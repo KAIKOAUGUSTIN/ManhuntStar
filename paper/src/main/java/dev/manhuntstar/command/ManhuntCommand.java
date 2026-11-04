@@ -12,7 +12,7 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.util.Vec3;
+import dev.manhuntstar.util.Locations;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -682,7 +682,7 @@ public final class ManhuntCommand {
         } else if (loc == null || loc.getWorld() == null) {
             return noLocation(ctx);
         } else {
-            g.setSpawnpoint(loc.getWorld().getName(), Vec3.of(loc));
+            g.setSpawnpoint(loc.getWorld().getName(), Locations.vec(loc));
             msg().send(sender(ctx), "group.spawnpoint", Messages.p("group", g.name()),
                     Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
         }
