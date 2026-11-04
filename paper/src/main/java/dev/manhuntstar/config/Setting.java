@@ -332,13 +332,4 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
             return placeholders;
         }
     }
-
-    /** Enums configuráveis expõem um nome para o config e apelidos aceitos nos comandos. */
-    public interface Choice {
-        String configName();
-
-        default List<String> aliases() {
-            return List.of(configName().toLowerCase(Locale.ROOT));
-        }
-    }
 }

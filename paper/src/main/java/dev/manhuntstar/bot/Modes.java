@@ -1,6 +1,6 @@
 package dev.manhuntstar.bot;
 
-import dev.manhuntstar.config.Setting;
+import dev.manhuntstar.config.Choice;
 import java.util.List;
 import java.util.Locale;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -12,7 +12,7 @@ public final class Modes {
     }
 
     /** Planejador de caminho. */
-    public enum PathMode implements Setting.Choice {
+    public enum PathMode implements Choice {
         ASTAR, DUMB;
 
         @Override
@@ -34,7 +34,7 @@ public final class Modes {
     }
 
     /** NORMAL: nasce exatamente no ponto. MANHUNT: nasce em roda e fica parado até a caçada começar. */
-    public enum SpawnMode implements Setting.Choice {
+    public enum SpawnMode implements Choice {
         NORMAL, MANHUNT;
 
         @Override
@@ -49,7 +49,7 @@ public final class Modes {
     }
 
     /** Centro da roda: AUTO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
-    public enum RingCenter implements Setting.Choice {
+    public enum RingCenter implements Choice {
         AUTO("auto", "automatic", "automatico", "automático"), MANUAL("manual", "fixed", "fixo");
 
         private final List<String> aliases;
@@ -70,7 +70,7 @@ public final class Modes {
     }
 
     /** Quem entra no servidor com a caçada em andamento. */
-    public enum LateJoin implements Setting.Choice {
+    public enum LateJoin implements Choice {
         HUNTED("hunted", "cacado", "caçado"), PROTECTED("protected", "protegido", "protecao", "proteção"), OUT("out", "ignored", "fora", "ignorado");
 
         private final List<String> aliases;
@@ -91,7 +91,7 @@ public final class Modes {
     }
 
     /** Lista de jogadores: OFF = todos; ALLOWLIST = só os da lista; BLOCKLIST = todos menos os da lista. */
-    public enum PlayerListMode implements Setting.Choice {
+    public enum PlayerListMode implements Choice {
         OFF("off", "false", "desligada", "nenhuma"), ALLOWLIST("allowlist", "whitelist", "permitidos"), BLOCKLIST("blocklist", "blacklist", "bloqueados");
 
         private final List<String> aliases;
@@ -112,7 +112,7 @@ public final class Modes {
     }
 
     /** Como os bots escolhem o jogador a perseguir. */
-    public enum TargetMode implements Setting.Choice {
+    public enum TargetMode implements Choice {
         CLOSEST_PLAYER("closest", "nearest", "perto", "proximo"),
         EQUAL_BOTS_PER_PLAYER("equal", "balanced", "balance", "dividir", "igual"),
         FARTHEST_PLAYER("farthest", "farest", "longe");
@@ -135,7 +135,7 @@ public final class Modes {
     }
 
     /** O que acontece com espada, picareta e armadura melhoradas quando o bot morre. */
-    public enum GearPersistence implements Setting.Choice {
+    public enum GearPersistence implements Choice {
         KEEP_ON_RESPAWN_NO_DROP, KEEP_AND_DROP, DROP_AND_LOSE;
 
         @Override
@@ -153,7 +153,7 @@ public final class Modes {
     }
 
     /** Em quais dimensões os bots podem jogar pérolas do End. */
-    public enum PearlDimension implements Setting.Choice {
+    public enum PearlDimension implements Choice {
         NETHER_ONLY("nether", "0"), BOTH("both", "ambas", "1"), OVERWORLD_ONLY("overworld", "2");
 
         private final List<String> aliases;
@@ -179,7 +179,7 @@ public final class Modes {
     }
 
     /** Cores possíveis para o brilho dos bots. */
-    public enum GlowColor implements Setting.Choice {
+    public enum GlowColor implements Choice {
         RED(NamedTextColor.RED), DARK_RED(NamedTextColor.DARK_RED), GOLD(NamedTextColor.GOLD), YELLOW(NamedTextColor.YELLOW),
         GREEN(NamedTextColor.GREEN), DARK_GREEN(NamedTextColor.DARK_GREEN), AQUA(NamedTextColor.AQUA),
         DARK_AQUA(NamedTextColor.DARK_AQUA), BLUE(NamedTextColor.BLUE), DARK_BLUE(NamedTextColor.DARK_BLUE),

@@ -189,7 +189,7 @@ public final class Settings {
         return register(new Setting.Dbl(path, legacy, key, c, def, min, max, step));
     }
 
-    private <E extends Enum<E> & Setting.Choice> Setting.Enumerated<E> choice(String path, String legacy, String key, Category c, Class<E> type, E def) {
+    private <E extends Enum<E> & Choice> Setting.Enumerated<E> choice(String path, String legacy, String key, Category c, Class<E> type, E def) {
         return register(new Setting.Enumerated<>(path, legacy, key, c, type, def));
     }
 

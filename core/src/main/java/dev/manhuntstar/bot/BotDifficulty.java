@@ -1,6 +1,6 @@
 package dev.manhuntstar.bot;
 
-import dev.manhuntstar.config.Setting;
+import dev.manhuntstar.config.Choice;
 import java.util.List;
 import java.util.Locale;
 
@@ -9,7 +9,7 @@ import java.util.Locale;
  * multiplicador de dano recebido e de dano causado. O nome mostrado fica nos arquivos de idioma
  * ({@code difficulty.<nome>}).
  */
-public enum BotDifficulty implements Setting.Choice {
+public enum BotDifficulty implements Choice {
     EASY(1, 1.0f, 300, 1.0f, 1.0f),
     MEDIUM(2, 0.5f, 180, 0.95f, 1.0f),
     HARD(4, 0.1f, 250, 0.9f, 1.1f),

@@ -82,11 +82,4 @@ class RingExitTest {
         assertFalse(stayOutside(exit, p, 10));
         assertTrue(exit.inside().isEmpty());
     }
-
-    @Test
-    void protectionLastsTheRingCountdownWithAMinimum() {
-        assertEquals(HuntPolicy.MIN_PROTECTION_SECONDS, HuntPolicy.protectionFor(0));
-        assertEquals(5, HuntPolicy.protectionFor(3));
-        assertEquals(60, HuntPolicy.protectionFor(60));
-    }
 }

@@ -31,7 +31,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public final class Messages {
 
     public static final String DEFAULT_LANGUAGE = "en";
-    /** Idiomas que vêm dentro do plugin (src/main/resources/lang). */
+    /** Languages that come inside the plugin (core/src/main/resources/lang). */
     public static final List<String> BUNDLED_LANGUAGES = List.of("en", "pt-br", "fr", "ru", "zh-cn");
     public static final String FOLDER = "lang";
 

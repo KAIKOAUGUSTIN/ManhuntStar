@@ -127,7 +127,7 @@ Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` 
 
 Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...), but when an update changes their default texts, your copy is moved to `lang/old/` and replaced; a file with your own name is never replaced.
 
-Want your translation in the plugin? Open a pull request adding it to `paper/src/main/resources/lang/`.
+Want your translation in the plugin? Open a pull request adding it to `core/src/main/resources/lang/`.
 
 ## 🔌 API for other plugins
 
