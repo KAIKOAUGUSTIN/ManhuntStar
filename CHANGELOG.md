@@ -2,6 +2,35 @@
 
 Generated automatically on every merge into main.
 
+## 1.6.1 - 2026-11-05
+
+### New
+
+- SECURITY.md (6bf5a28)
+- Modrinth, Hangar and Discord buttons in the README (20fd3de)
+
+### Changed
+
+- Update Discord role ID in release workflow (51214c0)
+- Revise security reporting instructions (183769c)
+- "Create SECURITY.md" listed as New in the release notes (06f4485)
+- Release notes accept Add:, Change:, Update: and Remove: too (5a1a5c5)
+- /manhunt create takes skin and at right after the name or the amount (53cddc3)
+- Code comments in English in the files changed by these fixes and in the tests (aec10fc)
+- Test failure messages in English (422524f)
+
+### Updated
+
+- Bump the actions group across 1 directory with 3 updates (b1e3afd)
+
+### Removed
+
+- Portuguese values and old option names in commands (33455a5)
+
+**Paper:** 26.2-26.3 · **Java:** 25
+
+**Full changelog since 1.6.0:** https://github.com/KAIKOAUGUSTIN/ManhuntStar/compare/v1.6.0...v1.6.1
+
 ## 1.6.0 - 2026-11-03
 
 ### New
