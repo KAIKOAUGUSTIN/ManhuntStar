@@ -30,7 +30,7 @@ class LanguageFilesTest {
 
     private static YamlConfiguration load(String lang) throws Exception {
         try (InputStream in = LanguageFilesTest.class.getResourceAsStream("/lang/" + lang + ".yml")) {
-            assertNotNull(in, "idioma não encontrado: " + lang);
+            assertNotNull(in, "language not found: " + lang);
             return YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
     }
@@ -64,10 +64,10 @@ class LanguageFilesTest {
         Set<String> enKeys = keys(en);
         for (String lang : Messages.BUNDLED_LANGUAGES) {
             YamlConfiguration other = load(lang);
-            assertEquals(enKeys, keys(other), "chaves diferentes do inglês em " + lang);
+            assertEquals(enKeys, keys(other), "keys differ from English in " + lang);
             for (String key : enKeys) {
                 if (en.isString(key)) {
-                    assertTrue(other.isString(key), lang + ": " + key + " não é texto");
+                    assertTrue(other.isString(key), lang + ": " + key + " is not text");
                     assertEquals(placeholders(en.getString(key)), placeholders(other.getString(key)), lang + ": placeholders de " + key);
                 }
             }
@@ -79,14 +79,14 @@ class LanguageFilesTest {
         YamlConfiguration en = load("en");
         Settings settings = new Settings();
         for (Setting<?> s : settings.all()) {
-            assertTrue(en.isString("options." + s.key() + ".name"), "sem nome: " + s.key());
-            assertTrue(en.isString("options." + s.key() + ".description"), "sem descrição: " + s.key());
+            assertTrue(en.isString("options." + s.key() + ".name"), "no name: " + s.key());
+            assertTrue(en.isString("options." + s.key() + ".description"), "no description: " + s.key());
         }
         for (Setting.Category c : Setting.Category.values()) {
-            assertTrue(en.isString("category." + c.name().toLowerCase(Locale.ROOT)), "sem nome: " + c);
+            assertTrue(en.isString("category." + c.name().toLowerCase(Locale.ROOT)), "no name: " + c);
         }
         for (BotDifficulty d : BotDifficulty.values()) {
-            assertTrue(en.isString("difficulty." + d.configName()), "sem nome: " + d);
+            assertTrue(en.isString("difficulty." + d.configName()), "no name: " + d);
         }
     }
 
@@ -103,9 +103,9 @@ class LanguageFilesTest {
                 }
             });
         }
-        assertTrue(used.size() > 20, "estados não encontrados no Brain.java");
+        assertTrue(used.size() > 20, "no states found in Brain.java");
         for (String state : used) {
-            assertTrue(en.isString("state." + state), "sem texto: state." + state);
+            assertTrue(en.isString("state." + state), "no text: state." + state);
         }
     }
 }

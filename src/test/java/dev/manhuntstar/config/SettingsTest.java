@@ -74,7 +74,7 @@ class SettingsTest {
         assertNull(s.byKey("listmode"));
         assertNull(s.byKey("allowhorseriding"));
         for (Setting<?> each : s.all()) {
-            assertFalse(each.key().contains("_"), "chave fora do padrão: " + each.key());
+            assertFalse(each.key().contains("_"), "key out of format: " + each.key());
         }
     }
 
@@ -148,14 +148,14 @@ class SettingsTest {
         Settings s = new Settings();
         YamlConfiguration cfg;
         try (InputStream in = SettingsTest.class.getResourceAsStream("/config.yml")) {
-            assertNotNull(in, "config.yml não encontrado");
+            assertNotNull(in, "config.yml not found");
             cfg = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
         for (Setting<?> each : s.all()) {
             assertTrue(cfg.contains(each.path()), "falta no config.yml: " + each.path());
             Object def = each.get();
             each.setFromText(String.valueOf(cfg.get(each.path())));
-            assertEquals(def, each.get(), "padrão diferente do config.yml: " + each.path());
+            assertEquals(def, each.get(), "default differs from config.yml: " + each.path());
         }
     }
 

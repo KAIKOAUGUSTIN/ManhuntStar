@@ -96,7 +96,7 @@ class PathfindingTest {
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(10, 64, 0), false);
         assertTrue(r.complete());
         assertFalse(r.toMine().isEmpty());
-        assertTrue(r.toMine().stream().allMatch(p -> p.x() == 5), () -> "cavar " + r.toMine() + " caminho " + r.path());
+        assertTrue(r.toMine().stream().allMatch(p -> p.x() == 5), () -> "dig " + r.toMine() + " path " + r.path());
     }
 
     @Test
@@ -126,7 +126,7 @@ class PathfindingTest {
         PathResult without = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), false);
         assertFalse(without.complete());
         PathResult with = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), true);
-        assertTrue(with.complete(), () -> "caminho " + with.path() + " colocar " + with.toPlace() + " nós " + with.nodesExplored());
+        assertTrue(with.complete(), () -> "path " + with.path() + " place " + with.toPlace() + " nodes " + with.nodesExplored());
         assertFalse(with.toPlace().isEmpty());
     }
 
@@ -141,7 +141,7 @@ class PathfindingTest {
         }
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), false);
         for (Pos p : r.path()) {
-            assertFalse(p.x() >= 5 && p.x() <= 8 && p.y() == 64, "pisou na lava em " + p);
+            assertFalse(p.x() >= 5 && p.x() <= 8 && p.y() == 64, "stepped into lava at " + p);
         }
     }
 
@@ -156,8 +156,8 @@ class PathfindingTest {
         assertTrue(boat.path().stream().allMatch(p -> Math.abs(p.z()) < 9), () -> "de barco " + boat.path());
         PathResult walk = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, false);
         assertTrue(walk.complete());
-        assertTrue(walk.path().stream().anyMatch(p -> Math.abs(p.z()) >= 9), () -> "a pé " + walk.path());
-        assertTrue(walk.path().stream().noneMatch(p -> p.y() == 63), () -> "a pé " + walk.path());
+        assertTrue(walk.path().stream().anyMatch(p -> Math.abs(p.z()) >= 9), () -> "on foot " + walk.path());
+        assertTrue(walk.path().stream().noneMatch(p -> p.y() == 63), () -> "on foot " + walk.path());
     }
 
     @Test
@@ -166,8 +166,8 @@ class PathfindingTest {
         // already in a boat next to the bank (z = 0 is the last row of water), target on land further ahead
         lake(g, -5, 30, 0, 12);
         PathResult r = find(g, new Pos(2, 63, 1), new Pos(28, 64, -2), false, true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
-        assertTrue(r.path().stream().filter(p -> p.y() == 63 && p.z() == 0).count() <= 2, () -> "rente à margem " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
+        assertTrue(r.path().stream().filter(p -> p.y() == 63 && p.z() == 0).count() <= 2, () -> "hugging the bank " + r.path());
     }
 
     @Test
@@ -176,7 +176,7 @@ class PathfindingTest {
         lake(g, 5, 8, -2, 2);
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(14, 64, 0), false, true);
         assertTrue(r.complete());
-        assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "caminho " + r.path());
+        assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "path " + r.path());
     }
 
     /**
@@ -200,11 +200,11 @@ class PathfindingTest {
             }
         }
         PathResult r = find(g, new Pos(3, 76, 0), new Pos(6, 71, 0), true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
         assertTrue(r.path().stream().allMatch(p -> p.x() >= 0 && p.x() <= 10 && Math.abs(p.z()) <= 3 && p.y() >= 71),
                 () -> "saiu da caixa: " + r.path());
-        assertTrue(r.toMine().stream().anyMatch(p -> p.y() == 75), () -> "não cavou o teto: " + r.toMine());
-        assertTrue(r.toPlace().isEmpty(), () -> "colocar " + r.toPlace());
+        assertTrue(r.toMine().stream().anyMatch(p -> p.y() == 75), () -> "didn't dig the ceiling: " + r.toMine());
+        assertTrue(r.toPlace().isEmpty(), () -> "place " + r.toPlace());
     }
 
     /** 13-block cliff: no way down relies on a block placed under the landing. */
@@ -219,12 +219,12 @@ class PathfindingTest {
             }
         }
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(12, 51, 0), true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
         List<Pos> path = r.path();
         for (int i = 1; i < path.size(); i++) {
             Pos p = path.get(i);
             if (p.y() < path.get(i - 1).y()) {
-                assertTrue(CostProvider.isSolid(g.cost(p.x(), p.y() - 1, p.z())), "pouso sem chão em " + p + ", caminho " + path);
+                assertTrue(CostProvider.isSolid(g.cost(p.x(), p.y() - 1, p.z())), "landing without ground at " + p + ", path " + path);
             }
         }
     }
