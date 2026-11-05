@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Supplier;
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -79,18 +80,23 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     void load(ConfigurationSection cfg) {
-        load(cfg, path);
+        load(cfg, path, Map.of());
     }
 
-    /** Reads the option from another path (the old one, when migrating config.yml). */
-    void load(ConfigurationSection cfg, String from) {
+    /**
+     * Reads the option from another path (the old one, when migrating config.yml). {@code oldValues}
+     * turns values that no longer exist into today's ones ("protegido" becomes "protected").
+     */
+    void load(ConfigurationSection cfg, String from, Map<String, String> oldValues) {
         Object raw = from == null ? null : cfg.get(from);
         if (raw == null) {
             value = defaultValue;
             return;
         }
+        String text = String.valueOf(raw);
+        text = oldValues.getOrDefault(text.trim().toLowerCase(Locale.ROOT), text);
         try {
-            value = sanitize(parse(String.valueOf(raw)));
+            value = sanitize(parse(text));
         } catch (IllegalArgumentException e) {
             value = defaultValue;
         }
@@ -121,8 +127,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         public Boolean parse(String raw) {
             String s = raw.trim().toLowerCase(Locale.ROOT);
             return switch (s) {
-                case "true", "on", "sim", "s", "1", "yes", "ligado", "ativado" -> true;
-                case "false", "off", "nao", "não", "n", "0", "no", "desligado", "desativado" -> false;
+                case "true", "on", "1", "yes" -> true;
+                case "false", "off", "0", "no" -> false;
                 default -> throw new InvalidValue("settings.error.boolean");
             };
         }

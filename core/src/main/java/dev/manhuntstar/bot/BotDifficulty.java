@@ -58,9 +58,9 @@ public enum BotDifficulty implements Choice {
     public List<String> aliases() {
         String n = configName();
         return switch (this) {
-            case EASY -> List.of(n, "difficulty.easy", "facil", "fácil");
-            case MEDIUM -> List.of(n, "difficulty.medium", "medio", "médio");
-            case HARD -> List.of(n, "difficulty.hard", "dificil", "difícil");
+            case EASY -> List.of(n, "difficulty.easy");
+            case MEDIUM -> List.of(n, "difficulty.medium");
+            case HARD -> List.of(n, "difficulty.hard");
             case TERMINATOR -> List.of(n, "difficulty.terminator");
         };
     }

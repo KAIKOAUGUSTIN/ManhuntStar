@@ -46,9 +46,9 @@ class BallisticsTest {
                         continue; // too high and too far for this speed (not even in the game does it reach)
                     }
                     Vec3 v = Ballistics.aimArrow(from, target, Vec3.ZERO, speed);
-                    assertTrue(Math.abs(v.length() - speed) < 1.0E-6, "velocidade alterada");
+                    assertTrue(Math.abs(v.length() - speed) < 1.0E-6, "speed changed");
                     double miss = closestApproach(from, v, target, Vec3.ZERO);
-                    assertTrue(miss < 0.25, "erro de " + miss + " a " + dist + " blocos, desnível " + dy + ", velocidade " + speed);
+                    assertTrue(miss < 0.25, "missed by " + miss + " at " + dist + " blocks, height difference " + dy + ", speed " + speed);
                 }
             }
         }
@@ -64,7 +64,7 @@ class BallisticsTest {
             Vec3 naive = Ballistics.aimArrow(from, target, Vec3.ZERO, 1.8);
             double ledMiss = closestApproach(from, led, target, running);
             double naiveMiss = closestApproach(from, naive, target, running);
-            assertTrue(ledMiss < 0.35, "com antecipação errou " + ledMiss + " a " + dist);
+            assertTrue(ledMiss < 0.35, "with lead, missed by " + ledMiss + " at " + dist);
             assertTrue(ledMiss < naiveMiss, "antecipar deveria ajudar a " + dist);
         }
     }
@@ -120,6 +120,6 @@ class BallisticsTest {
         Vec3 v = Ballistics.aim(from, target, running, 1.6, 0, 1);
         double t = Ballistics.straightTicks(from, target, running, 1.6);
         double miss = from.add(v.scale(t)).subtract(target.add(running.scale(t))).length();
-        assertTrue(miss < 0.1, "errou " + miss);
+        assertTrue(miss < 0.1, "missed by " + miss);
     }
 }

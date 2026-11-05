@@ -3,6 +3,7 @@ package dev.manhuntstar.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,7 +25,7 @@ import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Opções: chaves e apelidos do mod, faixas e conversão de texto. */
+/** Options: keys, ranges and text conversion. */
 class SettingsTest {
 
     @Test
@@ -57,26 +58,27 @@ class SettingsTest {
         assertSame(s.ringCenter, s.byKey("ringcenter"));
         assertSame(s.lateJoin, s.byKey("latejoin"));
         assertSame(s.playerListMode, s.byKey("playerlistmode"));
-        assertNotNull(s.byKey("allowhorseriding"));
+        assertSame(s.allowHorse, s.byKey("allowhorse"));
     }
 
-    /** Os nomes antigos (do mod e das versões anteriores) continuam valendo, fora do Tab. */
+    /** The old option names (from the mod and from earlier versions) no longer work in /manhunt settings. */
     @Test
-    void oldKeysStillWork() {
+    void oldOptionNamesAreGone() {
         Settings s = new Settings();
-        assertSame(s.nodeCap, s.byKey("nodes"));
-        assertSame(s.mobsAttackBots, s.byKey("MobTarget"));
-        assertSame(s.minNetherDelay, s.byKey("min_sec_range_nether_entering"));
-        assertSame(s.useElytra, s.byKey("botuseelytra"));
-        assertSame(s.startCountdown, s.byKey("starttime"));
-        assertSame(s.glowHunters, s.byKey("glowing"));
-        assertSame(s.playerListMode, s.byKey("listmode"));
+        assertNull(s.byKey("nodes"));
+        assertNull(s.byKey("MobTarget"));
+        assertNull(s.byKey("min_sec_range_nether_entering"));
+        assertNull(s.byKey("botuseelytra"));
+        assertNull(s.byKey("starttime"));
+        assertNull(s.byKey("glowing"));
+        assertNull(s.byKey("listmode"));
+        assertNull(s.byKey("allowhorseriding"));
         for (Setting<?> each : s.all()) {
-            assertFalse(each.key().contains("_"), "chave fora do padrão: " + each.key());
+            assertFalse(each.key().contains("_"), "key out of format: " + each.key());
         }
     }
 
-    /** A lista usa off/allowlist/blocklist; os nomes em português das versões antigas ainda valem. */
+    /** The list uses off/allowlist/blocklist. */
     @Test
     void playerListModeEnglishWords() {
         Settings s = new Settings();
@@ -95,7 +97,7 @@ class SettingsTest {
         assertSame(RingCenter.AUTO, s.ringCenter.get());
         assertSame(LateJoin.PROTECTED, s.lateJoin.get());
         assertSame(PlayerListMode.OFF, s.playerListMode.get());
-        s.lateJoin.setFromText("caçado");
+        s.lateJoin.setFromText("hunted");
         assertSame(LateJoin.HUNTED, s.lateJoin.get());
         s.playerListMode.setFromText("blacklist");
         assertSame(PlayerListMode.BLOCKLIST, s.playerListMode.get());
@@ -103,7 +105,7 @@ class SettingsTest {
         assertEquals(64.0, s.ringRadius.value());
     }
 
-    /** Permitidos: só os da lista; bloqueados: todos menos os da lista; nomes sem diferenciar maiúsculas. */
+    /** Allowlist: only those on the list; blocklist: everyone except those on the list; names are case-insensitive. */
     @Test
     void playerListAllowsAndBlocks() {
         Settings s = new Settings();
@@ -124,9 +126,9 @@ class SettingsTest {
     @Test
     void parsingAndClamping() {
         Settings s = new Settings();
-        s.allowPearl.setFromText("não");
+        s.allowPearl.setFromText("off");
         assertFalse(s.allowPearl.on());
-        s.allowPearl.setFromText("sim");
+        s.allowPearl.setFromText("yes");
         assertTrue(s.allowPearl.on());
         s.nodeCap.setFromText("999999");
         assertEquals(5000, s.nodeCap.value());
@@ -140,24 +142,24 @@ class SettingsTest {
         assertEquals("settings.error.boolean", e.getMessage());
     }
 
-    /** Toda opção do Settings está no config.yml do plugin, com o mesmo valor padrão. */
+    /** Every option in Settings is in the plugin's config.yml, with the same default value. */
     @Test
     void everyOptionIsInTheBundledConfig() throws Exception {
         Settings s = new Settings();
         YamlConfiguration cfg;
         try (InputStream in = SettingsTest.class.getResourceAsStream("/config.yml")) {
-            assertNotNull(in, "config.yml não encontrado");
+            assertNotNull(in, "config.yml not found");
             cfg = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
         for (Setting<?> each : s.all()) {
             assertTrue(cfg.contains(each.path()), "falta no config.yml: " + each.path());
             Object def = each.get();
             each.setFromText(String.valueOf(cfg.get(each.path())));
-            assertEquals(def, each.get(), "padrão diferente do config.yml: " + each.path());
+            assertEquals(def, each.get(), "default differs from config.yml: " + each.path());
         }
     }
 
-    /** Um config.yml das versões com chaves em português é lido pelos caminhos antigos. */
+    /** A config.yml from the versions with Portuguese keys is read from the old paths, and its Portuguese values are converted. */
     @Test
     void legacyConfigIsMigrated(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("config.yml");
@@ -166,11 +168,15 @@ class SettingsTest {
                   tab-list: false
                 bots:
                   vida-maxima: 40
+                  dificuldade-padrao: dificil
                   mobs-que-nao-atacam-bots: [CREEPER]
                 combate:
-                  modo-alvo: closest
+                  modo-alvo: perto
+                mobilidade:
+                  perolas: "nao"
+                  dimensao-perolas: ambas
                 manhunt:
-                  centro-roda: manual
+                  centro-roda: fixo
                   quem-entra-no-meio: cacado
                   lista-modo: permitidos
                   lista-jogadores: [Steve]
@@ -181,7 +187,10 @@ class SettingsTest {
         s.loadLegacy(file.toFile(), Logger.getAnonymousLogger());
         assertFalse(s.tabList.on());
         assertEquals(40.0, s.botHealth.value());
+        assertSame(BotDifficulty.HARD, s.defaultDifficulty.get());
         assertSame(TargetMode.CLOSEST_PLAYER, s.targetMode.get());
+        assertFalse(s.allowPearl.on());
+        assertSame(PearlDimension.BOTH, s.pearlDimension.get());
         assertSame(RingCenter.MANUAL, s.ringCenter.get());
         assertSame(LateJoin.HUNTED, s.lateJoin.get());
         assertSame(PlayerListMode.ALLOWLIST, s.playerListMode.get());
@@ -202,7 +211,7 @@ class SettingsTest {
         assertEquals("pt-br", again.language.get());
     }
 
-    /** O idioma só aceita um dos arquivos que existem, sem diferenciar "PT_BR" de "pt-br". */
+    /** The language only takes one of the files that exist, treating "PT_BR" and "pt-br" the same. */
     @Test
     void languageMustExist() {
         Settings s = new Settings();
@@ -216,10 +225,25 @@ class SettingsTest {
         assertEquals("de", s.language.get());
     }
 
+    /** Commands only take English values: the Portuguese ones from old versions are refused. */
+    @Test
+    void portugueseValuesAreRefused() {
+        Settings s = new Settings();
+        assertThrows(Setting.InvalidValue.class, () -> s.allowPearl.setFromText("não"));
+        assertThrows(Setting.InvalidValue.class, () -> s.allowPearl.setFromText("sim"));
+        assertThrows(Setting.InvalidValue.class, () -> s.lateJoin.setFromText("caçado"));
+        assertThrows(Setting.InvalidValue.class, () -> s.ringCenter.setFromText("automático"));
+        assertThrows(Setting.InvalidValue.class, () -> s.playerListMode.setFromText("permitidos"));
+        assertThrows(Setting.InvalidValue.class, () -> s.targetMode.setFromText("perto"));
+        assertThrows(Setting.InvalidValue.class, () -> s.pearlDimension.setFromText("ambas"));
+        assertThrows(Setting.InvalidValue.class, () -> s.defaultDifficulty.setFromText("difícil"));
+        assertNull(BotDifficulty.parse("fácil"));
+    }
+
     @Test
     void difficultyAliases() {
         assertSame(BotDifficulty.HARD, BotDifficulty.parse("difficulty.hard"));
-        assertSame(BotDifficulty.EASY, BotDifficulty.parse("fácil"));
+        assertSame(BotDifficulty.EASY, BotDifficulty.parse("easy"));
         assertSame(BotDifficulty.TERMINATOR, BotDifficulty.parse("TERMINATOR"));
         assertEquals(8, BotDifficulty.TERMINATOR.startPhase());
         assertEquals(600 * 20, BotDifficulty.TERMINATOR.phaseDurationTicks());

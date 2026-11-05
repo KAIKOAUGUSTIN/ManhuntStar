@@ -84,8 +84,6 @@ Difficulties: `easy`, `medium`, `hard`, `terminator`.
 
 Names with `%`, accents or spaces go in quotes in commands, for example `/manhunt create "Hunter%" 5` and `/manhunt group "Hunter%" role escape`. Tab completion already adds the quotes.
 
-The old option names (`starttime`, `glowing`, `nodes`, `min_sec_range_nether_entering`, `botuseelytra`...) still work in `/manhunt settings`, but don't show up in Tab completion.
-
 ## 🔧 Configuration
 
 Everything is commented in `plugins/ManhuntStar/config.yml` and can also be changed in game, with `/manhunt settings` or in `/manhunt menu`. Highlights:
