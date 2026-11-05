@@ -20,7 +20,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
-/** Os idiomas do plugin têm as mesmas chaves e os mesmos placeholders do inglês. */
+/** The plugin's languages have the same keys and the same placeholders as English. */
 class LanguageFilesTest {
 
     private static final Pattern TAG = Pattern.compile("<([a-z0-9_-]+)>");
@@ -45,7 +45,7 @@ class LanguageFilesTest {
         return out;
     }
 
-    /** Placeholders de um texto: as tags que não são cor nem estilo. */
+    /** A text's placeholders: the tags that are neither color nor style. */
     private static Set<String> placeholders(String text) {
         Set<String> out = new TreeSet<>();
         Matcher m = TAG.matcher(text);
@@ -90,7 +90,7 @@ class LanguageFilesTest {
         }
     }
 
-    /** Cada estado que o Brain usa ({@code state("...")}) tem texto. */
+    /** Every state the Brain uses ({@code state("...")}) has a text. */
     @Test
     void everyBrainStateHasText() throws Exception {
         YamlConfiguration en = load("en");

@@ -42,10 +42,10 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * {@code /manhunt}. Partida: start, pause, resume, target, ring, players. Bots: create, remove, list,
- * info, tp, skin, spawnpoint, equip, test. Grupos: group. Opções: settings, reload. E o menu.
- * Os verbos são os mesmos em tudo: create/remove para bots e grupos, add/remove para
- * listas e clear para apagar um valor. Posições aceitam {@code ~ ~ ~}; sem posição vale onde você está.
+ * {@code /manhunt}. Match: start, pause, resume, target, ring, players. Bots: create, remove, list,
+ * info, tp, skin, spawnpoint, equip, test. Groups: group. Options: settings, reload. And the menu.
+ * The verbs are the same everywhere: create/remove for bots and groups, add/remove for
+ * lists and clear to erase a value. Positions accept {@code ~ ~ ~}; with no position, where you are is used.
  */
 public final class ManhuntCommand {
 
@@ -74,7 +74,7 @@ public final class ManhuntCommand {
         return ctx.getSource().getSender();
     }
 
-    // ------------------------------------------------------------------ sugestões
+    // ------------------------------------------------------------------ suggestions
 
     private SuggestionProvider<CommandSourceStack> botNames() {
         return (ctx, b) -> {
@@ -112,7 +112,7 @@ public final class ManhuntCommand {
         };
     }
 
-    /** Nomes com %, acento ou espaço só passam entre aspas, então a sugestão já vem com elas. */
+    /** Names with %, accents or spaces only work in quotes, so the suggestion already comes with them. */
     private static void suggestName(SuggestionsBuilder b, String name) {
         String text = StringArgumentType.escapeIfRequired(name);
         if (text.toLowerCase(Locale.ROOT).startsWith(b.getRemaining().toLowerCase(Locale.ROOT))) {
@@ -131,7 +131,7 @@ public final class ManhuntCommand {
         };
     }
 
-    // ------------------------------------------------------------------ árvore
+    // ------------------------------------------------------------------ tree
 
     public LiteralCommandNode<CommandSourceStack> build() {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("manhunt")
@@ -140,7 +140,7 @@ public final class ManhuntCommand {
         root.then(Commands.literal("help").executes(this::help));
         root.then(Commands.literal("menu").executes(this::menu));
 
-        // partida
+        // match
         root.then(Commands.literal("start").executes(this::start));
         root.then(Commands.literal("pause").executes(this::pause));
         root.then(Commands.literal("resume").executes(this::resume));
@@ -190,7 +190,7 @@ public final class ManhuntCommand {
                         .suggests(words("leather", "chainmail", "iron", "gold", "diamond", "netherite")).executes(this::equipArmor))));
         root.then(Commands.literal("test").then(Commands.argument("ability", StringArgumentType.word()).suggests(words(ABILITIES)).executes(this::test)));
 
-        // grupos
+        // groups
         root.then(Commands.literal("group").then(Commands.argument("group", StringArgumentType.string()).suggests(groupNames())
                 .then(Commands.literal("role").then(Commands.argument("role", StringArgumentType.word()).suggests(words("hunter", "escape")).executes(this::groupRole)))
                 .then(Commands.literal("enemy")
@@ -204,7 +204,7 @@ public final class ManhuntCommand {
                 .then(Commands.literal("chaseplayers").then(Commands.argument("enabled", BoolArgumentType.bool()).executes(this::groupChase)))
                 .then(Commands.literal("remove").executes(this::groupRemove))));
 
-        // opções
+        // options
         root.then(settingsNode());
         root.then(Commands.literal("reload").executes(ctx -> {
             plugin.reloadAll();
@@ -215,8 +215,8 @@ public final class ManhuntCommand {
     }
 
     /**
-     * Opções do create, sempre nesta ordem: {@code [skin <jogador>] [at <x y z>] [phase] [aggression]}.
-     * Cada nível da árvore ganha o executor e os ramos que ainda cabem nele.
+     * create's options, always in this order: {@code [skin <player>] [at <x y z>] [phase] [aggression]}.
+     * Each level of the tree gets the executor and the branches that still fit in it.
      */
     private <T extends ArgumentBuilder<CommandSourceStack, T>> T createOptions(T node, boolean skin, boolean at, boolean phase) {
         node.executes(this::create);
@@ -233,9 +233,9 @@ public final class ManhuntCommand {
         return node;
     }
 
-    // ------------------------------------------------------------------ argumentos
+    // ------------------------------------------------------------------ arguments
 
-    /** Argumento opcional: null quando o ramo digitado não tem esse argumento. */
+    /** Optional argument: null when the typed branch doesn't have this argument. */
     private static <V> V opt(CommandContext<CommandSourceStack> ctx, String name, Class<V> type) {
         try {
             return ctx.getArgument(name, type);
@@ -253,7 +253,7 @@ public final class ManhuntCommand {
         return ctx.getArgument("pos", FinePositionResolver.class).resolve(ctx.getSource()).toLocation(base.getWorld());
     }
 
-    /** Onde quem digitou está; null no console (sem posição própria). */
+    /** Where whoever typed it is; null on the console (no position of its own). */
     private static Location here(CommandContext<CommandSourceStack> ctx) {
         return ctx.getSource().getExecutor() instanceof Entity ? ctx.getSource().getLocation() : null;
     }
@@ -263,7 +263,7 @@ public final class ManhuntCommand {
         return 0;
     }
 
-    // ------------------------------------------------------------------ geral
+    // ------------------------------------------------------------------ general
 
     private int help(CommandContext<CommandSourceStack> ctx) {
         for (Component line : msg().lines("help")) {
@@ -281,7 +281,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    // ------------------------------------------------------------------ partida
+    // ------------------------------------------------------------------ match
 
     private int start(CommandContext<CommandSourceStack> ctx) {
         if (manager().rings().releaseAll() == 0) {
@@ -334,7 +334,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** Marca o ponto da roda e passa o centro para manual. */
+    /** Sets the ring point and switches the center to manual. */
     private int ringPoint(CommandContext<CommandSourceStack> ctx, Location loc) {
         if (loc == null || loc.getWorld() == null) {
             return noLocation(ctx);
@@ -347,7 +347,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** Apaga o ponto da roda e volta o centro para automático. */
+    /** Clears the ring point and switches the center back to automatic. */
     private int ringPointClear(CommandContext<CommandSourceStack> ctx) {
         settings().setRingPoint(null);
         settings().ringCenter.set(RingCenter.AUTO);
@@ -390,7 +390,7 @@ public final class ManhuntCommand {
 
     // ------------------------------------------------------------------ bots
 
-    /** Cria onde quem digitou está (ou no ponto da roda, com o centro em manual), ou no "at x y z". */
+    /** Creates where whoever typed it is (or at the ring point, with the center on manual), or at "at x y z". */
     private int create(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSender s = sender(ctx);
         Integer amount = opt(ctx, "amount", Integer.class);
@@ -465,7 +465,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** O que a IA está fazendo, ou "pausado" com a caçada pausada. */
+    /** What the AI is doing, or "paused" with the hunt paused. */
     private Component stateOf(Bot b) {
         if (!b.isAlive()) {
             return Component.text("-");
@@ -496,7 +496,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** Leva os bots com esse nome até o jogador (ou até você). */
+    /** Brings the bots with this name to the player (or to you). */
     private int tp(CommandContext<CommandSourceStack> ctx, Player to) {
         Player dest = to != null ? to : ctx.getSource().getExecutor() instanceof Player p ? p : null;
         if (dest == null) {
@@ -549,7 +549,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    /** Ponto de renascimento dos bots com esse nome (onde você está, numa posição, ou clear). */
+    /** Respawn point of the bots with this name (where you are, at a position, or clear). */
     private int botSpawnpoint(CommandContext<CommandSourceStack> ctx, Location loc, boolean clear) {
         String name = StringArgumentType.getString(ctx, "bot");
         List<Bot> list = manager().botsNamed(name);
@@ -622,7 +622,7 @@ public final class ManhuntCommand {
         return 0;
     }
 
-    // ------------------------------------------------------------------ grupos
+    // ------------------------------------------------------------------ groups
 
     private BotGroup groupArg(CommandContext<CommandSourceStack> ctx) {
         String name = StringArgumentType.getString(ctx, "group");
@@ -722,7 +722,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    // ------------------------------------------------------------------ opções
+    // ------------------------------------------------------------------ options
 
     private LiteralArgumentBuilder<CommandSourceStack> settingsNode() {
         SuggestionProvider<CommandSourceStack> keys = (ctx, b) -> {
@@ -801,7 +801,7 @@ public final class ManhuntCommand {
             v = "0";
         }
         if (s == settings().glowHunters || s == settings().glowEscapers) {
-            // "glowhunters true red": liga e troca a cor de uma vez
+            // "glowhunters true red": turns it on and changes the color at once
             String[] parts = v.split("\\s+", 2);
             v = parts[0];
             if (parts.length > 1) {

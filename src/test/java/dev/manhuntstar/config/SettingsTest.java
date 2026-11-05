@@ -25,7 +25,7 @@ import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Opções: chaves e apelidos do mod, faixas e conversão de texto. */
+/** Options: keys, ranges and text conversion. */
 class SettingsTest {
 
     @Test
@@ -61,7 +61,7 @@ class SettingsTest {
         assertSame(s.allowHorse, s.byKey("allowhorse"));
     }
 
-    /** Os nomes antigos (do mod e das versões anteriores) continuam valendo, fora do Tab. */
+    /** The old option names (from the mod and from earlier versions) no longer work in /manhunt settings. */
     @Test
     void oldOptionNamesAreGone() {
         Settings s = new Settings();
@@ -78,7 +78,7 @@ class SettingsTest {
         }
     }
 
-    /** A lista usa off/allowlist/blocklist; os nomes em português das versões antigas ainda valem. */
+    /** The list uses off/allowlist/blocklist. */
     @Test
     void playerListModeEnglishWords() {
         Settings s = new Settings();
@@ -105,7 +105,7 @@ class SettingsTest {
         assertEquals(64.0, s.ringRadius.value());
     }
 
-    /** Permitidos: só os da lista; bloqueados: todos menos os da lista; nomes sem diferenciar maiúsculas. */
+    /** Allowlist: only those on the list; blocklist: everyone except those on the list; names are case-insensitive. */
     @Test
     void playerListAllowsAndBlocks() {
         Settings s = new Settings();
@@ -142,7 +142,7 @@ class SettingsTest {
         assertEquals("settings.error.boolean", e.getMessage());
     }
 
-    /** Toda opção do Settings está no config.yml do plugin, com o mesmo valor padrão. */
+    /** Every option in Settings is in the plugin's config.yml, with the same default value. */
     @Test
     void everyOptionIsInTheBundledConfig() throws Exception {
         Settings s = new Settings();
@@ -159,7 +159,7 @@ class SettingsTest {
         }
     }
 
-    /** Um config.yml das versões com chaves em português é lido pelos caminhos antigos. */
+    /** A config.yml from the versions with Portuguese keys is read from the old paths, and its Portuguese values are converted. */
     @Test
     void legacyConfigIsMigrated(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("config.yml");
@@ -211,7 +211,7 @@ class SettingsTest {
         assertEquals("pt-br", again.language.get());
     }
 
-    /** O idioma só aceita um dos arquivos que existem, sem diferenciar "PT_BR" de "pt-br". */
+    /** The language only takes one of the files that exist, treating "PT_BR" and "pt-br" the same. */
     @Test
     void languageMustExist() {
         Settings s = new Settings();

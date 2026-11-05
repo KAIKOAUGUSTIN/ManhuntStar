@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** A* em mundos sintéticos (sem servidor). */
+/** A* in synthetic worlds (no server). */
 class PathfindingTest {
 
     private static final byte STONE = 7;
 
-    /** Mundo de teste: chão de pedra em y=63, ar acima, AVOID fora de -5 ≤ x ≤ 30 e |z| ≤ limite. */
+    /** Test world: stone floor at y=63, air above, AVOID outside -5 ≤ x ≤ 30 and |z| ≤ limit. */
     private static final class Grid implements CostProvider {
         final Map<Long, Byte> overrides = new HashMap<>();
         final int limit;
@@ -49,7 +49,7 @@ class PathfindingTest {
         return AStar.get().findPath(g, from, to, 20_000, 2_000, 1.5, place, boat);
     }
 
-    /** Lago de 2 blocos de fundo, com a superfície em y=63. */
+    /** Lake 2 blocks deep, with the surface at y=63. */
     private static void lake(Grid g, int x0, int x1, int z0, int z1) {
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
@@ -148,7 +148,7 @@ class PathfindingTest {
     @Test
     void crossesLakeByBoatAndWalksAroundWithout() {
         Grid g = new Grid(20);
-        // 21 blocos de travessia; dar a volta pela ponta (|z| >= 9) custa menos que nadar e mais que remar
+        // 21 blocks across; going around the end (|z| >= 9) costs less than swimming and more than rowing
         lake(g, 4, 24, -8, 8);
         PathResult boat = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, true);
         assertTrue(boat.complete());
@@ -163,7 +163,7 @@ class PathfindingTest {
     @Test
     void boatKeepsOffTheShore() {
         Grid g = new Grid(20);
-        // já de barco ao lado da margem (z = 0 é a última fileira de água), alvo em terra lá na frente
+        // already in a boat next to the bank (z = 0 is the last row of water), target on land further ahead
         lake(g, -5, 30, 0, 12);
         PathResult r = find(g, new Pos(2, 63, 1), new Pos(28, 64, -2), false, true);
         assertTrue(r.complete(), () -> "caminho " + r.path());
@@ -180,9 +180,10 @@ class PathfindingTest {
     }
 
     /**
-     * Caixa no céu (chão em y=70, teto de vidro em y=75) com o alvo dentro e o bot no teto: o caminho cava
-     * o teto e cai na caixa. Antes ele saía pela beirada contando com blocos colocados no ar e o bot caía
-     * até o chão lá embaixo. As paredes não quebram para o caminho não descer cavando a coluna da parede.
+     * Box in the sky (floor at y=70, glass ceiling at y=75) with the target inside and the bot on the ceiling:
+     * the path digs through the ceiling and drops into the box. It used to step off the edge relying on blocks
+     * placed in the air and the bot fell all the way to the ground below. The walls don't break so the path
+     * doesn't go down by digging the wall's column.
      */
     @Test
     void digsThroughRoofIntoTheBoxBelow() {
@@ -206,7 +207,7 @@ class PathfindingTest {
         assertTrue(r.toPlace().isEmpty(), () -> "colocar " + r.toPlace());
     }
 
-    /** Despenhadeiro de 13 blocos: nenhuma descida conta com bloco colocado embaixo do pouso. */
+    /** 13-block cliff: no way down relies on a block placed under the landing. */
     @Test
     void neverPlansLandingOnBlocksPlacedInTheAir() {
         Grid g = new Grid(2);
