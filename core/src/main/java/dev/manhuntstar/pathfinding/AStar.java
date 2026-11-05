@@ -9,20 +9,20 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A* com o modelo de movimento do mod: andar/correr (com teto), subir 1 bloco, cair até 3,
- * pular buracos de 2-3 blocos, pilar para cima/descer cavando, diagonais, cavar blocos no caminho,
- * colocar blocos para atravessar vãos e atravessar água de barco. Nós ficam em arrays (sem alocar objetos) e cada thread
- * tem sua própria instância, então pode rodar em paralelo com segurança.
+ * A* with the mod's movement model: walking/sprinting (with a ceiling), stepping up 1 block, falling up to 3,
+ * jumping 2-3 block gaps, pillaring up/digging down, diagonals, digging blocks in the way,
+ * placing blocks to cross gaps and crossing water by boat. Nodes live in arrays (no object allocation) and
+ * each thread has its own instance, so it can safely run in parallel.
  *
- * <p>Descer nunca conta com bloco colocado: caindo, o bot não consegue pôr um bloco embaixo de onde vai
- * pousar. Cavando o chão com um vão embaixo (o teto da sala ou da caixa do alvo), ele cai até o primeiro
- * apoio, até {@link #MAX_DIG_FALL} blocos.
+ * <p>Going down never relies on a placed block: while falling, the bot can't put a block under where it
+ * will land. Digging the floor with a gap below (the ceiling of a room or of the target's box), it falls to
+ * the first support, up to {@link #MAX_DIG_FALL} blocks.
  */
 public final class AStar {
 
-    /** Maior queda planejada: cavar o chão e cair no vão de baixo (5 blocos = 1 coração de dano). */
+    /** Longest planned fall: dig the floor and fall into the gap below (5 blocks = 1 heart of damage). */
     public static final int MAX_DIG_FALL = 5;
-    /** Custo extra por bloco de queda acima de 3 (dano de queda). */
+    /** Extra cost per block of fall above 3 (fall damage). */
     private static final double FALL_DAMAGE_COST = 4.0;
 
     private static final double SPRINT_COST = 2.81;
@@ -30,9 +30,9 @@ public final class AStar {
     private static final double JUMP_COST = 3.16;
     private static final double STEP_UP_COST = 7.79;
     private static final double SWIM_EXTRA = 4.63;
-    /** De barco na superfície: ~8 blocos/s contra ~5,6 correndo. */
+    /** By boat on the surface: ~8 blocks/s against ~5.6 sprinting. */
     private static final double BOAT_FACTOR = 0.7;
-    /** Colocar o barco, embarcar e quebrá-lo na outra margem (~2 s): só compensa em travessia longa. */
+    /** Placing the boat, boarding and breaking it on the other bank (~2 s): only worth it on a long crossing. */
     private static final double BOAT_BOARD_COST = 25.0;
     private static final double PLACE_COST = 20.0;
     private static final double DIAG_COST = 3.97334;
@@ -47,7 +47,7 @@ public final class AStar {
         return LOCAL.get();
     }
 
-    // Armazenamento dos nós (struct-of-arrays).
+    // Node storage (struct-of-arrays).
     private int capacity = 4096;
     private int count;
     private int[] nx = new int[capacity];
@@ -70,8 +70,8 @@ public final class AStar {
     private boolean allowBoat;
 
     /**
-     * @param allowBoat a superfície da água conta como trecho de barco (mais rápido que nadar, com um
-     *                  custo fixo para embarcar), e o bot atravessa de barco o trecho que o caminho escolher
+     * @param allowBoat the water surface counts as a boat stretch (faster than swimming, with a fixed
+     *                  cost to board), and the bot crosses by boat the stretch the path picks
      */
     public PathResult findPath(CostProvider costs, Pos start, Pos target, int maxNodes, long maxTimeMs, double greediness,
             boolean allowPlacement, boolean allowBoat) {
@@ -138,7 +138,7 @@ public final class AStar {
         return reconstruct(best, false, iterations, t0);
     }
 
-    /** Diagonal só se pelo menos um dos lados não tiver parede no corpo (não atravessa quina). */
+    /** Diagonal only if at least one of the sides has no wall at body height (doesn't cut corners). */
     private boolean diagonalCornersPassable(int cx, int cy, int cz, int x, int z) {
         boolean side1 = !CostProvider.isSolid(costs.cost(x, cy, cz)) && !CostProvider.isSolid(costs.cost(x, cy + 1, cz));
         boolean side2 = !CostProvider.isSolid(costs.cost(cx, cy, z)) && !CostProvider.isSolid(costs.cost(cx, cy + 1, z));
@@ -158,7 +158,7 @@ public final class AStar {
         expand(cur, x, cy + 1, z, STEP_UP_COST + extra);
     }
 
-    /** Ao sair de uma beirada o corpo passa pelas células acima do pouso: precisam estar livres. */
+    /** When stepping off a ledge the body passes through the cells above the landing: they must be free. */
     private boolean dropColumnClear(int x, int cy, int z, int drop) {
         for (int y = cy + 1; y > cy - drop + 1; y--) {
             byte c = costs.cost(x, y, z);
@@ -173,7 +173,7 @@ public final class AStar {
         int cx = nx[cur];
         int cy = ny[cur];
         int cz = nz[cur];
-        // o pulo sobe mais de 1 bloco: com teto logo acima da cabeça ele não sai e o bot cai no vão
+        // the jump goes up more than 1 block: with a ceiling right above the head it doesn't make it and the bot falls into the gap
         if (CostProvider.isSolid(costs.cost(cx, cy + 2, cz))) {
             return;
         }
@@ -201,11 +201,11 @@ public final class AStar {
     }
 
     /**
-     * Descer: nadando, ou cavando o chão. Se embaixo do bloco cavado houver um vão, o bot cai até o
-     * primeiro apoio (ou até a água), no máximo {@link #MAX_DIG_FALL} blocos. Sem bloco para cavar não há
-     * descida: no ar o bot não consegue pôr um bloco embaixo de si. A exceção é o nó inicial no ar (o bot
-     * pulando ou caindo quando o caminho foi pedido), que cai de verdade; os outros nós no ar estão sobre
-     * um bloco que o caminho vai colocar.
+     * Going down: swimming, or digging the floor. If there is a gap under the dug block, the bot falls to
+     * the first support (or to the water), at most {@link #MAX_DIG_FALL} blocks. With no block to dig there is
+     * no way down: in the air the bot can't put a block under itself. The exception is the starting node in
+     * the air (the bot jumping or falling when the path was requested), which really falls; the other nodes in
+     * the air stand on a block the path will place.
      */
     private void expandDown(int cur) {
         int cx = nx[cur];
@@ -234,7 +234,7 @@ public final class AStar {
             }
             int fall = cy - land;
             double cost = 3.0 + fall * 1.5 + Math.max(0, fall - 3) * FALL_DAMAGE_COST;
-            // o bloco cavado só entra na conta do expand quando é a cabeça do pouso (queda de 2)
+            // the dug block only counts in expand when it is the landing's head (2-block fall)
             if (dig && land < cy - 2) {
                 cost += floor;
             }
@@ -247,7 +247,7 @@ public final class AStar {
         expand(cur, x, y, z, baseCost, true);
     }
 
-    /** @param canPlace pode pousar sobre um bloco colocado (não vale para quedas: caindo não dá para colocar) */
+    /** @param canPlace can land on a placed block (not for falls: you can't place while falling) */
     private void expand(int cur, int x, int y, int z, double baseCost, boolean canPlace) {
         byte feet = costs.cost(x, y, z);
         byte head = costs.cost(x, y + 1, z);
@@ -289,14 +289,14 @@ public final class AStar {
         submit(cur, x, y, z, cost);
     }
 
-    /** Superfície da água onde o barco cabe (pés na água, cabeça no ar). */
+    /** Water surface where the boat fits (feet in the water, head in the air). */
     private boolean isBoatNode(int x, int y, int z) {
         return costs.cost(x, y, z) == CostProvider.WATER && costs.cost(x, y + 1, z) == CostProvider.AIR && boatFits(x, y, z);
     }
 
     /**
-     * O barco tem 1,4 bloco de largura: centrado num bloco, ele entra uns 0,2 bloco nos quatro vizinhos.
-     * Se um deles for a margem, o casco raspa na terra e o barco quase para.
+     * The boat is 1.4 blocks wide: centered on a block, it reaches about 0.2 blocks into the four neighbors.
+     * If one of them is the bank, the hull scrapes the ground and the boat nearly stops.
      */
     private boolean boatFits(int x, int y, int z) {
         for (int[] d : CARDINALS) {
@@ -383,7 +383,7 @@ public final class AStar {
             if (p >= 0 && y > ny[p] && CostProvider.isMinable(costs.cost(nx[p], ny[p] + 2, nz[p]))) {
                 toMine.add(new Pos(nx[p], ny[p] + 2, nz[p]));
             }
-            // cavou o chão e caiu no vão de baixo: o bloco cavado não é nem os pés nem a cabeça do pouso
+            // dug the floor and fell into the gap below: the dug block is neither the landing's feet nor its head
             if (p >= 0 && x == nx[p] && z == nz[p] && y < ny[p] - 2 && CostProvider.isMinable(costs.cost(x, ny[p] - 1, z))) {
                 toMine.add(new Pos(x, ny[p] - 1, z));
             }
@@ -403,7 +403,7 @@ public final class AStar {
         return new PathResult(path, toMine, toPlace, complete, iterations, (System.nanoTime() - t0) / 1_000_000L);
     }
 
-    // ------------------------------------------------------------------ heap binário por f = g + h
+    // ------------------------------------------------------------------ binary heap by f = g + h
 
     private double f(int n) {
         return g[n] + h[n];
@@ -468,7 +468,7 @@ public final class AStar {
         heapIdx[n] = i;
     }
 
-    /** Mapa long -> int com endereçamento aberto (evita boxing). */
+    /** long -> int map with open addressing (avoids boxing). */
     static final class LongIntMap {
         private long[] keys;
         private int[] values;

@@ -38,16 +38,16 @@ import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.util.Vector;
 
 /**
- * Capacidades especiais (o BotAggressive do mod), que tomam o controle do bot por alguns segundos:
+ * Special abilities (the mod's BotAggressive), which take control of the bot for a few seconds:
  * <ul>
- *   <li>emboscada de TNT: o bot surge atrás do jogador na caverna, chega agachado, coloca e acende
- *   uma TNT perto dele e foge;</li>
- *   <li>rajada de arco (fase 4+): para, puxa o arco o quanto precisa para alcançar o jogador e dispara
- *   2–6 flechas;</li>
- *   <li>besta com fogos (fase 5+, experimental no mod, desligada por padrão): foguete de duração 3, e só
- *   atira se ele chega ao jogador antes de explodir.</li>
+ *   <li>TNT ambush: the bot shows up behind the player in the cave, sneaks in, places and lights
+ *   a TNT near them and runs away;</li>
+ *   <li>bow burst (phase 4+): stops, draws the bow as much as needed to reach the player and fires
+ *   2–6 arrows;</li>
+ *   <li>firework crossbow (phase 5+, experimental in the mod, off by default): a flight duration 3
+ *   rocket, and it only fires if the rocket reaches the player before exploding.</li>
  * </ul>
- * No mod a ativação automática estava travada no código; aqui é a opção "capacidades-automaticas".
+ * In the mod the automatic activation was locked in the code; here it's the {@code tactics.auto-abilities} option.
  */
 public final class TacticsManager {
 
@@ -56,18 +56,18 @@ public final class TacticsManager {
     private static final int CRAFTING_WINDOW_TICKS = 60;
     private static final double TNT_TRIGGER_DISTANCE = 3.0;
     private static final int ESCAPE_TICKS = 24;
-    /** Duração de voo do foguete da besta (como no item do jogo, de 1 a 3). */
+    /** Flight duration of the crossbow's firework rocket (as on the game's item, from 1 to 3). */
     private static final int FIREWORK_FLIGHT = 3;
-    /** Menor tempo de vida do foguete no jogo: 10·(1 + duração) ticks, mais um sorteio de 0 a 11. */
+    /** The rocket's shortest lifetime in the game: 10·(1 + duration) ticks, plus a random 0 to 11. */
     private static final int FIREWORK_MIN_LIFETIME = 10 * (1 + FIREWORK_FLIGHT);
-    /** Velocidade do foguete disparado pela besta do jogo (CrossbowItem.getShootingPower). */
+    /** Speed of a rocket fired by the game's crossbow (CrossbowItem.getShootingPower). */
     private static final double FIREWORK_SPEED = 1.6;
-    /** Com a besta carregada, quanto tempo espera o jogador entrar no alcance antes de desistir. */
+    /** With the crossbow loaded, how long it waits for the player to come into range before giving up. */
     private static final int FIREWORK_HOLD_TICKS = 20;
-    /** Puxada da rajada de arco, em ticks: de 10 (flecha a 1,25 bloco/tick) ao arco todo puxado (20, flecha a 3,0). */
+    /** Bow burst draw, in ticks: from 10 (arrow at 1.25 blocks/tick) to a fully drawn bow (20, arrow at 3.0). */
     private static final int BOW_MIN_DRAW = 10;
     private static final int BOW_MAX_DRAW = 20;
-    /** Com o arco todo puxado, quanto tempo espera o jogador entrar no alcance antes de desistir. */
+    /** With the bow fully drawn, how long it waits for the player to come into range before giving up. */
     private static final int BOW_HOLD_TICKS = 20;
 
     private final BotManager manager;
@@ -154,12 +154,12 @@ public final class TacticsManager {
         return isControllingBot(bot) || manager.caveAmbush().isReserved(bot);
     }
 
-    /** Jogador abriu uma mesa de trabalho (fica vulnerável por 3 s para a emboscada automática). */
+    /** A player opened a crafting table (vulnerable for 3 s to the automatic ambush). */
     public void recordCraftingTableUse(Player p) {
         trackers.computeIfAbsent(p.getUniqueId(), k -> new Tracker()).lastCraftingTick = Bukkit.getCurrentTick();
     }
 
-    /** Executa a capacidade ativa deste bot (chamado pelo cérebro, dentro do tick do bot). */
+    /** Runs this bot's active ability (called by the brain, inside the bot's tick). */
     public void tickControlled(Bot bot) {
         long now = Bukkit.getCurrentTick();
         TntAmbush a = tnt.get(bot.id());
@@ -176,7 +176,7 @@ public final class TacticsManager {
         }
     }
 
-    /** Ticks globais: ativação automática e limpeza de capacidades de bots que sumiram. */
+    /** Global ticks: automatic activation and cleanup of abilities of bots that are gone. */
     public void tick() {
         long now = Bukkit.getCurrentTick();
         tnt.values().removeIf(a -> {
@@ -205,14 +205,14 @@ public final class TacticsManager {
         });
         if (manager.plugin().settings().autoCapacities.on()) {
             refreshTrackers(now);
-            // bots da roda ficam de fora em selectBot; os que já caçam seguem com as capacidades
+            // ring bots are left out in selectBot; the ones already hunting keep their abilities
             if (now % CHECK_INTERVAL == 0) {
                 autoTrigger(now);
             }
         }
     }
 
-    // ------------------------------------------------------------------ automático
+    // ------------------------------------------------------------------ automatic
 
     private void refreshTrackers(long now) {
         List<UUID> online = new ArrayList<>();
@@ -275,7 +275,7 @@ public final class TacticsManager {
     private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase, Predicate<Bot> able) {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
-            // bots esperando na roda não saem dela para emboscar
+            // bots waiting in the ring don't leave it to ambush
             if (!b.world().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
                     || b.idle() != null) {
                 continue;
@@ -298,9 +298,9 @@ public final class TacticsManager {
         bot.mining().cancel();
     }
 
-    // ------------------------------------------------------------------ comando de teste (/manhunt test)
+    // ------------------------------------------------------------------ test command (/manhunt test)
 
-    /** @return mensagem de erro ou null se iniciou. */
+    /** @return an error message or null if it started. */
     public String debugExecute(Player player, String capacity) {
         if (player.isDead()) {
             return "must-be-alive";
@@ -349,9 +349,9 @@ public final class TacticsManager {
         }
     }
 
-    // ------------------------------------------------------------------ rajada de arco
+    // ------------------------------------------------------------------ bow burst
 
-    /** Chamado pela IA quando o jogador fica muito tempo sem ser acertado (pressão de arco). */
+    /** Called by the AI when the player goes too long without being hit (bow pressure). */
     public boolean tryStartBowBurst(Bot bot, Player player, long now) {
         if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.getWorld()) || bot.progression().phase() < 4) {
             return false;
@@ -359,7 +359,7 @@ public final class TacticsManager {
         if (!player.getUniqueId().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.getUniqueId()) || isBusy(bot)) {
             return false;
         }
-        // nem com o arco todo puxado a flecha chega (longe demais para o desnível, ou bloco na trajetória)
+        // not even with the bow fully drawn does the arrow get there (too far for the height difference, or a block in the way)
         if (bowDraw(bot, player, Vec3.ZERO) < 0) {
             return false;
         }
@@ -374,7 +374,7 @@ public final class TacticsManager {
         bows.put(bot.id(), new BowBurst(bot.id(), player.getUniqueId(), bot.getItem(EquipmentSlot.HAND).clone(), shots, now));
     }
 
-    /** @return false quando a rajada terminou (e já foi limpa). */
+    /** @return false when the burst is over (and already cleaned up). */
     private boolean stepBow(BowBurst s, Bot bot, long now) {
         Player p = Bukkit.getPlayer(s.player);
         if (!validContext(bot, p)) {
@@ -403,8 +403,8 @@ public final class TacticsManager {
                 s.nextAction = now + draw;
             }
             case 1 -> {
-                // na hora de soltar o jogador pode ter saído do alcance desta puxada: puxa mais; com o arco
-                // todo puxado espera um pouco e desiste sem atirar
+                // at release time the player may have moved out of this draw's range: draw more; with the bow
+                // fully drawn wait a little and give up without shooting
                 double speed = Ballistics.bowSpeed((int) (now - s.drawStart));
                 if (!arrowReaches(bot, p, s.aim.velocity(), speed)) {
                     if (now - s.drawStart >= BOW_MAX_DRAW + BOW_HOLD_TICKS) {
@@ -442,9 +442,9 @@ public final class TacticsManager {
     }
 
     /**
-     * Flecha do arco puxado. No mod a elevação era uma fórmula fixa ({@code 0,24·d + 0,0032·d²}) que
-     * passava 1,5 a 2,5 blocos acima da cabeça; aqui a velocidade vem da puxada, o ângulo da física da
-     * flecha (com o desnível) e o jogador é antecipado pelo tempo de voo.
+     * Arrow from the drawn bow. In the mod the elevation was a fixed formula ({@code 0.24·d + 0.0032·d²}) that
+     * went 1.5 to 2.5 blocks over the head; here the speed comes from the draw, the angle from the arrow's
+     * physics (with the height difference) and the player is led by the flight time.
      */
     private static void shootArrow(Bot bot, Player player, Vec3 playerVelocity, double speed) {
         Mannequin e = bot.entity();
@@ -460,7 +460,7 @@ public final class TacticsManager {
         dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), player);
         arrow.setShooter(e);
         arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
-        // como no jogo: flecha do arco todo puxado é crítica
+        // as in the game: an arrow from a fully drawn bow is critical
         arrow.setCritical(speed >= Ballistics.bowSpeed(BOW_MAX_DRAW));
         e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
@@ -475,9 +475,9 @@ public final class TacticsManager {
     }
 
     /**
-     * Quantos ticks puxar o arco: entre as puxadas que alcançam o jogador (o desnível conta, e a trajetória
-     * não pode bater em bloco), a que acerta mais cedo somando o tempo de puxar e o de voo. Perto puxa pouco
-     * e atira rápido; longe puxa até o fim. -1 se nem o arco todo puxado chega.
+     * How many ticks to draw the bow: among the draws that reach the player (the height difference counts, and
+     * the trajectory can't hit a block), the one that hits soonest adding up draw time and flight time. Up close
+     * it draws a little and shoots fast; far away it draws all the way. -1 if not even a fully drawn bow reaches.
      */
     private static int bowDraw(Bot bot, Player player, Vec3 playerVelocity) {
         Vec3 from = arrowOrigin(bot);
@@ -500,14 +500,14 @@ public final class TacticsManager {
         return -1;
     }
 
-    /** A flecha com esta velocidade alcança o jogador sem bater em bloco no caminho. */
+    /** An arrow with this speed reaches the player without hitting a block on the way. */
     private static boolean arrowReaches(Bot bot, Player player, Vec3 playerVelocity, double speed) {
         Vec3 from = arrowOrigin(bot);
         Ballistics.Shot shot = Ballistics.shotArrow(from, arrowTarget(player), playerVelocity, speed);
         return shot.reachable() && arrowPathClear(bot.world(), from, shot.velocity(), shot.ticks());
     }
 
-    /** Segue a trajetória da flecha tick a tick (anda, perde 1% e cai 0,05) até o tempo de voo, sem bater em bloco. */
+    /** Follows the arrow's trajectory tick by tick (moves, loses 1% and drops 0.05) up to the flight time, without hitting a block. */
     private static boolean arrowPathClear(World w, Vec3 from, Vec3 velocity, double ticks) {
         Vec3 p = from;
         Vec3 v = velocity;
@@ -522,7 +522,7 @@ public final class TacticsManager {
         return true;
     }
 
-    /** O {@code shoot} do jogo: normaliza, soma ruído gaussiano * 0,0075 * imprecisão e escala. */
+    /** The game's {@code shoot}: normalizes, adds gaussian noise * 0.0075 * inaccuracy and scales. */
     public static Vector shootVector(Vector dir, float speed, float inaccuracy) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vector v = dir.clone().normalize();
@@ -530,7 +530,7 @@ public final class TacticsManager {
         return v.multiply(speed);
     }
 
-    // ------------------------------------------------------------------ besta com fogos
+    // ------------------------------------------------------------------ firework crossbow
 
     private void startFirework(Player player, Bot bot, long now) {
         prepare(bot);
@@ -563,8 +563,8 @@ public final class TacticsManager {
                 s.nextAction = now + 25;
             }
             case 1 -> {
-                // só atira se o foguete chega ao jogador antes de explodir; senão segura a besta carregada
-                // (nextAction fica no fim da carga) e desiste sem atirar se o jogador não entrar no alcance
+                // only fires if the rocket reaches the player before exploding; otherwise keeps the crossbow loaded
+                // (nextAction stays at the end of the charge) and gives up without firing if the player doesn't come into range
                 if (!fireworkReaches(bot, p, s.aim.velocity())) {
                     if (now - s.nextAction >= FIREWORK_HOLD_TICKS) {
                         cleanupFirework(s, bot);
@@ -596,7 +596,7 @@ public final class TacticsManager {
         activeBotByPlayer.remove(s.player);
     }
 
-    /** Fogo disparado de besta voa reto (sem gravidade), então a mira é direta, com antecipação. */
+    /** A firework fired from a crossbow flies straight (no gravity), so the aim is direct, with lead. */
     private static void shootFirework(Bot bot, Player player, Vec3 playerVelocity) {
         Mannequin e = bot.entity();
         Vec3 from = fireworkOrigin(bot);
@@ -609,7 +609,7 @@ public final class TacticsManager {
         Vector vel = shootVector(Locations.vector(aim), (float) FIREWORK_SPEED, 0.65f);
         Location at = Locations.location(from, e.getWorld());
         e.getWorld().spawn(at, Firework.class, fw -> {
-            // o Paper sorteia o tempo de vida pela duração de voo, como o jogo
+            // Paper rolls the lifetime from the flight duration, like the game
             fw.setFireworkMeta((FireworkMeta) fireworkRocket().getItemMeta());
             fw.setShooter(e);
             fw.setShotAtAngle(true);
@@ -636,8 +636,8 @@ public final class TacticsManager {
     }
 
     /**
-     * O foguete chega ao jogador antes de explodir: o tiro reto alcança o ponto antecipado dentro do menor
-     * tempo de vida do foguete, sem bloco no caminho.
+     * The rocket reaches the player before exploding: the straight shot gets to the led point within the
+     * rocket's shortest lifetime, with no block in the way.
      */
     private static boolean fireworkReaches(Bot bot, Player player, Vec3 playerVelocity) {
         Vec3 from = fireworkOrigin(bot);
@@ -646,7 +646,7 @@ public final class TacticsManager {
         return ticks <= FIREWORK_MIN_LIFETIME && WorldUtil.clearLine(bot.world(), from, target.add(playerVelocity.scale(ticks)));
     }
 
-    // ------------------------------------------------------------------ emboscada de TNT
+    // ------------------------------------------------------------------ TNT ambush
 
     private boolean startTntAmbush(Player player, Bot bot, long now, boolean ignoreCooldown) {
         World w = player.getWorld();
@@ -669,7 +669,7 @@ public final class TacticsManager {
         return true;
     }
 
-    /** @return false quando a emboscada terminou (e já foi limpa). */
+    /** @return false when the ambush is over (and already cleaned up). */
     private boolean stepTnt(TntAmbush a, Bot bot, long now) {
         Player p = Bukkit.getPlayer(a.player);
         if (!tntStillValid(a, bot, p) || now - a.started > 600) {
@@ -694,7 +694,7 @@ public final class TacticsManager {
                     return false;
                 }
                 Locations.block(tntPos, w).setType(Material.TNT);
-                // se a emboscada acabar antes de acender (bot morreu, jogador fugiu), a TNT some
+                // if the ambush ends before lighting (the bot died, the player ran), the TNT disappears
                 manager.temporaryBlocks().add(w, tntPos, Material.TNT, 40);
                 w.playSound(Locations.location(tntPos, w), Sound.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
                 bot.swing();

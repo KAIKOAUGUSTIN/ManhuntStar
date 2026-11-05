@@ -21,7 +21,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-/** Sobrevivência: comer quando com fome, maçã dourada em combate e fugir do fogo colocando água. */
+/** Survival: eating when hungry, golden apple in combat and escaping fire by placing water. */
 public final class Survival {
 
     private static final int EAT_TICKS = 32;
@@ -129,7 +129,7 @@ public final class Survival {
         return new ItemStack(r.nextInt(4) < 3 ? Material.COOKED_BEEF : Material.CARROT);
     }
 
-    // ------------------------------------------------------------------ fogo
+    // ------------------------------------------------------------------ fire
 
     private boolean shouldHandleFireEscape(Settings s) {
         if (!s.fireWaterEscape.on() || bot.progression().phase() < 3 || !bot.isOnFire()) {
@@ -185,7 +185,7 @@ public final class Survival {
         Locations.block(waterPos, w).setType(Material.WATER);
         bot.swing();
         w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
-        // se o bot morrer antes de recolher, a água some do mesmo jeito
+        // if the bot dies before picking it up, the water disappears all the same
         bot.manager().temporaryBlocks().add(w, waterPos, Material.WATER, FIRE_WATER_PICKUP_TICKS + 40);
         fireEscapeWaterPos = waterPos;
         fireEscapeWaterWorld = w;
@@ -203,7 +203,7 @@ public final class Survival {
         }
         World w = fireEscapeWaterWorld;
         Block b = Locations.block(fireEscapeWaterPos, w);
-        // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+        // in another world the bot can't reach it: the temporary block registry picks it up
         if (w.equals(bot.world()) && b.getType() == Material.WATER) {
             bot.manager().temporaryBlocks().remove(w, fireEscapeWaterPos);
             ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
@@ -227,7 +227,7 @@ public final class Survival {
         fireEscapeSource = null;
     }
 
-    // ------------------------------------------------------------------ comer
+    // ------------------------------------------------------------------ eating
 
     private void startEating(ItemStack food, boolean golden) {
         if (food.isEmpty() || eatingTicks > 0 || bot.entity() == null) {
@@ -268,8 +268,8 @@ public final class Survival {
             e.getWorld().playSound(e.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
         }
         applyFood(currentFood, eatingGoldenApple);
-        // A mão secundária não é mexida ao comer; devolver a de antes traria de volta um totem
-        // gasto durante a refeição.
+        // The offhand isn't touched while eating; putting back the previous one would bring back a totem
+        // used up during the meal.
         bot.setItem(EquipmentSlot.HAND, savedMainHand.clone());
         currentFood = ItemStack.empty();
         savedMainHand = ItemStack.empty();

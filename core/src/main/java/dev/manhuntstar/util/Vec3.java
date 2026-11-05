@@ -1,6 +1,6 @@
 package dev.manhuntstar.util;
 
-/** Vetor 3D imutável (evita os erros de mutabilidade do {@code Vector} do Bukkit). */
+/** Immutable 3D vector (avoids the mutability bugs of Bukkit's {@code Vector}). */
 public record Vec3(double x, double y, double z) {
 
     public static final Vec3 ZERO = new Vec3(0, 0, 0);
@@ -83,7 +83,7 @@ public record Vec3(double x, double y, double z) {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /** Gira o vetor em torno do eixo Y. */
+    /** Rotates the vector around the Y axis. */
     public Vec3 rotateY(double radians) {
         double c = Math.cos(radians);
         double s = Math.sin(radians);
@@ -98,17 +98,17 @@ public record Vec3(double x, double y, double z) {
         return Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z);
     }
 
-    /** Yaw (graus, convenção do Minecraft) apontando nesta direção. */
+    /** Yaw (degrees, Minecraft convention) pointing in this direction. */
     public float yaw() {
         return (float) Math.toDegrees(Math.atan2(-x, z));
     }
 
-    /** Pitch (graus, positivo olhando para baixo). */
+    /** Pitch (degrees, positive looking down). */
     public float pitch() {
         return (float) Math.toDegrees(-Math.atan2(y, Math.sqrt(x * x + z * z)));
     }
 
-    /** Vetor de direção a partir de yaw/pitch (igual ao getLookAngle do jogo). */
+    /** Direction vector from yaw/pitch (same as the game's getLookAngle). */
     public static Vec3 fromRotation(float yaw, float pitch) {
         double f = Math.toRadians(pitch);
         double g = Math.toRadians(-yaw);

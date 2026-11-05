@@ -1,9 +1,9 @@
 package dev.manhuntstar.util;
 
 /**
- * Mira de projéteis com a física do servidor. A cada tick a flecha (e o tridente) anda a velocidade
- * atual, perde 1% dela no ar e cai 0,05 bloco/tick. O ângulo é achado simulando o voo, e o alvo em
- * movimento é antecipado pelo tempo de voo.
+ * Projectile aiming with the server's physics. Each tick the arrow (and the trident) moves by its current
+ * velocity, loses 1% of it in the air and drops 0.05 blocks/tick. The angle is found by simulating the
+ * flight, and a moving target is led by the flight time.
  */
 public final class Ballistics {
 
@@ -18,14 +18,14 @@ public final class Ballistics {
     }
 
     /**
-     * @param angle  inclinação do disparo em radianos (positivo para cima)
-     * @param ticks  tempo de voo até o alvo, em ticks (fracionário)
-     * @param reachable false quando o alvo está fora do alcance (o ângulo é o que chega mais perto)
+     * @param angle  shot elevation in radians (positive upward)
+     * @param ticks  flight time to the target, in ticks (fractional)
+     * @param reachable false when the target is out of range (the angle is the one that gets closest)
      */
     public record Solution(double angle, double ticks, boolean reachable) {
     }
 
-    /** Tiro baixo (trajetória mais reta) que passa por (distância horizontal, desnível). */
+    /** Low shot (flattest trajectory) that passes through (horizontal distance, height difference). */
     public static Solution solve(double horizontal, double dy, double speed, double gravity, double drag) {
         if (horizontal < 1.0E-3) {
             return new Solution(dy >= 0 ? MAX_ANGLE : MIN_ANGLE, Math.abs(dy) / speed, true);
@@ -60,7 +60,7 @@ public final class Ballistics {
         return new Solution(bestAngle, flightTicks(bestAngle, horizontal, speed, drag), false);
     }
 
-    /** Altura do projétil ao cruzar a distância horizontal menos o desnível do alvo (−∞ se não chega). */
+    /** Projectile height when crossing the horizontal distance minus the target's height difference (−∞ if it doesn't get there). */
     static double heightError(double angle, double horizontal, double dy, double speed, double gravity, double drag) {
         double vx = Math.cos(angle) * speed;
         double vy = Math.sin(angle) * speed;
@@ -84,7 +84,7 @@ public final class Ballistics {
         return Double.NEGATIVE_INFINITY;
     }
 
-    /** Ticks até cruzar a distância horizontal (a parte horizontal só sofre arrasto). */
+    /** Ticks to cross the horizontal distance (the horizontal part only suffers drag). */
     static double flightTicks(double angle, double horizontal, double speed, double drag) {
         double vx = Math.cos(angle) * speed;
         if (vx <= 1.0E-6) {
@@ -98,28 +98,28 @@ public final class Ballistics {
     }
 
     /**
-     * @param velocity  vetor de disparo
-     * @param ticks     tempo de voo até o ponto antecipado
-     * @param reachable false quando nem o melhor ângulo chega ao alvo
+     * @param velocity  shot vector
+     * @param ticks     flight time to the led point
+     * @param reachable false when not even the best angle reaches the target
      */
     public record Shot(Vec3 velocity, double ticks, boolean reachable) {
     }
 
-    /** Velocidade da flecha do arco puxado por {@code drawTicks} ticks, como no jogo (força × 3,0). */
+    /** Speed of an arrow from a bow drawn for {@code drawTicks} ticks, as in the game (power × 3.0). */
     public static double bowSpeed(int drawTicks) {
         double f = drawTicks / 20.0;
         return Math.min(1.0, (f * f + f * 2) / 3) * 3.0;
     }
 
     /**
-     * Vetor de disparo de {@code from} até {@code target}, antecipando a velocidade do alvo
-     * (blocos/tick). Usa a física da flecha; {@code gravity = 0} vira um tiro reto.
+     * Shot vector from {@code from} to {@code target}, leading the target's velocity
+     * (blocks/tick). Uses arrow physics; {@code gravity = 0} makes it a straight shot.
      */
     public static Vec3 aim(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed, double gravity, double drag) {
         return shot(from, target, targetVelocity, speed, gravity, drag).velocity();
     }
 
-    /** Como {@link #aim}, mas também diz o tempo de voo e se o tiro alcança (o desnível conta). */
+    /** Like {@link #aim}, but also gives the flight time and whether the shot reaches (the height difference counts). */
     public static Shot shot(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed, double gravity, double drag) {
         Vec3 aimPoint = target;
         Solution sol = null;
@@ -148,7 +148,7 @@ public final class Ballistics {
         return new Shot(new Vec3(flat.x() * c * speed, s * speed, flat.z() * c * speed), sol.ticks(), sol.reachable());
     }
 
-    /** Ticks até um tiro reto (gravidade 0) chegar ao ponto antecipado, com a mesma antecipação de {@link #aim}. */
+    /** Ticks for a straight shot (gravity 0) to reach the led point, with the same lead as {@link #aim}. */
     public static double straightTicks(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
         Vec3 aimPoint = target;
         for (int i = 0; i < 3 && targetVelocity != null && targetVelocity.lengthSqr() >= 1.0E-6; i++) {
@@ -158,12 +158,12 @@ public final class Ballistics {
         return aimPoint.subtract(from).length() / speed;
     }
 
-    /** Vetor de disparo de flecha/tridente (gravidade 0,05 e arrasto 0,99). */
+    /** Shot vector for an arrow/trident (gravity 0.05 and drag 0.99). */
     public static Vec3 aimArrow(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
         return aim(from, target, targetVelocity, speed, ARROW_GRAVITY, ARROW_DRAG);
     }
 
-    /** {@link #shot} com a física da flecha. */
+    /** {@link #shot} with arrow physics. */
     public static Shot shotArrow(Vec3 from, Vec3 target, Vec3 targetVelocity, double speed) {
         return shot(from, target, targetVelocity, speed, ARROW_GRAVITY, ARROW_DRAG);
     }

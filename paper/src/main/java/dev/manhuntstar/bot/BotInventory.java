@@ -20,8 +20,8 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Inventário virtual do bot (36 espaços, como o de um jogador) e controle do melhor equipamento:
- * coleta de itens/XP, troca automática para a melhor espada/armadura e persistência de equipamento entre mortes.
+ * The bot's virtual inventory (36 slots, like a player's) and handling of the best equipment:
+ * picking up items/XP, automatic switch to the best sword/armor and keeping equipment between deaths.
  */
 public final class BotInventory {
 
@@ -60,7 +60,7 @@ public final class BotInventory {
         }
     }
 
-    /** Adiciona ao inventário; retorna o que sobrou. */
+    /** Adds to the inventory; returns what's left over. */
     public ItemStack add(ItemStack stack) {
         if (GearScoring.isEmpty(stack)) {
             return ItemStack.empty();
@@ -96,7 +96,7 @@ public final class BotInventory {
         }
     }
 
-    // ------------------------------------------------------------------ equipamento preferido
+    // ------------------------------------------------------------------ preferred equipment
 
     public ItemStack preferredMainHand() {
         ItemStack current = bot.getItem(EquipmentSlot.HAND);
@@ -145,7 +145,7 @@ public final class BotInventory {
         }
     }
 
-    /** Chamado sempre que um slot de equipamento muda: atualiza o equipamento persistente se for melhor. */
+    /** Called whenever an equipment slot changes: updates the persistent equipment if it's better. */
     void onEquipmentChanged(EquipmentSlot slot, ItemStack stack) {
         if (slot == EquipmentSlot.HAND) {
             if (GearScoring.isSword(stack) && GearScoring.attackScore(stack) >= GearScoring.attackScore(persistedSword) - 0.01f) {
@@ -173,7 +173,7 @@ public final class BotInventory {
                 persistedArmor.get(EquipmentSlot.CHEST).clone(), persistedArmor.get(EquipmentSlot.LEGS).clone(), persistedArmor.get(EquipmentSlot.FEET).clone());
     }
 
-    /** Restaura o equipamento persistente e equipa o que for melhor que o atual. */
+    /** Restores the persistent equipment and equips whatever is better than the current one. */
     public void applyPersistentGear(PersistentGear gear) {
         if (gear == null) {
             return;
@@ -236,7 +236,7 @@ public final class BotInventory {
             persistedPickaxe = bestPick.clone();
         }
         ItemStack currentMain = bot.getItem(EquipmentSlot.HAND);
-        // a cavalo o bot segura a lança da carga (HorseRoutine); a espada volta quando ele desce
+        // on horseback the bot holds the charge spear (HorseRoutine); the sword comes back when it dismounts
         boolean ridingWithSpear = bot.isRiding() && GearScoring.isSpear(currentMain);
         if (!bestSword.isEmpty() && !ridingWithSpear
                 && (currentMain.isEmpty() || !GearScoring.isSword(currentMain) || GearScoring.isBetterSword(bestSword, currentMain))) {
@@ -311,7 +311,7 @@ public final class BotInventory {
         return best.isEmpty() ? ItemStack.empty() : best.clone();
     }
 
-    // ------------------------------------------------------------------ coleta
+    // ------------------------------------------------------------------ pickup
 
     private void pickupNearbyLootAndXp() {
         Mannequin e = bot.entity();
@@ -345,9 +345,9 @@ public final class BotInventory {
         }
     }
 
-    // ------------------------------------------------------------------ morte
+    // ------------------------------------------------------------------ death
 
-    /** Itens a dropar quando o bot morre, conforme as opções de drop e de persistência. */
+    /** Items to drop when the bot dies, according to the drop and persistence options. */
     public List<ItemStack> collectDeathDrops(boolean dropInventory, Modes.GearPersistence mode) {
         List<ItemStack> drops = new ArrayList<>();
         reevaluateAndEquipBestGearSafe();
@@ -355,8 +355,8 @@ public final class BotInventory {
             boolean keep = mode == Modes.GearPersistence.KEEP_ON_RESPAWN_NO_DROP;
             int keepSword = keep ? findBestSwordSlot() : -1;
             int keepPick = keep ? findBestPickaxeSlot() : -1;
-            // O que o bot veste ou segura e veio do inventário é uma cópia do item de lá: é um item só.
-            // Antes ele caía duas vezes (ou caía e continuava com o bot no modo que mantém).
+            // What the bot wears or holds and came from the inventory is a copy of the item there: it's one item.
+            // It used to drop twice (or drop and stay with the bot in the mode that keeps it).
             Map<EquipmentSlot, Integer> source = equippedSourceSlots();
             Set<Integer> keptSources = new HashSet<>();
             for (EquipmentSlot slot : EQUIPMENT) {
@@ -371,8 +371,8 @@ public final class BotInventory {
                     }
                     continue;
                 }
-                // a elytra vestida é emprestada para o voo (opção "elytra") e a lança fora do inventário,
-                // para a carga a cavalo: não são do bot
+                // the worn elytra is lent for flying (the {@code mobility.elytra} option) and the spear is outside the inventory,
+                // for the horseback charge: they don't belong to the bot
                 if (from == null && !(slot == EquipmentSlot.CHEST && s.getType() == Material.ELYTRA)
                         && !(slot == EquipmentSlot.HAND && GearScoring.isSpear(s))) {
                     drops.add(s.clone());
@@ -397,7 +397,7 @@ public final class BotInventory {
         return drops;
     }
 
-    /** Para cada peça vestida/segurada, o espaço do inventário de onde ela foi copiada (se houver). */
+    /** For each worn/held piece, the inventory slot it was copied from (if any). */
     private Map<EquipmentSlot, Integer> equippedSourceSlots() {
         Map<EquipmentSlot, Integer> out = new EnumMap<>(EquipmentSlot.class);
         Set<Integer> used = new HashSet<>();
@@ -472,7 +472,7 @@ public final class BotInventory {
         return -1;
     }
 
-    /** Derruba um item no mundo como um jogador faria. */
+    /** Drops an item into the world as a player would. */
     public static void dropAt(Bot bot, ItemStack stack) {
         if (GearScoring.isEmpty(stack) || bot.world() == null) {
             return;

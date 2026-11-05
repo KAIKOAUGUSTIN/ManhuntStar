@@ -8,9 +8,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Decide quem saiu da roda: só conta quem esteve dentro dela (até {@code leaveRadius} do centro) e
- * depois ficou fora por {@value #OUTSIDE_TICKS} ticks seguidos, para um empurrão não disparar.
- * Quem nunca entrou não dispara nada.
+ * Decides who left the ring: it only counts players who were inside it (up to {@code leaveRadius} from
+ * the center) and then stayed outside for {@value #OUTSIDE_TICKS} ticks in a row, so a push doesn't set
+ * it off. Players who never went in don't set anything off.
  */
 public final class RingExit {
 
@@ -25,9 +25,9 @@ public final class RingExit {
     }
 
     /**
-     * Distância do jogador ao centro neste tick.
+     * The player's distance to the center this tick.
      *
-     * @return true se ele acabou de sair da roda
+     * @return true if they have just left the ring
      */
     public boolean observe(UUID player, double distance) {
         if (distance <= leaveRadius) {
@@ -41,13 +41,13 @@ public final class RingExit {
         return outside.merge(player, 1, Integer::sum) >= OUTSIDE_TICKS;
     }
 
-    /** Saiu do servidor, virou espectador ou a lista não deixa mais: deixa de contar. */
+    /** Left the server, became a spectator or the list no longer allows them: stops counting. */
     public void forget(UUID player) {
         inside.remove(player);
         outside.remove(player);
     }
 
-    /** Jogadores que estão (ou estavam, antes de sair por pouco tempo) dentro da roda. */
+    /** Players who are (or were, before stepping out for a short time) inside the ring. */
     public Set<UUID> inside() {
         return Set.copyOf(inside);
     }

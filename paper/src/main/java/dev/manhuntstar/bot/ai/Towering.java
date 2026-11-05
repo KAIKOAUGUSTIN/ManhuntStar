@@ -13,9 +13,9 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 /**
- * Torre (pilar sob o próprio pé) e ponte até um jogador em skybase/torre, e a ponte agachada
- * rápida no Nether. Só perto do alvo (até 3 blocos na horizontal), como no mod; quantos bots
- * constroem depende de quantos perseguem o mesmo jogador.
+ * Tower (pillar under its own feet) and bridge to a player on a skybase/tower, and the quick crouching
+ * bridge in the Nether. Only near the target (up to 3 blocks horizontally), as in the mod; how many bots
+ * build depends on how many are chasing the same player.
  */
 final class Towering {
 
@@ -44,9 +44,9 @@ final class Towering {
         return WorldUtil.isTrulySolid(world(), p);
     }
 
-    // ------------------------------------------------------------------ torre / ponte para skybase
+    // ------------------------------------------------------------------ tower / bridge to a skybase
 
-    /** @return true se tomou o controle do movimento neste tick. */
+    /** @return true if it took control of movement this tick. */
     boolean handle(Player sky, Navigator nav) {
         Vec3 p = bot.pos();
         Vec3 t = Locations.vec(sky.getLocation());
@@ -128,7 +128,7 @@ final class Towering {
         return true;
     }
 
-    /** Chance de este bot ser um dos que constroem, pelo número de bots atrás do mesmo jogador. */
+    /** Chance of this bot being one of the builders, by the number of bots after the same player. */
     private double towerProbability(Player target) {
         int n = 0;
         for (Bot other : bot.manager().aliveBots()) {
@@ -283,7 +283,7 @@ final class Towering {
         return neighbors <= 1;
     }
 
-    // ------------------------------------------------------------------ ponte agachada rápida (Nether)
+    // ------------------------------------------------------------------ quick crouching bridge (Nether)
 
     boolean handleSpeedBridging(boolean canPlace) {
         if (!canPlace || !bot.onGround() || bot.isInWater() || bot.isInLava() || world().getEnvironment() != World.Environment.NETHER) {

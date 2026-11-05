@@ -34,10 +34,10 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.server.ServerCommandEvent;
 
 /**
- * Eventos de mundo e de jogador: blocos colocados por jogadores (torres/skybases), mudanças de bloco
- * para o pathfinding, cama de emboscada quebrada, mesa de trabalho, TAB e regra da caçada para quem
- * entra, contagem na lista de servidores e no /list, e redistribuição quando o jogador renasce longe
- * dos bots.
+ * World and player events: blocks placed by players (towers/skybases), block changes
+ * for pathfinding, broken ambush bed, crafting table, TAB and the hunt rule for players who
+ * join, count in the server list and in /list, and redistribution when the player respawns far
+ * from the bots.
  */
 public final class WorldPlayerListener implements Listener {
 
@@ -47,7 +47,7 @@ public final class WorldPlayerListener implements Listener {
         this.plugin = plugin;
     }
 
-    // ------------------------------------------------------------------ blocos
+    // ------------------------------------------------------------------ blocks
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
@@ -93,7 +93,7 @@ public final class WorldPlayerListener implements Listener {
         plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
     }
 
-    // ------------------------------------------------------------------ mesa de trabalho
+    // ------------------------------------------------------------------ crafting table
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInteract(PlayerInteractEvent event) {
@@ -110,12 +110,12 @@ public final class WorldPlayerListener implements Listener {
         }
     }
 
-    // ------------------------------------------------------------------ jogadores
+    // ------------------------------------------------------------------ players
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
-        // caçada em andamento: caçado na hora, protegido ou de fora, conforme a opção
+        // hunt in progress: hunted right away, protected or left out, depending on the option
         plugin.botManager().policy().admit(p);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
@@ -124,7 +124,7 @@ public final class WorldPlayerListener implements Listener {
         }, 2L);
     }
 
-    /** Jogador renasceu longe: bots a mais de 150 blocos reaparecem perto dele depois de um tempo. */
+    /** The player respawned far away: bots more than 150 blocks away reappear near them after a while. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
         Player p = event.getPlayer();
@@ -141,7 +141,7 @@ public final class WorldPlayerListener implements Listener {
         });
     }
 
-    /** Bots contam como jogadores online na lista de servidores (número e nomes). */
+    /** Bots count as online players in the server list (number and names). */
     @EventHandler(priority = EventPriority.HIGH)
     public void onPing(PaperServerListPingEvent event) {
         if (!plugin.settings().countInServerList.on()) {
@@ -161,7 +161,7 @@ public final class WorldPlayerListener implements Listener {
         }
     }
 
-    // ------------------------------------------------------------------ /list com os bots
+    // ------------------------------------------------------------------ /list with the bots
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent event) {
@@ -187,7 +187,7 @@ public final class WorldPlayerListener implements Listener {
         return cmd.equals("list") || cmd.equals("minecraft:list");
     }
 
-    /** Mesmo texto do /list do jogo (traduzido pelo cliente), com os bots entre os jogadores. */
+    /** Same text as the game's /list (translated by the client), with the bots among the players. */
     private void sendList(CommandSender to) {
         List<Component> names = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) {

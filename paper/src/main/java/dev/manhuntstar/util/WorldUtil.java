@@ -14,7 +14,7 @@ import org.bukkit.block.BlockSupport;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
-/** Consultas de blocos usadas pela IA (equivalentes às checagens de BlockState do mod). */
+/** Block queries used by the AI (equivalent to the mod's BlockState checks). */
 public final class WorldUtil {
 
     private WorldUtil() {
@@ -33,8 +33,8 @@ public final class WorldUtil {
     }
 
     public static Fluid fluid(World w, int x, int y, int z) {
-        // Ar e blocos opacos inteiros nunca têm fluido. O atalho evita a conversão de registro do FluidData,
-        // que dominava buscas grandes por blocos (emboscada em caverna).
+        // Air and full opaque blocks never have fluid. The shortcut avoids FluidData's registry conversion,
+        // which dominated large block searches (cave ambush).
         Material m = w.getType(x, y, z);
         if (m.isAir() || m.isOccluding()) {
             return Fluid.EMPTY;
@@ -58,7 +58,7 @@ public final class WorldUtil {
         return f != Fluid.EMPTY;
     }
 
-    /** Bloco que não é ar nem fluido (o "isTrulySolid" do mod). */
+    /** A block that is neither air nor fluid (the mod's "isTrulySolid"). */
     public static boolean isTrulySolid(World w, Pos p) {
         if (!isLoaded(w, p)) {
             return true;
@@ -85,7 +85,7 @@ public final class WorldUtil {
         return data.isFaceSturdy(BlockFace.UP, BlockSupport.FULL);
     }
 
-    /** Pés e cabeça livres de colisão e de fluido. */
+    /** Feet and head free of collision and fluid. */
     public static boolean hasBodySpace(World w, Pos feet) {
         return !hasCollision(w, feet) && !hasCollision(w, feet.above());
     }
@@ -110,7 +110,7 @@ public final class WorldUtil {
         return false;
     }
 
-    /** Raio sem bater em blocos com colisão (ClipContext COLLIDER, fluido ignorado). */
+    /** Ray that doesn't hit blocks with collision (ClipContext COLLIDER, fluid ignored). */
     public static boolean clearLine(World w, Vec3 from, Vec3 to) {
         Vec3 d = to.subtract(from);
         double len = d.length();
@@ -139,7 +139,7 @@ public final class WorldUtil {
         return w.getHighestBlockYAt(x, z, org.bukkit.HeightMap.MOTION_BLOCKING_NO_LEAVES);
     }
 
-    /** Primeiro Y livre acima do terreno (o {@code getHeight} do jogo). */
+    /** First free Y above the terrain (the game's {@code getHeight}). */
     public static int surfaceY(World w, int x, int z) {
         return highestY(w, x, z) + 1;
     }
@@ -148,12 +148,12 @@ public final class WorldUtil {
         return highestYNoLeaves(w, x, z) + 1;
     }
 
-    /** O bloco tem forma de colisão e não é fluido (o "getCollisionShape não vazio" do mod). */
+    /** The block has a collision shape and isn't fluid (the mod's "non-empty getCollisionShape"). */
     public static boolean collides(World w, Pos p) {
         return isLoaded(w, p) && hasCollision(w, p);
     }
 
-    /** Lugar seguro para ficar em pé: apoio sólido, pés e cabeça livres e sem fluido/lava. */
+    /** A safe place to stand: solid support, feet and head free and no fluid/lava. */
     public static boolean isSafeStand(World w, Pos feet) {
         if (feet.y() <= w.getMinHeight() || feet.y() >= w.getMaxHeight() - 2) {
             return false;

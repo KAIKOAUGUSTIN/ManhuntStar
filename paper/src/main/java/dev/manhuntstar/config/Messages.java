@@ -24,9 +24,9 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
- * Textos do plugin (formato MiniMessage), um arquivo por idioma na pasta {@code lang/}. Por baixo de
- * tudo ficam os textos em inglês de dentro do plugin, então uma chave que falte num idioma (ou num
- * arquivo editado) aparece em inglês em vez de sumir.
+ * The plugin's texts (MiniMessage format), one file per language in the {@code lang/} folder. Underneath
+ * everything are the English texts inside the plugin, so a key missing from a language (or from an
+ * edited file) shows up in English instead of disappearing.
  */
 public final class Messages {
 
@@ -40,7 +40,7 @@ public final class Messages {
     private String prefix = "";
     private String language = DEFAULT_LANGUAGE;
 
-    /** "PT_BR" e "pt-br" são o mesmo idioma. */
+    /** "PT_BR" and "pt-br" are the same language. */
     public static String normalize(String language) {
         return language == null ? DEFAULT_LANGUAGE : language.trim().toLowerCase(Locale.ROOT).replace('_', '-');
     }
@@ -50,9 +50,9 @@ public final class Messages {
     }
 
     /**
-     * Copia para {@code lang/} os idiomas que faltam. Um arquivo de uma versão anterior (os textos
-     * padrão mudaram, campo {@code version}) vai para {@code lang/old/<idioma>-v<versão>.yml} e é
-     * trocado pelo novo.
+     * Copies the missing languages to {@code lang/}. A file from an older version (the default texts
+     * changed, {@code version} field) goes to {@code lang/old/<language>-v<version>.yml} and is
+     * replaced by the new one.
      */
     public static void install(File langDir, Function<String, InputStream> resources, Logger logger) {
         if (!langDir.isDirectory() && !langDir.mkdirs()) {
@@ -92,7 +92,7 @@ public final class Messages {
         }
     }
 
-    /** Idiomas disponíveis: os de dentro do plugin e os arquivos .yml da pasta lang/. */
+    /** Available languages: the ones inside the plugin and the .yml files in the lang/ folder. */
     public static List<String> available(File langDir) {
         TreeSet<String> out = new TreeSet<>(BUNDLED_LANGUAGES);
         File[] files = langDir.listFiles((dir, name) -> name.endsWith(".yml"));
@@ -117,8 +117,8 @@ public final class Messages {
     }
 
     /**
-     * Carrega um idioma: o inglês de dentro do plugin, por cima o idioma de dentro do plugin e por
-     * cima o {@code lang/<idioma>.yml} do servidor. Idioma que não existe vira inglês, com aviso.
+     * Loads a language: the English inside the plugin, on top of it the language inside the plugin and on
+     * top of that the server's {@code lang/<language>.yml}. A language that doesn't exist becomes English, with a warning.
      */
     public void load(File langDir, String requested, Function<String, InputStream> resources, Logger logger) {
         String lang = normalize(requested);
@@ -153,7 +153,7 @@ public final class Messages {
         }
     }
 
-    /** Idioma carregado agora. */
+    /** The language loaded now. */
     public String language() {
         return language;
     }
@@ -166,7 +166,7 @@ public final class Messages {
         return mini.deserialize(raw(key), TagResolver.resolver(resolvers));
     }
 
-    /** Texto de várias linhas (lore de item, ajuda): uma Component por linha. */
+    /** Multi-line text (item lore, help): one Component per line. */
     public List<Component> lines(String key, TagResolver... resolvers) {
         TagResolver all = TagResolver.resolver(resolvers);
         List<Component> out = new ArrayList<>();
@@ -196,12 +196,12 @@ public final class Messages {
         return raw("difficulty." + d.configName());
     }
 
-    /** Nome de uma opção no menu ({@code options.<chave>.name}). */
+    /** Name of an option in the menu ({@code options.<key>.name}). */
     public String optionName(Setting<?> s) {
         return raw("options." + s.key() + ".name");
     }
 
-    /** Erro de valor de uma opção, já com os placeholders do {@link Setting.InvalidValue}. */
+    /** Error for an option's value, already with the placeholders from {@link Setting.InvalidValue}. */
     public Component invalidValue(Setting.InvalidValue e) {
         Object[] args = e.placeholders();
         List<TagResolver> resolvers = new ArrayList<>();

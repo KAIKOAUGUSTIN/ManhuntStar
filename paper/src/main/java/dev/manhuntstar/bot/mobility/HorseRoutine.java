@@ -31,17 +31,17 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 /**
- * Cavalo (fase 4+): com o alvo a mais de 32 blocos, procura um cavalo adulto num raio de 40, monta,
- * doma (forçado depois de 3 s, como no mod), sela e cavalga até o alvo. Desce a 4 blocos do alvo e
- * só volta a montar depois de 60 s. Cavalo parado por 3 s fica marcado como inacessível por 30 s.
+ * Horse (phase 4+): with the target more than 32 blocks away, looks for an adult horse within 40 blocks,
+ * mounts, tames it (forced after 3 s, as in the mod), saddles it and rides to the target. Gets off 4 blocks
+ * from the target and only mounts again after 60 s. A horse stuck for 3 s is marked unreachable for 30 s.
  *
- * <p>Com a lança a cavalo ligada ({@code combate.lanca-a-cavalo}) ele não desce: carrega contra o alvo
- * com a lança da fase, passa por ele, segue reto, dá a volta e carrega de novo (ver {@link #joust}).
+ * <p>With the horseback spear on ({@code combat.mounted-spear}) it doesn't get off: it charges the target
+ * with the phase's spear, rides past, keeps going straight, turns around and charges again (see {@link #joust}).
  *
- * <p>No jogo só um jogador comanda o cavalo. Com o bot montado, a IA do cavalo é desligada
- * ({@code setAware(false)}, ver {@code BotManager#takeHorseControl}) e o plugin aplica a entrada do
- * cavaleiro como o jogo faz: o cavalo vira para onde o cavaleiro olha, acelera com a velocidade do
- * atributo, pula com a força de pulo dele (com o impulso para a frente) e boia na água.
+ * <p>In the game only a player steers the horse. With the bot mounted, the horse's AI is turned off
+ * ({@code setAware(false)}, see {@code BotManager#takeHorseControl}) and the plugin applies the rider's
+ * input as the game does: the horse turns where the rider looks, speeds up with its attribute speed,
+ * jumps with its jump strength (with the forward boost) and floats on water.
  */
 public final class HorseRoutine {
 
@@ -53,26 +53,26 @@ public final class HorseRoutine {
     private static final float MAX_TURN_PER_TICK = 30f;
     private static final double MAX_HORIZONTAL_SPEED = 1.5;
     /**
-     * Desvio máximo (ir até o cavalo e dele até o alvo, menos ir direto) para buscar um cavalo. O cavalo
-     * ganha ~0,075 s por bloco sobre correr; 16 blocos de desvio (~3 s) mais a doma (3 s) já empatam
-     * com o ganho numa perseguição de ~100 blocos.
+     * Maximum detour (going to the horse and from it to the target, minus going straight) to fetch a horse. The
+     * horse gains ~0.075 s per block over sprinting; a 16-block detour (~3 s) plus taming (3 s) already breaks
+     * even with the gain on a ~100-block chase.
      */
     private static final double MAX_DETOUR = 16.0;
 
-    /** Ergue a lança quando faltam até (atraso da lança + isto) ticks para chegar ao alvo. */
+    /** Raises the spear when there are at most (spear delay + this) ticks left to reach the target. */
     private static final int LANCE_RAISE_MARGIN = 6;
-    /** Ticks seguindo reto depois de passar pelo alvo, para ganhar distância antes de voltar (~9 blocos a galope). */
+    /** Ticks going straight after passing the target, to gain distance before turning back (~9 blocks at a gallop). */
     private static final int LANCE_RUNOUT_TICKS = 14;
-    /** Passadas seguidas sem acertar antes de largar a lança e descer para lutar a pé. */
+    /** Passes in a row without a hit before dropping the spear and getting off to fight on foot. */
     private static final int LANCE_MAX_MISSES = 3;
-    /** Lança erguida por mais que isso sem passar pelo alvo (ele fugiu de lado): abaixa e conta como erro. */
+    /** Spear raised for longer than this without passing the target (it moved aside): lowers it and counts as a miss. */
     private static final int LANCE_MAX_RAISED_TICKS = 100;
-    /** Alvo mais alto ou mais baixo que isso (em cima de um pilar, num buraco): desce e luta a pé. */
+    /** Target higher or lower than this (on top of a pillar, in a hole): gets off and fights on foot. */
     private static final double LANCE_MAX_DY = 2.5;
-    /** Atraso da carga das lanças do jogo, caso o item não traga o componente. */
+    /** Charge delay of the game's spears, in case the item doesn't carry the component. */
     private static final int DEFAULT_LANCE_DELAY = 12;
 
-    /** Só nos testes em servidor ({@code -Dmanhuntstar.teste.cavalo=true}): mais detalhes no /manhunt info. */
+    /** Only for server tests ({@code -Dmanhuntstar.teste.cavalo=true}): more detail in /manhunt info. */
     private static final boolean TEST_DETAIL = Boolean.getBoolean("manhuntstar.teste.cavalo");
 
     private final Bot bot;
@@ -86,7 +86,7 @@ public final class HorseRoutine {
     private int untamedTicks;
     private Vector lastSetVelocity;
     private String detail = "";
-    /** Ticks com a lança erguida (0 = abaixada). */
+    /** Ticks with the spear raised (0 = lowered). */
     private int lanceRaisedTicks;
     private boolean lanceHit;
     private int lanceMisses;
@@ -101,7 +101,7 @@ public final class HorseRoutine {
         this.bot = bot;
     }
 
-    /** Detalhe para o /manhunt info (velocidade do cavalo, distância ao próximo ponto, domação). */
+    /** Detail for /manhunt info (horse speed, distance to the next point, taming). */
     public String detail() {
         return detail;
     }
@@ -121,7 +121,7 @@ public final class HorseRoutine {
         }
     }
 
-    /** A pé nada de lança: se o bot desceu (ou foi derrubado) do cavalo com ela na mão, volta para a espada. */
+    /** No spear on foot: if the bot got off (or was knocked off) the horse holding it, it goes back to the sword. */
     public void tickLance() {
         if (!bot.isAlive() || bot.vehicle() instanceof Horse) {
             return;
@@ -132,14 +132,14 @@ public final class HorseRoutine {
         }
     }
 
-    /** A carga de lança deste bot acertou alguém (ver BotEntityListener). */
+    /** This bot's spear charge hit someone (see BotEntityListener). */
     public void onLanceHit() {
         if (lanceRaisedTicks > 0) {
             lanceHit = true;
         }
     }
 
-    /** @return true se o cavalo controlou o bot neste tick. */
+    /** @return true if the horse controlled the bot this tick. */
     public boolean handle(LivingEntity target) {
         Entity vehicle = bot.vehicle();
         if (bot.isHorseRidingBlocked()) {
@@ -151,7 +151,7 @@ public final class HorseRoutine {
         }
         if (!bot.settings().allowHorse.on() || bot.progression().phase() < 4 || target == null || target.isDead()) {
             if (vehicle instanceof Horse h) {
-                // sem alvo para perseguir: desce (montado o bot não anda nem luta direito)
+                // no target to chase: gets off (mounted the bot neither walks nor fights properly)
                 dismount(h);
                 actionCooldown = Math.max(actionCooldown, 10);
             }
@@ -234,7 +234,7 @@ public final class HorseRoutine {
         return true;
     }
 
-    /** Cavalo arisco: empina e se debate como faz com o jogador; domado à força depois de 3 s (mod). */
+    /** Skittish horse: rears and bucks as it does with a player; tamed by force after 3 s (mod). */
     private void tameTick(Horse horse) {
         if (!horse.getUniqueId().equals(untamedHorse)) {
             untamedHorse = horse.getUniqueId();
@@ -305,8 +305,8 @@ public final class HorseRoutine {
     }
 
     /**
-     * Entrada do cavaleiro aplicada ao cavalo, como o jogo faz com um jogador montado. Sem
-     * {@code usePlanner} vai reto até o ponto (a corrida depois de passar pelo alvo na carga de lança).
+     * Rider input applied to the horse, as the game does with a mounted player. Without
+     * {@code usePlanner} it goes straight to the point (the run after passing the target in the spear charge).
      */
     private void steer(Horse horse, Vec3 chaseTarget, boolean usePlanner) {
         Navigator nav = bot.brain().navigator();
@@ -321,7 +321,7 @@ public final class HorseRoutine {
         horse.setEating(false);
         Location hl = horse.getLocation();
         Vector current = horse.getVelocity();
-        // chunk sem física neste tick: não soma de novo (a velocidade acumularia e lançaria o cavalo)
+        // chunk without physics this tick: don't add again (the velocity would build up and launch the horse)
         boolean stalled = lastSetVelocity != null && current.equals(lastSetVelocity)
                 && lastSetVelocity.getX() * lastSetVelocity.getX() + lastSetVelocity.getZ() * lastSetVelocity.getZ() > 1.0E-8;
         Vec3 to = new Vec3(navTarget.x() - hl.getX(), 0, navTarget.z() - hl.getZ());
@@ -331,7 +331,7 @@ public final class HorseRoutine {
                 bot.mining().isMining() ? ", digging" : "")
                 + (TEST_DETAIL ? " ticks=" + horse.getTicksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ai=" + horse.isAware() : "");
         if (stalled) {
-            noMoveTicks++; // conta como travado: depois de 3 s o bot desce e segue a pé
+            noMoveTicks++; // counts as stuck: after 3 s the bot gets off and goes on foot
             return;
         }
         if (to.lengthSqr() < 0.09) {
@@ -364,7 +364,7 @@ public final class HorseRoutine {
         if (inWater) {
             accel = 0.02;
         } else if (onGround) {
-            // jogo: velocidade do atributo × 0,98 (entrada para a frente) × 0,216 / atrito³
+            // game: attribute speed × 0.98 (forward input) × 0.216 / friction³
             float friction = hl.clone().subtract(0, 0.5, 0).getBlock().getType().getSlipperiness();
             accel = movementSpeed(horse) * 0.98 * (0.216 / (friction * friction * friction));
         } else {
@@ -377,14 +377,14 @@ public final class HorseRoutine {
         Vector v = current.clone().add(new Vector(fx * accel, 0, fz * accel));
 
         if (onGround && !inWater && jumpCooldown <= 0 && shouldJump(horse, hl, navTarget, to, fx, fz)) {
-            // pulo carregado do jogador: força de pulo do cavalo e impulso de 0,4 para a frente
+            // the player's charged jump: the horse's jump strength and a forward boost of 0.4
             v.setY(horse.getJumpStrength());
             v.add(new Vector(fx * 0.4 * forward, 0, fz * 0.4 * forward));
             horse.getWorld().playSound(hl, Sound.ENTITY_HORSE_JUMP, SoundCategory.NEUTRAL, 0.4f, 1f);
             jumpCooldown = 10;
         }
         if (inWater) {
-            // nada como o cavalo com cavaleiro: fica na superfície
+            // swims like a horse with a rider: stays on the surface
             v.setY(Math.min(v.getY() + 0.04, 0.3));
         }
         double h = Math.hypot(v.getX(), v.getZ());
@@ -396,9 +396,9 @@ public final class HorseRoutine {
         lastSetVelocity = v.clone();
     }
 
-    // ------------------------------------------------------------------ lança a cavalo
+    // ------------------------------------------------------------------ horseback spear
 
-    /** Carga só com a opção ligada, alvo no nível do cavalo e PvP permitido (com "respeitar PvP"). */
+    /** Charge only with the option on, the target at the horse's level and PvP allowed (with {@code general.respect-disabled-pvp}). */
     private boolean useLance(Horse horse, LivingEntity target) {
         if (!bot.settings().allowSpear.on() || lanceMisses >= LANCE_MAX_MISSES
                 || Math.abs(target.getY() - horse.getY()) > LANCE_MAX_DY) {
@@ -409,10 +409,10 @@ public final class HorseRoutine {
     }
 
     /**
-     * Justa: segura a lança da fase e a ergue quando falta pouco para chegar ao alvo (a carga do jogo só
-     * vale depois do atraso da lança). Depois de acertar ou de passar por ele, segue reto para ganhar
-     * distância, dá a volta e carrega de novo. Dano, empurrão e derrubada da montaria são os da lança
-     * do jogo, que usa a velocidade do cavalo.
+     * Joust: holds the phase's spear and raises it when it's almost at the target (the game's charge only
+     * counts after the spear's delay). After hitting or passing it, keeps going straight to gain
+     * distance, turns around and charges again. Damage, knockback and dismount are those of the game's
+     * spear, which uses the horse's speed.
      */
     private void joust(Horse horse, LivingEntity target) {
         holdLance();
@@ -421,7 +421,7 @@ public final class HorseRoutine {
             runoutTicks--;
             steer(horse, new Vec3(runoutX, hl.getY(), runoutZ), false);
             if (noMoveTicks > 5) {
-                runoutTicks = 0; // parede à frente: volta já
+                runoutTicks = 0; // wall ahead: turn back now
             }
             detail += ", passando";
             return;
@@ -445,7 +445,7 @@ public final class HorseRoutine {
                 lowerLance();
                 lanceMisses++;
             } else if (!bot.entity().hasActiveItem()) {
-                raiseLance(); // o uso foi interrompido (cavou, trocou de item): ergue de novo
+                raiseLance(); // the use was interrupted (dug, switched items): raise it again
             }
             return;
         }
@@ -456,7 +456,7 @@ public final class HorseRoutine {
         }
     }
 
-    /** Fim de uma passada: abaixa a lança e segue reto ~12 blocos antes de voltar. */
+    /** End of a pass: lowers the spear and keeps going straight ~12 blocks before turning back. */
     private void endPass(Location hl, double fx, double fz) {
         lanceMisses = lanceHit ? 0 : lanceMisses + 1;
         lanceHit = false;
@@ -472,8 +472,8 @@ public final class HorseRoutine {
             return;
         }
         if (me.getAttribute(Attribute.ATTACK_DAMAGE) == null) {
-            // a carga do jogo lê o dano de ataque de quem segura a lança e o Mannequin não tem esse
-            // atributo: sem ele o jogo lança um erro e o servidor remove o cavalo
+            // the game's charge reads the attack damage of whoever holds the spear and the Mannequin doesn't have that
+            // attribute: without it the game throws an error and the server removes the horse
             me.registerAttribute(Attribute.ATTACK_DAMAGE);
             me.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
         }
@@ -489,7 +489,7 @@ public final class HorseRoutine {
         lanceRaisedTicks = 0;
     }
 
-    /** Abaixa a lança e volta para a espada. */
+    /** Lowers the spear and goes back to the sword. */
     private void stowLance() {
         lowerLance();
         if (GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
@@ -514,7 +514,7 @@ public final class HorseRoutine {
         }
     }
 
-    /** Lança do nível da espada da fase: pedra (4), ferro (5-6), diamante (7-10, Afiação II a partir da 8), netherite (final). */
+    /** Spear matching the phase's sword level: stone (4), iron (5-6), diamond (7-10, Sharpness II from 8), netherite (final). */
     private ItemStack lanceForPhase() {
         int phase = bot.progression().phase();
         if (phase != lancePhase) {
@@ -532,8 +532,8 @@ public final class HorseRoutine {
     }
 
     /**
-     * Pula quando está travado num obstáculo, quando o próximo ponto do caminho é alto demais para o
-     * passo do cavalo (1 bloco) ou quando há um vão logo à frente.
+     * Jumps when stuck on an obstacle, when the path's next point is too high for the horse's
+     * step (1 block) or when there is a gap right ahead.
      */
     private boolean shouldJump(Horse horse, Location hl, Vec3 navTarget, Vec3 to, double fx, double fz) {
         if (to.lengthSqr() <= 1.0) {
@@ -558,7 +558,7 @@ public final class HorseRoutine {
         return a == null ? 0.225 : a.getValue();
     }
 
-    /** O cavalo com menor desvio no caminho até o alvo; nenhum se todos exigirem voltar demais. */
+    /** The horse with the smallest detour on the way to the target; none if they all need going back too far. */
     private Horse findCandidate(LivingEntity target) {
         if (targetHorse != null && lockTicks > 0 && Bukkit.getEntity(targetHorse) instanceof Horse locked && eligible(locked)) {
             return locked;

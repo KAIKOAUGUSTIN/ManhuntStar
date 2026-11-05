@@ -28,15 +28,16 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 /**
- * Rodas de bots antes da caçada. A roda não tem dono: o primeiro jogador que estava dentro dela e
- * sai começa a contagem de vantagem (barra no topo, títulos 3-2-1 e som), e no fim os bots dessa roda
- * são soltos. Roda criada longe de todos espera alguém entrar e sair, ou o /manhunt start. Com
- * "contagem-ao-sair-da-roda" desligado a contagem começa assim que os bots nascem; com 0 segundos
- * os bots soltam assim que alguém sai. Cada roda tem a sua contagem; bots fora de roda seguem caçando.
+ * Bot rings before the hunt. A ring has no owner: the first player who was inside it and
+ * leaves starts the head-start countdown (bar at the top, 3-2-1 titles and sound), and at the end that
+ * ring's bots are released. A ring created far from everyone waits for someone to go in and out, or for
+ * /manhunt start. With {@code manhunt.countdown-on-ring-leave} off the countdown starts as soon as the bots spawn; with 0
+ * seconds the bots are released as soon as someone leaves. Each ring has its own countdown; bots outside a
+ * ring keep hunting.
  */
 public final class RingService {
 
-    /** Margem além do raio da roda para contar como "dentro" e como "saiu". */
+    /** Margin beyond the ring's radius to count as "inside" and as "left". */
     private static final double LEAVE_MARGIN = 1.5;
 
     private final ManhuntStarPlugin plugin;
@@ -50,7 +51,7 @@ public final class RingService {
         return plugin.botManager();
     }
 
-    /** Há alguma roda esperando ou contando. */
+    /** There is some ring waiting or counting down. */
     public boolean isActive() {
         return !rings.isEmpty();
     }
@@ -63,26 +64,26 @@ public final class RingService {
         return id == null ? null : rings.get(id);
     }
 
-    /** O bot está preso numa roda (esperando ou na contagem). */
+    /** The bot is held in a ring (waiting or in the countdown). */
     public boolean holds(Bot bot) {
         return bot.idle() != null && bot.idle().isActive();
     }
 
-    /** A roda deste bot já está na contagem. */
+    /** This bot's ring is already counting down. */
     public boolean isCounting(Bot bot) {
         Ring r = bot.idle() == null ? null : rings.get(bot.idle().ringId());
         return r != null && r.isCounting();
     }
 
-    /** Pode disparar a roda: online, fora do espectador e liberado pela lista de jogadores. */
+    /** Can set off the ring: online, not a spectator and allowed by the player list. */
     private boolean canTrigger(Player p) {
         return p.isOnline() && p.getGameMode() != GameMode.SPECTATOR && manager().policy().listAllows(p);
     }
 
     /**
-     * Prende os bots recém-criados numa roda nova.
+     * Holds the newly created bots in a new ring.
      *
-     * @return false se não há roda (contagem 0 com "contagem-ao-sair-da-roda" desligado: já caçam)
+     * @return false if there is no ring (countdown 0 with {@code manhunt.countdown-on-ring-leave} off: they hunt right away)
      */
     public boolean create(Location center, double radius, List<Bot> bots, int seconds) {
         boolean onLeave = plugin.settings().countdownOnLeave.on();
@@ -97,7 +98,7 @@ public final class RingService {
         rings.put(r.id, r);
         Messages m = plugin.messages();
         if (onLeave) {
-            // quem já está dentro conta como dentro (sair dispara a contagem)
+            // players already inside count as inside (leaving starts the countdown)
             for (Player p : center.getWorld().getPlayers()) {
                 if (canTrigger(p) && !p.isDead()) {
                     r.exit.observe(p.getUniqueId(), distance(p, r));
@@ -115,7 +116,7 @@ public final class RingService {
         return true;
     }
 
-    /** /manhunt start: solta todas as rodas na hora. @return quantos bots foram soltos */
+    /** /manhunt start: releases every ring right away. @return how many bots were released */
     public int releaseAll() {
         int n = 0;
         for (Ring r : new ArrayList<>(rings.values())) {
@@ -125,7 +126,7 @@ public final class RingService {
         return n;
     }
 
-    /** Apagar tudo ou desligar o servidor: some com as rodas sem soltar ninguém. */
+    /** Clearing everything or shutting down the server: gets rid of the rings without releasing anyone. */
     public void cancelAll() {
         for (Ring r : rings.values()) {
             hideBar(r);
@@ -140,7 +141,7 @@ public final class RingService {
         boolean second = Bukkit.getCurrentTick() % 20 == 0;
         for (Ring r : new ArrayList<>(rings.values())) {
             if (second && prune(r)) {
-                // os bots da roda foram removidos (ou renasceram): não há o que soltar
+                // the ring's bots were removed (or respawned): there's nothing to release
                 rings.remove(r.id);
                 hideBar(r);
                 manager().markDirty();
@@ -154,7 +155,7 @@ public final class RingService {
         }
     }
 
-    /** Tira da roda os bots que não esperam mais nela. @return true se não sobrou nenhum */
+    /** Takes out of the ring the bots that no longer wait in it. @return true if none are left */
     private boolean prune(Ring r) {
         r.bots.removeIf(id -> {
             Bot b = manager().bot(id);
@@ -165,8 +166,8 @@ public final class RingService {
 
     private void tickWaiting(Ring r, boolean second) {
         World w = Bukkit.getWorld(r.worldId);
-        // quem estava dentro e foi para outro mundo saiu da roda; quem saiu do servidor, virou
-        // espectador ou foi barrado pela lista deixa de contar
+        // whoever was inside and went to another world left the ring; whoever left the server, became a
+        // spectator or was blocked by the list stops counting
         for (UUID id : r.exit.inside()) {
             Player p = Bukkit.getPlayer(id);
             if (p == null || !canTrigger(p)) {
@@ -180,7 +181,7 @@ public final class RingService {
             return;
         }
         for (Player p : w.getPlayers()) {
-            // morto não conta; se renascer longe da roda, conta como saída
+            // dead doesn't count; if they respawn far from the ring, it counts as leaving
             if (p.isDead() || !canTrigger(p)) {
                 continue;
             }
@@ -190,7 +191,7 @@ public final class RingService {
             }
         }
         if (second) {
-            // atualiza quem vê a barra (jogadores que entraram ou trocaram de mundo)
+            // updates who sees the bar (players who joined or changed worlds)
             updateBar(r);
         }
     }
@@ -230,7 +231,7 @@ public final class RingService {
         }
     }
 
-    /** Fim da contagem: solta os bots da roda e começa uma caçada nova. */
+    /** End of the countdown: releases the ring's bots and starts a new hunt. */
     private void release(Ring r) {
         rings.remove(r.id);
         hideBar(r);
@@ -251,7 +252,7 @@ public final class RingService {
         return Locations.vec(p.getLocation()).distanceTo(r.center);
     }
 
-    // ------------------------------------------------------------------ barra e títulos
+    // ------------------------------------------------------------------ bar and titles
 
     private Iterable<Player> audience(Ring r) {
         World w = Bukkit.getWorld(r.worldId);
@@ -306,7 +307,7 @@ public final class RingService {
         r.viewers.clear();
     }
 
-    // ------------------------------------------------------------------ salvamento
+    // ------------------------------------------------------------------ saving
 
     public void save(ConfigurationSection s) {
         for (Ring r : rings.values()) {
@@ -328,7 +329,7 @@ public final class RingService {
         }
     }
 
-    /** Recria as rodas salvas e prende de novo os bots delas (depois de os bots serem restaurados). */
+    /** Recreates the saved rings and holds their bots again (after the bots are restored). */
     public void load(ConfigurationSection s) {
         if (s == null) {
             return;
@@ -350,7 +351,7 @@ public final class RingService {
                     c.getInt("segundos"), radius + LEAVE_MARGIN);
             for (UUID botId : readIds(c.getStringList("bots"))) {
                 Bot b = manager().bot(botId);
-                // morto ao desligar também volta para a roda quando renascer
+                // dead at shutdown also goes back to the ring when it respawns
                 if (b != null && (b.isAlive() || manager().isPendingRespawn(b))) {
                     b.setIdle(new IdleBehavior(b, r.id));
                     r.bots.add(botId);
@@ -383,7 +384,7 @@ public final class RingService {
             try {
                 out.add(UUID.fromString(r));
             } catch (IllegalArgumentException ignored) {
-                // linha estragada no bots.yml
+                // broken line in bots.yml
             }
         }
         return out;

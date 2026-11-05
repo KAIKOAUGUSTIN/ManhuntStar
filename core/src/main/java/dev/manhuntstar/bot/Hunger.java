@@ -1,9 +1,9 @@
 package dev.manhuntstar.bot;
 
 /**
- * Fome simulada com as mesmas regras do FoodData do jogador:
- * exaustão consome saturação/comida, regeneração rápida com saturação e comida cheia,
- * regeneração normal com comida >= 18 e dano de fome quando zerada.
+ * Simulated hunger with the same rules as the player's FoodData:
+ * exhaustion uses up saturation/food, fast regeneration with saturation and a full food bar,
+ * normal regeneration with food >= 18 and starvation damage when it reaches zero.
  */
 public final class Hunger {
 
@@ -34,7 +34,7 @@ public final class Hunger {
         saturation = Math.min(saturation + nutrition * saturationModifier * 2.0f, foodLevel);
     }
 
-    /** Avança um tick. Retorna a cura (positivo) ou dano de fome (negativo) a aplicar. */
+    /** Advances one tick. Returns the healing (positive) or starvation damage (negative) to apply. */
     public float tick(float health, float maxHealth, boolean naturalRegen, int difficultyOrdinal) {
         if (exhaustion > 4.0f) {
             exhaustion -= 4.0f;
@@ -64,7 +64,7 @@ public final class Hunger {
             tickTimer++;
             if (tickTimer >= 80) {
                 tickTimer = 0;
-                // Mesma regra do jogo: no fácil para em 10 de vida, no normal em 1, no difícil mata.
+                // Same rule as the game: on easy it stops at 10 health, on normal at 1, on hard it kills.
                 if (health > 10.0f || difficultyOrdinal >= 3 || (health > 1.0f && difficultyOrdinal == 2)) {
                     return -1.0f;
                 }

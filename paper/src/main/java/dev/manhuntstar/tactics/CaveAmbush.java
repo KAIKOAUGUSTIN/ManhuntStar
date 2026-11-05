@@ -26,18 +26,17 @@ import org.bukkit.block.data.type.Bed;
 import org.bukkit.entity.Player;
 
 /**
- * Emboscada em caverna: quando o jogador está numa caverna (Y &lt; 60, sem luz do céu), um bot que o
- * persegue é levado para um ponto escondido da mesma caverna a 50–130 blocos e coloca uma cama
- * vermelha. Enquanto a cama existir e o jogador continuar nessa caverna, o bot renasce ao lado
- * dela (voltando à fase 1 e recuperando uma fase a cada 5 s). Se o jogador sair da caverna ou a
- * cama for quebrada, a emboscada acaba e os bots da caverna morrem.
+ * Cave ambush: when the player is in a cave (Y &lt; 60, no skylight), a bot chasing them is taken to a
+ * hidden spot in the same cave 50–130 blocks away and places a red bed. While the bed exists and the
+ * player stays in that cave, the bot respawns next to it (back to phase 1 and regaining a phase every
+ * 5 s). If the player leaves the cave or the bed is broken, the ambush ends and the cave's bots die.
  */
 public final class CaveAmbush {
 
     private static final int CAVE_MAX_Y = 60;
     private static final int MAX_SCAN_NODES = 6000;
     private static final int MAX_RADIUS = 96;
-    /** Sem esconderijo na caverna, espera isso (10 s) antes de procurar de novo, em vez de todo segundo. */
+    /** With no hiding spot in the cave, waits this long (10 s) before looking again, instead of every second. */
     private static final int RETRY_TICKS = 200;
     private static final int[][] DIRS = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
 
@@ -63,7 +62,7 @@ public final class CaveAmbush {
             return;
         }
         cleanupInvalid();
-        // bots da roda ficam de fora em tryStartOne; os que já caçam seguem emboscando
+        // ring bots are left out in tryStartOne; the ones already hunting keep ambushing
         if (!manager.plugin().settings().caveAmbush.on()) {
             return;
         }
@@ -99,7 +98,7 @@ public final class CaveAmbush {
         }
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         World w = target.getWorld();
-        // a caverna do jogador é varrida uma vez só; esconderijo e cama só consultam o resultado
+        // the player's cave is scanned only once; hiding spot and bed only look up the result
         Set<Long> cave = caveRegion(w, Locations.pos(target.getLocation()));
         if (cave == null) {
             return false;
@@ -210,7 +209,7 @@ public final class CaveAmbush {
                 && Locations.block(bed.head(), w).getBlockData() instanceof Bed h && h.getPart() == Bed.Part.HEAD;
     }
 
-    /** Onde o bot deve renascer (perto da cama) ou null se a emboscada não vale mais. */
+    /** Where the bot should respawn (near the bed) or null if the ambush no longer applies. */
     public Location respawnLocation(Bot bot) {
         AmbushBed bed = beds.get(bot.id());
         if (bed == null) {
@@ -268,7 +267,7 @@ public final class CaveAmbush {
         }
         for (UUID targetId : targetsToKill) {
             for (Bot b : new ArrayList<>(manager.aliveBots())) {
-                // bots esperando numa roda (mesmo embaixo da terra) não fazem parte da emboscada
+                // bots waiting in a ring (even underground) aren't part of the ambush
                 if (targetId.equals(b.targetPlayerId()) && b.idle() == null && isInCave(b.world(), b.blockPos())) {
                     removeBed(b.id());
                     botTargets.remove(b.id());
@@ -333,7 +332,7 @@ public final class CaveAmbush {
         nextAttemptTick.clear();
     }
 
-    // ------------------------------------------------------------------ caverna
+    // ------------------------------------------------------------------ cave
 
     public static boolean isInCave(World w, Pos pos) {
         if (w == null || pos.y() >= CAVE_MAX_Y) {
@@ -350,7 +349,7 @@ public final class CaveAmbush {
                 && !WorldUtil.isLava(w, p.below()) && !WorldUtil.isLava(w, p);
     }
 
-    /** Busca em largura pelo ar da caverna (até 6000 blocos, raio 96) ligando os dois pontos. */
+    /** Breadth-first search through the cave's air (up to 6000 blocks, radius 96) connecting the two points. */
     public static boolean isSameCave(World w, Pos a, Pos b) {
         if (w == null || a == null || b == null || !within(a, b, MAX_RADIUS)) {
             return false;
@@ -385,8 +384,8 @@ public final class CaveAmbush {
     }
 
     /**
-     * O ar da caverna ligado a {@code from}, com os mesmos limites de {@link #isSameCave} (6000 blocos,
-     * raio 96), ou null se não houver ar perto. Serve para testar vários pontos com uma busca só.
+     * The cave air connected to {@code from}, with the same limits as {@link #isSameCave} (6000 blocks,
+     * radius 96), or null if there is no air nearby. Used to test several points with a single search.
      */
     private static Set<Long> caveRegion(World w, Pos from) {
         Pos start = normalize(w, from);
@@ -411,7 +410,7 @@ public final class CaveAmbush {
         return visited;
     }
 
-    /** O ponto está a até 2 blocos do ar da região (o mesmo critério de chegada de {@link #isSameCave}). */
+    /** The point is within 2 blocks of the region's air (the same arrival rule as {@link #isSameCave}). */
     private static boolean inRegion(Set<Long> region, Pos p) {
         for (int dx = -2; dx <= 2; dx++) {
             for (int dy = -2; dy <= 2; dy++) {

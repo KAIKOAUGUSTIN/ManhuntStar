@@ -7,12 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
-/** Quem dispara a roda: só quem esteve dentro e saiu por alguns ticks seguidos. */
+/** Who sets off the ring: only players who were inside and left for a few ticks in a row. */
 class RingExitTest {
 
     private static final double LEAVE = 6.5;
 
-    /** Fica fora por {@code ticks} ticks; devolve se disparou em algum deles. */
+    /** Stays outside for {@code ticks} ticks; returns whether it fired in any of them. */
     private static boolean stayOutside(RingExit exit, UUID p, int ticks) {
         boolean fired = false;
         for (int i = 0; i < ticks; i++) {

@@ -38,14 +38,14 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 /**
- * O cérebro do bot (o {@code runAI} do mod): escolhe o alvo (jogador, mob hostil ou bot de grupo
- * inimigo, pelo peso de "prioridade-alvo"), decide entre fugir, montar, atirar, cavar, construir,
- * lutar corpo a corpo ou seguir o caminho, e cuida de pérolas, dimensões e redistribuição.
+ * The bot's brain (the mod's {@code runAI}): picks the target (player, hostile mob or bot from an enemy
+ * group, weighted by {@code combat.target-priority}), decides between fleeing, riding, shooting, digging, building,
+ * melee fighting or following the path, and handles pearls, dimensions and redistribution.
  */
 public final class Brain {
 
     private static final double SEPARATION_RADIUS = 3.0;
-    /** Só para testes em servidor sem jogador: o cavalo também persegue bots inimigos. */
+    /** Only for tests on a server without players: the horse also chases enemy bots. */
     private static final boolean HORSE_ANY_TARGET = Boolean.getBoolean("manhuntstar.teste.cavalo");
 
     private final Bot bot;
@@ -97,8 +97,8 @@ public final class Brain {
     }
 
     /**
-     * O que a IA decidiu no último tick (mostrado no /manhunt info): chave {@code state.<estado>} do
-     * arquivo de idioma, com o alvo ({@code <target>}) e um detalhe ({@code <detail>}).
+     * What the AI decided on the last tick (shown in /manhunt info): the language file's {@code state.<state>}
+     * key, with the target ({@code <target>}) and a detail ({@code <detail>}).
      */
     public String state() {
         return state;
@@ -142,7 +142,7 @@ public final class Brain {
         return bot.settings();
     }
 
-    /** Torre/ponte e blocos do A* só a até 3 blocos (horizontal) do alvo, como no mod. */
+    /** Tower/bridge and A* blocks only within 3 blocks (horizontally) of the target, as in the mod. */
     public boolean canPlaceToweringBlocksNearTarget() {
         return settings().allowTowering.on() && bot.isWithinToweringRange(bot.target(), 3.0);
     }
@@ -151,9 +151,9 @@ public final class Brain {
         return settings().pathMode.get().usesPlanner();
     }
 
-    // ------------------------------------------------------------------ eventos externos
+    // ------------------------------------------------------------------ external events
 
-    /** O bot levou repulsão: a IA fica parada 10 ticks (o jogador também não controla no ar). */
+    /** The bot took knockback: the AI stays idle for 10 ticks (the player has no control in the air either). */
     public void onKnockback() {
         knockbackTicks = 10;
         bot.mining().cancel();
@@ -174,7 +174,7 @@ public final class Brain {
         redistributionCooldown = ticks;
     }
 
-    /** Depois de um teleporte o bot fica 15 ticks parado, sem velocidade, até o chão "assentar". */
+    /** After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". */
     public void startPostTeleportStabilization() {
         stabilizeTicks = Math.max(stabilizeTicks, 15);
         bot.motor().stopWalk();
@@ -275,7 +275,7 @@ public final class Brain {
         }
         BotGroup group = bot.group();
         boolean escaping = group != null && group.role() == BotRole.ESCAPE;
-        // na roda o bot não decola, e fugitivo não voa na direção do alvo
+        // in the ring the bot doesn't take off, and an escaper doesn't fly toward the target
         elytra.tick(escaping ? null : chosenTarget);
         if (playerTarget != null) {
             if (!playerTarget.getWorld().equals(bot.world())) {
@@ -310,7 +310,7 @@ public final class Brain {
         if (active == null) {
             horse.handle(null);
             state("no-target");
-            // sem isto o bot ficava parado segurando a besta "carregando" até achar outro alvo
+            // without this the bot stood still holding the crossbow "loading" until it found another target
             bot.combat().cancelChargeWithoutTarget();
             if (bot.idle() == null) {
                 bot.motor().stopWalk();
@@ -369,8 +369,8 @@ public final class Brain {
         if (playerTarget != null) {
             bot.combat().handleRiskyHitBoost(playerTarget);
         }
-        // Na água o olho fica na altura da margem e ela tapa a visão: cavar a margem abre um canal de água
-        // corrente que prende o bot. Ele sai nadando e pulando (melee faz isso).
+        // In the water the eyes are at the height of the bank and it blocks the view: digging the bank opens a
+        // channel of flowing water that traps the bot. It gets out by swimming and jumping (melee does that).
         boolean inFluid = bot.isInWater() || bot.isInLava();
         if (dist < 4.5 && !los && !inFluid && openPassageTo(active)) {
             state("breaking-through", who, "");
@@ -432,12 +432,12 @@ public final class Brain {
             Vec3 wp = navigator.waypoint(targetLoc);
             if (wp != null) {
                 targetLoc = wp;
-                // sem caminho calculado o ponto é só a direção: anda desviando dos obstáculos
+                // with no computed path the point is only a direction: walks around obstacles
                 hasPath = navigator.onPath();
             }
             Pos crossing = navigator.boatCrossingGoal(false);
             if (crossing != null) {
-                // o A* preferiu atravessar a água de barco: embarca quando chegar na beira
+                // the A* chose to cross the water by boat: boards when it reaches the edge
                 boat.requestCrossing(crossing, active);
             }
         }
@@ -448,7 +448,7 @@ public final class Brain {
         }
     }
 
-    /** Alvo perto mas atrás de um bloco: cava o bloco no caminho da visão (como um jogador faria). */
+    /** Target close but behind a block: digs the block in the line of sight (as a player would). */
     private boolean openPassageTo(LivingEntity target) {
         if (bot.mining().isMining()) {
             return true;
@@ -467,8 +467,8 @@ public final class Brain {
     }
 
     /**
-     * O jogo empurra o jogador para fora de um bloco em que ele ficou preso; o Mannequin não. Se a
-     * cabeça ou os pés estiverem dentro de um bloco sólido, o bot cava para sair (como o jogador faria).
+     * The game pushes a player out of a block they got stuck in; it doesn't do that for the Mannequin. If the
+     * head or the feet are inside a solid block, the bot digs its way out (as the player would).
      */
     private boolean escapeSuffocation() {
         World w = bot.world();
@@ -491,7 +491,7 @@ public final class Brain {
         return false;
     }
 
-    // ------------------------------------------------------------------ escolha do alvo
+    // ------------------------------------------------------------------ target choice
 
     private LivingEntity updateMobTarget() {
         LivingEntity m = bot.combat().mobAttacker();
@@ -545,7 +545,7 @@ public final class Brain {
         return cachedEnemyBot;
     }
 
-    /** Pesos do mod: jogador e bot inimigo pesam (5 - prioridade), mob pesa (5 + prioridade); menor nota vence. */
+    /** The mod's weights: player and enemy bot weigh (5 - priority), mob weighs (5 + priority); lowest score wins. */
     private LivingEntity chooseTarget(Player player, LivingEntity mob, LivingEntity enemyBot) {
         double priority = settings().targetPriority.value();
         LivingEntity active;
@@ -589,7 +589,7 @@ public final class Brain {
         return active;
     }
 
-    // ------------------------------------------------------------------ fuga
+    // ------------------------------------------------------------------ fleeing
 
     private void flee(LivingEntity threat, boolean usePlanner) {
         Vec3 threatPos = Locations.vec(threat.getLocation());
@@ -621,7 +621,7 @@ public final class Brain {
         }
     }
 
-    // ------------------------------------------------------------------ corpo a corpo
+    // ------------------------------------------------------------------ melee
 
     private void updateStrafe(double dist) {
         if (dist < 8.0) {
@@ -656,9 +656,9 @@ public final class Brain {
         Vec3 forward = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
         Vec3 left = new Vec3(-forward.z(), 0, forward.x()).normalize();
         Vec3 strafe = left.scale(strafeDirection * 0.25);
-        // Na água andar não sobe a margem: nada até o alvo e pula para sair (sem isso ficava preso na beira).
+        // In the water walking doesn't climb the bank: swims to the target and jumps to get out (without this it got stuck at the edge).
         boolean inFluid = bot.isInWater() || bot.isInLava();
-        // Alvo derrubado da beirada: o bot ia atrás dele andando e caía junto.
+        // Target knocked off the ledge: the bot walked after it and fell too.
         boolean ledge = !inFluid && dropAhead(forward);
         if (!inFluid && dropAhead(strafe)) {
             strafe = Vec3.ZERO;
@@ -735,7 +735,7 @@ public final class Brain {
         }
     }
 
-    /** Na beirada: corta o embalo ({@code walk} só soma aceleração à velocidade atual) e no máximo anda de lado. */
+    /** On the ledge: kills the momentum ({@code walk} only adds acceleration to the current velocity) and at most walks sideways. */
     private void holdAtLedge(Vec3 strafe) {
         bot.motor().stopWalk();
         if (strafe.horizontal().lengthSqr() >= 1.0E-4) {
@@ -744,16 +744,16 @@ public final class Brain {
     }
 
     /**
-     * Andar nessa direção leva a uma beirada com queda maior que a que o caminho aceita
-     * ({@link AStar#MAX_DIG_FALL}), ou para a lava. Vale também no ar: o bot chegava pulando na beirada e o
-     * embalo do pulo o levava para fora.
+     * Walking in this direction leads to a ledge with a fall bigger than the path accepts
+     * ({@link AStar#MAX_DIG_FALL}), or into lava. Also applies in the air: the bot reached the ledge jumping and
+     * the jump's momentum carried it over.
      */
     private boolean dropAhead(Vec3 dir) {
         if (dir.horizontal().lengthSqr() < 1.0E-4) {
             return false;
         }
         World w = bot.world();
-        // já no ar sobre o vão (pulando um buraco), parar só o faria cair nele
+        // already in the air over the gap (jumping a hole), stopping would only make it fall in
         if (!bot.onGround() && isDrop(w, bot.blockPos())) {
             return false;
         }
@@ -782,7 +782,7 @@ public final class Brain {
         }
     }
 
-    // ------------------------------------------------------------------ pressão de arco e túnel
+    // ------------------------------------------------------------------ bow pressure and tunnel
 
     private boolean tryTriggerNonHitBowPressure(Player target, double dist) {
         if (!settings().bowPressure.on() || target.isDead()) {
@@ -853,7 +853,7 @@ public final class Brain {
         return true;
     }
 
-    // ------------------------------------------------------------------ água
+    // ------------------------------------------------------------------ water
 
     private boolean handleWaterBuilding(Player target) {
         if (target.getY() <= bot.pos().y() + 1.0) {
@@ -888,7 +888,7 @@ public final class Brain {
         return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !target.isInWater();
     }
 
-    /** Nada até o ponto; com o alvo fora da água, mira acima da margem e pula para subir nela. */
+    /** Swims to the point; with the target out of the water, aims above the bank and jumps to climb it. */
     private void swimToward(Vec3 finalTarget, LivingEntity lookTarget) {
         Vec3 swimTarget = finalTarget;
         if (bot.isInWater() && lookTarget != null && isTargetOutOfWater(lookTarget)) {
@@ -912,12 +912,12 @@ public final class Brain {
         return clearFeet && clearHead && solidBelow;
     }
 
-    // ------------------------------------------------------------------ movimento "Dumb*"
+    // ------------------------------------------------------------------ "Dumb*" movement
 
-    /** Anda até o ponto desviando de obstáculos, abrindo portas, pulando degraus e nadando. */
+    /** Walks to the point avoiding obstacles, opening doors, jumping steps and swimming. */
     public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, LivingEntity lookTarget) {
         if (plannerActive) {
-            // um desvio de quando não havia caminho não vale mais
+            // a detour from when there was no path no longer applies
             detourPos = null;
         } else if (detourPos != null) {
             if (bot.pos().distanceTo(detourPos) < 2.0 || --detourTimer <= 0) {
@@ -955,8 +955,8 @@ public final class Brain {
         }
         Vec3 toTarget = finalTarget.subtract(bot.pos()).horizontal();
         Vec3 moveDir = toTarget.normalize();
-        // Num caminho calculado só confere até o próximo nó: o A* já desviou da lava, e olhar além dele
-        // fazia o bot recuar para sempre de uma descida segura ao lado de um lago de lava.
+        // On a computed path it only checks up to the next node: the A* already avoided the lava, and looking past it
+        // made the bot back away forever from a safe way down next to a lava lake.
         Vec3 lookAhead = moveDir.scale(plannerActive ? Math.min(1.5, toTarget.length()) : 1.5);
         Pos lookAheadBlock = bot.pos().add(lookAhead).toPos();
         boolean cliff = !WorldUtil.blocksMotion(w, lookAheadBlock.below());
@@ -1040,7 +1040,7 @@ public final class Brain {
             return false;
         }
         if (Locations.block(pos, w).isPassable()) {
-            // pés livres mas a cabeça bate (folha, laje): o bot tem quase 2 blocos de altura e não passa
+            // feet free but the head bumps (leaves, slab): the bot is almost 2 blocks tall and doesn't fit
             return head.isSolid() && !Locations.block(pos.above(), w).isPassable();
         }
         if (Tag.DOORS.isTagged(legs) || Tag.FENCE_GATES.isTagged(legs)) {
@@ -1075,7 +1075,7 @@ public final class Brain {
         return sep.horizontal();
     }
 
-    // ------------------------------------------------------------------ jogo furtivo
+    // ------------------------------------------------------------------ sneaky play
 
     private boolean handleSneakyPlay(Player player) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
@@ -1149,9 +1149,9 @@ public final class Brain {
         return true;
     }
 
-    // ------------------------------------------------------------------ redistribuição e pérolas
+    // ------------------------------------------------------------------ redistribution and pearls
 
-    /** Bot longe demais (> distância de redistribuição) reaparece escondido a 50–100 blocos do alvo. */
+    /** A bot that is too far (> redistribution distance) reappears hidden 50–100 blocks from the target. */
     private void handleAutoRedistribution(Player target) {
         if (!settings().allowRedistribution.on()) {
             return;
@@ -1232,7 +1232,7 @@ public final class Brain {
         return null;
     }
 
-    /** Joga uma pérola para cair a 15–30 blocos do alvo (só se ficar mais perto do que está). */
+    /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
     private void handleOffensivePearl(LivingEntity target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         World w = bot.world();

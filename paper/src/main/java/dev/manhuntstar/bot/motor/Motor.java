@@ -17,10 +17,10 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 /**
- * Locomoção do bot. O servidor já simula gravidade, colisão, subir degraus, água, lava e escadas
- * para o Mannequin; aqui só aplicamos a "entrada" de um jogador (aceleração de andar/correr/agachar,
- * pulo com impulso de corrida, nado) usando as mesmas fórmulas do jogo, e detectamos colisão horizontal.
- * A velocidade final é aplicada uma vez por tick, depois que a IA decidiu o movimento.
+ * The bot's locomotion. The server already simulates gravity, collision, stepping up, water, lava and ladders
+ * for the Mannequin; here we only apply a player's "input" (walk/sprint/sneak acceleration,
+ * jump with sprint boost, swimming) using the same formulas as the game, and detect horizontal collision.
+ * The final velocity is applied once per tick, after the AI decided the movement.
  */
 public final class Motor {
 
@@ -52,9 +52,9 @@ public final class Motor {
         this.bot = bot;
     }
 
-    // ------------------------------------------------------------------ ciclo do tick
+    // ------------------------------------------------------------------ tick cycle
 
-    /** Lê o estado deixado pela física do servidor no tick anterior. */
+    /** Reads the state left by the server's physics on the previous tick. */
     public void beginTick() {
         Mannequin e = bot.entity();
         if (e == null) {
@@ -62,9 +62,9 @@ public final class Motor {
         }
         Vec3 pos = bot.pos();
         velocity = Locations.vec(e.getVelocity());
-        // Se a física da entidade não rodou (chunk ainda não ativo), a velocidade volta igual à aplicada;
-        // somar a aceleração de novo faria o bot "disparar" quando a física voltasse.
-        // (o atrito sempre muda a velocidade horizontal quando a física roda; parado no chão ela é zero)
+        // If the entity's physics didn't run (chunk not active yet), the velocity comes back the same as applied;
+        // adding the acceleration again would make the bot "shoot off" when the physics came back.
+        // (friction always changes the horizontal velocity when the physics runs; standing on the ground it's zero)
         stalled = lastApplied != null && lastApplied.horizontalLengthSqr() > 1.0E-8
                 && velocity.x() == lastApplied.x() && velocity.z() == lastApplied.z();
         onGround = e.isOnGround();
@@ -97,7 +97,7 @@ public final class Motor {
         return Math.abs(requested) > 1.0E-3 && Math.abs(moved) < Math.abs(requested) * 0.5 - 1.0E-4;
     }
 
-    /** Aplica a velocidade decidida neste tick à entidade. */
+    /** Applies the velocity decided this tick to the entity. */
     public void endTick() {
         Mannequin e = bot.entity();
         if (e == null) {
@@ -110,7 +110,7 @@ public final class Motor {
             velocity = Vec3.ZERO;
             lastApplied = null;
         } else if (stalled) {
-            // física parada: não reaplica (evita acumular) e espera o chunk voltar a tickar
+            // physics stopped: don't reapply (avoids building up) and wait for the chunk to tick again
             lastApplied = Locations.vec(e.getVelocity());
         } else {
             e.setVelocity(new Vector(velocity.x(), velocity.y(), velocity.z()));
@@ -136,7 +136,7 @@ public final class Motor {
                 -velocity.x() * 4.0, 1.5, -velocity.z() * 4.0, 0, below.getBlockData());
     }
 
-    // ------------------------------------------------------------------ comandos de movimento
+    // ------------------------------------------------------------------ movement commands
 
     public Vec3 velocity() {
         return velocity;
@@ -191,8 +191,8 @@ public final class Motor {
     }
 
     /**
-     * Anda na direção (horizontal) como um jogador apertando W: aceleração = velocidade * 0,216/atrito³ no chão,
-     * 0,02 (0,026 correndo) no ar e 0,02 na água/lava. O atrito e a gravidade são aplicados pelo servidor.
+     * Walks in the (horizontal) direction like a player holding W: acceleration = speed * 0.216/friction³ on the
+     * ground, 0.02 (0.026 sprinting) in the air and 0.02 in water/lava. Friction and gravity are applied by the server.
      */
     public void walk(Vec3 dir) {
         Vec3 horiz = dir.horizontal();
@@ -255,7 +255,7 @@ public final class Motor {
         return 0.6f;
     }
 
-    /** Pulo: 0,42 + efeito de salto, com impulso de 0,2 para frente se estiver correndo (como o jogador). */
+    /** Jump: 0.42 + jump boost, with a 0.2 forward push when sprinting (like the player). */
     public void jump() {
         if (bot.isInWater() || bot.isInLava()) {
             swimUp();
@@ -284,7 +284,7 @@ public final class Motor {
         }
     }
 
-    /** Pulo com velocidade definida (usado por parkour e capacidades). */
+    /** Jump with a given velocity (used by parkour and abilities). */
     public void jump(Vec3 vel) {
         if (groundTicks > 1 && jumpTicks == 0) {
             jumpTicks = 4;
@@ -298,7 +298,7 @@ public final class Motor {
         }
     }
 
-    /** Nada em direção a um ponto (3D), como o jogador nadando rápido olhando para o alvo. */
+    /** Swims toward a point (3D), like the player swimming fast while looking at the target. */
     public void swimTowardNode(Vec3 waypoint) {
         Vec3 target = waypoint.add(0, 0.5, 0);
         Vec3 p = bot.pos();
@@ -329,7 +329,7 @@ public final class Motor {
         }
     }
 
-    /** Ajustes de flutuação que o jogador faz segurando espaço perto da superfície. */
+    /** Buoyancy adjustments the player makes by holding space near the surface. */
     public void tickWaterBuoyancy() {
         if (!bot.isInWater() || bot.pitch() >= 45f) {
             return;
@@ -379,9 +379,9 @@ public final class Motor {
         shouldBeSwimming = false;
     }
 
-    // ------------------------------------------------------------------ obstáculos e buracos
+    // ------------------------------------------------------------------ obstacles and holes
 
-    /** Degrau de 1 bloco à frente com espaço acima: pula. */
+    /** 1-block step ahead with room above: jumps. */
     public void handleObstacles() {
         World w = bot.world();
         Pos front = Locations.relative(bot.blockPos(), bot.facing());
@@ -400,7 +400,7 @@ public final class Motor {
         return !WorldUtil.isTrulySolid(w, ahead.below());
     }
 
-    /** Buraco à frente: pula se houver chão a até 5 blocos, senão coloca um bloco (só perto do alvo). */
+    /** Hole ahead: jumps if there is ground within 5 blocks, otherwise places a block (only near the target). */
     public void handleGaps() {
         World w = bot.world();
         int now = Bukkit.getCurrentTick();
@@ -487,7 +487,7 @@ public final class Motor {
         return false;
     }
 
-    /** Para de andar se não houver chão logo à frente. */
+    /** Stops walking if there is no ground right ahead. */
     public void avoidFalls() {
         Vec3 fwd = bot.forwardVector().scale(1.1);
         Pos below = bot.pos().add(fwd).add(0, -1, 0).toPos();

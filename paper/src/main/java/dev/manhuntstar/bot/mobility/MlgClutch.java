@@ -27,12 +27,12 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 /**
- * MLG: caindo rápido (≥ 0,6 bloco/tick) a até 4,5 blocos do chão, o bot coloca água (ou um barco,
- * sempre no Nether) embaixo de si e recolhe depois. Também limpa barcos que o próprio bot colocou.
+ * MLG: falling fast (≥ 0.6 blocks/tick) within 4.5 blocks of the ground, the bot places water (or a boat,
+ * always in the Nether) under itself and picks it up afterwards. Also cleans up boats the bot itself placed.
  */
 public final class MlgClutch {
 
-    /** Folga sobre a altura da queda planejada antes de contar como escorregão. */
+    /** Margin over the planned fall height before it counts as a slip. */
     private static final float PLANNED_FALL_SLACK = 0.5f;
 
     private final Bot bot;
@@ -67,7 +67,7 @@ public final class MlgClutch {
         handleMlg(nav);
         if (waterPos != null && ++waterTicks > 15) {
             World w = waterWorld;
-            // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+            // in another world the bot can't reach it: the temporary block registry picks it up
             if (w.equals(bot.world()) && Locations.block(waterPos, w).getType() == Material.WATER) {
                 bot.manager().temporaryBlocks().remove(w, waterPos);
                 Locations.block(waterPos, w).setType(Material.AIR);
@@ -128,8 +128,8 @@ public final class MlgClutch {
     }
 
     /**
-     * O bot morreu ou saiu do mundo: some com os barcos que ele colocou. A próxima vida começa com um
-     * registro novo, então sem isso o barco ficava no mundo para sempre.
+     * The bot died or left the world: gets rid of the boats it placed. The next life starts with a new
+     * registry, so without this the boat stayed in the world forever.
      */
     public void discardBoats() {
         for (UUID id : spawnedBoats) {
@@ -140,7 +140,7 @@ public final class MlgClutch {
         spawnedBoats.clear();
     }
 
-    /** Desmonta e quebra o barco como o jogador quebrando com socos (sem drop). */
+    /** Dismounts and breaks the boat like a player punching it (no drop). */
     public void breakBoat(Boat b) {
         if (b.getPassengers().contains(bot.entity())) {
             b.removePassenger(bot.entity());
@@ -154,9 +154,9 @@ public final class MlgClutch {
         if (bot.onGround() || boatClutching || cooldown > 0 || bot.isRiding() || waterPos != null) {
             return;
         }
-        // O caminho planeja quedas de até 3 blocos (5 cavando o chão para cair num vão). Caindo mais que a
-        // queda planejada o bot escorregou (beira de ravina): enquanto ele cai o caminho não avança e
-        // continuava dizendo "queda planejada", e ele morria sem balde.
+        // The path plans falls of up to 3 blocks (5 when digging the floor to drop into a gap). Falling more than the
+        // planned fall means the bot slipped (edge of a ravine): while it falls the path doesn't advance and
+        // kept saying "planned fall", and it died without a bucket.
         int plannedFall = nav.plannedFallHeight();
         boolean planned = plannedFall > 0 && bot.entity() != null && bot.entity().getFallDistance() <= plannedFall + PLANNED_FALL_SLACK;
         if (planned || bot.isInWater() || bot.isInLava()) {
@@ -212,7 +212,7 @@ public final class MlgClutch {
             bot.swing();
             bot.motor().resetFallTracking();
             bot.manager().plugin().pathService().invalidate(w, water);
-            // se o bot morrer antes de recolher, a água some do mesmo jeito
+            // if the bot dies before picking it up, the water disappears all the same
             bot.manager().temporaryBlocks().add(w, water, Material.WATER, 15 + 40);
             waterPos = water;
             waterWorld = w;

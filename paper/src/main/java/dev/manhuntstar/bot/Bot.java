@@ -46,13 +46,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BoundingBox;
 
 /**
- * Um bot caçador. Guarda a identidade e o estado persistente; a entidade {@link Mannequin}
- * existe só enquanto o bot está vivo e é recriada a cada respawn.
+ * A hunter bot. Holds the identity and the persistent state; the {@link Mannequin} entity
+ * only exists while the bot is alive and is recreated on every respawn.
  */
 public final class Bot {
 
     private static final double EYE_HEIGHT = 1.62;
-    /** Folhas de carvalho colocadas pelo bot somem depois de 100 s. */
+    /** Oak leaves placed by the bot disappear after 100 s. */
     private static final int LEAF_LIFETIME_TICKS = 2000;
 
     private final BotManager manager;
@@ -119,7 +119,7 @@ public final class Bot {
         ability = new PearlAbility(this);
     }
 
-    // ------------------------------------------------------------------ identidade
+    // ------------------------------------------------------------------ identity
 
     public UUID id() {
         return id;
@@ -226,7 +226,7 @@ public final class Bot {
         return difficulty == BotDifficulty.TERMINATOR && terminatorTotemAvailable && getItem(EquipmentSlot.OFF_HAND).getType() == Material.TOTEM_OF_UNDYING;
     }
 
-    /** Chamado quando o totem foi consumido: devolve o escudo/mão secundária normal. */
+    /** Called when the totem was used up: gives back the normal shield/offhand. */
     public void onTotemConsumed() {
         terminatorTotemAvailable = false;
         terminatorTotemIssued = false;
@@ -253,7 +253,7 @@ public final class Bot {
         }
     }
 
-    // ------------------------------------------------------------------ acesso a subsistemas
+    // ------------------------------------------------------------------ subsystem access
 
     public BotManager manager() {
         return manager;
@@ -307,12 +307,12 @@ public final class Bot {
         this.idle = idle;
     }
 
-    /** Uma capacidade especial (emboscada, rajada de arco) está controlando o bot. */
+    /** A special ability (ambush, bow burst) is controlling the bot. */
     public boolean capacityLocked() {
         return manager.tactics().isControllingBot(this);
     }
 
-    // ------------------------------------------------------------------ entidade
+    // ------------------------------------------------------------------ entity
 
     public Mannequin entity() {
         return entity;
@@ -435,7 +435,7 @@ public final class Bot {
         return aliveTicks;
     }
 
-    /** Verdadeiro uma vez a cada {@code i} ticks, com fase deslocada por bot para espalhar trabalho pesado. */
+    /** True once every {@code i} ticks, with a per-bot phase offset to spread heavy work. */
     public boolean tickDelay(int i) {
         return ((aliveTicks + (id.hashCode() & 0xFF)) % i) == 0;
     }
@@ -448,7 +448,7 @@ public final class Bot {
         return pos().distanceTo(Locations.vec(e.getLocation()));
     }
 
-    /** Linha de visão dos olhos até o ponto, ignorando blocos sem colisão. */
+    /** Line of sight from the eyes to the point, ignoring blocks without collision. */
     public boolean canSee(Vec3 target) {
         World w = world();
         return w != null && WorldUtil.clearLine(w, eyePos(), target);
@@ -468,7 +468,7 @@ public final class Bot {
         lastFireSourcePos = null;
     }
 
-    // ------------------------------------------------------------------ alvo
+    // ------------------------------------------------------------------ target
 
     public UUID targetPlayerId() {
         return targetPlayer;
@@ -478,7 +478,7 @@ public final class Bot {
         this.targetPlayer = id;
     }
 
-    /** O jogador alvo, se a lista e a proteção de quem entrou no meio ainda deixam caçá-lo. */
+    /** The target player, if the list and the late-joiner protection still allow hunting them. */
     public Player target() {
         Player p = targetPlayer == null ? null : Bukkit.getPlayer(targetPlayer);
         if (p == null || p.getUniqueId().equals(manager.forcedTarget()) || manager.policy().canBeHunted(p)) {
@@ -487,7 +487,7 @@ public final class Bot {
         return null;
     }
 
-    /** Jogador vivo mais próximo em qualquer mundo (fallback quando o alvo sumiu). */
+    /** Closest living player in any world (fallback when the target is gone). */
     public Player fallbackTarget() {
         Player best = null;
         double bestDist = Double.MAX_VALUE;
@@ -514,9 +514,9 @@ public final class Bot {
         return Math.hypot(target.getX() - p.x(), target.getZ() - p.z()) <= maxAxisDistance;
     }
 
-    // ------------------------------------------------------------------ mira e pose
+    // ------------------------------------------------------------------ aim and pose
 
-    /** Define para onde a cabeça deve virar (aplicado no fim do tick, com suavização opcional). */
+    /** Sets where the head should turn (applied at the end of the tick, with optional smoothing). */
     public void lookAt(Vec3 target) {
         Vec3 d = target.subtract(eyePos());
         targetYaw = d.yaw();
@@ -540,7 +540,7 @@ public final class Bot {
         return dy <= tolerance && dp <= tolerance;
     }
 
-    /** Muda o pitch imediatamente (ex.: olhar para baixo ao colocar bloco). */
+    /** Changes the pitch right away (e.g. looking down to place a block). */
     public void setPitchNow(float pitch) {
         targetPitch = pitch;
         if (targetYaw == null) {
@@ -650,7 +650,7 @@ public final class Bot {
         }
     }
 
-    // ------------------------------------------------------------------ equipamento
+    // ------------------------------------------------------------------ equipment
 
     public ItemStack getItem(EquipmentSlot slot) {
         if (entity == null) {
@@ -674,11 +674,11 @@ public final class Bot {
         return getItem(EquipmentSlot.HAND);
     }
 
-    // ------------------------------------------------------------------ blocos
+    // ------------------------------------------------------------------ blocks
 
     /**
-     * Coloca um bloco como o jogador: segura o bloco, olha para ele, toca o som e respeita o limite
-     * de 10 blocos a cada 10 segundos. Folhas de carvalho são temporárias e somem depois de 100 s.
+     * Places a block like a player: holds the block, looks at it, plays the sound and respects the limit
+     * of 10 blocks every 10 seconds. Oak leaves are temporary and disappear after 100 s.
      */
     public boolean placeBlock(Pos pos, Material material, boolean allowSelfOverlap) {
         World w = world();
@@ -713,7 +713,7 @@ public final class Bot {
         Block b = Locations.block(pos, w);
         BlockData data = material.createBlockData();
         if (data instanceof Leaves leaves) {
-            // sem tronco perto as folhas apodreceriam sozinhas e derrubariam mudas e maçãs
+            // with no log nearby the leaves would decay on their own and drop saplings and apples
             leaves.setPersistent(true);
         }
         b.setBlockData(data, true);
@@ -763,9 +763,9 @@ public final class Bot {
     }
 
     /**
-     * Pilar: depois de pular, coloca o bloco no lugar dos pés assim que eles passam do topo do bloco
-     * (como o jogador faz). O Mannequin não é empurrado para fora de blocos, então colocar antes
-     * prenderia o bot dentro dele.
+     * Pillar: after jumping, places the block where the feet were as soon as they pass the top of the block
+     * (as the player does). The Mannequin isn't pushed out of blocks, so placing it earlier
+     * would trap the bot inside it.
      */
     public void queuePillarBlock(Pos feetBlock, Runnable onDone) {
         pendingPillar = feetBlock;
@@ -797,7 +797,7 @@ public final class Bot {
         }
     }
 
-    /** Abre portas, portões e alçapões fechados como um jogador clicando com o botão direito. */
+    /** Opens closed doors, gates and trapdoors like a player right-clicking. */
     public boolean tryOpen(Pos pos) {
         World w = world();
         Block b = Locations.block(pos, w);
@@ -819,7 +819,7 @@ public final class Bot {
         return false;
     }
 
-    // ------------------------------------------------------------------ ciclo de vida da entidade
+    // ------------------------------------------------------------------ entity life cycle
 
     ResolvableProfile buildProfile() {
         ResolvableProfile.Builder b = ResolvableProfile.resolvableProfile().name(profileName()).uuid(id);
@@ -829,7 +829,7 @@ public final class Bot {
         return b.build();
     }
 
-    /** Nome do perfil (o que aparece no TAB e no /list): o nome interno, válido para o jogo. */
+    /** Profile name (what shows in TAB and /list): the internal name, valid for the game. */
     public String profileName() {
         String n = name.replaceAll("[^A-Za-z0-9_]", "");
         if (n.isEmpty()) {
@@ -838,7 +838,7 @@ public final class Bot {
         return n.length() > 16 ? n.substring(0, 16) : n;
     }
 
-    /** Cria a entidade no local indicado (primeiro spawn, respawn ou restauração). */
+    /** Creates the entity at the given location (first spawn, respawn or restore). */
     Mannequin spawnEntity(Location loc) {
         Location safe = adjustOutOfLava(loc);
         Settings s = settings();
@@ -887,14 +887,14 @@ public final class Bot {
         return loc;
     }
 
-    /** Recria os subsistemas de IA (equivale ao bot "novo" que o mod criava a cada respawn). */
+    /** Recreates the AI subsystems (same as the "new" bot the mod created on every respawn). */
     void resetRuntime() {
         brain.navigator().reset();
         createRuntime();
         idle = null;
     }
 
-    /** Remove a entidade sem efeito de morte. */
+    /** Removes the entity without a death effect. */
     void despawnEntity() {
         if (entity != null) {
             lastKnownPos = Locations.vec(entity.getLocation());
@@ -932,8 +932,8 @@ public final class Bot {
     }
 
     /**
-     * Leva o bot para outro mundo recriando a entidade no destino (como o mod recriava o jogador
-     * falso), preservando vida, fogo, ar, efeitos e equipamento.
+     * Takes the bot to another world by recreating the entity at the destination (as the mod recreated the
+     * fake player), keeping health, fire, air, effects and equipment.
      */
     void relocate(Location dest) {
         if (entity == null || !entity.isValid()) {
@@ -968,7 +968,7 @@ public final class Bot {
         brain.navigator().reset();
     }
 
-    /** Fotografia do estado atual (para salvar em disco ou renascer). */
+    /** Snapshot of the current state (to save to disk or to respawn). */
     BotSnapshot snapshot() {
         boolean alive = isAlive();
         Vec3 p = pos();
@@ -986,7 +986,7 @@ public final class Bot {
                 aggression, kills, alive);
     }
 
-    /** Aplica o estado salvo que não depende da entidade (chamar antes de {@link #spawnEntity}). */
+    /** Applies the saved state that doesn't depend on the entity (call before {@link #spawnEntity}). */
     void applySnapshotState(BotSnapshot s) {
         groupName = s.group();
         targetPlayer = s.target();
@@ -1006,7 +1006,7 @@ public final class Bot {
         lastKnownPos = new Vec3(s.x(), s.y(), s.z());
     }
 
-    /** Aplica o equipamento e a vida salvos na entidade recém-criada. */
+    /** Applies the saved equipment and health to the newly created entity. */
     void applySnapshotEquipment(BotSnapshot s) {
         if (entity == null) {
             return;
@@ -1032,7 +1032,7 @@ public final class Bot {
         return lastKnownWorld;
     }
 
-    /** Mantém 3x3 chunks em volta do bot carregados (para ele continuar agindo longe dos jogadores). */
+    /** Keeps the 3x3 chunks around the bot loaded (so it keeps acting far from players). */
     private void updateChunkTickets(boolean force) {
         if (entity == null) {
             return;
@@ -1113,7 +1113,7 @@ public final class Bot {
         motor.endTick();
     }
 
-    /** Caçada pausada: o bot não pensa nem se move (a pausa o segura); só continua ativo e com os chunks. */
+    /** Hunt paused: the bot neither thinks nor moves (the pause holds it); it only stays active and keeps its chunks. */
     void tickPaused() {
         if (entity == null) {
             return;
@@ -1123,10 +1123,10 @@ public final class Bot {
     }
 
     /**
-     * O Paper deixa de atualizar entidades comuns a mais de 16 blocos de um jogador
-     * (entity-activation-range): o bot parava de andar e ficava congelado. Jogadores nunca ficam
-     * inativos, e o Paper mantém ativa toda entidade com recarga de portal, então o bot fica com
-     * uma recarga permanente (ele não usa portais sozinho; as trocas de dimensão são do plugin).
+     * Paper stops updating ordinary entities more than 16 blocks from a player
+     * (entity-activation-range): the bot stopped walking and stayed frozen. Players are never
+     * inactive, and Paper keeps every entity with a portal cooldown active, so the bot keeps
+     * a permanent cooldown (it doesn't use portals on its own; dimension changes are done by the plugin).
      */
     public static void keepActive(Entity e) {
         if (e.getPortalCooldown() < 40) {
@@ -1140,7 +1140,7 @@ public final class Bot {
         }
         double hp = entity.getHealth();
         double max = maxHealth();
-        // Regeneração passiva extra do mod (0,5 de vida por segundo fora de fogo/lava e com ar cheio).
+        // The mod's extra passive regeneration (0.5 health per second out of fire/lava and with full air).
         if (hp < max && !isInLava() && !isOnFire() && entity.getRemainingAir() >= entity.getMaximumAir()) {
             entity.setHealth(Math.min(max, hp + 0.025));
         }

@@ -5,8 +5,8 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Jeito próprio de cada bot andar (derivado do UUID): leve desvio lateral, oscilação e passar
- * um pouco do ponto, para que um grupo de bots não ande em fila perfeita. Escala com "humanizacao".
+ * Each bot's own way of walking (derived from the UUID): a slight sideways drift, some wobble and a
+ * little overshoot, so a group of bots doesn't walk in a perfect line. Scales with {@code combat.humanization}.
  */
 public final class Personality {
 
@@ -22,8 +22,8 @@ public final class Personality {
         Random r = new Random(id.getLeastSignificantBits());
         lateralBias = (r.nextFloat() - 0.5f) * 0.8f;
         forwardBias = r.nextFloat() * 0.3f;
-        r.nextFloat(); // atraso de reação (não usado pelo mod)
-        r.nextFloat(); // limiar de corrida (não usado pelo mod)
+        r.nextFloat(); // reaction delay (not used by the mod)
+        r.nextFloat(); // sprint threshold (not used by the mod)
         noiseFrequency = 0.03f + r.nextFloat() * 0.04f;
         noiseAmplitude = 0.05f + r.nextFloat() * 0.2f;
         overshootChance = r.nextFloat() * 0.12f;

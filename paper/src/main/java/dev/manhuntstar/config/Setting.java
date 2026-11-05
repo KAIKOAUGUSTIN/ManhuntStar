@@ -8,10 +8,10 @@ import java.util.function.Supplier;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Uma opção do plugin: caminho no config.yml (e o caminho em português das versões antigas, lido na
- * migração), chave usada nos comandos, valor padrão e validação. Nome e descrição ficam nos arquivos
- * de idioma ({@code options.<chave>}). O valor é volátil porque algumas opções (ex.: limite de nós
- * do A*) são lidas por threads de pathfinding.
+ * A plugin option: path in config.yml (and the Portuguese path from old versions, read during
+ * migration), key used in commands, default value and validation. Name and description are in the
+ * language files ({@code options.<key>}). The value is volatile because some options (e.g. the A* node
+ * limit) are read by pathfinding threads.
  */
 public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setting.Dbl, Setting.Enumerated, Setting.Text {
 
@@ -35,7 +35,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         return path;
     }
 
-    /** Caminho da opção no config.yml das versões com chaves em português (null se não existia). */
+    /** The option's path in the config.yml of the versions with Portuguese keys (null if it didn't exist). */
     public String legacyPath() {
         return legacyPath;
     }
@@ -60,10 +60,10 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         this.value = sanitize(newValue);
     }
 
-    /** Converte um texto digitado em comando; lança {@link InvalidValue} se inválido. */
+    /** Converts text typed in a command; throws {@link InvalidValue} if invalid. */
     public abstract T parse(String raw);
 
-    /** Define a partir de texto (comando ou menu). */
+    /** Sets it from text (command or menu). */
     public void setFromText(String raw) {
         set(parse(raw));
     }
@@ -82,7 +82,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         load(cfg, path);
     }
 
-    /** Lê a opção de outro caminho (o antigo, na migração do config.yml). */
+    /** Reads the option from another path (the old one, when migrating config.yml). */
     void load(ConfigurationSection cfg, String from) {
         Object raw = from == null ? null : cfg.get(from);
         if (raw == null) {
@@ -287,8 +287,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         }
 
         /**
-         * Texto que só aceita uma das sugestões, que mudam com o tempo (ex.: os idiomas da pasta
-         * lang/). Maiúsculas e "_" viram minúsculas e "-" ("PT_BR" = "pt-br").
+         * Text that only accepts one of the suggestions, which change over time (e.g. the languages in the
+         * lang/ folder). Uppercase and "_" become lowercase and "-" ("PT_BR" = "pt-br").
          */
         public Text(String path, String legacyPath, String key, Category category, String def, Supplier<List<String>> suggestions) {
             super(path, legacyPath, key, category, def);
@@ -317,8 +317,8 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
     }
 
     /**
-     * Valor inválido digitado num comando ou no menu: a mensagem é a chave do arquivo de idioma, com
-     * os placeholders em pares (nome, valor).
+     * Invalid value typed in a command or in the menu: the message is the language file's key, with
+     * the placeholders in pairs (name, value).
      */
     public static final class InvalidValue extends IllegalArgumentException {
         private final transient Object[] placeholders;

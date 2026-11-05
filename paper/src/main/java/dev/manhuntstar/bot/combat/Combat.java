@@ -44,8 +44,8 @@ import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 /**
- * Combate do bot. O corpo a corpo segue as regras de um jogador (recarga da arma, crítico ao cair,
- * golpe de varredura, repulsão de corrida, encantamentos); a humanização do mod controla erros e ritmo.
+ * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
+ * sweep attack, sprint knockback, enchantments); the mod's humanization controls mistakes and pace.
  */
 public final class Combat {
 
@@ -120,7 +120,7 @@ public final class Combat {
         hasShield = v;
     }
 
-    // ------------------------------------------------------------------ escudo
+    // ------------------------------------------------------------------ shield
 
     public void setShield(boolean enable) {
         if (bot.shouldHoldTotemInOffhand()) {
@@ -162,7 +162,7 @@ public final class Combat {
         }
     }
 
-    /** Bloqueia por um tempo e solta (API usada por capacidades). */
+    /** Blocks for a while and lowers it (API used by abilities). */
     public void block(int time, int cooldown) {
         if (!hasShield || blocking) {
             return;
@@ -172,8 +172,8 @@ public final class Combat {
     }
 
     /**
-     * O escudo só bloqueia, como no jogo, ataques vindos da frente, com um ponto de origem e que não
-     * ignoram escudo. Sufocar, cacto, magma, congelar e efeito de wither não têm origem e passam.
+     * Like in the game, the shield only blocks attacks from the front, with a point of origin and that don't
+     * bypass shields. Suffocation, cactus, magma, freezing and the wither effect have no origin and go through.
      */
     public boolean canBlockDamage(EntityDamageEvent event) {
         DamageSource src = event.getDamageSource();
@@ -206,7 +206,7 @@ public final class Combat {
         }
     }
 
-    /** O alvo sumiu (morreu, saiu) no meio da carga: solta a besta ou o tridente e volta para a arma de sempre. */
+    /** The target disappeared (died, left) in the middle of the charge: lowers the crossbow or the trident and goes back to the usual weapon. */
     public void cancelChargeWithoutTarget() {
         if (!chargingCrossbow && !chargingTrident) {
             return;
@@ -216,7 +216,7 @@ public final class Combat {
         bot.inventory().restorePreferredMainHand();
     }
 
-    // ------------------------------------------------------------------ corpo a corpo
+    // ------------------------------------------------------------------ melee
 
     public void attack(Entity target) {
         if (target instanceof LivingEntity living) {
@@ -338,7 +338,7 @@ public final class Combat {
         if (enchant > 0) {
             w.spawnParticle(Particle.ENCHANTED_HIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 8, 0.3, 0.4, 0.3, 0.2);
         }
-        // Mortes de jogadores e de bots são contadas pelos eventos de morte; aqui só mobs.
+        // Player and bot kills are counted by the death events; here only mobs.
         if (!(target instanceof Player) && target.isDead() && !bot.manager().isBotEntity(target)) {
             bot.incrementKills();
         }
@@ -415,7 +415,7 @@ public final class Combat {
         bot.world().playSound(Locations.location(p, bot.world()), s, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
-    // ------------------------------------------------------------------ besta
+    // ------------------------------------------------------------------ crossbow
 
     public boolean handleCrossbowCombat(LivingEntity target, double dist) {
         if (!bot.progression().canUseCrossbow()) {
@@ -467,9 +467,9 @@ public final class Combat {
     }
 
     /**
-     * Velocidade de disparo de flecha/tridente rumo ao meio do corpo do alvo, com a trajetória
-     * calculada pela física do jogo e o alvo antecipado. O erro é o do mod: um desvio no ponto
-     * mirado que cresce com a distância, mais o ruído do disparo do jogo.
+     * Arrow/trident shot velocity toward the middle of the target's body, with the trajectory
+     * computed with the game's physics and the target led. The error is the mod's: an offset on the aimed
+     * point that grows with distance, plus the game's shot spread.
      */
     private Vector aimProjectile(LivingEntity target, double speed, double scatterPerBlock) {
         Mannequin me = bot.entity();
@@ -508,9 +508,9 @@ public final class Combat {
         bot.inventory().restorePreferredMainHand();
     }
 
-    // ------------------------------------------------------------------ impulso arriscado
+    // ------------------------------------------------------------------ risky boost
 
-    /** Às vezes usa um bot aliado como "trampolim" para avançar de repente em direção ao jogador. */
+    /** Sometimes uses an allied bot as a "springboard" to suddenly lunge toward the player. */
     public void handleRiskyHitBoost(Player player) {
         if (hitBoostCooldown > 0) {
             hitBoostCooldown--;
@@ -548,7 +548,7 @@ public final class Combat {
         }
     }
 
-    // ------------------------------------------------------------------ tridente
+    // ------------------------------------------------------------------ trident
 
     public boolean handleTridentCombat(LivingEntity target, double dist) {
         if (!bot.progression().canUseTrident()) {
@@ -620,7 +620,7 @@ public final class Combat {
         bot.inventory().restorePreferredMainHand();
     }
 
-    /** O tridente com lealdade volta: quando chega perto do bot ou para, é recolhido. */
+    /** A loyalty trident comes back: when it gets close to the bot or stops, it's picked up. */
     public void tickTridentPickup() {
         if (thrownTrident == null) {
             return;
@@ -679,7 +679,7 @@ public final class Combat {
         }
     }
 
-    // ------------------------------------------------------------------ balde de lava
+    // ------------------------------------------------------------------ lava bucket
 
     public boolean handleLavaBucketCombat(LivingEntity target, double dist) {
         if (!bot.progression().canUseLavaBucket() || !hasLavaBucket || lavaUsedThisRun || placedLavaPos != null) {
@@ -713,7 +713,7 @@ public final class Combat {
         lavaCleanupTicks = 0;
         lavaHitPlayer = false;
         hasLavaBucket = false;
-        // se o bot morrer ou sumir antes de recolher, a lava não fica no mundo para sempre
+        // if the bot dies or disappears before picking it up, the lava doesn't stay in the world forever
         bot.manager().temporaryBlocks().add(w, p, Material.LAVA, 60 + 40);
         bot.manager().plugin().pathService().invalidate(w, p);
         bot.inventory().restorePreferredMainHand();
@@ -721,8 +721,8 @@ public final class Combat {
     }
 
     /**
-     * Recolhe a lava colocada. Roda todo tick, qualquer que seja a decisão da IA: antes só rodava
-     * enquanto o bot continuava no combate com balde, e a lava ficava se ele fugisse ou montasse.
+     * Picks up the placed lava. Runs every tick, whatever the AI decided: it used to run only while the bot
+     * stayed in bucket combat, and the lava stayed if it fled or mounted.
      */
     public void tickLavaCleanup() {
         if (placedLavaPos == null) {
@@ -742,7 +742,7 @@ public final class Combat {
         Vec3 c = Vec3.center(placedLavaPos);
         boolean canReach = sameWorld && bot.distanceTo(c) <= 5.0 && bot.canSee(c);
         Block b = Locations.block(placedLavaPos, w);
-        // em outro mundo o bot não alcança: o registro de blocos temporários recolhe
+        // in another world the bot can't reach it: the temporary block registry picks it up
         if (sameWorld && b.getType() == Material.LAVA) {
             bot.manager().temporaryBlocks().remove(w, placedLavaPos);
             b.setType(Material.AIR);

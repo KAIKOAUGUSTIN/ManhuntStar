@@ -6,8 +6,8 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 
 /**
- * Velocidade horizontal de um alvo medida pela variação de posição entre ticks. No servidor a
- * velocidade de um jogador andando não é confiável, então a mira usa esta estimativa.
+ * A target's horizontal velocity measured from the change in position between ticks. On the server a
+ * walking player's velocity isn't reliable, so aiming uses this estimate.
  */
 public final class MotionTracker {
 
@@ -33,13 +33,13 @@ public final class MotionTracker {
             return;
         }
         Vec3 delta = p.subtract(last).horizontal().scale(1.0 / dt);
-        // teleporte, pérola etc.: não é movimento para antecipar
+        // teleport, pearl etc.: not movement to lead
         velocity = delta.horizontalLengthSqr() > 1.0 ? Vec3.ZERO : velocity.scale(0.6).add(delta.scale(0.4));
         last = p;
         lastTick = now;
     }
 
-    /** Velocidade horizontal estimada (blocos/tick) do último alvo observado. */
+    /** Estimated horizontal velocity (blocks/tick) of the last observed target. */
     public Vec3 velocity() {
         return velocity;
     }

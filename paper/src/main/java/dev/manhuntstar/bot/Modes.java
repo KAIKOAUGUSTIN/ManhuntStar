@@ -5,13 +5,13 @@ import java.util.List;
 import java.util.Locale;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-/** Enums de modo usados nas opções do plugin. */
+/** Mode enums used in the plugin's options. */
 public final class Modes {
 
     private Modes() {
     }
 
-    /** Planejador de caminho. */
+    /** Path planner. */
     public enum PathMode implements Choice {
         ASTAR, DUMB;
 
@@ -33,7 +33,7 @@ public final class Modes {
         }
     }
 
-    /** NORMAL: nasce exatamente no ponto. MANHUNT: nasce em roda e fica parado até a caçada começar. */
+    /** NORMAL: spawns exactly at the point. MANHUNT: spawns in a ring and stays still until the hunt starts. */
     public enum SpawnMode implements Choice {
         NORMAL, MANHUNT;
 
@@ -48,7 +48,7 @@ public final class Modes {
         }
     }
 
-    /** Centro da roda: AUTO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
+    /** Ring center: AUTO = where the ring is created; MANUAL = point set with /manhunt ring point. */
     public enum RingCenter implements Choice {
         AUTO("auto", "automatic", "automatico", "automático"), MANUAL("manual", "fixed", "fixo");
 
@@ -69,7 +69,7 @@ public final class Modes {
         }
     }
 
-    /** Quem entra no servidor com a caçada em andamento. */
+    /** Players who join the server while a hunt is in progress. */
     public enum LateJoin implements Choice {
         HUNTED("hunted", "cacado", "caçado"), PROTECTED("protected", "protegido", "protecao", "proteção"), OUT("out", "ignored", "fora", "ignorado");
 
@@ -90,7 +90,7 @@ public final class Modes {
         }
     }
 
-    /** Lista de jogadores: OFF = todos; ALLOWLIST = só os da lista; BLOCKLIST = todos menos os da lista. */
+    /** Player list: OFF = everyone; ALLOWLIST = only those on the list; BLOCKLIST = everyone except those on the list. */
     public enum PlayerListMode implements Choice {
         OFF("off", "false", "desligada", "nenhuma"), ALLOWLIST("allowlist", "whitelist", "permitidos"), BLOCKLIST("blocklist", "blacklist", "bloqueados");
 
@@ -111,7 +111,7 @@ public final class Modes {
         }
     }
 
-    /** Como os bots escolhem o jogador a perseguir. */
+    /** How the bots pick the player to chase. */
     public enum TargetMode implements Choice {
         CLOSEST_PLAYER("closest", "nearest", "perto", "proximo"),
         EQUAL_BOTS_PER_PLAYER("equal", "balanced", "balance", "dividir", "igual"),
@@ -134,7 +134,7 @@ public final class Modes {
         }
     }
 
-    /** O que acontece com espada, picareta e armadura melhoradas quando o bot morre. */
+    /** What happens to upgraded sword, pickaxe and armor when the bot dies. */
     public enum GearPersistence implements Choice {
         KEEP_ON_RESPAWN_NO_DROP, KEEP_AND_DROP, DROP_AND_LOSE;
 
@@ -152,7 +152,7 @@ public final class Modes {
         }
     }
 
-    /** Em quais dimensões os bots podem jogar pérolas do End. */
+    /** In which dimensions the bots can throw ender pearls. */
     public enum PearlDimension implements Choice {
         NETHER_ONLY("nether", "0"), BOTH("both", "ambas", "1"), OVERWORLD_ONLY("overworld", "2");
 
@@ -173,12 +173,12 @@ public final class Modes {
         }
     }
 
-    /** Papel do grupo: HUNTER persegue, ESCAPE foge dos alvos. */
+    /** Group role: HUNTER chases, ESCAPE runs away from the targets. */
     public enum BotRole {
         HUNTER, ESCAPE
     }
 
-    /** Cores possíveis para o brilho dos bots. */
+    /** Possible colors for the bots' glow. */
     public enum GlowColor implements Choice {
         RED(NamedTextColor.RED), DARK_RED(NamedTextColor.DARK_RED), GOLD(NamedTextColor.GOLD), YELLOW(NamedTextColor.YELLOW),
         GREEN(NamedTextColor.GREEN), DARK_GREEN(NamedTextColor.DARK_GREEN), AQUA(NamedTextColor.AQUA),

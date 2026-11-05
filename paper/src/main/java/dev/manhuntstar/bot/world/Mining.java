@@ -16,10 +16,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-/** Quebra de blocos pelo bot, com tempo, animação de rachadura, som e drops como um jogador. */
+/** Block breaking by the bot, with time, crack animation, sound and drops like a player. */
 public final class Mining {
 
-    /** Alcance máximo para continuar quebrando (o do jogador é 4,5 a partir dos olhos). */
+    /** Maximum reach to keep breaking (the player's is 4.5 from the eyes). */
     private static final double MAX_REACH = 6.0;
 
     private final Bot bot;
@@ -50,7 +50,7 @@ public final class Mining {
             return;
         }
         if (bot.eyePos().distanceTo(Vec3.center(miningPos)) > MAX_REACH) {
-            // teleportado (/manhunt tp, pérola, redistribuição) no meio da quebra: não quebra de longe
+            // teleported (/manhunt tp, pearl, redistribution) in the middle of breaking: doesn't break from afar
             clear(true);
             return;
         }
@@ -87,7 +87,7 @@ public final class Mining {
         }
     }
 
-    /** Para de quebrar (por exemplo ao levar knockback ou ao ser controlado por uma capacidade). */
+    /** Stops breaking (for example when taking knockback or when controlled by an ability). */
     public void cancel() {
         if (miningPos != null && bot.world() != null) {
             sendCrack(bot.world(), miningPos, 0f);
@@ -125,7 +125,7 @@ public final class Mining {
         return true;
     }
 
-    /** Tempo de quebra do mod: dureza * 30 / velocidade (8 com a ferramenta certa) * 2, mínimo 5 ticks. */
+    /** The mod's break time: hardness * 30 / speed (8 with the right tool) * 2, at least 5 ticks. */
     private static int breakTimeTicks(Block b) {
         float hardness = b.getType().getHardness();
         if (hardness < 0) {
@@ -171,9 +171,9 @@ public final class Mining {
         return false;
     }
 
-    /** Modo "preso": cava em direção ao alvo (escada para baixo, para cima ou zigue-zague). */
+    /** "Stuck" mode: digs toward the target (staircase down, up or zigzag). */
     public void executeHardcodedMining(Player target) {
-        // A quebra em si avança em tick(), chamado uma vez por tick pelo Bot.
+        // The breaking itself advances in tick(), called once per tick by Bot.
         if (miningPos != null) {
             return;
         }
@@ -268,7 +268,7 @@ public final class Mining {
         }
     }
 
-    /** Cava até o jogador quando ele está acima/abaixo/na frente (usado quando o A* não tem caminho). */
+    /** Digs to the player when they're above/below/ahead (used when the A* has no path). */
     public void handleMiningTowards(Player target) {
         if (bot.isInWater() || miningPos != null) {
             return;
@@ -318,7 +318,7 @@ public final class Mining {
         }
     }
 
-    /** Depois do pulo, coloca um bloco no lugar dos pés (pilar) quando eles passam do topo do bloco. */
+    /** After the jump, places a block where the feet were (pillar) when they pass the top of the block. */
     private void placePillarSupport(Pos feet) {
         if (!bot.brain().canPlaceToweringBlocksNearTarget() || bot.hasPendingPillar()) {
             return;

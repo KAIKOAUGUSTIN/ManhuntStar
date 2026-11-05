@@ -34,7 +34,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 
-/** Dano, morte, totem, pérola e teleporte dos bots (o que o mod fazia dentro do jogador falso). */
+/** Bot damage, death, totem, pearl and teleport (what the mod did inside the fake player). */
 public final class BotEntityListener implements Listener {
 
     private final ManhuntStarPlugin plugin;
@@ -106,8 +106,8 @@ public final class BotEntityListener implements Listener {
     }
 
     /**
-     * Carga de lança de um bot a cavalo (dano do próprio jogo, ver HorseRoutine): não acerta aliados,
-     * respeita o PvP desligado e leva o multiplicador de ataque da dificuldade, como o golpe de espada.
+     * Spear charge of a bot on horseback (the game's own damage, see HorseRoutine): doesn't hit allies,
+     * respects PvP being off and takes the difficulty's attack multiplier, like the sword hit.
      */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onBotSpear(EntityDamageEvent event) {
@@ -187,7 +187,7 @@ public final class BotEntityListener implements Listener {
         }
     }
 
-    /** Pérola do bot: teleporta (se o jogo não o fez) e dá os 5 de dano da pérola, como no jogador. */
+    /** The bot's pearl: teleports (if the game didn't) and deals the pearl's 5 damage, as with the player. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPearlHit(ProjectileHitEvent event) {
         if (!(event.getEntity() instanceof EnderPearl pearl) || !(pearl.getShooter() instanceof Mannequin m)) {
@@ -216,7 +216,7 @@ public final class BotEntityListener implements Listener {
         });
     }
 
-    /** Entidade do bot removida sem morrer (comando, outro plugin): volta no mesmo lugar. */
+    /** Bot entity removed without dying (command, another plugin): comes back in the same place. */
     @EventHandler
     public void onRemoved(EntityRemoveFromWorldEvent event) {
         Bot bot = manager().byEntity(event.getEntity());

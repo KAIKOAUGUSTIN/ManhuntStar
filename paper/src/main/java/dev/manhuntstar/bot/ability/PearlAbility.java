@@ -21,7 +21,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-/** Pérolas do End: resgate (void/lava) e aproximação rápida do alvo (só Terminator). */
+/** Ender pearls: rescue (void/lava) and quick approach to the target (Terminator only). */
 public final class PearlAbility {
 
     private final Bot bot;
@@ -59,7 +59,7 @@ public final class PearlAbility {
         }
     }
 
-    /** Bot da roda espera a caçada começar e fugitivo não pula atrás do alvo. */
+    /** A ring bot waits for the hunt to start and an escaper doesn't jump after the target. */
     private boolean isChasing() {
         if (bot.idle() != null && bot.idle().isActive()) {
             return false;
@@ -68,7 +68,7 @@ public final class PearlAbility {
         return g == null || g.role() != BotRole.ESCAPE;
     }
 
-    /** Respeita as opções "perolas" e "dimensao-perolas". */
+    /** Respects the {@code mobility.ender-pearls} and {@code mobility.pearl-dimension} options. */
     public static boolean canUsePearl(Bot bot) {
         if (!bot.settings().allowPearl.on() || bot.world() == null) {
             return false;
@@ -127,7 +127,7 @@ public final class PearlAbility {
         cooldown = (int) (seconds * 20 * mult);
     }
 
-    /** Joga uma pérola mirando um ponto (como o jogador: olha, segura a pérola, lança com força 1,5). */
+    /** Throws a pearl aimed at a point (like the player: looks, holds the pearl, throws with power 1.5). */
     public static void throwPearl(Bot bot, Vec3 target) {
         Mannequin me = bot.entity();
         if (me == null) {
@@ -152,7 +152,7 @@ public final class PearlAbility {
         });
     }
 
-    /** Arremesso com arco alto (usado pela IA: fuga da lava e pérola ofensiva). */
+    /** High-arc throw (used by the AI: escaping lava and offensive pearl). */
     public static void throwPearlArc(Bot bot, Vec3 target) {
         Mannequin me = bot.entity();
         if (me == null) {

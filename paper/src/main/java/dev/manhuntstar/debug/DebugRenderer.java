@@ -15,9 +15,9 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 /**
- * Caminho do A* em partículas para quem tem a permissão de administrador (opção "debug-particulas"):
- * verde = caminho, vermelho = blocos a cavar, azul = blocos a colocar. No mod isso era um desenho
- * do cliente que só funcionava em mundo de um jogador.
+ * The A* path in particles for whoever has the admin permission ({@code pathfinding.debug-particles} option):
+ * green = path, red = blocks to dig, blue = blocks to place. In the mod this was a client-side drawing
+ * that only worked in single player.
  */
 public final class DebugRenderer {
 

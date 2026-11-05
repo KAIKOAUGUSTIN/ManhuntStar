@@ -1,6 +1,6 @@
 package dev.manhuntstar.bot;
 
-/** Textura assinada de skin (propriedade "textures" do perfil). */
+/** Signed skin texture (the profile's "textures" property). */
 public record SkinData(String value, String signature) {
 
     public boolean valid() {

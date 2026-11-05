@@ -22,9 +22,9 @@ import org.bukkit.block.data.Orientable;
 import org.bukkit.entity.Player;
 
 /**
- * Bots seguindo o alvo para outra dimensão: depois de 30–60 s (um décimo disso no End), um portal
- * do Nether aparece num lugar que o jogador está vendo e os bots saem dele um a um. Com
- * "entrada-por-portal" desligada, eles chegam escondidos perto do jogador, sem portal.
+ * Bots following the target to another dimension: after 30–60 s (a tenth of that in the End), a Nether
+ * portal appears somewhere the player can see and the bots come out of it one by one. With
+ * {@code tactics.portal-entrance} off, they arrive hidden near the player, without a portal.
  */
 public final class PortalEntrance {
 
@@ -146,7 +146,7 @@ public final class PortalEntrance {
         manager.plugin().pathService().invalidate(w, portalPos);
     }
 
-    /** Portal 2x3 com moldura de obsidiana no eixo X, chão de obsidiana onde não houver apoio. */
+    /** 2x3 portal with an obsidian frame along the X axis, obsidian floor where there is no support. */
     public static void buildNetherPortal(World w, Pos pos) {
         for (int x = -1; x <= 2; x++) {
             for (int z = -1; z <= 2; z++) {
@@ -250,7 +250,7 @@ public final class PortalEntrance {
         return base.offset(0, 0, 1);
     }
 
-    /** Lugar seguro fora da vista do jogador, a 15–40 blocos (entrada sem portal). */
+    /** A safe spot out of the player's sight, 15–40 blocks away (entrance without a portal). */
     private static Pos hiddenSpot(World w, Pos center) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 30; i++) {

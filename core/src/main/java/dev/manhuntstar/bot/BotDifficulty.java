@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Dificuldade do bot: fase inicial, chance de drop por fase, duração de cada fase,
- * multiplicador de dano recebido e de dano causado. O nome mostrado fica nos arquivos de idioma
- * ({@code difficulty.<nome>}).
+ * Bot difficulty: starting phase, drop chance per phase, length of each phase, damage taken
+ * multiplier and damage dealt multiplier. The displayed name is in the language files
+ * ({@code difficulty.<name>}).
  */
 public enum BotDifficulty implements Choice {
     EASY(1, 1.0f, 300, 1.0f, 1.0f),

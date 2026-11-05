@@ -51,8 +51,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Registro e ciclo de vida de todos os bots: criação (com skin), escolha do jogador alvo, morte,
- * respawn, mortes silenciosas dos bots muito longe, troca de dimensão, salvamento e grupos.
+ * Registry and life cycle of every bot: creation (with skin), choosing the target player, death,
+ * respawn, silent deaths of bots that are too far away, dimension changes, saving and groups.
  */
 public final class BotManager {
 
@@ -100,7 +100,7 @@ public final class BotManager {
         this.caveAmbush = new CaveAmbush(this);
     }
 
-    // ------------------------------------------------------------------ acesso
+    // ------------------------------------------------------------------ access
 
     public ManhuntStarPlugin plugin() {
         return plugin;
@@ -118,12 +118,12 @@ public final class BotManager {
         return rings;
     }
 
-    /** Quem pode ser caçado (lista de jogadores e quem entra no meio). */
+    /** Who can be hunted (player list and late joiners). */
     public HuntPolicy policy() {
         return policy;
     }
 
-    /** Pausa da caçada e o relógio que para junto com ela. */
+    /** The hunt pause and the clock that stops along with it. */
     public PauseService pause() {
         return pause;
     }
@@ -172,7 +172,7 @@ public final class BotManager {
         return id == null ? null : bots.get(id);
     }
 
-    /** Primeiro bot com esse nome interno ou visual (sem diferenciar maiúsculas). */
+    /** First bot with this internal or display name (case-insensitive). */
     public Bot bot(String name) {
         for (Bot b : bots.values()) {
             if (b.name().equalsIgnoreCase(name)) {
@@ -197,7 +197,7 @@ public final class BotManager {
         return out;
     }
 
-    /** O bot dono desta entidade (Mannequin), ou null. */
+    /** The bot that owns this entity (Mannequin), or null. */
     public Bot byEntity(Entity e) {
         if (!(e instanceof Mannequin)) {
             return null;
@@ -220,7 +220,7 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ grupos
+    // ------------------------------------------------------------------ groups
 
     public BotGroup group(String name) {
         return name == null ? null : groups.get(name.toLowerCase(Locale.ROOT));
@@ -239,7 +239,7 @@ public final class BotManager {
         return g == null || g.trackPlayers();
     }
 
-    /** Outro bot que não é de um grupo inimigo (o golpe de varredura não acerta aliados). */
+    /** Another bot that isn't from an enemy group (the sweep attack doesn't hit allies). */
     public boolean isAlly(Bot bot, Entity other) {
         Bot o = byEntity(other);
         if (o == null || o == bot) {
@@ -271,17 +271,17 @@ public final class BotManager {
         return nearest;
     }
 
-    // ------------------------------------------------------------------ alvo
+    // ------------------------------------------------------------------ target
 
     /**
-     * Jogador que os bots podem caçar agora: vivo, fora do espectador e liberado pela lista de
-     * jogadores e pela regra de quem entra no meio. O alvo forçado (/manhunt target) passa sempre.
+     * A player the bots can hunt now: alive, not a spectator and allowed by the player list and by the
+     * late-joiner rule. The forced target (/manhunt target) always passes.
      */
     public boolean isEligibleTarget(Player p) {
         return isActivePlayer(p) && (p.getUniqueId().equals(forcedTarget) || policy.canBeHunted(p));
     }
 
-    /** Online, vivo e fora do modo espectador. */
+    /** Online, alive and not in spectator mode. */
     public static boolean isActivePlayer(Player p) {
         return p != null && p.isOnline() && !p.isDead() && p.getGameMode() != GameMode.SPECTATOR;
     }
@@ -294,7 +294,7 @@ public final class BotManager {
         forcedTarget = id;
     }
 
-    /** Jogador alvo do bot: forçado → regra do modo (mais perto, dividido igualmente, mais longe). */
+    /** The bot's target player: forced → the mode's rule (closest, split evenly, farthest). */
     public Player resolvePlayerTarget(Bot bot) {
         if (!isTrackingPlayers(bot)) {
             return null;
@@ -346,7 +346,7 @@ public final class BotManager {
         return chosen;
     }
 
-    /** Divide os bots igualmente entre os jogadores, trocando para um mais perto só se ganhar ≥ 2,5 blocos (≤ 10). */
+    /** Splits the bots evenly among the players, switching to a closer one only if it gains ≥ 2.5 blocks (≤ 10). */
     private Player balanced(Bot bot, List<Player> pool) {
         Map<UUID, Integer> counts = new HashMap<>();
         Map<UUID, Player> byId = new HashMap<>();
@@ -392,9 +392,9 @@ public final class BotManager {
         return best;
     }
 
-    // ------------------------------------------------------------------ fases
+    // ------------------------------------------------------------------ phases
 
-    /** @return true se for a maior fase já alcançada por um bot (anunciar no chat). */
+    /** @return true if it is the highest phase any bot has reached (announce in chat). */
     public boolean notePhaseReached(int phase) {
         if (phase > globalMaxPhase) {
             globalMaxPhase = phase;
@@ -410,7 +410,7 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ cavalos
+    // ------------------------------------------------------------------ horses
 
     public void markHorseInaccessible(Horse horse, int ticks) {
         inaccessibleHorses.put(horse.getUniqueId(), (long) Bukkit.getCurrentTick() + ticks);
@@ -422,9 +422,9 @@ public final class BotManager {
     }
 
     /**
-     * Desliga a IA do cavalo enquanto o bot monta. No jogo só um jogador comanda o cavalo; com
-     * outro cavaleiro ele continua passeando, pastando e virando sozinho e briga com o bot.
-     * A marca no cavalo garante que a IA volte mesmo se o servidor cair com o bot montado.
+     * Turns off the horse's AI while the bot rides it. In the game only a player steers the horse; with
+     * another rider it keeps wandering, grazing and turning on its own and fights the bot.
+     * The mark on the horse makes sure the AI comes back even if the server goes down with the bot mounted.
      */
     public void takeHorseControl(Bot bot, AbstractHorse horse) {
         Bot.keepActive(horse);
@@ -437,7 +437,7 @@ public final class BotManager {
         controlledHorses.put(horse.getUniqueId(), bot.id());
     }
 
-    /** Devolve o cavalo à própria IA. */
+    /** Gives the horse back its own AI. */
     public void releaseHorse(AbstractHorse horse) {
         controlledHorses.remove(horse.getUniqueId());
         if (horse.getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
@@ -447,7 +447,7 @@ public final class BotManager {
         }
     }
 
-    /** Solta cavalos cujo bot desmontou, morreu ou foi removido sem passar pela rotina do cavalo. */
+    /** Releases horses whose bot dismounted, died or was removed without going through the horse routine. */
     private void tickControlledHorses() {
         if (controlledHorses.isEmpty()) {
             return;
@@ -455,7 +455,7 @@ public final class BotManager {
         for (Map.Entry<UUID, UUID> e : new ArrayList<>(controlledHorses.entrySet())) {
             Entity horse = Bukkit.getEntity(e.getKey());
             if (!(horse instanceof AbstractHorse h)) {
-                // descarregado: a marca é tratada quando o chunk voltar (removeOrphan)
+                // unloaded: the mark is handled when the chunk comes back (removeOrphan)
                 controlledHorses.remove(e.getKey());
                 continue;
             }
@@ -476,12 +476,12 @@ public final class BotManager {
         controlledHorses.clear();
     }
 
-    // ------------------------------------------------------------------ criação
+    // ------------------------------------------------------------------ creation
 
     /**
-     * Cria {@code count} bots no local. Nomes: "nome1, nome2..." ou "%" trocado pelo número;
-     * o nome visível é o nome sem "%". Com o modo MANHUNT eles nascem em roda em volta do local
-     * (que é o centro da roda) e esperam até alguém sair dela.
+     * Creates {@code count} bots at the location. Names: "name1, name2..." or "%" replaced by the number;
+     * the visible name is the name without "%". In MANHUNT mode they spawn in a ring around the location
+     * (which is the ring's center) and wait until someone leaves it.
      */
     public CompletableFuture<List<Bot>> createBots(Location loc, String name, String skinName, int count,
                                                    BotDifficulty difficulty, int startPhase, int aggression) {
@@ -491,8 +491,8 @@ public final class BotManager {
     }
 
     /**
-     * Centro da roda para bots criados em {@code given} (posição de quem criou): no modo manual, o
-     * ponto marcado com /manhunt ring point; sem ponto (ou com o mundo dele descarregado), o próprio local.
+     * Ring center for bots created at {@code given} (the creator's position): in manual mode, the
+     * point set with /manhunt ring point; with no point (or with its world unloaded), the location itself.
      */
     public Location ringCenterFor(Location given) {
         if (!manualRingPointInUse()) {
@@ -502,7 +502,7 @@ public final class BotManager {
         return new Location(Bukkit.getWorld(p.world()), p.x(), p.y(), p.z());
     }
 
-    /** O modo manual está ligado mas não há ponto da roda utilizável. */
+    /** Manual mode is on but there is no usable ring point. */
     public boolean manualRingPointMissing() {
         return settings().spawnMode.get() == SpawnMode.MANHUNT && settings().ringCenter.get() == RingCenter.MANUAL && !manualRingPointInUse();
     }
@@ -515,7 +515,7 @@ public final class BotManager {
         return p != null && Bukkit.getWorld(p.world()) != null;
     }
 
-    /** Raio da roda: o da opção, ou 5 blocos + 1 a cada 5 bots com a opção em 0. */
+    /** Ring radius: the option's value, or 5 blocks + 1 for every 5 bots with the option at 0. */
     private double ringRadius(int count) {
         double fixed = settings().ringRadius.value();
         return fixed <= 0 ? 5.0 + count / 5.0 : Math.max(2.0, fixed);
@@ -538,7 +538,7 @@ public final class BotManager {
             } else {
                 spawn = pos.clone().add(Math.cos(angle) * radius + (r.nextDouble() - 0.5), 0, Math.sin(angle) * radius + (r.nextDouble() - 0.5));
                 spawn.setY(surfaceNear(world, spawn, pos.getY()));
-                // de frente para o centro da roda
+                // facing the ring's center
                 spawn.setYaw(Locations.vec(pos).subtract(Locations.vec(spawn)).yaw());
             }
             String botName = name.contains("%") ? name.replace("%", String.valueOf(i)) : name + i;
@@ -557,14 +557,14 @@ public final class BotManager {
         }
         boolean inRing = mode == SpawnMode.MANHUNT && rings.create(pos, radius, created, settings().startCountdown.value());
         if (!inRing && !created.isEmpty()) {
-            // sem roda os bots já caçam
+            // without a ring the bots hunt right away
             policy.beginIfIdle();
         }
         dirty = true;
         return created;
     }
 
-    /** Altura do chão perto de um ponto da roda (para não nascer dentro de blocos nem no ar). */
+    /** Ground height near a ring point (so it doesn't spawn inside blocks or in the air). */
     private static double surfaceNear(World w, Location spawn, double refY) {
         Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 4; dy++) {
@@ -578,7 +578,7 @@ public final class BotManager {
         return refY;
     }
 
-    /** Se o ponto cair dentro de blocos, sobe até o primeiro espaço livre (até 16 blocos). */
+    /** If the point falls inside blocks, moves up to the first free space (up to 16 blocks). */
     private static double freeSpaceAbove(World w, Location spawn) {
         Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 16; dy++) {
@@ -624,9 +624,9 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ teleporte
+    // ------------------------------------------------------------------ teleport
 
-    /** Teleporta o bot (no mesmo mundo ou para outro, recriando a entidade) e estabiliza a IA. */
+    /** Teleports the bot (in the same world or to another, recreating the entity) and settles the AI. */
     public void teleportBot(Bot bot, Location dest) {
         if (!bot.isAlive()) {
             return;
@@ -643,7 +643,7 @@ public final class BotManager {
         }
     }
 
-    /** Leva os bots vivos com esse nome até o jogador (como remove e skin, vale para todos). @return quantos foram */
+    /** Brings the living bots with this name to the player (like remove and skin, applies to all). @return how many went */
     public int teleportBotsToPlayer(String name, Player target) {
         List<Bot> alive = new ArrayList<>();
         for (Bot b : botsNamed(name)) {
@@ -666,13 +666,13 @@ public final class BotManager {
         return n;
     }
 
-    /** Perto do jogador, espalhado um pouco para os bots não ficarem um dentro do outro. */
+    /** Near the player, spread out a little so the bots don't end up inside each other. */
     private static Location nearPlayer(Player target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         return target.getLocation().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
     }
 
-    /** Alvo foi para outra dimensão: abre uma entrada por portal para os bots que o seguem. */
+    /** The target went to another dimension: opens a portal entrance for the bots following them. */
     public void requestDimensionChange(Player target, World from) {
         for (PortalEntrance e : entrances) {
             if (e.playerId().equals(target.getUniqueId()) && e.worldId().equals(target.getWorld().getUID())) {
@@ -681,7 +681,7 @@ public final class BotManager {
         }
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
-            // bots esperando numa roda ficam nela até a largada
+            // bots waiting in a ring stay there until the start
             if (b.world().equals(from) && target.getUniqueId().equals(b.targetPlayerId()) && b.idle() == null) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
@@ -692,9 +692,9 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ morte e respawn
+    // ------------------------------------------------------------------ death and respawn
 
-    /** Morte do bot (evento de morte da entidade): drops, mensagem, API e respawn. */
+    /** Bot death (the entity's death event): drops, message, API and respawn. */
     public void handleDeath(Bot bot, EntityDeathEvent event) {
         Mannequin e = bot.entity();
         event.getDrops().clear();
@@ -729,7 +729,7 @@ public final class BotManager {
         dirty = true;
     }
 
-    /** Morte silenciosa: some sem mensagem nem drops e renasce como numa morte normal. */
+    /** Silent death: disappears with no message or drops and respawns as in a normal death. */
     public void killSilently(Bot bot) {
         if (!bot.isAlive()) {
             return;
@@ -780,7 +780,7 @@ public final class BotManager {
     }
 
     private void respawn(Bot bot, PendingRespawn p) {
-        // bot da roda que morreu antes da largada volta para a roda, e não já caçando
+        // a ring bot that died before the start goes back to the ring, not straight to hunting
         UUID ringId = waitingRing(bot);
         Location caveLoc = caveAmbush.respawnLocation(bot);
         Location spawn;
@@ -812,7 +812,7 @@ public final class BotManager {
         dirty = true;
     }
 
-    /** A roda em que o bot ainda espera (também morto, antes de renascer), ou null. */
+    /** The ring the bot is still waiting in (also when dead, before respawning), or null. */
     private UUID waitingRing(Bot bot) {
         IdleBehavior idle = bot.idle();
         return idle != null && idle.isActive() && rings.ring(idle.ringId()) != null ? idle.ringId() : null;
@@ -823,7 +823,7 @@ public final class BotManager {
         return w == null ? Bukkit.getWorlds().getFirst() : w;
     }
 
-    /** No chão, onde o bot morreu (para o bot da roda, a própria roda). */
+    /** On the ground, where the bot died (for a ring bot, the ring itself). */
     private static Location deathSpot(PendingRespawn p) {
         World w = deathWorld(p);
         Vec3 pos = p.deathPos() == null ? Locations.vec(w.getSpawnLocation()) : p.deathPos();
@@ -853,7 +853,7 @@ public final class BotManager {
         return deathSpot(p);
     }
 
-    /** Lugar de 100–200 blocos do alvo, fora da linha de visão dele (só em chunks carregados). */
+    /** A spot 100–200 blocks from the target, out of their line of sight (only in loaded chunks). */
     private static Location findHiddenLocation(Player target) {
         World w = target.getWorld();
         ThreadLocalRandom r = ThreadLocalRandom.current();
@@ -874,7 +874,7 @@ public final class BotManager {
         return null;
     }
 
-    /** Chão seguro perto do ponto (anéis de até 24 blocos); no Nether procura também em altura. */
+    /** Safe ground near the point (rings of up to 24 blocks); in the Nether it also searches vertically. */
     public static Location resolveSurface(Location anchor) {
         World w = anchor.getWorld();
         int bx = anchor.getBlockX();
@@ -920,9 +920,9 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ remoção
+    // ------------------------------------------------------------------ removal
 
-    /** Remove o bot de vez (sem respawn), como um jogador saindo do servidor. */
+    /** Removes the bot for good (no respawn), like a player leaving the server. */
     public void removeBot(Bot bot) {
         bot.setShouldRespawn(false);
         pendingRespawns.remove(bot.id());
@@ -1031,9 +1031,9 @@ public final class BotManager {
     }
 
     /**
-     * Caçada pausada: cada bot fica parado onde estava e não pensa; rodas, caçada, táticas,
-     * renascimentos e chegadas por portal esperam. Seguem só os blocos temporários, a checagem dos
-     * cavalos e o salvamento.
+     * Hunt paused: each bot stays still where it was and doesn't think; rings, hunt, tactics,
+     * respawns and portal arrivals wait. Only temporary blocks, the horse check and saving
+     * keep going.
      */
     private void tickPaused() {
         for (Bot bot : bots.values()) {
@@ -1072,7 +1072,7 @@ public final class BotManager {
         }
     }
 
-    /** Mortes silenciosas: o bot mais longe de cada jogador (≥ 200 blocos) some e renasce mais perto. */
+    /** Silent deaths: the farthest bot from each player (≥ 200 blocks) disappears and respawns closer. */
     private void tickDistanceManagement() {
         long now = pause.clock();
         if (!pendingSilentDeaths.isEmpty()) {
@@ -1091,7 +1091,7 @@ public final class BotManager {
             }
             toKill.forEach(this::killSilently);
         }
-        // bots da roda ficam de fora (b.idle() != null); os outros seguem com as mortes silenciosas
+        // ring bots are left out (b.idle() != null); the others go on with silent deaths
         if (Bukkit.getCurrentTick() % 20 != 0 || !settings().silentDeaths.on()) {
             return;
         }
@@ -1119,9 +1119,9 @@ public final class BotManager {
         }
     }
 
-    // ------------------------------------------------------------------ entidade sumiu sem morrer
+    // ------------------------------------------------------------------ entity gone without dying
 
-    /** A entidade do bot foi removida por fora (comando, outro plugin): o bot volta no mesmo lugar. */
+    /** The bot's entity was removed from outside (command, another plugin): the bot comes back in the same place. */
     public void onEntityLost(Bot bot) {
         if (bot.entity() == null || bot.entity().isValid() || bot.entity().isDead()) {
             return;
@@ -1145,24 +1145,24 @@ public final class BotManager {
         }
     }
 
-    /** Remove Mannequins marcados como bot que não pertencem a nenhum bot registrado (órfãos). */
+    /** Removes Mannequins marked as bots that don't belong to any registered bot (orphans). */
     public void removeOrphan(Entity e) {
         if (isBotEntity(e) && byEntity(e) == null) {
             e.remove();
         } else if (e instanceof AbstractHorse h && !controlledHorses.containsKey(h.getUniqueId())
                 && h.getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
-            // cavalo que ficou sem IA (servidor caiu com o bot montado)
+            // a horse left without AI (the server went down with the bot mounted)
             releaseHorse(h);
         }
     }
 
-    // ------------------------------------------------------------------ persistência
+    // ------------------------------------------------------------------ persistence
 
     public void markDirty() {
         dirty = true;
     }
 
-    /** Salva o estado de todos os bots (assíncrono, a não ser no desligamento). */
+    /** Saves the state of every bot (asynchronously, except on shutdown). */
     public void flush(boolean async) {
         if (!settings().persistentBots.on()) {
             if (dirty) {
@@ -1184,20 +1184,20 @@ public final class BotManager {
         dirty = false;
     }
 
-    /** Pausa, rodas esperando e a caçada em andamento (participantes, protegidos, quem ficou de fora). */
+    /** Pause, rings waiting and the hunt in progress (participants, protected players, who was left out). */
     private void saveManhunt(ConfigurationSection s) {
         s.set("pausada", pause.isPaused());
         policy.save(s.createSection("cacada"));
         rings.save(s.createSection("rodas"));
     }
 
-    /** Recria a pausa, as rodas e a caçada salvas; chamado depois de {@link #restore}. */
+    /** Recreates the saved pause, rings and hunt; called after {@link #restore}. */
     public void restoreManhunt(ConfigurationSection s) {
         if (s == null || !settings().persistentBots.on()) {
             return;
         }
         if (s.getBoolean("pausada")) {
-            // antes da caçada: o relógio parado vale para a proteção que ela recria
+            // before the hunt: the stopped clock applies to the protection it recreates
             pause.pause();
         }
         policy.load(s.getConfigurationSection("cacada"));
@@ -1208,7 +1208,7 @@ public final class BotManager {
         plugin.storage().save(List.of(), new ArrayList<>(groups.values()), null, true);
     }
 
-    /** Recria os bots salvos ao ligar o servidor. */
+    /** Recreates the saved bots when the server starts. */
     public int restore(List<BotSnapshot> snapshots, List<BotGroup> savedGroups) {
         for (BotGroup g : savedGroups) {
             groups.put(g.name().toLowerCase(Locale.ROOT), g);
@@ -1238,7 +1238,7 @@ public final class BotManager {
                     bot.applySnapshotEquipment(s);
                     bot.progression().updateGear();
                 } else if (s.shouldRespawn() && settings().respawn.on()) {
-                    // morto ao desligar: só volta se o respawn estiver ligado, como numa morte normal
+                    // dead at shutdown: only comes back if respawn is on, as in a normal death
                     pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.getName(), Locations.vec(loc)));
                 }
                 notePhaseReached(bot.progression().phase());
@@ -1250,7 +1250,7 @@ public final class BotManager {
         return n;
     }
 
-    /** Desligamento: salva tudo e tira as entidades do mundo (elas não são salvas com o mundo). */
+    /** Shutdown: saves everything and takes the entities out of the world (they aren't saved with the world). */
     public void shutdown() {
         flush(false);
         pause.shutdown();

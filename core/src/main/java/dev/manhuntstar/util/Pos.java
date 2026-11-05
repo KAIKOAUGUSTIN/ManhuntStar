@@ -1,6 +1,6 @@
 package dev.manhuntstar.util;
 
-/** Posição de bloco imutável. */
+/** Immutable block position. */
 public record Pos(int x, int y, int z) {
 
     public Pos offset(int dx, int dy, int dz) {

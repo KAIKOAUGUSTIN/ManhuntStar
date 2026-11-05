@@ -10,13 +10,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.entity.Player;
 
 /**
- * Bots esperando na roda (modo MANHUNT): pulam, agacham, giram, olham para o jogador mais perto e
- * para os colegas. Quem solta é a {@link dev.manhuntstar.manhunt.RingService}, quando alguém sai da
- * roda e a contagem acaba.
+ * Bots waiting in the ring (MANHUNT mode): they jump, crouch, spin, look at the closest player and
+ * at their teammates. {@link dev.manhuntstar.manhunt.RingService} releases them when someone leaves the
+ * ring and the countdown ends.
  */
 public final class IdleBehavior {
 
-    /** Distância até onde o bot da roda olha para jogadores. */
+    /** How far a ring bot looks at players. */
     private static final double WATCH_RANGE = 32.0;
 
     private final Bot bot;
@@ -41,7 +41,7 @@ public final class IdleBehavior {
         return ringId;
     }
 
-    /** Sai da roda de vez: o bot deixa de ser tratado como "esperando" pelo resto do plugin. */
+    /** Leaves the ring for good: the rest of the plugin no longer treats the bot as "waiting". */
     public void release() {
         if (active) {
             active = false;
@@ -52,14 +52,14 @@ public final class IdleBehavior {
         }
     }
 
-    /** @return true se o bot ficou parado na roda neste tick (a IA normal não roda). */
+    /** @return true if the bot stayed still in the ring this tick (the normal AI doesn't run). */
     public boolean tick() {
         if (!active) {
             return false;
         }
         Ring ring = bot.manager().rings().ring(ringId);
         if (ring == null) {
-            // a roda acabou sem passar por este bot
+            // the ring ended without going through this bot
             release();
             return false;
         }

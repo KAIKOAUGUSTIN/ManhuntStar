@@ -15,9 +15,9 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Elytra (opção "elytra", desligada por padrão): com o alvo a mais de 80 blocos e céu aberto, o bot
- * veste a elytra, pula, abre as asas e usa foguetes para subir até um ponto alto perto do alvo;
- * pousa a 12 blocos do ponto ou a 30 do alvo e devolve o peitoral.
+ * Elytra ({@code mobility.elytra} option, off by default): with the target more than 80 blocks away and open sky, the bot
+ * puts on the elytra, jumps, opens the wings and uses fireworks to climb to a high point near the target;
+ * lands 12 blocks from the point or 30 from the target and gives back the chestplate.
  */
 public final class ElytraFlight {
 
@@ -124,7 +124,7 @@ public final class ElytraFlight {
         }
     }
 
-    /** Impulso do foguete como no jogo: v += olhar*0,1 + (olhar*1,5 - v)*0,5 por tick. */
+    /** Firework boost as in the game: v += look*0.1 + (look*1.5 - v)*0.5 per tick. */
     private void tickBoost() {
         if (boostTicks <= 0) {
             return;

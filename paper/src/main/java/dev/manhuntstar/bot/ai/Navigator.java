@@ -29,54 +29,54 @@ import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 
 /**
- * Navegação por caminho (A*) com as regras do mod: alvo "resolvido" (skybase →
- * ponto de aproximação, alvo distante → passo intermediário de 96 blocos), recálculo quando o
- * caminho fica velho ou o alvo anda, cálculo antecipado do próximo trecho, filas de blocos a
- * cavar/colocar, parkour e navegação na água (subir para respirar, sair pela margem).
+ * Path navigation (A*) with the mod's rules: "resolved" target (skybase →
+ * approach point, distant target → 96-block intermediate step), recomputing when the path gets
+ * stale or the target moves, computing the next stretch ahead of time, queues of blocks to
+ * dig/place, parkour and water navigation (coming up for air, getting out by the bank).
  */
 public final class Navigator {
 
     private static final double NODE_REACH_SQ = 2.25;
-    /** Raio para dar o nó por alcançado quando não dá para seguir reto até o próximo (curva em quina). */
+    /** Radius to count the node as reached when it can't go straight to the next one (corner turn). */
     private static final double NODE_REACH_TIGHT_SQ = 0.36;
-    /** O nó seguido ficou mais que isso acima do bot (caiu, foi empurrado de uma beirada): recalcula. */
+    /** The node being followed ended up more than this above the bot (it fell, got pushed off a ledge): recompute. */
     private static final double STRAY_BELOW = 3.0;
-    /** No chão, longe assim do nó seguido (de lado ou acima dele), o caminho não serve mais. */
+    /** On the ground, this far from the node being followed (to the side or above it), the path is no longer usable. */
     private static final double STRAY_HORIZONTAL = 5.0;
     private static final double STRAY_ABOVE = AStar.MAX_DIG_FALL + 2;
-    /** Até onde procurar, embaixo do bot no ar, o chão em que ele vai pousar. */
+    /** How far below a bot in the air to look for the ground it will land on. */
     private static final int LANDING_SCAN = 64;
     private static final long STALE_MS = 2000L;
     private static final int LOOKAHEAD_TRIGGER = 25;
     private static final int MAX_DISTANCE = 150;
     private static final int APPROACH_RADIUS = 12;
     private static final int FAR_STEP = 96;
-    /** Distâncias e desvios (graus) tentados, nessa ordem, para o ponto intermediário. */
+    /** Distances and detours (degrees) tried, in this order, for the intermediate point. */
     private static final int[] STEP_LENGTHS = {FAR_STEP, 64, 40, 20};
     private static final int[] STEP_ANGLES = {0, 30, -30, 60, -60};
     private static final int STEP_RADIUS = 5;
-    /** O desvio escolhido vale até o bot chegar a esta distância dele ou o alvo andar mais que isso. */
+    /** The chosen detour holds until the bot gets within this distance of it or the target moves more than this. */
     private static final int STEP_KEEP = 4;
     private static final int STEP_KEEP_TARGET_MOVE = 16;
-    /** Em mundo com teto (Nether), quantos blocos acima e abaixo do bot procurar chão. */
+    /** In a world with a ceiling (Nether), how many blocks above and below the bot to look for ground. */
     private static final int CEILING_BAND = 12;
     private static final int SKYBASE_MIN_ELEVATION = 3;
-    /** Até essa diferença de altura e distância o bot está no nível do alvo (não precisa de aproximação). */
+    /** Within this height difference and distance the bot is at the target's level (no approach needed). */
     private static final int SAME_LEVEL_DY = 2;
     private static final int SAME_LEVEL_RADIUS = 32;
     private static final int RESOLVE_CACHE_TICKS = 10;
     private static final int WATER_ASCEND_AIR = 60;
     private static final int WATER_RESUME_AIR = 220;
-    /** Um pulo de 2–3 blocos leva menos de 1 s; passou de 3 s, o bot ficou preso. */
+    /** A 2–3 block jump takes less than 1 s; past 3 s, the bot got stuck. */
     private static final int PARKOUR_TIMEOUT_TICKS = 60;
-    /** Trecho de água mais curto que isso não vale o barco, mesmo que o A* tenha passado por ele. */
+    /** A stretch of water shorter than this isn't worth the boat, even if the A* went through it. */
     private static final int BOAT_MIN_RUN = 6;
-    /** Quanto um bloco nadando vale em blocos correndo, na escolha do ponto de saída da água. */
+    /** How much a block of swimming is worth in blocks of sprinting, when choosing where to leave the water. */
     private static final double SWIM_EXIT_WEIGHT = 3.0;
 
     private enum WaterMode { NONE, CRUISE, ASCEND_FOR_AIR }
 
-    /** Procura, numa coluna (x, z), onde ficar em pé. */
+    /** Looks, in an (x, z) column, for a place to stand. */
     @FunctionalInterface
     private interface ColumnSearch {
         Pos find(int x, int z);
@@ -95,7 +95,7 @@ public final class Navigator {
     private int lastResolveDebugTick = -200;
     private CompletableFuture<PathResult> task;
     private boolean lookahead;
-    /** Fim de caminho de onde o trecho extra não rendeu nada: não é pedido de novo de lá. */
+    /** End of a path where the extra stretch got nowhere: it isn't requested from there again. */
     private Pos lookaheadDeadEnd;
     private final ArrayDeque<Pos> mineQueue = new ArrayDeque<>();
     private final ArrayDeque<Pos> placeQueue = new ArrayDeque<>();
@@ -104,17 +104,17 @@ public final class Navigator {
     private int parkourTicks;
     private WaterMode waterMode = WaterMode.NONE;
     private Pos escapeTarget;
-    /** O último ponto devolvido é um nó de caminho calculado (e não um "vá reto até lá"). */
+    /** The last point returned is a node of a computed path (and not a "go straight there"). */
     private boolean onPath;
-    /** Como saiu o último ponto intermediário, para o debug: distância/desvio, água ou motivo da falha. */
+    /** How the last intermediate point came out, for debugging: distance/detour, water or why it failed. */
     private String stepNote = "";
-    /** Desvio em uso quando a reta de 96 blocos não tem chão, e o alvo para o qual foi escolhido. */
+    /** Detour in use when the 96-block straight line has no ground, and the target it was chosen for. */
     private Pos keptStep;
     private Pos keptStepTarget;
     private String keptStepNote = "";
-    /** Lado (1 ou -1) do último desvio: na próxima escolha esse lado é tentado primeiro. */
+    /** Side (1 or -1) of the last detour: on the next choice that side is tried first. */
     private int stepSide = 1;
-    /** Até este tick o A* não planeja barco (uma travessia acabou de falhar). */
+    /** Until this tick the A* doesn't plan boats (a crossing has just failed). */
     private int boatBlockedUntil;
 
     public Navigator(Bot bot) {
@@ -126,15 +126,15 @@ public final class Navigator {
         return bot.world();
     }
 
-    // ------------------------------------------------------------------ entrada principal
+    // ------------------------------------------------------------------ main entry
 
-    /** Próximo ponto para andar rumo ao alvo, ou null se não houver caminho e o fallback estiver desligado. */
+    /** Next point to walk to toward the target, or null if there is no path and the fallback is off. */
     public Vec3 waypoint(Vec3 finalTarget) {
         personality.tick();
         return astarWaypoint(resolveWaterAwareTarget(finalTarget));
     }
 
-    /** Foge do ponto de ameaça para um lugar a 40–70 blocos na direção oposta. */
+    /** Flees from the threat to a place 40–70 blocks away in the opposite direction. */
     public Vec3 escapeWaypoint(Vec3 threat) {
         personality.tick();
         Pos botPos = bot.blockPos();
@@ -194,8 +194,8 @@ public final class Navigator {
             boolean targetMoved = lastTarget == null || lastTarget.manhattan(targetPos) > threshold;
             needsRecalc = stale || targetMoved;
         }
-        // Longe do caminho, o trecho extra pedido do fim dele não serve: recalcula de onde o bot está. Com um
-        // cálculo inteiro já em andamento, espera por ele.
+        // Far from the path, the extra stretch requested from its end is no use: recompute from where the bot is. With
+        // a full computation already running, wait for it.
         if (current != null && (task == null || lookahead) && strayedFromPath()) {
             needsRecalc = true;
         }
@@ -232,28 +232,28 @@ public final class Navigator {
     }
 
     /**
-     * O último {@link #waypoint} veio de um caminho calculado. Quando é false o ponto é só uma direção
-     * (alvo longe demais, caminho ainda sendo calculado ou que falhou) e quem anda precisa desviar dos
-     * obstáculos sozinho.
+     * The last {@link #waypoint} came from a computed path. When false the point is only a direction
+     * (target too far, path still being computed or one that failed) and whoever walks has to avoid
+     * obstacles on their own.
      */
     public boolean onPath() {
         return onPath;
     }
 
-    // ------------------------------------------------------------------ barco
+    // ------------------------------------------------------------------ boat
 
     private boolean boatsAllowed() {
         return bot.settings().allowBoat.on() && Bukkit.getCurrentTick() >= boatBlockedUntil;
     }
 
-    /** Depois de uma travessia que não deu certo o bot nada ou contorna por um tempo. */
+    /** After a crossing that didn't work the bot swims or goes around for a while. */
     public void blockBoats(int ticks) {
         boatBlockedUntil = Bukkit.getCurrentTick() + ticks;
     }
 
     /**
-     * Fim do trecho de água à frente no caminho, quando o A* decidiu atravessá-lo de barco. A pé só
-     * responde com o bot já na beira de um trecho longo; de barco, devolve o fim do trecho em que ele está.
+     * End of the water stretch ahead on the path, when the A* decided to cross it by boat. On foot it only
+     * answers with the bot already at the edge of a long stretch; by boat, returns the end of the stretch it's on.
      */
     public Pos boatCrossingGoal(boolean riding) {
         if (current == null || !boatsAllowed()) {
@@ -305,7 +305,7 @@ public final class Navigator {
                 if (result.path().size() > 1) {
                     path.addAll(result.path().subList(1, result.path().size()));
                 } else {
-                    // do fim do caminho não sai nada (ponto no ar, beco): pedia de novo de lá a cada tick
+                    // nothing comes out of the end of the path (point in the air, dead end): it asked again from there every tick
                     lookaheadDeadEnd = path.getLast();
                 }
                 Set<Pos> mine = new LinkedHashSet<>(current.toMine());
@@ -348,7 +348,7 @@ public final class Navigator {
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
         task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement, boatsAllowed());
         lastTarget = target;
-        // o trecho extra continua o caminho antigo: contar como cálculo novo impedia o caminho de ficar velho
+        // the extra stretch continues the old path: counting it as a new computation kept the path from going stale
         if (!lookahead) {
             lastCalcMs = System.currentTimeMillis();
         }
@@ -369,11 +369,11 @@ public final class Navigator {
         return dist <= 20 ? 2 : 4;
     }
 
-    // ------------------------------------------------------------------ seguir os nós
+    // ------------------------------------------------------------------ following the nodes
 
     /**
-     * O bot saiu de perto do nó que está seguindo (caiu de uma beirada, foi empurrado). Um nó bem acima dele
-     * nunca é alcançado: ele ficava pulando embaixo, olhando para cima.
+     * The bot moved away from the node it's following (fell off a ledge, got pushed). A node well above it
+     * is never reached: it kept jumping underneath, looking up.
      */
     private boolean strayedFromPath() {
         if (current == null || pathIndex >= current.path().size() || parkouring || bot.isRiding()) {
@@ -385,7 +385,7 @@ public final class Navigator {
         if (dy < -STRAY_BELOW) {
             return true;
         }
-        // no ar (pulando, numa queda planejada) espera pousar
+        // in the air (jumping, in a planned fall) waits to land
         if (!bot.onGround()) {
             return false;
         }
@@ -405,8 +405,8 @@ public final class Navigator {
         double dz = p.z() - centre.z();
         double dy = p.y() - centre.y();
         double distSq = dx * dx + dz * dz;
-        // Perto do nó já vale seguir para o próximo, a não ser que a linha reta até ele bata num bloco:
-        // aí o caminho faz uma curva em volta dele e o bot precisa chegar de fato no nó.
+        // Close to the node it may already move on to the next one, unless the straight line to it hits a block:
+        // then the path turns around it and the bot needs to actually reach the node.
         boolean reached = distSq < NODE_REACH_TIGHT_SQ || (distSq < NODE_REACH_SQ
                 && (pathIndex + 1 >= current.path().size() || vehicle != null || straightWalkClear(p, current.path().get(pathIndex + 1))));
         if (reached && dy > -0.2 && dy < 1.5) {
@@ -420,7 +420,7 @@ public final class Navigator {
             centre = Vec3.bottomCenter(next);
             int gapX = Math.abs(prev.x() - next.x());
             int gapZ = Math.abs(prev.z() - next.z());
-            // montado, o vão é pulado pelo cavalo (HorseRoutine), não pelo parkour a pé
+            // mounted, the gap is jumped by the horse (HorseRoutine), not by parkour on foot
             if ((gapX >= 2 || gapZ >= 2) && (gapX == 0 || gapZ == 0) && vehicle == null) {
                 parkouring = true;
                 parkourTarget = next;
@@ -432,8 +432,8 @@ public final class Navigator {
     }
 
     /**
-     * A linha reta da posição atual até o centro do nó passa livre na altura dos pés e da cabeça do bot.
-     * Degrau para cima não passa (o bloco do degrau está na altura dos pés), então subida nunca corta caminho.
+     * The straight line from the current position to the node's center is free at the bot's feet and head
+     * height. A step up doesn't pass (the step's block is at feet height), so going up never cuts corners.
      */
     private boolean straightWalkClear(Vec3 from, Pos node) {
         World w = world();
@@ -441,7 +441,7 @@ public final class Navigator {
         double dx = to.x() - from.x();
         double dz = to.z() - from.z();
         int steps = (int) Math.ceil(Math.hypot(dx, dz) / 0.25);
-        // +0.5: em cima de laje ou areia das almas os pés ficam no bloco de cima, não no da laje
+        // +0.5: on a slab or soul sand the feet are in the block above, not in the slab's
         int feet = (int) Math.floor(from.y() + 0.5);
         for (int i = 1; i < steps; i++) {
             double t = (double) i / steps;
@@ -459,12 +459,12 @@ public final class Navigator {
             return;
         }
         World w = world();
-        // Para subir um degrau o corpo passa 2 blocos acima do nó atual. O A* conta com cavar esse
-        // bloco, que não é nem os pés nem a cabeça do próximo nó; sem isso o bot fica preso embaixo dele.
+        // To climb a step the body goes 2 blocks above the current node. The A* relies on digging that
+        // block, which is neither the next node's feet nor its head; without this the bot gets stuck under it.
         if (node.y() > from.y() && WorldUtil.collides(w, from.above(2))) {
             mineQueue.addLast(from.above(2));
         }
-        // Cavar o chão e cair no vão de baixo (teto da caixa do alvo): o bloco cavado é o chão do nó atual.
+        // Digging the floor and falling into the gap below (the ceiling of the target's box): the dug block is the current node's floor.
         if (node.x() == from.x() && node.z() == from.z() && node.y() < from.y() - 1 && WorldUtil.collides(w, from.below())) {
             mineQueue.addLast(from.below());
         }
@@ -480,7 +480,7 @@ public final class Navigator {
         }
     }
 
-    /** @return true enquanto cava/coloca blocos do caminho (o bot fica no nó atual). */
+    /** @return true while digging/placing the path's blocks (the bot stays at the current node). */
     private boolean tickActions() {
         if (bot.isRiding()) {
             mineQueue.clear();
@@ -543,7 +543,7 @@ public final class Navigator {
             return;
         }
         if (++parkourTicks > PARKOUR_TIMEOUT_TICKS) {
-            // o pulo não deu certo e o bot ficou num vão raso: desiste e recalcula o caminho
+            // the jump didn't work and the bot ended up in a shallow gap: gives up and recomputes the path
             parkouring = false;
             current = null;
             return;
@@ -570,7 +570,7 @@ public final class Navigator {
         }
     }
 
-    /** Pulo de corrida em reta plana (ou sob teto baixo), como o jogador faz para ganhar velocidade. */
+    /** Sprint jump on a flat straight (or under a low ceiling), as the player does to gain speed. */
     public boolean shouldSprintJump() {
         if (current == null || pathIndex >= current.path().size() || parkouring) {
             return false;
@@ -588,7 +588,7 @@ public final class Navigator {
         return pathIndex + 1 < current.path().size() && current.path().get(pathIndex + 1).y() == cur.y();
     }
 
-    /** Há bloco inquebrável (dureza ≥ 50 ou negativa) entre os olhos do bot e o ponto. */
+    /** There is an unbreakable block (hardness ≥ 50 or negative) between the bot's eyes and the point. */
     public boolean hasIndestructibleBlockInPath(Vec3 targetEye) {
         Vec3 from = bot.eyePos();
         Vec3 dir = targetEye.subtract(from);
@@ -617,8 +617,8 @@ public final class Navigator {
     }
 
     /**
-     * Altura da maior queda que o caminho prevê logo à frente (até {@link AStar#MAX_DIG_FALL} blocos; 0 =
-     * nenhuma). Quedas planejadas não precisam de MLG.
+     * Height of the biggest fall the path expects right ahead (up to {@link AStar#MAX_DIG_FALL} blocks; 0 =
+     * none). Planned falls don't need an MLG.
      */
     public int plannedFallHeight() {
         if (current == null || pathIndex >= current.path().size()) {
@@ -666,11 +666,11 @@ public final class Navigator {
         clearDebug();
     }
 
-    // ------------------------------------------------------------------ resolução do alvo
+    // ------------------------------------------------------------------ target resolution
 
     private Pos resolveTarget(Pos botPos, Pos real) {
         int now = Bukkit.getCurrentTick();
-        // a falha também fica guardada: refazer a busca toda a cada tick custaria caro
+        // the failure is stored too: redoing the whole search every tick would be expensive
         if (lastResolvedReal != null && now - lastResolvedTick <= RESOLVE_CACHE_TICKS && lastResolvedReal.manhattan(real) <= 2) {
             if (lastResolved != null) {
                 lastResolveMode = "cache";
@@ -678,9 +678,9 @@ public final class Navigator {
             return lastResolved;
         }
         World w = world();
-        // O ponto de aproximação é para alvo acima do bot (torre, plataforma no céu). Com o bot já no nível
-        // do alvo e perto, ele mandava o bot para outro lugar (até o teto de uma caixa de vidro) e não no alvo.
-        // Com o bot acima do alvo (no teto da caixa dele), mandava descer até o chão embaixo da plataforma.
+        // The approach point is for a target above the bot (tower, platform in the sky). With the bot already at the
+        // target's level and close, it sent the bot somewhere else (up to the ceiling of a glass box) and not to the target.
+        // With the bot above the target (on the ceiling of its box), it sent it down to the ground under the platform.
         boolean botAbove = botPos.y() - real.y() > SAME_LEVEL_DY;
         boolean needsApproach = !botAbove && !sameLevelNearby(botPos, real) && isTargetAirborneOrSkybasing(w, real);
         Pos resolved = real;
@@ -702,7 +702,7 @@ public final class Navigator {
             }
         }
         if (botPos.manhattan(resolved) > MAX_DISTANCE) {
-            // rumo ao alvo real; se já foi essa a busca que falhou acima, não repete
+            // toward the real target; if that's the search that failed above, don't repeat it
             Pos fallback = resolved.equals(real) ? null : intermediateTarget(botPos, real);
             if (fallback == null || botPos.manhattan(fallback) > MAX_DISTANCE) {
                 lastResolveMode = mode + "+null" + stepNote;
@@ -729,11 +729,11 @@ public final class Navigator {
     }
 
     /**
-     * Ponto intermediário rumo a um alvo distante. Primeiro 96 blocos em linha reta, como no mod; se ali
-     * não houver chão (lago, mar, mata fechada), tenta para os lados e mais perto, e por fim a superfície
-     * da água, porque o bot nada. Com barco liberado, água na reta já serve: ele atravessa remando. Só
-     * aceita pontos ao alcance do A* ({@link #MAX_DISTANCE}). Um desvio
-     * escolhido é mantido enquanto servir, senão o bot trocaria de lado a cada passo.
+     * Intermediate point toward a distant target. First 96 blocks in a straight line, as in the mod; if there
+     * is no ground there (lake, sea, dense forest), it tries to the sides and closer, and finally the water's
+     * surface, because the bot swims. With boats allowed, water on the straight line is fine: it rows across.
+     * Only accepts points within the A*'s reach ({@link #MAX_DISTANCE}). A chosen
+     * detour is kept while it works, otherwise the bot would switch sides at every step.
      */
     private Pos intermediateTarget(Pos botPos, Pos target) {
         stepNote = "";
@@ -790,7 +790,7 @@ public final class Navigator {
                     lava |= WorldUtil.isLava(w, top);
                     boolean surfaceWater = WorldUtil.isWater(w, top) && !WorldUtil.hasFluid(w, rough) && botPos.manhattan(top) <= MAX_DISTANCE;
                     if (surfaceWater && straight && boatsAllowed()) {
-                        // de barco, atravessar em linha reta costuma ganhar de procurar terra para os lados
+                        // by boat, crossing in a straight line usually beats looking for land to the sides
                         keptStep = null;
                         stepNote = "(boat)";
                         return top;
@@ -820,7 +820,7 @@ public final class Navigator {
         }
     }
 
-    /** O desvio guardado ainda leva para perto do alvo, o bot não chegou nele e ainda dá para ficar lá. */
+    /** The stored detour still leads near the target, the bot hasn't reached it and it can still stand there. */
     private boolean keptStepStillGood(Pos botPos, Pos target) {
         if (keptStep == null || keptStepTarget == null || keptStepTarget.manhattan(target) > STEP_KEEP_TARGET_MOVE
                 || botPos.manhattan(keptStep) > MAX_DISTANCE) {
@@ -836,7 +836,7 @@ public final class Navigator {
         return WorldUtil.isLoaded(w, keptStep) && (WorldUtil.isWater(w, keptStep) || isStandableApproach(keptStep, false));
     }
 
-    /** Chão da coluna para o ponto intermediário: o lugar em pé mais alto perto do terreno, sem contar copa de árvore. */
+    /** Column ground for the intermediate point: the highest standing spot near the terrain, ignoring tree canopies. */
     private Pos groundInColumn(int x, int z) {
         World w = world();
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
@@ -855,8 +855,8 @@ public final class Navigator {
     }
 
     /**
-     * Em mundo com teto (Nether) o mapa de alturas aponta o teto de bedrock; procura chão perto da altura
-     * do bot, abaixo do teto.
+     * In a world with a ceiling (Nether) the heightmap points at the bedrock ceiling; looks for ground near the
+     * bot's height, below the ceiling.
      */
     private Pos groundNearY(int x, int z, int refY) {
         World w = world();
@@ -866,7 +866,7 @@ public final class Navigator {
         int low = Math.max(w.getMinHeight() + 1, refY - CEILING_BAND);
         int high = Math.min(w.getLogicalHeight() - 1, refY + CEILING_BAND);
         for (int i = 0; i <= 2 * CEILING_BAND; i++) {
-            // refY, refY+1, refY-1, refY+2, ...: o mais perto da altura do bot primeiro
+            // refY, refY+1, refY-1, refY+2, ...: closest to the bot's height first
             int y = refY + ((i + 1) >> 1) * ((i & 1) == 1 ? 1 : -1);
             if (y < low || y > high) {
                 continue;
@@ -962,7 +962,7 @@ public final class Navigator {
         return bot.manager().blockTracker().isPlayerPlaced(world(), p);
     }
 
-    /** Bot na altura do alvo e perto: já está na plataforma dele (ou ao lado) e o caminho normal resolve. */
+    /** Bot at the target's height and close: it's already on their platform (or next to it) and the normal path handles it. */
     private static boolean sameLevelNearby(Pos botPos, Pos target) {
         return Math.abs(botPos.y() - target.y()) <= SAME_LEVEL_DY
                 && Math.hypot(botPos.x() - target.x(), botPos.z() - target.z()) <= SAME_LEVEL_RADIUS;
@@ -1057,7 +1057,7 @@ public final class Navigator {
         return false;
     }
 
-    // ------------------------------------------------------------------ água
+    // ------------------------------------------------------------------ water
 
     private Vec3 resolveWaterAwareTarget(Vec3 finalTarget) {
         if (bot.vehicle() instanceof Boat) {
@@ -1074,7 +1074,7 @@ public final class Navigator {
             if (exit == null) {
                 return finalTarget;
             }
-            // já na saída: mira o chão firme para subir (mirar a própria água deixava o bot sem direção)
+            // already at the exit: aims at the solid ground to climb out (aiming at the water itself left the bot with no direction)
             Vec3 water = Vec3.bottomCenter(exit.water());
             boolean atExit = Math.hypot(water.x() - bot.pos().x(), water.z() - bot.pos().z()) < 1.5;
             return atExit ? Vec3.bottomCenter(exit.land()) : water;
@@ -1121,7 +1121,7 @@ public final class Navigator {
         return !below.getType().isAir() && !WorldUtil.hasFluid(w, feet.below()) && below.getType().isOccluding();
     }
 
-    /** O alvo não está sobre chão firme (está na água/no ar): navegar pela água em vez de seguir direto. */
+    /** The target isn't on solid ground (it's in the water/in the air): navigate through the water instead of going straight. */
     private boolean isTargetOffSolidGround(Vec3 finalTarget) {
         World w = world();
         Pos below = finalTarget.toPos().below();
@@ -1140,13 +1140,13 @@ public final class Navigator {
         waterMode = air <= WATER_ASCEND_AIR ? WaterMode.ASCEND_FOR_AIR : WaterMode.CRUISE;
     }
 
-    /** Bloco de água na beira e o chão firme ao lado dele, por onde o bot sai da água. */
+    /** Water block at the edge and the solid ground next to it, where the bot gets out of the water. */
     private record ShoreExit(Pos water, Pos land) {
     }
 
     /**
-     * Saída da água mais rápida até o alvo: nadar custa ~3× correr. Com distâncias ao quadrado a
-     * saída mais longe vencia quando o alvo seguia pela margem, e o bot nadava rente à beira sem sair.
+     * Fastest way out of the water toward the target: swimming costs ~3× sprinting. With squared distances the
+     * farthest exit won when the target went along the bank, and the bot swam along the edge without getting out.
      */
     private ShoreExit shoreExitToward(Vec3 finalTarget) {
         World w = world();
@@ -1275,8 +1275,8 @@ public final class Navigator {
         if (e == null || bot.onGround() || bot.isInWater() || bot.isInLava() || e.isClimbing() || e.isGliding()) {
             return p;
         }
-        // No ar (pulando, caindo) o caminho sai de onde ele vai pousar. Saindo do ponto no ar o A* não acha
-        // apoio e devolve só aquele nó: o bot pousava e ficava embaixo dele, pulando e olhando para cima.
+        // In the air (jumping, falling) the path starts where it will land. Starting from the point in the air the A*
+        // finds no support and returns only that node: the bot landed and stayed under it, jumping and looking up.
         World w = world();
         for (int i = 0; i < LANDING_SCAN && p.y() - i > w.getMinHeight(); i++) {
             Pos feet = p.below(i);
