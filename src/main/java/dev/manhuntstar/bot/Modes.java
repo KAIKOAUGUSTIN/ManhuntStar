@@ -50,7 +50,7 @@ public final class Modes {
 
     /** Centro da roda: AUTO = onde a roda é criada; MANUAL = ponto marcado com /manhunt ring point. */
     public enum RingCenter implements Setting.Choice {
-        AUTO("auto", "automatic", "automatico", "automático"), MANUAL("manual", "fixed", "fixo");
+        AUTO("auto", "automatic"), MANUAL("manual", "fixed");
 
         private final List<String> aliases;
 
@@ -71,7 +71,7 @@ public final class Modes {
 
     /** Quem entra no servidor com a caçada em andamento. */
     public enum LateJoin implements Setting.Choice {
-        HUNTED("hunted", "cacado", "caçado"), PROTECTED("protected", "protegido", "protecao", "proteção"), OUT("out", "ignored", "fora", "ignorado");
+        HUNTED("hunted"), PROTECTED("protected"), OUT("out", "ignored");
 
         private final List<String> aliases;
 
@@ -92,7 +92,7 @@ public final class Modes {
 
     /** Lista de jogadores: OFF = todos; ALLOWLIST = só os da lista; BLOCKLIST = todos menos os da lista. */
     public enum PlayerListMode implements Setting.Choice {
-        OFF("off", "false", "desligada", "nenhuma"), ALLOWLIST("allowlist", "whitelist", "permitidos"), BLOCKLIST("blocklist", "blacklist", "bloqueados");
+        OFF("off", "false"), ALLOWLIST("allowlist", "whitelist"), BLOCKLIST("blocklist", "blacklist");
 
         private final List<String> aliases;
 
@@ -113,9 +113,9 @@ public final class Modes {
 
     /** Como os bots escolhem o jogador a perseguir. */
     public enum TargetMode implements Setting.Choice {
-        CLOSEST_PLAYER("closest", "nearest", "perto", "proximo"),
-        EQUAL_BOTS_PER_PLAYER("equal", "balanced", "balance", "dividir", "igual"),
-        FARTHEST_PLAYER("farthest", "farest", "longe");
+        CLOSEST_PLAYER("closest", "nearest"),
+        EQUAL_BOTS_PER_PLAYER("equal", "balanced", "balance"),
+        FARTHEST_PLAYER("farthest", "farest");
 
         private final List<String> aliases;
 
@@ -154,7 +154,7 @@ public final class Modes {
 
     /** Em quais dimensões os bots podem jogar pérolas do End. */
     public enum PearlDimension implements Setting.Choice {
-        NETHER_ONLY("nether", "0"), BOTH("both", "ambas", "1"), OVERWORLD_ONLY("overworld", "2");
+        NETHER_ONLY("nether", "0"), BOTH("both", "1"), OVERWORLD_ONLY("overworld", "2");
 
         private final List<String> aliases;
 

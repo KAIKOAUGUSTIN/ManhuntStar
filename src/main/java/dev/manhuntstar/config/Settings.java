@@ -35,9 +35,28 @@ import org.bukkit.entity.EntityType;
 public final class Settings {
 
     private final Map<String, Setting<?>> byKey = new LinkedHashMap<>();
-    private final Map<String, String> keyAliases = new LinkedHashMap<>();
 
-    // --- Geral (idioma e fidelidade de jogador) ---
+    /**
+     * Values from the config.yml of the versions with Portuguese keys (up to 1.5) and what they are now.
+     * Only used by the migration ({@link #loadLegacy}): commands only take the English values.
+     */
+    static final Map<String, String> LEGACY_VALUES = Map.ofEntries(
+            Map.entry("sim", "true"), Map.entry("s", "true"), Map.entry("ligado", "true"), Map.entry("ativado", "true"),
+            Map.entry("nao", "false"), Map.entry("não", "false"), Map.entry("n", "false"),
+            Map.entry("desligado", "false"), Map.entry("desativado", "false"),
+            Map.entry("facil", "easy"), Map.entry("fácil", "easy"), Map.entry("medio", "medium"), Map.entry("médio", "medium"),
+            Map.entry("dificil", "hard"), Map.entry("difícil", "hard"),
+            Map.entry("automatico", "auto"), Map.entry("automático", "auto"), Map.entry("fixo", "manual"),
+            Map.entry("cacado", "hunted"), Map.entry("caçado", "hunted"),
+            Map.entry("protegido", "protected"), Map.entry("protecao", "protected"), Map.entry("proteção", "protected"),
+            Map.entry("fora", "out"), Map.entry("ignorado", "out"),
+            Map.entry("desligada", "off"), Map.entry("nenhuma", "off"),
+            Map.entry("permitidos", "allowlist"), Map.entry("bloqueados", "blocklist"),
+            Map.entry("perto", "closest"), Map.entry("proximo", "closest"),
+            Map.entry("dividir", "equal"), Map.entry("igual", "equal"), Map.entry("longe", "farthest"),
+            Map.entry("ambas", "both"));
+
+    // --- General (language and player fidelity) ---
     public final Setting.Text language = register(new Setting.Text("general.language", null, "language", Category.GENERAL,
             Messages.DEFAULT_LANGUAGE, () -> this.languages.get()));
     public final Setting.Bool tabList = bool("general.tab-list", "geral.tab-list", "tablist", Category.GENERAL, true);
@@ -149,34 +168,6 @@ public final class Settings {
     public record RingPoint(String world, double x, double y, double z) {
     }
 
-    public Settings() {
-        // nomes antigos (do mod e das versões anteriores): continuam valendo, mas não aparecem no Tab
-        alias("mobtarget", "mobsattackbots");
-        alias("smoothness", "aimsmoothness");
-        alias("projaccuracy", "projinaccuracy");
-        alias("botuseelytra", "allowelytra");
-        alias("min_sec_range_nether_entering", "minnetherdelay");
-        alias("max_sec_range_nether_entering", "maxnetherdelay");
-        alias("greediness", "pathgreediness");
-        alias("nodes", "pathnodes");
-        alias("dynamic", "pathdynamicnodes");
-        alias("fallback", "pathfallback");
-        alias("async", "pathasync");
-        alias("debugastar", "pathdebug");
-        alias("starttime", "countdown");
-        alias("listmode", "playerlistmode");
-        alias("glowing", "glowhunters");
-        alias("glowcolor", "glowhunterscolor");
-        alias("glowingescape", "glowescapers");
-        alias("glowcolorescape", "glowescaperscolor");
-        alias("meleerangejitter", "meleereachvariance");
-        alias("allowhorseriding", "allowhorse");
-        alias("allowboatriding", "allowboat");
-        alias("autogoldenapple", "autogapple");
-        alias("dropinventoryondeath", "dropinventory");
-        alias("allowenderpearl", "allowpearl");
-    }
-
     private Setting.Bool bool(String path, String legacy, String key, Category c, boolean def) {
         return register(new Setting.Bool(path, legacy, key, c, def));
     }
@@ -198,17 +189,8 @@ public final class Settings {
         return s;
     }
 
-    private void alias(String alias, String key) {
-        keyAliases.put(alias, key);
-    }
-
     public Setting<?> byKey(String key) {
-        String k = key.toLowerCase(Locale.ROOT).trim();
-        Setting<?> s = byKey.get(k);
-        if (s == null && keyAliases.containsKey(k)) {
-            s = byKey.get(keyAliases.get(k));
-        }
-        return s;
+        return byKey.get(key.toLowerCase(Locale.ROOT).trim());
     }
 
     public Collection<Setting<?>> all() {
@@ -312,7 +294,7 @@ public final class Settings {
     private void load(YamlConfiguration cfg, boolean legacy, Logger logger) {
         for (Setting<?> s : byKey.values()) {
             if (legacy) {
-                s.load(cfg, s.legacyPath());
+                s.load(cfg, s.legacyPath(), LEGACY_VALUES);
             } else {
                 s.load(cfg);
             }
