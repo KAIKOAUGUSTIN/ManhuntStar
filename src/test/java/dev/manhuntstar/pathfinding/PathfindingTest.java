@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** A* em mundos sintéticos (sem servidor). */
+/** A* in synthetic worlds (no server). */
 class PathfindingTest {
 
     private static final byte STONE = 7;
 
-    /** Mundo de teste: chão de pedra em y=63, ar acima, AVOID fora de -5 ≤ x ≤ 30 e |z| ≤ limite. */
+    /** Test world: stone floor at y=63, air above, AVOID outside -5 ≤ x ≤ 30 and |z| ≤ limit. */
     private static final class Grid implements CostProvider {
         final Map<Long, Byte> overrides = new HashMap<>();
         final int limit;
@@ -49,7 +49,7 @@ class PathfindingTest {
         return AStar.get().findPath(g, from, to, 20_000, 2_000, 1.5, place, boat);
     }
 
-    /** Lago de 2 blocos de fundo, com a superfície em y=63. */
+    /** Lake 2 blocks deep, with the surface at y=63. */
     private static void lake(Grid g, int x0, int x1, int z0, int z1) {
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
@@ -96,7 +96,7 @@ class PathfindingTest {
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(10, 64, 0), false);
         assertTrue(r.complete());
         assertFalse(r.toMine().isEmpty());
-        assertTrue(r.toMine().stream().allMatch(p -> p.x() == 5), () -> "cavar " + r.toMine() + " caminho " + r.path());
+        assertTrue(r.toMine().stream().allMatch(p -> p.x() == 5), () -> "dig " + r.toMine() + " path " + r.path());
     }
 
     @Test
@@ -126,7 +126,7 @@ class PathfindingTest {
         PathResult without = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), false);
         assertFalse(without.complete());
         PathResult with = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), true);
-        assertTrue(with.complete(), () -> "caminho " + with.path() + " colocar " + with.toPlace() + " nós " + with.nodesExplored());
+        assertTrue(with.complete(), () -> "path " + with.path() + " place " + with.toPlace() + " nodes " + with.nodesExplored());
         assertFalse(with.toPlace().isEmpty());
     }
 
@@ -141,14 +141,14 @@ class PathfindingTest {
         }
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(12, 64, 0), false);
         for (Pos p : r.path()) {
-            assertFalse(p.x() >= 5 && p.x() <= 8 && p.y() == 64, "pisou na lava em " + p);
+            assertFalse(p.x() >= 5 && p.x() <= 8 && p.y() == 64, "stepped into lava at " + p);
         }
     }
 
     @Test
     void crossesLakeByBoatAndWalksAroundWithout() {
         Grid g = new Grid(20);
-        // 21 blocos de travessia; dar a volta pela ponta (|z| >= 9) custa menos que nadar e mais que remar
+        // 21 blocks across; going around the end (|z| >= 9) costs less than swimming and more than rowing
         lake(g, 4, 24, -8, 8);
         PathResult boat = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, true);
         assertTrue(boat.complete());
@@ -156,18 +156,18 @@ class PathfindingTest {
         assertTrue(boat.path().stream().allMatch(p -> Math.abs(p.z()) < 9), () -> "de barco " + boat.path());
         PathResult walk = find(g, new Pos(0, 64, 0), new Pos(28, 64, 0), false, false);
         assertTrue(walk.complete());
-        assertTrue(walk.path().stream().anyMatch(p -> Math.abs(p.z()) >= 9), () -> "a pé " + walk.path());
-        assertTrue(walk.path().stream().noneMatch(p -> p.y() == 63), () -> "a pé " + walk.path());
+        assertTrue(walk.path().stream().anyMatch(p -> Math.abs(p.z()) >= 9), () -> "on foot " + walk.path());
+        assertTrue(walk.path().stream().noneMatch(p -> p.y() == 63), () -> "on foot " + walk.path());
     }
 
     @Test
     void boatKeepsOffTheShore() {
         Grid g = new Grid(20);
-        // já de barco ao lado da margem (z = 0 é a última fileira de água), alvo em terra lá na frente
+        // already in a boat next to the bank (z = 0 is the last row of water), target on land further ahead
         lake(g, -5, 30, 0, 12);
         PathResult r = find(g, new Pos(2, 63, 1), new Pos(28, 64, -2), false, true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
-        assertTrue(r.path().stream().filter(p -> p.y() == 63 && p.z() == 0).count() <= 2, () -> "rente à margem " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
+        assertTrue(r.path().stream().filter(p -> p.y() == 63 && p.z() == 0).count() <= 2, () -> "hugging the bank " + r.path());
     }
 
     @Test
@@ -176,13 +176,14 @@ class PathfindingTest {
         lake(g, 5, 8, -2, 2);
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(14, 64, 0), false, true);
         assertTrue(r.complete());
-        assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "caminho " + r.path());
+        assertTrue(r.path().stream().noneMatch(p -> p.y() == 63), () -> "path " + r.path());
     }
 
     /**
-     * Caixa no céu (chão em y=70, teto de vidro em y=75) com o alvo dentro e o bot no teto: o caminho cava
-     * o teto e cai na caixa. Antes ele saía pela beirada contando com blocos colocados no ar e o bot caía
-     * até o chão lá embaixo. As paredes não quebram para o caminho não descer cavando a coluna da parede.
+     * Box in the sky (floor at y=70, glass ceiling at y=75) with the target inside and the bot on the ceiling:
+     * the path digs through the ceiling and drops into the box. It used to step off the edge relying on blocks
+     * placed in the air and the bot fell all the way to the ground below. The walls don't break so the path
+     * doesn't go down by digging the wall's column.
      */
     @Test
     void digsThroughRoofIntoTheBoxBelow() {
@@ -199,14 +200,14 @@ class PathfindingTest {
             }
         }
         PathResult r = find(g, new Pos(3, 76, 0), new Pos(6, 71, 0), true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
         assertTrue(r.path().stream().allMatch(p -> p.x() >= 0 && p.x() <= 10 && Math.abs(p.z()) <= 3 && p.y() >= 71),
                 () -> "saiu da caixa: " + r.path());
-        assertTrue(r.toMine().stream().anyMatch(p -> p.y() == 75), () -> "não cavou o teto: " + r.toMine());
-        assertTrue(r.toPlace().isEmpty(), () -> "colocar " + r.toPlace());
+        assertTrue(r.toMine().stream().anyMatch(p -> p.y() == 75), () -> "didn't dig the ceiling: " + r.toMine());
+        assertTrue(r.toPlace().isEmpty(), () -> "place " + r.toPlace());
     }
 
-    /** Despenhadeiro de 13 blocos: nenhuma descida conta com bloco colocado embaixo do pouso. */
+    /** 13-block cliff: no way down relies on a block placed under the landing. */
     @Test
     void neverPlansLandingOnBlocksPlacedInTheAir() {
         Grid g = new Grid(2);
@@ -218,12 +219,12 @@ class PathfindingTest {
             }
         }
         PathResult r = find(g, new Pos(0, 64, 0), new Pos(12, 51, 0), true);
-        assertTrue(r.complete(), () -> "caminho " + r.path());
+        assertTrue(r.complete(), () -> "path " + r.path());
         List<Pos> path = r.path();
         for (int i = 1; i < path.size(); i++) {
             Pos p = path.get(i);
             if (p.y() < path.get(i - 1).y()) {
-                assertTrue(CostProvider.isSolid(g.cost(p.x(), p.y() - 1, p.z())), "pouso sem chão em " + p + ", caminho " + path);
+                assertTrue(CostProvider.isSolid(g.cost(p.x(), p.y() - 1, p.z())), "landing without ground at " + p + ", path " + path);
             }
         }
     }

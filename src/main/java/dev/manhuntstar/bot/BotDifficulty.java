@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Dificuldade do bot: fase inicial, chance de drop por fase, duração de cada fase,
- * multiplicador de dano recebido e de dano causado. O nome mostrado fica nos arquivos de idioma
- * ({@code difficulty.<nome>}).
+ * Bot difficulty: starting phase, drop chance per phase, length of each phase, damage taken
+ * multiplier and damage dealt multiplier. The displayed name is in the language files
+ * ({@code difficulty.<name>}).
  */
 public enum BotDifficulty implements Setting.Choice {
     EASY(1, 1.0f, 300, 1.0f, 1.0f),
@@ -58,9 +58,9 @@ public enum BotDifficulty implements Setting.Choice {
     public List<String> aliases() {
         String n = configName();
         return switch (this) {
-            case EASY -> List.of(n, "difficulty.easy", "facil", "fácil");
-            case MEDIUM -> List.of(n, "difficulty.medium", "medio", "médio");
-            case HARD -> List.of(n, "difficulty.hard", "dificil", "difícil");
+            case EASY -> List.of(n, "difficulty.easy");
+            case MEDIUM -> List.of(n, "difficulty.medium");
+            case HARD -> List.of(n, "difficulty.hard");
             case TERMINATOR -> List.of(n, "difficulty.terminator");
         };
     }

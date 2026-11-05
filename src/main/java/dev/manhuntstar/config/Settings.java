@@ -29,15 +29,34 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 
 /**
- * Todas as opções do plugin. As chaves de comando ({@code /manhunt settings <chave>}) e o config.yml
- * são em inglês; os caminhos em português das versões antigas só são lidos na migração.
+ * Every plugin option. The command keys ({@code /manhunt settings <key>}) and config.yml
+ * are in English; the Portuguese paths from old versions are only read during migration.
  */
 public final class Settings {
 
     private final Map<String, Setting<?>> byKey = new LinkedHashMap<>();
-    private final Map<String, String> keyAliases = new LinkedHashMap<>();
 
-    // --- Geral (idioma e fidelidade de jogador) ---
+    /**
+     * Values from the config.yml of the versions with Portuguese keys (up to 1.5) and what they are now.
+     * Only used by the migration ({@link #loadLegacy}): commands only take the English values.
+     */
+    static final Map<String, String> LEGACY_VALUES = Map.ofEntries(
+            Map.entry("sim", "true"), Map.entry("s", "true"), Map.entry("ligado", "true"), Map.entry("ativado", "true"),
+            Map.entry("nao", "false"), Map.entry("não", "false"), Map.entry("n", "false"),
+            Map.entry("desligado", "false"), Map.entry("desativado", "false"),
+            Map.entry("facil", "easy"), Map.entry("fácil", "easy"), Map.entry("medio", "medium"), Map.entry("médio", "medium"),
+            Map.entry("dificil", "hard"), Map.entry("difícil", "hard"),
+            Map.entry("automatico", "auto"), Map.entry("automático", "auto"), Map.entry("fixo", "manual"),
+            Map.entry("cacado", "hunted"), Map.entry("caçado", "hunted"),
+            Map.entry("protegido", "protected"), Map.entry("protecao", "protected"), Map.entry("proteção", "protected"),
+            Map.entry("fora", "out"), Map.entry("ignorado", "out"),
+            Map.entry("desligada", "off"), Map.entry("nenhuma", "off"),
+            Map.entry("permitidos", "allowlist"), Map.entry("bloqueados", "blocklist"),
+            Map.entry("perto", "closest"), Map.entry("proximo", "closest"),
+            Map.entry("dividir", "equal"), Map.entry("igual", "equal"), Map.entry("longe", "farthest"),
+            Map.entry("ambas", "both"));
+
+    // --- General (language and player fidelity) ---
     public final Setting.Text language = register(new Setting.Text("general.language", null, "language", Category.GENERAL,
             Messages.DEFAULT_LANGUAGE, () -> this.languages.get()));
     public final Setting.Bool tabList = bool("general.tab-list", "geral.tab-list", "tablist", Category.GENERAL, true);
@@ -64,7 +83,7 @@ public final class Settings {
     public final Setting.Bool mobsAttackBots = bool("bots.mobs-attack-bots", "bots.mobs-atacam-bots", "mobsattackbots", Category.BOTS, true);
     public final Setting.Int aimSmoothness = integer("bots.aim-smoothness-ms", "bots.suavidade-mira-ms", "aimsmoothness", Category.BOTS, 0, 0, 200);
 
-    // --- Combate ---
+    // --- Combat ---
     public final Setting.Dbl targetPriority = dbl("combat.target-priority", "combate.prioridade-alvo", "targetpriority", Category.COMBAT, 2.0, -5.0, 5.0, 0.5);
     public final Setting.Enumerated<TargetMode> targetMode = choice("combat.target-mode", "combate.modo-alvo", "targetmode", Category.COMBAT, TargetMode.class, TargetMode.EQUAL_BOTS_PER_PLAYER);
     public final Setting.Bool allowTrident = bool("combat.trident", "combate.tridente", "allowtrident", Category.COMBAT, true);
@@ -78,7 +97,7 @@ public final class Settings {
     public final Setting.Dbl meleeAimOffset = dbl("combat.melee-aim-offset", "combate.desvio-mira", "meleeaimoffset", Category.COMBAT, 0.25, 0.0, 1.5, 0.05);
     public final Setting.Dbl meleeSpamVariance = dbl("combat.melee-rhythm-variance", "combate.variacao-ritmo-golpes", "meleespamvariance", Category.COMBAT, 3.0, 0.0, 10.0, 0.5);
 
-    // --- Mobilidade ---
+    // --- Mobility ---
     public final Setting.Bool allowTowering = bool("mobility.towering", "mobilidade.construir-torres", "allowtowering", Category.MOBILITY, true);
     public final Setting.Bool allowPearl = bool("mobility.ender-pearls", "mobilidade.perolas", "allowpearl", Category.MOBILITY, true);
     public final Setting.Dbl pearlCooldownMult = dbl("mobility.pearl-cooldown-multiplier", "mobilidade.multiplicador-recarga-perola", "pearlcooldownmult", Category.MOBILITY, 1.0, 0.1, 5.0, 0.1);
@@ -100,7 +119,7 @@ public final class Settings {
     public final Setting.Bool asyncPaths = bool("pathfinding.async", "pathfinding.assincrono", "pathasync", Category.PATHFINDING, true);
     public final Setting.Bool debugPaths = bool("pathfinding.debug-particles", "pathfinding.debug-particulas", "pathdebug", Category.PATHFINDING, false);
 
-    // --- Táticas ---
+    // --- Tactics ---
     public final Setting.Bool caveAmbush = bool("tactics.cave-ambush", "taticas.emboscada-caverna", "caveambush", Category.TACTICS, true);
     public final Setting.Int caveAmbushCooldown = integer("tactics.cave-ambush-cooldown-seconds", "taticas.recarga-emboscada-caverna-segundos", "caveambushcooldown", Category.TACTICS, 1, 0, 3600);
     public final Setting.Bool autoCapacities = bool("tactics.auto-abilities", "taticas.capacidades-automaticas", "autocapacities", Category.TACTICS, false);
@@ -119,17 +138,17 @@ public final class Settings {
     public final Setting.Enumerated<LateJoin> lateJoin = choice("manhunt.late-join", "manhunt.quem-entra-no-meio", "latejoin", Category.MANHUNT, LateJoin.class, LateJoin.PROTECTED);
     public final Setting.Enumerated<PlayerListMode> playerListMode = choice("manhunt.player-list-mode", "manhunt.lista-modo", "playerlistmode", Category.MANHUNT, PlayerListMode.class, PlayerListMode.OFF);
 
-    // --- Aparência ---
+    // --- Appearance ---
     public final Setting.Bool glowHunters = bool("appearance.glow-hunters", "aparencia.brilho-cacadores", "glowhunters", Category.APPEARANCE, false);
     public final Setting.Enumerated<GlowColor> glowHuntersColor = choice("appearance.glow-hunters-color", "aparencia.cor-brilho-cacadores", "glowhunterscolor", Category.APPEARANCE, GlowColor.class, GlowColor.RED);
     public final Setting.Bool glowEscapers = bool("appearance.glow-escapers", "aparencia.brilho-fugitivos", "glowescapers", Category.APPEARANCE, false);
     public final Setting.Enumerated<GlowColor> glowEscapersColor = choice("appearance.glow-escapers-color", "aparencia.cor-brilho-fugitivos", "glowescaperscolor", Category.APPEARANCE, GlowColor.class, GlowColor.AQUA);
     public final Setting.Bool showNameTag = bool("appearance.show-name-tag", "aparencia.mostrar-nome", "nametag", Category.APPEARANCE, true);
 
-    /** Opções que já existiram e saem do config.yml ao salvar. */
+    /** Options that used to exist and are removed from config.yml on save. */
     private static final List<String> REMOVED_PATHS = List.of("manhunt.liberar-ao-sair-da-roda");
 
-    /** Seções do config.yml com chaves em português (até a versão 1.5): sinal de que precisa migrar. */
+    /** config.yml sections with Portuguese keys (up to version 1.5): a sign that it needs migrating. */
     private static final List<String> LEGACY_SECTIONS = List.of("geral", "combate", "mobilidade", "taticas", "aparencia");
     private static final String MOBS_PATH = "bots.mobs-that-ignore-bots";
     private static final String LEGACY_MOBS_PATH = "bots.mobs-que-nao-atacam-bots";
@@ -138,43 +157,15 @@ public final class Settings {
     private static final String RING_POINT_PATH = "manhunt.ring-point";
     private static final String LEGACY_RING_POINT_PATH = "manhunt.ponto-roda";
 
-    /** Idiomas que aparecem no Tab de {@code /manhunt settings language} (os arquivos da pasta lang/). */
+    /** Languages shown in the Tab completion of {@code /manhunt settings language} (the files in the lang/ folder). */
     private volatile Supplier<List<String>> languages = () -> Messages.BUNDLED_LANGUAGES;
 
     private volatile Set<EntityType> excludedMobs = Set.of();
     private volatile List<String> playerList = List.of();
     private volatile RingPoint ringPoint;
 
-    /** Ponto da roda no modo manual (ring-center: manual). */
+    /** Ring point in manual mode (ring-center: manual). */
     public record RingPoint(String world, double x, double y, double z) {
-    }
-
-    public Settings() {
-        // nomes antigos (do mod e das versões anteriores): continuam valendo, mas não aparecem no Tab
-        alias("mobtarget", "mobsattackbots");
-        alias("smoothness", "aimsmoothness");
-        alias("projaccuracy", "projinaccuracy");
-        alias("botuseelytra", "allowelytra");
-        alias("min_sec_range_nether_entering", "minnetherdelay");
-        alias("max_sec_range_nether_entering", "maxnetherdelay");
-        alias("greediness", "pathgreediness");
-        alias("nodes", "pathnodes");
-        alias("dynamic", "pathdynamicnodes");
-        alias("fallback", "pathfallback");
-        alias("async", "pathasync");
-        alias("debugastar", "pathdebug");
-        alias("starttime", "countdown");
-        alias("listmode", "playerlistmode");
-        alias("glowing", "glowhunters");
-        alias("glowcolor", "glowhunterscolor");
-        alias("glowingescape", "glowescapers");
-        alias("glowcolorescape", "glowescaperscolor");
-        alias("meleerangejitter", "meleereachvariance");
-        alias("allowhorseriding", "allowhorse");
-        alias("allowboatriding", "allowboat");
-        alias("autogoldenapple", "autogapple");
-        alias("dropinventoryondeath", "dropinventory");
-        alias("allowenderpearl", "allowpearl");
     }
 
     private Setting.Bool bool(String path, String legacy, String key, Category c, boolean def) {
@@ -198,17 +189,8 @@ public final class Settings {
         return s;
     }
 
-    private void alias(String alias, String key) {
-        keyAliases.put(alias, key);
-    }
-
     public Setting<?> byKey(String key) {
-        String k = key.toLowerCase(Locale.ROOT).trim();
-        Setting<?> s = byKey.get(k);
-        if (s == null && keyAliases.containsKey(k)) {
-            s = byKey.get(keyAliases.get(k));
-        }
-        return s;
+        return byKey.get(key.toLowerCase(Locale.ROOT).trim());
     }
 
     public Collection<Setting<?>> all() {
@@ -241,7 +223,7 @@ public final class Settings {
         ringPoint = point;
     }
 
-    /** Nomes da lista de jogadores (permitidos ou bloqueados, conforme a opção player-list-mode). */
+    /** Names on the player list (allowed or blocked, depending on the player-list-mode option). */
     public List<String> playerList() {
         return playerList;
     }
@@ -255,7 +237,7 @@ public final class Settings {
         return false;
     }
 
-    /** @return false se o nome já estava na lista */
+    /** @return false if the name was already on the list */
     public synchronized boolean addListedPlayer(String name) {
         if (isListed(name)) {
             return false;
@@ -266,7 +248,7 @@ public final class Settings {
         return true;
     }
 
-    /** @return false se o nome não estava na lista */
+    /** @return false if the name wasn't on the list */
     public synchronized boolean removeListedPlayer(String name) {
         List<String> next = new ArrayList<>(playerList);
         if (!next.removeIf(n -> n.equalsIgnoreCase(name))) {
@@ -276,7 +258,7 @@ public final class Settings {
         return true;
     }
 
-    /** A lista deixa este jogador ser caçado e disparar a roda? */
+    /** Does the list let this player be hunted and set off the ring? */
     public boolean listAllows(String name) {
         return switch (playerListMode.get()) {
             case OFF -> true;
@@ -285,7 +267,7 @@ public final class Settings {
         };
     }
 
-    /** O config.yml ainda tem as chaves em português das versões até a 1.5? */
+    /** Does config.yml still have the Portuguese keys from versions up to 1.5? */
     public static boolean isLegacy(File file) {
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         for (String section : LEGACY_SECTIONS) {
@@ -301,8 +283,8 @@ public final class Settings {
     }
 
     /**
-     * Lê um config.yml com as chaves em português (versões até a 1.5). O arquivo novo é gravado depois
-     * com {@link #save}; o idioma fica em pt-br, que era o único que existia.
+     * Reads a config.yml with Portuguese keys (versions up to 1.5). The new file is written afterwards
+     * with {@link #save}; the language is set to pt-br, which was the only one there was.
      */
     public void loadLegacy(File file, Logger logger) {
         load(YamlConfiguration.loadConfiguration(file), true, logger);
@@ -312,7 +294,7 @@ public final class Settings {
     private void load(YamlConfiguration cfg, boolean legacy, Logger logger) {
         for (Setting<?> s : byKey.values()) {
             if (legacy) {
-                s.load(cfg, s.legacyPath());
+                s.load(cfg, s.legacyPath(), LEGACY_VALUES);
             } else {
                 s.load(cfg);
             }
@@ -343,7 +325,7 @@ public final class Settings {
         }
     }
 
-    /** Grava os valores atuais preservando comentários e chaves extras do arquivo. */
+    /** Writes the current values keeping the file's comments and extra keys. */
     public void save(File file, Logger logger) {
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         cfg.options().parseComments(true);
