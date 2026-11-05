@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 class BallisticsTest {
 
-    /** Física da flecha no servidor 26.2: anda, perde 1% e cai 0,05 por tick. Devolve a menor distância ao ponto. */
+    /** Arrow physics on the 26.2 server: moves, loses 1% and drops 0.05 per tick. Returns the closest distance to the point. */
     private static double closestApproach(Vec3 from, Vec3 velocity, Vec3 target, Vec3 targetVelocity) {
         double x = from.x(), y = from.y(), z = from.z();
         double vx = velocity.x(), vy = velocity.y(), vz = velocity.z();
@@ -16,7 +16,7 @@ class BallisticsTest {
         for (int tick = 0; tick < 200; tick++) {
             double nx = x + vx, ny = y + vy, nz = z + vz;
             Vec3 nt = t.add(targetVelocity);
-            // menor distância no segmento deste tick
+            // closest distance on this tick's segment
             for (int s = 0; s <= 10; s++) {
                 double f = s / 10.0;
                 double px = x + (nx - x) * f, py = y + (ny - y) * f, pz = z + (nz - z) * f;
@@ -43,12 +43,12 @@ class BallisticsTest {
                 for (int dy = -12; dy <= 12; dy += 4) {
                     Vec3 target = new Vec3(dist * 0.6, 64.9 + dy, dist * 0.8);
                     if (!Ballistics.solve(dist, target.y() - from.y(), speed, Ballistics.ARROW_GRAVITY, Ballistics.ARROW_DRAG).reachable()) {
-                        continue; // alto e longe demais para essa velocidade (nem no jogo alcança)
+                        continue; // too high and too far for this speed (not even in the game does it reach)
                     }
                     Vec3 v = Ballistics.aimArrow(from, target, Vec3.ZERO, speed);
-                    assertTrue(Math.abs(v.length() - speed) < 1.0E-6, "velocidade alterada");
+                    assertTrue(Math.abs(v.length() - speed) < 1.0E-6, "speed changed");
                     double miss = closestApproach(from, v, target, Vec3.ZERO);
-                    assertTrue(miss < 0.25, "erro de " + miss + " a " + dist + " blocos, desnível " + dy + ", velocidade " + speed);
+                    assertTrue(miss < 0.25, "missed by " + miss + " at " + dist + " blocks, height difference " + dy + ", speed " + speed);
                 }
             }
         }
@@ -57,21 +57,21 @@ class BallisticsTest {
     @Test
     void runningTargetIsLed() {
         Vec3 from = new Vec3(0, 65.52, 0);
-        Vec3 running = new Vec3(0.28, 0, 0); // jogador correndo de lado (5,6 blocos/s)
+        Vec3 running = new Vec3(0.28, 0, 0); // player running sideways (5.6 blocks/s)
         for (int dist = 8; dist <= 30; dist += 4) {
             Vec3 target = new Vec3(0, 64.9, dist);
             Vec3 led = Ballistics.aimArrow(from, target, running, 1.8);
             Vec3 naive = Ballistics.aimArrow(from, target, Vec3.ZERO, 1.8);
             double ledMiss = closestApproach(from, led, target, running);
             double naiveMiss = closestApproach(from, naive, target, running);
-            assertTrue(ledMiss < 0.35, "com antecipação errou " + ledMiss + " a " + dist);
+            assertTrue(ledMiss < 0.35, "with lead, missed by " + ledMiss + " at " + dist);
             assertTrue(ledMiss < naiveMiss, "antecipar deveria ajudar a " + dist);
         }
     }
 
     @Test
     void modFormulaWentOverTheHead() {
-        // fórmula da rajada de arco do mod: passava acima da cabeça de um jogador parado a 15 blocos
+        // the mod's bow-burst formula: it went over the head of a player standing still 15 blocks away
         Vec3 from = new Vec3(0, 65.52, 0);
         Vec3 head = new Vec3(0, 65.47, 15);
         double dist = 15;
@@ -100,7 +100,7 @@ class BallisticsTest {
 
     @Test
     void fromAMountainTheArrowReachesFurther() {
-        // arco todo puxado: no mesmo nível a flecha não chega a 150 blocos; de 60 blocos de altura chega e acerta
+        // fully drawn bow: at the same level the arrow doesn't reach 150 blocks; from 60 blocks up it reaches and hits
         Vec3 from = new Vec3(0, 125.5, 0);
         assertFalse(Ballistics.shotArrow(from, new Vec3(90, 125.5, 120), Vec3.ZERO, 3.0).reachable());
         Vec3 below = new Vec3(90, 65.5, 120);
@@ -115,11 +115,11 @@ class BallisticsTest {
         Vec3 from = new Vec3(0, 65, 0);
         Vec3 target = new Vec3(0, 65, 30);
         assertTrue(Math.abs(Ballistics.straightTicks(from, target, Vec3.ZERO, 1.6) - 30 / 1.6) < 1.0E-9);
-        // no tick calculado o foguete (reto, velocidade constante) está em cima do jogador que corre de lado
+        // at the computed tick the rocket (straight, constant speed) is on the player running sideways
         Vec3 running = new Vec3(0.28, 0, 0);
         Vec3 v = Ballistics.aim(from, target, running, 1.6, 0, 1);
         double t = Ballistics.straightTicks(from, target, running, 1.6);
         double miss = from.add(v.scale(t)).subtract(target.add(running.scale(t))).length();
-        assertTrue(miss < 0.1, "errou " + miss);
+        assertTrue(miss < 0.1, "missed by " + miss);
     }
 }

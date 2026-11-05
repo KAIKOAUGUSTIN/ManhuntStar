@@ -9,14 +9,14 @@ import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** bots.yml: um salvamento mais velho que ainda estava na fila não grava por cima de um mais novo. */
+/** bots.yml: an older save that was still queued doesn't overwrite a newer one. */
 class BotStorageTest {
 
     @Test
     void anOlderQueuedSaveDoesNotOverwriteANewerOne(@TempDir Path dir) {
         BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"));
-        // a gravação em segundo plano espera este monitor (o mesmo do write): ela só roda depois do
-        // salvamento direto, como quando o servidor desliga logo depois de um salvamento periódico
+        // the background write waits for this monitor (the same one write uses): it only runs after the
+        // direct save, as when the server shuts down right after a periodic save
         synchronized (storage) {
             storage.save(List.of(), List.of(new BotGroup("antigo")), null, true);
             storage.save(List.of(), List.of(new BotGroup("novo")), null, false);

@@ -34,7 +34,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TARGET: ${{ inputs.target }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
