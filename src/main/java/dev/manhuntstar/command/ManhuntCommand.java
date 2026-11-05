@@ -162,8 +162,8 @@ public final class ManhuntCommand {
 
         // bots
         root.then(Commands.literal("create").then(
-                createOptions(Commands.argument("name", StringArgumentType.string()), false, false, false).then(
-                        createOptions(Commands.argument("amount", IntegerArgumentType.integer(1, 100)), false, false, false).then(
+                createOptions(Commands.argument("name", StringArgumentType.string()), true, true, false).then(
+                        createOptions(Commands.argument("amount", IntegerArgumentType.integer(1, 100)), true, true, false).then(
                                 createOptions(Commands.argument("difficulty", StringArgumentType.word()).suggests(words(DIFFICULTIES)), true, true, true)))));
         root.then(Commands.literal("remove")
                 .then(Commands.literal("all").executes(ctx -> {
