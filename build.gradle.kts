@@ -1,6 +1,8 @@
 plugins {
     java
+    jacoco
     alias(libs.plugins.shadow)
+    alias(libs.plugins.sonarqube)
 }
 
 group = "dev.manhuntstar"
@@ -70,6 +72,25 @@ tasks.check {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+// Test coverage for SonarQube Cloud: the sonar task reads this XML report.
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+    }
+}
+
+// SonarQube Cloud analysis (./gradlew build sonar, run by the Build workflow). The token comes from
+// the SONAR_TOKEN environment variable (the SONAR_TOKEN secret in the workflow).
+sonar {
+    properties {
+        property("sonar.projectKey", "kaikoaugustin_manhunt-star")
+        property("sonar.organization", "kaikoaugustin")
+        property("sonar.host.url", "https://sonarcloud.io")
+    }
 }
 
 // The plugin jar is the shadow jar: the plugin plus bStats, moved into its own package so it doesn't

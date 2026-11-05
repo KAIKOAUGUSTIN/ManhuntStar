@@ -4,6 +4,9 @@
 # Every push to dev (a merged PR or a direct push; not PRs while open) is also posted to Discord as a
 # card with the commits and the jar, mentioning DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is
 # set (Settings > Secrets and variables > Actions).
+#
+# Each run is also analyzed by SonarQube Cloud (project kaikoaugustin_manhunt-star) when the SONAR_TOKEN
+# secret is available; PRs from forks and Dependabot don't get it and skip the analysis.
 name: Build
 
 on:
@@ -23,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history, so SonarQube Cloud can tell which code is new
 
       - uses: actions/setup-java@v6
         with:
@@ -34,6 +39,23 @@ jobs:
       # build also runs the tests and compiles against the newest Paper API (compileAgainstLatest)
       - name: Build and test
         run: ./gradlew build
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: SonarQube Cloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::notice::SONAR_TOKEN is not available in this run; skipping the SonarQube Cloud analysis."
+            exit 0
+          fi
+          ./gradlew sonar
 
       - name: Artifact name
         id: artifact
