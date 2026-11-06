@@ -15,6 +15,7 @@ import dev.manhuntstar.host.AimDiagnostics;
 import dev.manhuntstar.host.BotEventSink;
 import dev.manhuntstar.listener.BotEntityListener;
 import dev.manhuntstar.listener.MobTargeting;
+import dev.manhuntstar.listener.UpdateNotifyListener;
 import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.metrics.MetricsService;
 import dev.manhuntstar.paper.BukkitYamlFiles;
@@ -111,7 +112,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
 
         pathService = new PathService(server, settings, getLogger());
         debugRenderer = new DebugRenderer();
-        skins = new SkinService(getDataFolder(), getLogger(), settings.skinFallbackUpload::on);
+        skins = new SkinService(getDataFolder(), getLogger(), yaml, settings.skinFallbackUpload::on);
         tabList = new TabListService(getLogger(), settings.tabList::on);
         tabList.init();
         glow = new GlowService(settings);
@@ -120,14 +121,14 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         deathMessages = new DeathMessages(botManager);
         menus = new MenuManager(this);
         mobTargeting = new MobTargeting(this);
-        updates = new UpdateChecker(this);
+        updates = new UpdateChecker(this, getPluginMeta().getVersion());
 
         var pm = getServer().getPluginManager();
         pm.registerEvents(new BotEntityListener(this), this);
         pm.registerEvents(new WorldPlayerListener(this), this);
         pm.registerEvents(mobTargeting, this);
         pm.registerEvents(menus, this);
-        pm.registerEvents(updates, this);
+        pm.registerEvents(new UpdateNotifyListener(updates), this);
         dev.manhuntstar.debug.AimDebug.install(this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,

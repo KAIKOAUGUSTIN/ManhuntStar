@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.manhuntstar.bot.SkinData;
 import dev.manhuntstar.host.SkinSource;
+import dev.manhuntstar.platform.ConfigNode;
+import dev.manhuntstar.platform.YamlFiles;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +28,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Logger;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * The bots' skins: takes the skin of the player with the same name from Mojang; if there is none, uses
@@ -42,6 +43,7 @@ public final class SkinService implements SkinSource {
     private final File folder;
     private final File cacheFile;
     private final Logger logger;
+    private final YamlFiles yaml;
     private final BooleanSupplier mineskinAllowed;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NORMAL).build();
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -55,10 +57,11 @@ public final class SkinService implements SkinSource {
     private record CachedSkin(SkinData skin, long time) {
     }
 
-    public SkinService(File dataFolder, Logger logger, BooleanSupplier mineskinAllowed) {
+    public SkinService(File dataFolder, Logger logger, YamlFiles yaml, BooleanSupplier mineskinAllowed) {
         this.folder = new File(dataFolder, "skins");
         this.cacheFile = new File(folder, "cache.yml");
         this.logger = logger;
+        this.yaml = yaml;
         this.mineskinAllowed = mineskinAllowed;
         folder.mkdirs();
         loadCache();
@@ -222,11 +225,11 @@ public final class SkinService implements SkinSource {
         if (!cacheFile.exists()) {
             return;
         }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(cacheFile);
-        for (String k : y.getKeys(false)) {
+        ConfigNode y = yaml.load(cacheFile);
+        for (String k : y.keys(false)) {
             String v = y.getString(k + ".value");
             String s = y.getString(k + ".signature");
-            long t = y.getLong(k + ".time");
+            long t = y.getLong(k + ".time", 0);
             if (v != null && s != null) {
                 cache.put(y.getString(k + ".name", k), new CachedSkin(new SkinData(v, s), t));
             }
@@ -234,7 +237,7 @@ public final class SkinService implements SkinSource {
     }
 
     private synchronized void saveCache() {
-        YamlConfiguration y = new YamlConfiguration();
+        ConfigNode y = yaml.create();
         int i = 0;
         for (Map.Entry<String, CachedSkin> e : cache.entrySet()) {
             String k = "s" + (i++);
@@ -244,7 +247,7 @@ public final class SkinService implements SkinSource {
             y.set(k + ".time", e.getValue().time());
         }
         try {
-            y.save(cacheFile);
+            yaml.save(y, cacheFile);
         } catch (IOException e) {
             logger.warning("Could not save the skin cache: " + e.getMessage());
         }

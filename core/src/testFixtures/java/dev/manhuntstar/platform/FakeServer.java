@@ -111,6 +111,12 @@ public class FakeServer implements GameServer {
     }
 
     @Override
+    public ScheduledTask runTimerAsync(Runnable task, long delayTicks, long periodTicks) {
+        tasks.add(task);
+        return () -> tasks.remove(task);
+    }
+
+    @Override
     public GameItem newItem(ItemType type, int amount) {
         return new FakeItem(type, amount);
     }

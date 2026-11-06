@@ -7,6 +7,7 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.ItemType;
+import dev.manhuntstar.platform.ScheduledTask;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 
 /** The Bukkit server as a core {@link GameServer}: every call is the Bukkit one. */
 public final class PaperServer implements GameServer {
@@ -135,5 +137,11 @@ public final class PaperServer implements GameServer {
     @Override
     public void runLater(Runnable task, long delayTicks) {
         Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
+    }
+
+    @Override
+    public ScheduledTask runTimerAsync(Runnable task, long delayTicks, long periodTicks) {
+        BukkitTask t = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, task, delayTicks, periodTicks);
+        return t::cancel;
     }
 }

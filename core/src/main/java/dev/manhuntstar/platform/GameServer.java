@@ -53,4 +53,7 @@ public interface GameServer {
 
     /** Runs a task on the main thread after a number of ticks. */
     void runLater(Runnable task, long delayTicks);
+
+    /** Runs a task off the main thread after {@code delayTicks} and then every {@code periodTicks}. */
+    ScheduledTask runTimerAsync(Runnable task, long delayTicks, long periodTicks);
 }
