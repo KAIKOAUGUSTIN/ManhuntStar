@@ -16,8 +16,8 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.Damageable;
 
 /**
- * Fases de progressão do bot (1 a 10, 12 = fase final exclusiva do Terminator).
- * Cada fase define o equipamento base, o que o bot pode usar e os drops ao morrer.
+ * The bot's progression phases (1 to 10, 12 = the Terminator's own final phase).
+ * Each phase sets the base gear, what the bot can use and the drops when it dies.
  */
 public final class Progression {
 
@@ -78,12 +78,12 @@ public final class Progression {
         if (phase >= 10 && difficulty != BotDifficulty.TERMINATOR) {
             return;
         }
-        // o relógio das fases só anda durante a caçada: na roda, na contagem ou sem jogador caçável
-        // (morto, desconectado ou em espectador), não
+        // the phase clock only runs during the hunt: in the ring, in the countdown or with no huntable
+        // player (dead, disconnected or in spectator), it doesn't
         if (bot.idle() != null || huntedPlayer() == null) {
             return;
         }
-        // a passagem 10 → 12 do Terminator também respeita o multiplicador de duração das fases
+        // the Terminator's step from 10 to 12 also follows the phase duration multiplier
         int limit = (int) (difficulty.phaseDurationTicks() * bot.settings().phaseMultiplier.value());
         if (difficulty == BotDifficulty.TERMINATOR && phase == 10) {
             if (++ticksInPhase >= limit) {
@@ -100,7 +100,7 @@ public final class Progression {
         }
     }
 
-    /** Depois de renascer em uma cama de emboscada o bot volta à fase 1 e recupera uma fase a cada 5 s. */
+    /** After respawning in an ambush bed the bot goes back to phase 1 and recovers one phase every 5 s. */
     public void startRespawnRegeneration(int targetPhase) {
         int clamped = Math.max(1, targetPhase);
         regenTargetPhase = clamped;
@@ -126,7 +126,7 @@ public final class Progression {
         }
     }
 
-    /** O jogador que o bot caça (ou o mais próximo, se o alvo sumiu), se ainda puder ser caçado. */
+    /** The player the bot hunts (or the closest one, if the target is gone), if they can still be hunted. */
     private Player huntedPlayer() {
         BotManager manager = bot.manager();
         Player p = bot.target();
@@ -208,7 +208,7 @@ public final class Progression {
         return total;
     }
 
-    /** Sobe de fase (nunca desce), atualiza o equipamento e anuncia quando é uma fase nova no servidor. */
+    /** Goes up a phase (never down), updates the gear and announces it on the server when it's a new phase. */
     public void setPhase(int newPhase) {
         if (newPhase <= phase) {
             return;
@@ -224,8 +224,8 @@ public final class Progression {
     }
 
     /**
-     * Fase escolhida ao criar o bot (menu ou /manhunt create). Diferente de {@link #setPhase}, também desce: um
-     * Terminator (que começa na 8) criado na fase 3 fica na 3. O equipamento vem depois, em {@link #updateGear}.
+     * Phase chosen when creating the bot (menu or /manhunt create). Unlike {@link #setPhase}, it also goes down: a
+     * Terminator (which starts at 8) created at phase 3 stays at 3. The gear comes afterwards, in {@link #updateGear}.
      */
     public void setInitialPhase(int startPhase) {
         if (startPhase > phase) {
@@ -266,7 +266,7 @@ public final class Progression {
         return phase == 9 ? 0.5f : 1.0f;
     }
 
-    // ------------------------------------------------------------------ equipamento por fase
+    // ------------------------------------------------------------------ gear per phase
 
     public void updateGear() {
         if (!bot.isAlive()) {
@@ -321,7 +321,7 @@ public final class Progression {
         }
     }
 
-    /** Arma base da fase (usada quando o bot não tem espada melhor). */
+    /** The phase's base weapon (used when the bot has no better sword). */
     public ItemStack mainHandItem() {
         return switch (phase) {
             case 2, 3 -> new ItemStack(Material.WOODEN_SWORD);
@@ -344,7 +344,7 @@ public final class Progression {
         };
     }
 
-    /** Peitoral base da fase (para devolver depois de usar a elytra). */
+    /** The phase's base chestplate (to put back after using the elytra). */
     public ItemStack chestplateForPhase() {
         return switch (phase) {
             case 4 -> new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -400,7 +400,7 @@ public final class Progression {
 
     // ------------------------------------------------------------------ drops
 
-    /** Drops "sintéticos" da fase (comida, maçãs, armas gastas), sorteados pela chance da dificuldade. */
+    /** The phase's "synthetic" drops (food, apples, worn weapons), rolled with the difficulty's chance. */
     List<ItemStack> deathDrops(boolean inventoryAlreadyDropped) {
         List<ItemStack> out = new ArrayList<>();
         ThreadLocalRandom r = ThreadLocalRandom.current();

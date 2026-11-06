@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Blocos colocados por jogadores (para reconhecer torres e skybases). Corrige o mod, que registrava
- * qualquer clique como "bloco colocado", não separava por mundo e nunca esquecia: aqui só entra o
- * que foi realmente colocado ({@code BlockPlaceEvent}), por mundo, e expira em 30 minutos.
+ * Blocks placed by players (to recognize towers and skybases). Fixes the mod, which recorded
+ * any click as a "placed block", didn't separate worlds and never forgot: here only what was
+ * really placed ({@code BlockPlaceEvent}) goes in, per world, and it expires in 30 minutes.
  */
 public final class PlayerBlockTracker {
 
