@@ -18,9 +18,9 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 
 /**
- * Pausa da caçada (/manhunt pause): cada bot fica parado onde está, até no ar, montado ou de barco,
- * invencível e sem pensar, até o /manhunt resume. Junto param a contagem das rodas, o tempo das fases
- * e o relógio da caçada (renascimento e proteção de quem entrou no meio). A pausa é salva com os bots.
+ * Hunt pause (/manhunt pause): each bot stays still where it is, even mid-air, mounted or in a boat,
+ * invulnerable and not thinking, until /manhunt resume. The ring countdowns, the phase timers and the
+ * hunt clock (respawn and late-joiner protection) stop with it. The pause is saved with the bots.
  */
 public final class PauseService {
 
@@ -32,7 +32,7 @@ public final class PauseService {
     private int pausedAt;
     private long pausedTicks;
 
-    /** O bot e, se ele estiver montado, o cavalo ou barco embaixo dele. */
+    /** The bot and, if it is mounted, the horse or boat under it. */
     private record Frozen(Freeze body, Freeze mount) {
         void hold() {
             if (mount != null) {
@@ -57,12 +57,12 @@ public final class PauseService {
         return paused;
     }
 
-    /** Relógio da caçada: os ticks do servidor sem contar o tempo pausado. */
+    /** Hunt clock: the server ticks without the paused time. */
     public long clock() {
         return (paused ? pausedAt : Bukkit.getCurrentTick()) - pausedTicks;
     }
 
-    /** @return false se já estava pausada */
+    /** @return false if it was already paused */
     public boolean pause() {
         if (paused) {
             return false;
@@ -74,7 +74,7 @@ public final class PauseService {
         return true;
     }
 
-    /** @return false se não estava pausada */
+    /** @return false if it was not paused */
     public boolean resume() {
         if (!paused) {
             return false;
@@ -87,7 +87,7 @@ public final class PauseService {
         return true;
     }
 
-    /** A cada tick pausado: prende o bot (e o que ele monta) onde ele estava quando a pausa o pegou. */
+    /** Every paused tick: holds the bot (and what it rides) where it was when the pause caught it. */
     public void hold(Bot bot) {
         GameEntity body = bot.entity();
         GameEntity root = body;
@@ -107,8 +107,8 @@ public final class PauseService {
     }
 
     /**
-     * O bot foi levado de propósito durante a pausa (/manhunt tp, menu): congela de novo onde ele está.
-     * Sem isso o congelamento o devolvia ao lugar antigo no tick seguinte.
+     * The bot was moved on purpose during the pause (/manhunt tp, menu): freezes it again where it is.
+     * Without this the freeze would put it back in the old place on the next tick.
      */
     public void refreeze(Bot bot) {
         Frozen f = frozen.remove(bot.id());
@@ -116,14 +116,14 @@ public final class PauseService {
             f.release();
         }
         if (paused && bot.isAlive()) {
-            // chega parado, como depois de qualquer teleporte
+            // arrives standing still, as after any teleport
             bot.entity().setVelocity(Vec3.ZERO);
             bot.entity().setFallDistance(0);
             hold(bot);
         }
     }
 
-    /** Fim do tick pausado: solta quem deixou de ser bot vivo (removido ou /kill) e atualiza a barra. */
+    /** End of the paused tick: releases whoever stopped being a living bot (removed or /kill) and updates the bar. */
     public void tick() {
         Iterator<Map.Entry<UUID, Frozen>> it = frozen.entrySet().iterator();
         while (it.hasNext()) {
@@ -139,7 +139,7 @@ public final class PauseService {
         }
     }
 
-    /** Solta todos (fim da pausa, apagar tudo ou desligar o servidor). */
+    /** Releases everyone (end of the pause, delete all or server shutdown). */
     public void releaseAll() {
         for (Frozen f : frozen.values()) {
             f.release();
@@ -147,13 +147,13 @@ public final class PauseService {
         frozen.clear();
     }
 
-    /** Desligar o servidor: solta as entidades e tira a barra, mas a pausa continua (fica salva). */
+    /** Server shutdown: releases the entities and removes the bar, but the pause goes on (it stays saved). */
     public void shutdown() {
         releaseAll();
         hideBar();
     }
 
-    /** Apagar tudo: a pausa acaba junto com a caçada, sem aviso. */
+    /** Delete all: the pause ends together with the hunt, without a message. */
     public void reset() {
         if (paused) {
             pausedTicks += Bukkit.getCurrentTick() - pausedAt;
@@ -163,7 +163,7 @@ public final class PauseService {
         hideBar();
     }
 
-    // ------------------------------------------------------------------ barra
+    // ------------------------------------------------------------------ bar
 
     private void updateBar() {
         bar.name(plugin.messages().get("pause.bar"));

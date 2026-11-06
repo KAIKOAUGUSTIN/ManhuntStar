@@ -16,17 +16,17 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
- * Quem os bots podem caçar: a lista de jogadores (permitidos ou bloqueados) e quem entrou no meio.
- * A caçada começa quando uma roda solta os bots (ou quando bots nascem sem roda) e acaba quando não
- * sobra nenhum bot. Quem está online nessa hora participa; quem entra depois é caçado na hora, fica
- * protegido pelo tempo da contagem da roda (no mínimo 5 s) ou fica de fora até a próxima caçada,
- * conforme a opção "quem-entra-no-meio". Quem participa, cai e volta continua sendo caçado. Caçada
- * que começou sem ninguém online trata o primeiro a entrar como participante. A proteção conta no
- * relógio da caçada, que para durante a pausa.
+ * Who the bots may hunt: the player list (allowed or blocked) and late joiners.
+ * The hunt starts when a ring releases the bots (or when bots spawn without a ring) and ends when no
+ * bot is left. Whoever is online at that moment takes part; whoever joins later is hunted right away,
+ * protected for the ring's countdown time (at least 5 s) or left out until the next hunt, depending
+ * on the "late-join" option. A participant who leaves and comes back is still hunted. A hunt that
+ * started with nobody online treats the first one to join as a participant. The protection counts on
+ * the hunt clock, which stops during the pause.
  */
 public final class HuntPolicy {
 
-    /** Proteção mínima de quem acabou de entrar, mesmo com contagem 0. */
+    /** Minimum protection for someone who just joined, even with a countdown of 0. */
     public static final int MIN_PROTECTION_SECONDS = 5;
 
     private final ManhuntStarPlugin plugin;
@@ -44,7 +44,7 @@ public final class HuntPolicy {
         return plugin.botManager().pause().clock();
     }
 
-    /** Tempo de proteção de quem entra no meio: o da contagem da roda, no mínimo 5 s. */
+    /** Protection time for late joiners: the ring's countdown, at least 5 s. */
     public static int protectionFor(int countdownSeconds) {
         return Math.max(MIN_PROTECTION_SECONDS, countdownSeconds);
     }
@@ -53,7 +53,7 @@ public final class HuntPolicy {
         return active;
     }
 
-    /** Começa uma caçada nova (uma roda soltou os bots): quem está online participa. */
+    /** Starts a new hunt (a ring released the bots): whoever is online takes part. */
     public void begin(int countdownSeconds) {
         active = true;
         protectionSeconds = protectionFor(countdownSeconds);
@@ -66,7 +66,7 @@ public final class HuntPolicy {
         plugin.botManager().markDirty();
     }
 
-    /** Bots criados sem roda: começa uma caçada só se ainda não houver uma. */
+    /** Bots created without a ring: starts a hunt only if there is none yet. */
     public void beginIfIdle() {
         if (!active) {
             begin(0);
@@ -81,12 +81,12 @@ public final class HuntPolicy {
         plugin.botManager().markDirty();
     }
 
-    /** A lista de jogadores deixa caçar este jogador (e ele pode disparar a roda)? */
+    /** Does the player list allow hunting this player (and can they trigger the ring)? */
     public boolean listAllows(GamePlayer p) {
         return plugin.settings().listAllows(p.name());
     }
 
-    /** Pode ser alvo pela lista e pela regra de quem entra no meio (vivo e espectador o BotManager confere). */
+    /** Can be a target per the list and the late-join rule (alive and spectator are checked by BotManager). */
     public boolean canBeHunted(GamePlayer p) {
         if (!listAllows(p)) {
             return false;
@@ -95,7 +95,7 @@ public final class HuntPolicy {
             return true;
         }
         UUID id = p.uuid();
-        // de fora até a próxima caçada, ou ainda não admitido
+        // left out until the next hunt, or not admitted yet
         if (!participants.contains(id)) {
             return false;
         }
@@ -103,14 +103,14 @@ public final class HuntPolicy {
         return until == null || until <= clock();
     }
 
-    /** Jogador que entrou (ou passou a valer pela lista) com a caçada em andamento. */
+    /** A player who joined (or became eligible through the list) while the hunt is running. */
     public void admit(GamePlayer p) {
         UUID id = p.uuid();
         if (!active || participants.contains(id) || excluded.contains(id) || !listAllows(p)) {
             return;
         }
         if (participants.isEmpty()) {
-            // a caçada começou sem ninguém online (bots criados pelo console): quem chega é o primeiro alvo
+            // the hunt started with nobody online (bots created from the console): whoever arrives is the first target
             participants.add(id);
             plugin.botManager().markDirty();
             return;
@@ -134,7 +134,7 @@ public final class HuntPolicy {
         plugin.botManager().markDirty();
     }
 
-    /** A cada segundo: encerra a caçada sem bots, admite quem passou a valer e mostra a proteção. */
+    /** Every second: ends the hunt with no bots, admits whoever became eligible and shows the protection. */
     public void tick() {
         if (Bukkit.getCurrentTick() % 20 != 0 || !active) {
             return;
@@ -165,7 +165,7 @@ public final class HuntPolicy {
         }
     }
 
-    // ------------------------------------------------------------------ salvamento
+    // ------------------------------------------------------------------ saving
 
     public void save(ConfigurationSection s) {
         s.set("ativa", active);
@@ -202,7 +202,7 @@ public final class HuntPolicy {
                 try {
                     protectedUntil.put(UUID.fromString(k), now + prot.getInt(k));
                 } catch (IllegalArgumentException ignored) {
-                    // linha estragada no bots.yml
+                    // broken line in bots.yml
                 }
             }
         }
@@ -221,7 +221,7 @@ public final class HuntPolicy {
             try {
                 into.add(UUID.fromString(r));
             } catch (IllegalArgumentException ignored) {
-                // linha estragada no bots.yml
+                // broken line in bots.yml
             }
         }
     }

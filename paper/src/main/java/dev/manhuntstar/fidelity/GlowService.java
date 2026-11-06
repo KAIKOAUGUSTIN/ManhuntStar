@@ -11,8 +11,8 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
 /**
- * Brilho (contorno visível através das paredes) nos caçadores e, separadamente, nos fugitivos.
- * A cor vem de um time do placar que contém só as entidades dos bots.
+ * Glow (an outline visible through walls) on the hunters and, separately, on the runners.
+ * The color comes from a scoreboard team that holds only the bots' entities.
  */
 public final class GlowService {
 
@@ -89,7 +89,7 @@ public final class GlowService {
         }
     }
 
-    /** Ao desligar: tira os times (as entidades já foram removidas). */
+    /** On shutdown: removes the teams (the entities are already gone). */
     public void cleanup() {
         for (String name : new String[]{HUNTER_TEAM, ESCAPE_TEAM}) {
             Team t = board().getTeam(name);

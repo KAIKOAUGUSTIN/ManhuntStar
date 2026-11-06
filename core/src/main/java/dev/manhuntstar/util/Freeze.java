@@ -4,9 +4,9 @@ import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameWorld;
 
 /**
- * Entidade parada onde estava (até no ar) enquanto a caçada está pausada: sem gravidade, sem
- * velocidade e devolvida ao lugar se alguém a empurrar. Ao soltar, volta a gravidade, a velocidade e
- * a altura de queda que ela tinha, e o movimento continua de onde parou.
+ * Holds an entity where it was (even mid-air) while the hunt is paused: no gravity, no velocity, and
+ * put back in place if someone pushes it. On release, the gravity, velocity and fall distance it had
+ * come back, and the movement carries on from where it stopped.
  */
 public final class Freeze {
 
@@ -37,9 +37,9 @@ public final class Freeze {
     }
 
     /**
-     * Congela a entidade agora.
+     * Freezes the entity now.
      *
-     * @param protect deixa a entidade invulnerável enquanto congelada (o cavalo ou o barco do bot)
+     * @param protect makes the entity invulnerable while frozen (the bot's horse or boat)
      */
     public static Freeze capture(GameEntity e, boolean protect) {
         Freeze f = new Freeze(e, protect);
@@ -56,8 +56,8 @@ public final class Freeze {
     }
 
     /**
-     * A cada tick: zera a velocidade e devolve ao lugar quem foi empurrado. O passageiro segue o
-     * veículo; o veículo (com o bot em cima) volta pela velocidade, sem teleporte.
+     * Every tick: clears the velocity and puts back whoever was pushed. The passenger follows the
+     * vehicle; the vehicle (with the bot on it) goes back through its velocity, without a teleport.
      */
     public void hold() {
         if (!entity.isValid()) {

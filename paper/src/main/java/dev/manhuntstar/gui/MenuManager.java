@@ -48,11 +48,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 /**
- * {@code /manhunt menu}: menus em baú no lugar da tela do cliente do mod, em quatro seções.
- * Partida (começar, pausar, alvo forçado), Regras da caçada (roda, contagem, quem entra no meio,
- * lista de jogadores), Bots (criar, gerenciar, grupos, trazer, apagar) e Configurações (as outras
- * categorias de opções). Textos (nome do bot, skin, jogador) são digitados no chat; os textos do
- * menu vêm do arquivo de idioma ({@code menu.*}).
+ * {@code /manhunt menu}: chest menus in place of the mod client's screen, in four sections.
+ * Match (start, pause, forced target), Hunt rules (ring, countdown, late joiners, player list),
+ * Bots (create, manage, groups, bring, delete) and Settings (the other option categories). Text
+ * (bot name, skin, player) is typed in chat; the menu text comes from the language file
+ * ({@code menu.*}).
  */
 public final class MenuManager implements Listener {
 
@@ -61,7 +61,7 @@ public final class MenuManager implements Listener {
 
     private final ManhuntStarPlugin plugin;
     private final Map<UUID, SpawnDraft> drafts = new HashMap<>();
-    /** Lido pelo evento de chat, que roda fora da thread principal. */
+    /** Read by the chat event, which runs off the main thread. */
     private final Map<UUID, Consumer<String>> chatInput = new ConcurrentHashMap<>();
 
     private static final class SpawnDraft {
@@ -73,7 +73,7 @@ public final class MenuManager implements Listener {
         int aggression = 0;
     }
 
-    /** Inventário de menu: guarda a ação de cada slot. */
+    /** Menu inventory: keeps the action of each slot. */
     private static final class Menu implements InventoryHolder {
         final Map<Integer, Consumer<ClickType>> actions = new HashMap<>();
         Inventory inventory;
@@ -113,12 +113,12 @@ public final class MenuManager implements Listener {
         return s;
     }
 
-    /** Texto do arquivo de idioma, na cor padrão do menu quando o texto não traz cor. */
+    /** Text from the language file, in the menu's default color when the text has no color. */
     private Component t(String key, NamedTextColor color, TagResolver... resolvers) {
         return msg().get(key, resolvers).colorIfAbsent(color);
     }
 
-    /** Texto de várias linhas do arquivo de idioma, uma linha de lore por linha. */
+    /** Multi-line text from the language file, one lore line per line. */
     private List<Component> lines(String key, NamedTextColor color, TagResolver... resolvers) {
         List<Component> out = new ArrayList<>();
         for (Component line : msg().lines(key, resolvers)) {
@@ -127,7 +127,7 @@ public final class MenuManager implements Listener {
         return out;
     }
 
-    /** Texto que não vem do idioma (nome de jogador, de grupo, comando). */
+    /** Text that does not come from the language file (player name, group name, command). */
     private static Component plain(String text, NamedTextColor color) {
         return Component.text(text, color);
     }
@@ -158,7 +158,7 @@ public final class MenuManager implements Listener {
         }
     }
 
-    /** Botão "Voltar" no meio da última linha. */
+    /** "Back" button in the middle of the last row. */
     private void back(Menu m, Runnable to) {
         set(m, m.inventory.getSize() - 5, item(Material.OAK_DOOR, t("menu.back", NamedTextColor.GRAY), List.of()), c -> to.run());
     }
@@ -173,7 +173,7 @@ public final class MenuManager implements Listener {
         return fp == null ? msg().raw("common.none") : fp.getName();
     }
 
-    // ------------------------------------------------------------------ menu principal
+    // ------------------------------------------------------------------ main menu
 
     public void openMain(Player p) {
         Menu m = create(3, "menu.title.main");
@@ -190,7 +190,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    /** Resumo no topo do menu principal: bots, estado da caçada, alvo forçado e lista. */
+    /** Summary at the top of the main menu: bots, hunt state, forced target and list. */
     private List<Component> status() {
         BotManager bm = manager();
         List<Component> lore = new ArrayList<>();
@@ -215,7 +215,7 @@ public final class MenuManager implements Listener {
         return t(bm.allBots().isEmpty() ? "menu.main.hunt-no-bots" : "menu.main.hunt-stopped", NamedTextColor.WHITE);
     }
 
-    // ------------------------------------------------------------------ partida
+    // ------------------------------------------------------------------ match
 
     private void openMatch(Player p) {
         BotManager bm = manager();
@@ -276,7 +276,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    // ------------------------------------------------------------------ regras da caçada
+    // ------------------------------------------------------------------ hunt rules
 
     private void openRules(Player p) {
         List<Setting<?>> list = settings().inCategory(Category.MANHUNT);
@@ -316,7 +316,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    /** Jogadores online e os da lista: clicar põe ou tira da lista. */
+    /** Online players and the ones on the list: clicking adds them to or removes them from the list. */
     private void openPlayerList(Player p) {
         Menu m = create(6, "menu.title.player-list");
         Map<String, Player> people = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
@@ -362,7 +362,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    /** Cabeça de jogador; com o jogador online, já com a skin dele. */
+    /** Player head; with the player online, already wearing their skin. */
     private static ItemStack head(String name, Player online, NamedTextColor color, List<Component> lore) {
         ItemStack head = item(Material.PLAYER_HEAD, plain(name, color), lore);
         if (online != null) {
@@ -536,7 +536,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    // ------------------------------------------------------------------ configurações
+    // ------------------------------------------------------------------ settings
 
     private void openConfig(Player p) {
         Menu m = create(3, "menu.title.config");
@@ -552,7 +552,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    /** Atalho para o brilho dos caçadores: esquerdo liga/desliga, direito troca a cor. */
+    /** Shortcut for the hunters' glow: left click toggles it, right click changes the color. */
     private void setGlowButton(Player p, Menu m, int slot) {
         Setting.Bool glow = settings().glowHunters;
         Setting.Enumerated<GlowColor> color = settings().glowHuntersColor;
@@ -585,7 +585,7 @@ public final class MenuManager implements Listener {
         p.openInventory(m.inventory);
     }
 
-    /** Uma opção como item: nome, descrição do arquivo de idioma, valor e comando; o clique muda o valor. */
+    /** An option as an item: name, description from the language file, value and command; clicking changes the value. */
     private void setSetting(Menu m, int slot, Setting<?> s, Runnable reopen) {
         Material icon;
         List<Component> lore = new ArrayList<>();
@@ -613,8 +613,8 @@ public final class MenuManager implements Listener {
     }
 
     /**
-     * Quebra a descrição em linhas de até {@code width} letras. Palavra maior que a linha (texto sem
-     * espaços, como em chinês) é cortada no meio.
+     * Wraps the description into lines of up to {@code width} letters. A word longer than the line
+     * (text without spaces, as in Chinese) is cut in the middle.
      */
     static List<String> wrap(String text, int width) {
         List<String> lines = new ArrayList<>();
@@ -669,7 +669,7 @@ public final class MenuManager implements Listener {
         }
     }
 
-    // ------------------------------------------------------------------ eventos
+    // ------------------------------------------------------------------ events
 
     private void askChat(Player p, String key, Consumer<String> then) {
         p.closeInventory();

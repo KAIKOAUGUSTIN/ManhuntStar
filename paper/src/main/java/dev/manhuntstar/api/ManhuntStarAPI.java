@@ -8,8 +8,8 @@ import java.util.UUID;
 import org.bukkit.entity.Entity;
 
 /**
- * Ponto de entrada para outros plugins: lista os bots, encontra o bot de uma entidade e expõe
- * o gerenciador. Os eventos ficam em {@link BotEvents}.
+ * Entry point for other plugins: lists the bots, finds the bot of an entity and exposes the
+ * manager. The events live in {@link BotEvents}.
  */
 public final class ManhuntStarAPI {
 
@@ -32,7 +32,7 @@ public final class ManhuntStarAPI {
         return plugin().botManager().bot(name);
     }
 
-    /** O bot dono desta entidade (Mannequin), ou null se não for um bot. */
+    /** The bot that owns this entity (Mannequin), or null if it is not a bot. */
     public static Bot getBot(Entity entity) {
         return plugin().botManager().byEntity(PaperEntities.of(entity));
     }

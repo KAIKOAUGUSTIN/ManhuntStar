@@ -12,8 +12,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Mensagens de morte do bot no padrão do jogo ("X foi morto por Y", "X caiu de um lugar alto"...),
- * usando as chaves de tradução do próprio cliente, então aparecem no idioma de cada jogador.
+ * Bot death messages in the game's format ("X was slain by Y", "X fell from a high place"...),
+ * using the client's own translation keys, so they show up in each player's language.
  */
 public final class DeathMessages {
 
