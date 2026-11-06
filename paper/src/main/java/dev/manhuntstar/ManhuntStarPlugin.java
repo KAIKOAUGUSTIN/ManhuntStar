@@ -105,7 +105,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         tabList = new TabListService(getLogger(), settings.tabList::on);
         tabList.init();
         glow = new GlowService(settings);
-        storage = new BotStorage(getDataFolder(), getLogger());
+        storage = new BotStorage(getDataFolder(), getLogger(), yaml);
         botManager = new BotManager(this);
         deathMessages = new DeathMessages(botManager);
         menus = new MenuManager(this);

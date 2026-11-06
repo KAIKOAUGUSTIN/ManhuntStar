@@ -2,6 +2,7 @@ package dev.manhuntstar.manhunt;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.Platform;
 import java.util.ArrayList;
@@ -12,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.bukkit.configuration.ConfigurationSection;
 
 /**
  * Who the bots may hunt: the player list (allowed or blocked) and late joiners.
@@ -166,7 +166,7 @@ public final class HuntPolicy {
 
     // ------------------------------------------------------------------ saving
 
-    public void save(ConfigurationSection s) {
+    public void save(ConfigNode s) {
         s.set("ativa", active);
         if (!active) {
             return;
@@ -183,23 +183,23 @@ public final class HuntPolicy {
         }
     }
 
-    public void load(ConfigurationSection s) {
+    public void load(ConfigNode s) {
         participants.clear();
         excluded.clear();
         protectedUntil.clear();
-        active = s != null && s.getBoolean("ativa");
+        active = s != null && s.getBoolean("ativa", false);
         if (!active) {
             return;
         }
-        protectionSeconds = protectionFor(s.getInt("protecao-segundos"));
+        protectionSeconds = protectionFor(s.getInt("protecao-segundos", 0));
         readIds(s.getStringList("participantes"), participants);
         readIds(s.getStringList("fora"), excluded);
-        ConfigurationSection prot = s.getConfigurationSection("protegidos");
+        ConfigNode prot = s.section("protegidos");
         if (prot != null) {
             long now = clock();
-            for (String k : prot.getKeys(false)) {
+            for (String k : prot.keys(false)) {
                 try {
-                    protectedUntil.put(UUID.fromString(k), now + prot.getInt(k));
+                    protectedUntil.put(UUID.fromString(k), now + prot.getInt(k, 0));
                 } catch (IllegalArgumentException ignored) {
                     // broken line in bots.yml
                 }

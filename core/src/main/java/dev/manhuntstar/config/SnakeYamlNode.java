@@ -118,6 +118,11 @@ final class SnakeYamlNode implements ConfigNode {
     }
 
     @Override
+    public long getLong(String path, long def) {
+        return get(path) instanceof Number n ? n.longValue() : def;
+    }
+
+    @Override
     public double getDouble(String path, double def) {
         return get(path) instanceof Number n ? n.doubleValue() : def;
     }

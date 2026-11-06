@@ -59,6 +59,11 @@ public final class BukkitConfigNode implements ConfigNode {
     }
 
     @Override
+    public long getLong(String path, long def) {
+        return section.getLong(path, def);
+    }
+
+    @Override
     public double getDouble(String path, double def) {
         return section.getDouble(path, def);
     }

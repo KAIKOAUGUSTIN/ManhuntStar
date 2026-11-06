@@ -6,9 +6,11 @@ import dev.manhuntstar.bot.BotSnapshot;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.PersistentGear;
 import dev.manhuntstar.bot.SkinData;
+import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.YamlFiles;
 import dev.manhuntstar.util.Vec3;
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +31,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * Saves and reads the bots, groups, rings and the hunt in progress in {@code bots.yml}. The text is built on the main thread and
@@ -40,6 +40,7 @@ public final class BotStorage {
 
     private final File file;
     private final Logger logger;
+    private final YamlFiles yaml;
     private final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ManhuntStar-Salvamento");
         t.setDaemon(true);
@@ -51,23 +52,24 @@ public final class BotStorage {
     private long writtenSeq;
 
     /** @param manhunt rings and hunt in progress (null if there's none) */
-    public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigurationSection manhunt) {
+    public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigNode manhunt) {
     }
 
-    public BotStorage(File dataFolder, Logger logger) {
+    public BotStorage(File dataFolder, Logger logger, YamlFiles yaml) {
         this.file = new File(dataFolder, "bots.yml");
         this.logger = logger;
+        this.yaml = yaml;
     }
 
     /** @param manhunt writes the rings and the hunt in the "manhunt" section (null = not saved) */
-    public void save(List<BotSnapshot> bots, List<BotGroup> groups, Consumer<ConfigurationSection> manhunt, boolean async) {
-        YamlConfiguration y = new YamlConfiguration();
+    public void save(List<BotSnapshot> bots, List<BotGroup> groups, Consumer<ConfigNode> manhunt, boolean async) {
+        ConfigNode y = yaml.create();
         y.set("versao", 1);
         if (manhunt != null) {
             manhunt.accept(y.createSection("manhunt"));
         }
         for (BotGroup g : groups) {
-            ConfigurationSection s = y.createSection("grupos." + key(g.name()));
+            ConfigNode s = y.createSection("grupos." + key(g.name()));
             s.set("nome", g.name());
             s.set("papel", g.role().name());
             s.set("rastrear-jogadores", g.trackPlayers());
@@ -87,7 +89,7 @@ public final class BotStorage {
             }
         }
         for (BotSnapshot b : bots) {
-            ConfigurationSection s = y.createSection("bots." + b.id());
+            ConfigNode s = y.createSection("bots." + b.id());
             s.set("nome", b.name());
             s.set("nome-visivel", b.visualName());
             if (b.skin() != null && b.skin().valid()) {
@@ -133,7 +135,7 @@ public final class BotStorage {
             s.set("abates", b.kills());
             s.set("vivo", b.alive());
         }
-        String text = y.saveToString();
+        String text = yaml.saveToString(y);
         if (text.equals(lastWritten)) {
             return;
         }
@@ -174,11 +176,11 @@ public final class BotStorage {
         if (!file.exists()) {
             return new LoadResult(bots, groups, null);
         }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
-        ConfigurationSection gs = y.getConfigurationSection("grupos");
+        ConfigNode y = yaml.load(file);
+        ConfigNode gs = y.section("grupos");
         if (gs != null) {
-            for (String k : gs.getKeys(false)) {
-                ConfigurationSection s = gs.getConfigurationSection(k);
+            for (String k : gs.keys(false)) {
+                ConfigNode s = gs.section(k);
                 if (s == null) {
                     continue;
                 }
@@ -203,16 +205,16 @@ public final class BotStorage {
                     }
                     g.setAllowedMobTargets(types);
                 }
-                if (s.isConfigurationSection("spawnpoint")) {
-                    g.setSpawnpoint(s.getString("spawnpoint.mundo"), new Vec3(s.getDouble("spawnpoint.x"), s.getDouble("spawnpoint.y"), s.getDouble("spawnpoint.z")));
+                if (s.isSection("spawnpoint")) {
+                    g.setSpawnpoint(s.getString("spawnpoint.mundo"), new Vec3(s.getDouble("spawnpoint.x", 0), s.getDouble("spawnpoint.y", 0), s.getDouble("spawnpoint.z", 0)));
                 }
                 groups.add(g);
             }
         }
-        ConfigurationSection bs = y.getConfigurationSection("bots");
+        ConfigNode bs = y.section("bots");
         if (bs != null) {
-            for (String k : bs.getKeys(false)) {
-                ConfigurationSection s = bs.getConfigurationSection(k);
+            for (String k : bs.keys(false)) {
+                ConfigNode s = bs.section(k);
                 if (s == null) {
                     continue;
                 }
@@ -223,10 +225,10 @@ public final class BotStorage {
                 }
             }
         }
-        return new LoadResult(bots, groups, y.getConfigurationSection("manhunt"));
+        return new LoadResult(bots, groups, y.section("manhunt"));
     }
 
-    private static BotSnapshot readBot(UUID id, ConfigurationSection s) {
+    private static BotSnapshot readBot(UUID id, ConfigNode s) {
         SkinData skin = s.isString("skin.valor") ? new SkinData(s.getString("skin.valor"), s.getString("skin.assinatura")) : null;
         List<GameItem> inv = new ArrayList<>();
         for (String e : s.getStringList("inventario")) {
@@ -238,13 +240,13 @@ public final class BotStorage {
         String target = s.getString("alvo");
         BotDifficulty diff = BotDifficulty.parse(s.getString("dificuldade", "TERMINATOR"));
         return new BotSnapshot(id, s.getString("nome", "Bot"), s.getString("nome-visivel", s.getString("nome", "Bot")), skin,
-                s.getString("mundo"), s.getDouble("x"), s.getDouble("y"), s.getDouble("z"), (float) s.getDouble("yaw"), (float) s.getDouble("pitch"),
+                s.getString("mundo"), s.getDouble("x", 0), s.getDouble("y", 0), s.getDouble("z", 0), (float) s.getDouble("yaw", 0), (float) s.getDouble("pitch", 0),
                 s.getDouble("vida", 20), s.getInt("fome", 20), (float) s.getDouble("saturacao", 5), diff == null ? BotDifficulty.TERMINATOR : diff,
                 s.getInt("fase", 1), s.getBoolean("progressao", true), inv,
                 decode(s.getString("equipamento.mao")), decode(s.getString("equipamento.mao-secundaria")), decode(s.getString("equipamento.cabeca")),
                 decode(s.getString("equipamento.peito")), decode(s.getString("equipamento.pernas")), decode(s.getString("equipamento.pes")),
                 gear, s.getString("grupo"), target == null ? null : UUID.fromString(target), s.getBoolean("renascer", true),
-                s.getLong("cavalo-bloqueado-ticks"), s.getBoolean("totem", true), s.getInt("agressividade"), s.getInt("abates"), s.getBoolean("vivo", true));
+                s.getLong("cavalo-bloqueado-ticks", 0), s.getBoolean("totem", true), s.getInt("agressividade", 0), s.getInt("abates", 0), s.getBoolean("vivo", true));
     }
 
     private static String key(String name) {

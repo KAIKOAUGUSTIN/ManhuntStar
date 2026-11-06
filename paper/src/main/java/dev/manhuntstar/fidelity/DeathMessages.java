@@ -2,7 +2,9 @@ package dev.manhuntstar.fidelity;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperDamageInfo;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.DamageInfo;
 import net.kyori.adventure.text.Component;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
@@ -23,7 +25,8 @@ public final class DeathMessages {
         this.manager = manager;
     }
 
-    public Component build(Bot bot, DamageSource src) {
+    public Component build(Bot bot, DamageInfo info) {
+        DamageSource src = PaperDamageInfo.bukkit(info);
         Component victim = Component.text(bot.visualName());
         DamageType type = src.getDamageType();
         String base = "death.attack." + type.getTranslationKey();

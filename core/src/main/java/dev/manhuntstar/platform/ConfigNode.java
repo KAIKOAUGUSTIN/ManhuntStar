@@ -24,7 +24,15 @@ public interface ConfigNode {
     /** The value at the path as text, or null when there's nothing there. */
     String getString(String path);
 
+    /** The text at the path, or {@code def} when there's nothing there. */
+    default String getString(String path, String def) {
+        String s = getString(path);
+        return s != null ? s : def;
+    }
+
     int getInt(String path, int def);
+
+    long getLong(String path, long def);
 
     double getDouble(String path, double def);
 

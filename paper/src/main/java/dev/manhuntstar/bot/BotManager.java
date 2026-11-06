@@ -13,9 +13,9 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.BotDeath;
+import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
@@ -46,10 +46,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.event.entity.EntityDeathEvent;
 
 /**
  * Registry and life cycle of every bot: creation (with skin), choosing the target player, death,
@@ -692,24 +688,24 @@ public final class BotManager {
     // ------------------------------------------------------------------ death and respawn
 
     /** Bot death (the entity's death event): drops, message, API and respawn. */
-    public void handleDeath(Bot bot, EntityDeathEvent event) {
+    public void handleDeath(Bot bot, BotDeath death) {
         BotBody e = bot.entity();
-        event.getDrops().clear();
-        event.setDroppedExp(0);
+        death.clearDrops();
+        death.setDroppedExp(0);
         List<GameItem> drops = bot.inventory().collectDeathDrops(settings().dropInventory.on(), settings().gearPersistence.get());
         for (GameItem d : drops) {
-            event.getDrops().add(PaperItems.stack(d));
+            death.addDrop(d);
         }
         if (settings().deathMessages.on() && e != null) {
             Boolean show = e.world().gameRule(dev.manhuntstar.platform.GameRule.SHOW_DEATH_MESSAGES);
             if (!Boolean.FALSE.equals(show)) {
-                Platform.server().broadcast(plugin.deathMessages().build(bot, event.getDamageSource()));
+                Platform.server().broadcast(plugin.deathMessages().build(bot, death.source()));
             }
         }
-        GameEntity killer = PaperEntities.of(event.getDamageSource().getCausingEntity());
-        Bukkit.getPluginManager().callEvent(new BotEvents.BotDeathEvent(bot, event.getDamageSource()));
+        GameEntity killer = death.source().causingEntity();
+        BotEvents.fireDeath(bot, death.source());
         if (killer instanceof GamePlayer p) {
-            Bukkit.getPluginManager().callEvent(new BotEvents.BotKilledByPlayerEvent(bot, PaperEntities.bukkit(p)));
+            BotEvents.fireKilledByPlayer(bot, p);
         } else {
             Bot killerBot = byEntity(killer);
             if (killerBot != null) {
@@ -1184,23 +1180,23 @@ public final class BotManager {
     }
 
     /** Pause, rings waiting and the hunt in progress (participants, protected players, who was left out). */
-    private void saveManhunt(ConfigurationSection s) {
+    private void saveManhunt(ConfigNode s) {
         s.set("pausada", pause.isPaused());
         policy.save(s.createSection("cacada"));
         rings.save(s.createSection("rodas"));
     }
 
     /** Recreates the saved pause, rings and hunt; called after {@link #restore}. */
-    public void restoreManhunt(ConfigurationSection s) {
+    public void restoreManhunt(ConfigNode s) {
         if (s == null || !settings().persistentBots.on()) {
             return;
         }
-        if (s.getBoolean("pausada")) {
+        if (s.getBoolean("pausada", false)) {
             // before the hunt: the stopped clock applies to the protection it recreates
             pause.pause();
         }
-        policy.load(s.getConfigurationSection("cacada"));
-        rings.load(s.getConfigurationSection("rodas"));
+        policy.load(s.section("cacada"));
+        rings.load(s.section("rodas"));
     }
 
     public void clearPersistentSnapshots() {

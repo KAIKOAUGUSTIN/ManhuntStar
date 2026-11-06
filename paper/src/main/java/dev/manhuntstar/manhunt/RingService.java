@@ -5,6 +5,7 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.GameMode;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
@@ -25,7 +26,6 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.SoundCategory;
-import org.bukkit.configuration.ConfigurationSection;
 
 /**
  * Bot rings before the hunt. A ring has no owner: the first player who was inside it and
@@ -309,13 +309,13 @@ public final class RingService {
 
     // ------------------------------------------------------------------ saving
 
-    public void save(ConfigurationSection s) {
+    public void save(ConfigNode s) {
         for (Ring r : rings.values()) {
             GameWorld w = Platform.server().world(r.worldId);
             if (w == null) {
                 continue;
             }
-            ConfigurationSection c = s.createSection(r.id.toString());
+            ConfigNode c = s.createSection(r.id.toString());
             c.set("mundo", w.name());
             c.set("x", r.center.x());
             c.set("y", r.center.y());
@@ -330,12 +330,12 @@ public final class RingService {
     }
 
     /** Recreates the saved rings and holds their bots again (after the bots are restored). */
-    public void load(ConfigurationSection s) {
+    public void load(ConfigNode s) {
         if (s == null) {
             return;
         }
-        for (String key : s.getKeys(false)) {
-            ConfigurationSection c = s.getConfigurationSection(key);
+        for (String key : s.keys(false)) {
+            ConfigNode c = s.section(key);
             GameWorld w = c == null ? null : Platform.server().world(c.getString("mundo", ""));
             if (w == null) {
                 continue;
@@ -347,8 +347,8 @@ public final class RingService {
                 continue;
             }
             double radius = c.getDouble("raio", 5.0);
-            Ring r = new Ring(id, w.id(), new Vec3(c.getDouble("x"), c.getDouble("y"), c.getDouble("z")), radius,
-                    c.getInt("segundos"), radius + LEAVE_MARGIN);
+            Ring r = new Ring(id, w.id(), new Vec3(c.getDouble("x", 0), c.getDouble("y", 0), c.getDouble("z", 0)), radius,
+                    c.getInt("segundos", 0), radius + LEAVE_MARGIN);
             for (UUID botId : readIds(c.getStringList("bots"))) {
                 Bot b = manager().bot(botId);
                 // dead at shutdown also goes back to the ring when it respawns
@@ -361,9 +361,9 @@ public final class RingService {
                 continue;
             }
             r.exit.restoreInside(readIds(c.getStringList("dentro")));
-            if (c.getBoolean("contando")) {
+            if (c.getBoolean("contando", false)) {
                 r.phase = Ring.Phase.COUNTING;
-                r.ticksLeft = Math.max(1, c.getInt("ticks-restantes"));
+                r.ticksLeft = Math.max(1, c.getInt("ticks-restantes", 0));
             }
             rings.put(r.id, r);
             updateBar(r);

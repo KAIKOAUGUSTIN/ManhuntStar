@@ -1,6 +1,11 @@
 package dev.manhuntstar.api;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperDamageInfo;
+import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.DamageInfo;
+import dev.manhuntstar.platform.GamePlayer;
+import org.bukkit.Bukkit;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -11,6 +16,16 @@ import org.bukkit.event.HandlerList;
 public final class BotEvents {
 
     private BotEvents() {
+    }
+
+    /** Calls {@link BotDeathEvent} for a bot that died. */
+    public static void fireDeath(Bot bot, DamageInfo source) {
+        Bukkit.getPluginManager().callEvent(new BotDeathEvent(bot, PaperDamageInfo.bukkit(source)));
+    }
+
+    /** Calls {@link BotKilledByPlayerEvent} for a bot a player killed. */
+    public static void fireKilledByPlayer(Bot bot, GamePlayer player) {
+        Bukkit.getPluginManager().callEvent(new BotKilledByPlayerEvent(bot, PaperEntities.bukkit(player)));
     }
 
     /** Base: todo evento tem o bot envolvido. */

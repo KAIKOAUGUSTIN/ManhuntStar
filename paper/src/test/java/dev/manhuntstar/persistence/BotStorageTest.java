@@ -3,6 +3,7 @@ package dev.manhuntstar.persistence;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import dev.manhuntstar.bot.BotGroup;
+import dev.manhuntstar.paper.BukkitYamlFiles;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Logger;
@@ -14,7 +15,7 @@ class BotStorageTest {
 
     @Test
     void anOlderQueuedSaveDoesNotOverwriteANewerOne(@TempDir Path dir) {
-        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"));
+        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), new BukkitYamlFiles());
         // the background write waits for this monitor (the same one write uses): it only runs after the
         // direct save, as when the server shuts down right after a periodic save
         synchronized (storage) {

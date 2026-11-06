@@ -7,6 +7,7 @@ import dev.manhuntstar.debug.AimDebug;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.DamageInfo;
 import dev.manhuntstar.platform.DamageKind;
 import dev.manhuntstar.platform.Effect;
 import dev.manhuntstar.platform.Enchant;
@@ -30,20 +31,14 @@ import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Box;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
-import org.bukkit.damage.DamageSource;
-import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Arrow;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.tag.DamageTypeTags;
 
 /**
  * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
@@ -177,21 +172,21 @@ public final class Combat {
      * Like in the game, the shield only blocks attacks from the front, with a point of origin and that don't
      * bypass shields. Suffocation, cactus, magma, freezing and the wither effect have no origin and go through.
      */
-    public boolean canBlockDamage(EntityDamageEvent event) {
-        DamageSource src = event.getDamageSource();
-        if (DamageTypeTags.BYPASSES_SHIELD.isTagged(src.getDamageType())
-                || src.getDamageType().equals(DamageType.FALL) || src.getDamageType().equals(DamageType.ON_FIRE)
-                || src.getDamageType().equals(DamageType.IN_FIRE) || src.getDamageType().equals(DamageType.LAVA)
-                || src.getDamageType().equals(DamageType.OUT_OF_WORLD) || src.getDamageType().equals(DamageType.GENERIC_KILL)
-                || src.getDamageType().equals(DamageType.MAGIC) || src.getDamageType().equals(DamageType.INDIRECT_MAGIC)
-                || src.getDamageType().equals(DamageType.STARVE) || src.getDamageType().equals(DamageType.DROWN)) {
+    public boolean canBlockDamage(DamageInfo src) {
+        DamageKind type = src.kind();
+        if (src.bypassesShield()
+                || type == DamageKind.FALL || type == DamageKind.ON_FIRE
+                || type == DamageKind.IN_FIRE || type == DamageKind.LAVA
+                || type == DamageKind.OUT_OF_WORLD || type == DamageKind.GENERIC_KILL
+                || type == DamageKind.MAGIC || type == DamageKind.INDIRECT_MAGIC
+                || type == DamageKind.STARVE || type == DamageKind.DROWN) {
             return false;
         }
-        Location from = src.getSourceLocation();
+        Vec3 from = src.sourcePosition();
         if (from == null) {
             return false;
         }
-        Vec3 toSource = Locations.vec(from).subtract(bot.pos()).horizontal().normalize();
+        Vec3 toSource = from.subtract(bot.pos()).horizontal().normalize();
         return bot.forwardVector().dot(toSource) > 0.0;
     }
 

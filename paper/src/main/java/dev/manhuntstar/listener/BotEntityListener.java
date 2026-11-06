@@ -6,6 +6,8 @@ import dev.manhuntstar.api.BotEvents;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperBotDeath;
+import dev.manhuntstar.paper.PaperDamageInfo;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
@@ -97,7 +99,7 @@ public final class BotEntityListener implements Listener {
                 bot.combat().setMobAttacker(PaperEntities.of(le));
             }
         }
-        if (bot.combat().isBlocking() && bot.combat().canBlockDamage(event)) {
+        if (bot.combat().isBlocking() && bot.combat().canBlockDamage(new PaperDamageInfo(event.getDamageSource()))) {
             event.setCancelled(true);
             Mannequin e = bot.mannequin();
             e.getWorld().playSound(e.getLocation(), Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1f, 0.8f + (float) Math.random() * 0.4f);
@@ -152,7 +154,7 @@ public final class BotEntityListener implements Listener {
     public void onDeath(EntityDeathEvent event) {
         Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
-            manager().handleDeath(bot, event);
+            manager().handleDeath(bot, new PaperBotDeath(event));
         }
     }
 
