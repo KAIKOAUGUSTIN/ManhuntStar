@@ -5,6 +5,12 @@ import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
 import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameSound;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Locations;
@@ -21,8 +27,6 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.Tag;
-import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
@@ -41,7 +45,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.BoundingBox;
-import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
 /**
@@ -77,7 +80,7 @@ public final class Combat {
     private boolean hasLavaBucket = true;
     private boolean lavaUsedThisRun;
     private Pos placedLavaPos;
-    private World placedLavaWorld;
+    private GameWorld placedLavaWorld;
     private int lavaCleanupTicks;
     private boolean lavaHitPlayer;
 
@@ -262,7 +265,7 @@ public final class Combat {
         bot.swing();
         double missChance = Math.min(0.9, s.meleeMissChance.value() * humanize);
         if (missChance > 0 && meleeRandom.nextDouble() < missChance) {
-            playSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
+            playSound(Sounds.ENTITY_PLAYER_ATTACK_NODAMAGE);
             return;
         }
         if (s.respectPvp.on() && target instanceof Player && Boolean.FALSE.equals(target.getWorld().getGameRuleValue(org.bukkit.GameRules.PVP))) {
@@ -309,7 +312,7 @@ public final class Combat {
             lastSuccessfulPlayerHitTick = Bukkit.getCurrentTick();
         }
         if (!hurt) {
-            playSound(Sound.ENTITY_PLAYER_ATTACK_NODAMAGE);
+            playSound(Sounds.ENTITY_PLAYER_ATTACK_NODAMAGE);
             return;
         }
         double kb = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK) + (sprintHit ? 1.0 : 0.0);
@@ -323,21 +326,21 @@ public final class Combat {
         if (fire > 0) {
             target.setFireTicks(Math.max(target.getFireTicks(), fire * 80));
         }
-        World w = target.getWorld();
+        GameWorld w = PaperWorld.of(target.getWorld());
         Location tl = target.getLocation();
         if (sweep) {
             doSweep(target, damage);
         }
         if (crit) {
-            playSound(Sound.ENTITY_PLAYER_ATTACK_CRIT);
-            w.spawnParticle(Particle.CRIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 12, 0.3, 0.4, 0.3, 0.2);
+            playSound(Sounds.ENTITY_PLAYER_ATTACK_CRIT);
+            PaperWorld.bukkit(w).spawnParticle(Particle.CRIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 12, 0.3, 0.4, 0.3, 0.2);
         } else if (sprintHit) {
-            playSound(Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK);
+            playSound(Sounds.ENTITY_PLAYER_ATTACK_KNOCKBACK);
         } else if (!sweep) {
-            playSound(strong ? Sound.ENTITY_PLAYER_ATTACK_STRONG : Sound.ENTITY_PLAYER_ATTACK_WEAK);
+            playSound(strong ? Sounds.ENTITY_PLAYER_ATTACK_STRONG : Sounds.ENTITY_PLAYER_ATTACK_WEAK);
         }
         if (enchant > 0) {
-            w.spawnParticle(Particle.ENCHANTED_HIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 8, 0.3, 0.4, 0.3, 0.2);
+            PaperWorld.bukkit(w).spawnParticle(Particle.ENCHANTED_HIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 8, 0.3, 0.4, 0.3, 0.2);
         }
         // Player and bot kills are counted by the death events; here only mobs.
         if (!(target instanceof Player) && target.isDead() && !bot.manager().isBotEntity(target)) {
@@ -384,7 +387,7 @@ public final class Combat {
             le.knockback(0.4, Math.sin(yawRad), -Math.cos(yawRad));
             le.damage(sweepDamage, src);
         }
-        playSound(Sound.ENTITY_PLAYER_ATTACK_SWEEP);
+        playSound(Sounds.ENTITY_PLAYER_ATTACK_SWEEP);
         double yawRad = Math.toRadians(bot.yaw());
         Vec3 p = bot.pos();
         me.getWorld().spawnParticle(Particle.SWEEP_ATTACK, p.x() - Math.sin(yawRad), p.y() + bot.height() * 0.5, p.z() + Math.cos(yawRad), 1, 0, 0, 0, 0);
@@ -411,9 +414,9 @@ public final class Combat {
         return Math.max(6, cooldown);
     }
 
-    private void playSound(Sound s) {
+    private void playSound(GameSound s) {
         Vec3 p = bot.pos();
-        bot.world().playSound(Locations.location(p, bot.world()), s, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(p, s, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     // ------------------------------------------------------------------ crossbow
@@ -439,7 +442,7 @@ public final class Combat {
         swimWhileCharging(target);
         crossbowChargeTicks++;
         if (crossbowChargeTicks == 1 || crossbowChargeTicks == 10 || crossbowChargeTicks == 20) {
-            bot.world().playSound(bot.location(), Sound.ITEM_CROSSBOW_LOADING_MIDDLE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+            bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_MIDDLE, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         }
         if (crossbowChargeTicks >= 25) {
             performCrossbowShot(target);
@@ -464,7 +467,7 @@ public final class Combat {
         aimTracker.reset();
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
         bot.entity().startUsingItem(EquipmentSlot.HAND);
-        bot.world().playSound(bot.location(), Sound.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     /**
@@ -544,7 +547,7 @@ public final class Combat {
             booster.lookAt(me);
             Vec3 boost = toPlayer.scale(0.8);
             bot.motor().setVelocity(new Vec3(boost.x(), 0.35, boost.z()));
-            bot.world().playSound(bot.location(), Sound.ENTITY_PLAYER_HURT, SoundCategory.PLAYERS, 0.5f, 1.5f);
+            bot.world().playSound(bot.pos(), Sounds.ENTITY_PLAYER_HURT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 1.5f);
             return;
         }
     }
@@ -572,7 +575,7 @@ public final class Combat {
         swimWhileCharging(target);
         tridentChargeTicks++;
         if (tridentChargeTicks == 1 || tridentChargeTicks == 10) {
-            bot.world().playSound(bot.location(), Sound.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 0.5f, 0.8f);
+            bot.world().playSound(bot.pos(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 0.8f);
         }
         if (tridentChargeTicks >= 20) {
             performTridentThrow(target);
@@ -659,7 +662,7 @@ public final class Combat {
             return;
         }
         if (sound && bot.world() != null) {
-            bot.world().playSound(bot.location(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.5f, 1.0f);
+            bot.world().playSound(bot.pos(), Sounds.ENTITY_ITEM_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 1.0f);
         }
         thrownTrident.remove();
         thrownTrident = null;
@@ -693,30 +696,30 @@ public final class Combat {
     }
 
     private boolean attemptLavaPlace(LivingEntity target) {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Vec3 eye = bot.eyePos();
         Vec3 dir = Locations.vec(target.getLocation()).subtract(eye).normalize();
-        RayTraceResult hit = WorldUtil.rayBlocks(w, eye, eye.add(dir.scale(4.0)), true);
-        if (hit == null || hit.getHitBlock() == null || hit.getHitBlockFace() == null) {
+        RayHit hit = WorldUtil.rayBlocks(w, eye, eye.add(dir.scale(4.0)), true);
+        if (hit == null || hit.face() == null) {
             return false;
         }
-        Block placeAt = hit.getHitBlock().getRelative(hit.getHitBlockFace());
-        Pos p = Locations.pos(placeAt);
+        GameBlock placeAt = w.block(hit.block()).relative(hit.face());
+        Pos p = placeAt.pos();
         if (!placeAt.isReplaceable()) {
             return false;
         }
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.LAVA_BUCKET));
-        placeAt.setType(Material.LAVA);
+        placeAt.setType(Blocks.LAVA);
         bot.swing();
-        w.playSound(placeAt.getLocation(), Sound.ITEM_BUCKET_EMPTY_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        w.playSound(Vec3.of(p), Sounds.ITEM_BUCKET_EMPTY_LAVA, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         placedLavaPos = p;
         placedLavaWorld = w;
         lavaCleanupTicks = 0;
         lavaHitPlayer = false;
         hasLavaBucket = false;
         // if the bot dies or disappears before picking it up, the lava doesn't stay in the world forever
-        bot.manager().temporaryBlocks().add(w, p, Material.LAVA, 60 + 40);
-        bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), p);
+        bot.manager().temporaryBlocks().add(w, p, Blocks.LAVA, 60 + 40);
+        bot.manager().plugin().pathService().invalidate(w, p);
         bot.inventory().restorePreferredMainHand();
         return true;
     }
@@ -738,17 +741,17 @@ public final class Combat {
         if (lavaCleanupTicks < cleanupTime) {
             return;
         }
-        World w = placedLavaWorld;
+        GameWorld w = placedLavaWorld;
         boolean sameWorld = w.equals(bot.world());
         Vec3 c = Vec3.center(placedLavaPos);
         boolean canReach = sameWorld && bot.distanceTo(c) <= 5.0 && bot.canSee(c);
-        Block b = Locations.block(placedLavaPos, w);
+        GameBlock b = w.block(placedLavaPos);
         // in another world the bot can't reach it: the temporary block registry picks it up
-        if (sameWorld && b.getType() == Material.LAVA) {
+        if (sameWorld && b.type() == Blocks.LAVA) {
             bot.manager().temporaryBlocks().remove(w, placedLavaPos);
-            b.setType(Material.AIR);
-            w.playSound(b.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
-            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), placedLavaPos);
+            b.setType(Blocks.AIR);
+            w.playSound(Vec3.of(placedLavaPos), Sounds.ITEM_BUCKET_FILL_LAVA, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+            bot.manager().plugin().pathService().invalidate(w, placedLavaPos);
             if (canReach) {
                 hasLavaBucket = true;
             } else {

@@ -1,6 +1,8 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -9,7 +11,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 /**
@@ -36,7 +37,7 @@ final class Towering {
         this.bot = bot;
     }
 
-    private World world() {
+    private GameWorld world() {
         return bot.world();
     }
 
@@ -286,7 +287,7 @@ final class Towering {
     // ------------------------------------------------------------------ quick crouching bridge (Nether)
 
     boolean handleSpeedBridging(boolean canPlace) {
-        if (!canPlace || !bot.onGround() || bot.isInWater() || bot.isInLava() || world().getEnvironment() != World.Environment.NETHER) {
+        if (!canPlace || !bot.onGround() || bot.isInWater() || bot.isInLava() || world().dimension() != Dimension.NETHER) {
             resetBridge();
             return false;
         }

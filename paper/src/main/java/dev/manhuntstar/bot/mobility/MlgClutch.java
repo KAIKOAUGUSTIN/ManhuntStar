@@ -3,7 +3,11 @@ package dev.manhuntstar.bot.mobility;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
 import dev.manhuntstar.paper.PaperWorld;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -13,19 +17,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Vector;
 
 /**
  * MLG: falling fast (≥ 0.6 blocks/tick) within 4.5 blocks of the ground, the bot places water (or a boat,
@@ -41,7 +41,7 @@ public final class MlgClutch {
     private boolean boatClutching;
     private int boatTicks;
     private Pos waterPos;
-    private World waterWorld;
+    private GameWorld waterWorld;
     private int waterTicks;
     private final Set<UUID> spawnedBoats = new HashSet<>();
 
@@ -67,13 +67,13 @@ public final class MlgClutch {
         }
         handleMlg(nav);
         if (waterPos != null && ++waterTicks > 15) {
-            World w = waterWorld;
+            GameWorld w = waterWorld;
             // in another world the bot can't reach it: the temporary block registry picks it up
-            if (w.equals(bot.world()) && Locations.block(waterPos, w).getType() == Material.WATER) {
+            if (w.equals(bot.world()) && w.block(waterPos).type() == Blocks.WATER) {
                 bot.manager().temporaryBlocks().remove(w, waterPos);
-                Locations.block(waterPos, w).setType(Material.AIR);
-                w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
-                bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), waterPos);
+                w.block(waterPos).setType(Blocks.AIR);
+                w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_FILL, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
+                bot.manager().plugin().pathService().invalidate(w, waterPos);
             }
             waterPos = null;
             waterTicks = 0;
@@ -106,7 +106,7 @@ public final class MlgClutch {
     }
 
     private void cleanupBoats() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         if (w == null || spawnedBoats.isEmpty()) {
             return;
         }
@@ -166,13 +166,13 @@ public final class MlgClutch {
         if (bot.velocity().y() > -0.6) {
             return;
         }
-        World w = bot.world();
+        GameWorld w = bot.world();
         Vec3 p = bot.pos();
-        RayTraceResult r = w.rayTraceBlocks(Locations.location(p, w), new Vector(0, -1, 0), 10, FluidCollisionMode.NEVER, true);
-        if (r == null || r.getHitBlock() == null) {
+        RayHit r = w.rayTraceBlocks(p, new Vec3(0, -1, 0), 10, false, true);
+        if (r == null) {
             return;
         }
-        Pos ground = Locations.pos(r.getHitBlock());
+        Pos ground = r.block();
         double distToGround = p.y() - (ground.y() + 1.0);
         if (distToGround > 4.5 || distToGround < 0) {
             return;
@@ -180,16 +180,16 @@ public final class MlgClutch {
         doMlg(w, ground);
     }
 
-    private void doMlg(World w, Pos ground) {
+    private void doMlg(GameWorld w, Pos ground) {
         cooldown = 40;
-        boolean nether = w.getEnvironment() == World.Environment.NETHER;
+        boolean nether = w.dimension() == Dimension.NETHER;
         boolean smallPatch = isSmallWaterPatch(w, ground);
         boolean useBoat = nether || (!smallPatch && ThreadLocalRandom.current().nextDouble() < 0.5);
         if (useBoat) {
             bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.OAK_BOAT));
             bot.setPitchNow(90f);
-            Location loc = new Location(w, bot.pos().x(), ground.y() + 1.0, bot.pos().z(), bot.yaw(), 0);
-            Entity spawned = w.spawnEntity(loc, EntityType.OAK_BOAT);
+            Location loc = new Location(PaperWorld.bukkit(w), bot.pos().x(), ground.y() + 1.0, bot.pos().z(), bot.yaw(), 0);
+            Entity spawned = PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT);
             if (spawned instanceof Boat boat) {
                 trackSpawnedBoat(boat);
                 bot.swing();
@@ -208,20 +208,20 @@ public final class MlgClutch {
             return;
         }
         if (WorldUtil.canBeReplaced(w, water)) {
-            Locations.block(water, w).setType(Material.WATER);
-            w.playSound(Locations.location(water, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1f, 1f);
+            w.block(water).setType(Blocks.WATER);
+            w.playSound(Vec3.of(water), Sounds.ITEM_BUCKET_EMPTY, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
             bot.swing();
             bot.motor().resetFallTracking();
-            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), water);
+            bot.manager().plugin().pathService().invalidate(w, water);
             // if the bot dies before picking it up, the water disappears all the same
-            bot.manager().temporaryBlocks().add(w, water, Material.WATER, 15 + 40);
+            bot.manager().temporaryBlocks().add(w, water, Blocks.WATER, 15 + 40);
             waterPos = water;
             waterWorld = w;
             waterTicks = 0;
         }
     }
 
-    private static boolean isSmallWaterPatch(World w, Pos ground) {
+    private static boolean isSmallWaterPatch(GameWorld w, Pos ground) {
         Pos landing = ground.above();
         if (!WorldUtil.isWater(w, landing)) {
             return false;

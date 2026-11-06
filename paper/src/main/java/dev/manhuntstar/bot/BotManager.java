@@ -13,6 +13,9 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Locations;
@@ -92,7 +95,7 @@ public final class BotManager {
         this.plugin = plugin;
         this.botKey = new NamespacedKey(plugin, "bot");
         this.horseKey = new NamespacedKey(plugin, "cavalo_controlado");
-        this.temporaryBlocks = new TemporaryBlocks(plugin::pathService);
+        this.temporaryBlocks = new TemporaryBlocks(plugin.server(), plugin::pathService);
         this.rings = new RingService(plugin);
         this.policy = new HuntPolicy(plugin);
         this.pause = new PauseService(plugin);
@@ -316,7 +319,7 @@ public final class BotManager {
         }
         List<Player> same = new ArrayList<>();
         for (Player p : candidates) {
-            if (p.getWorld().equals(bot.world())) {
+            if (p.getWorld().equals(bot.bukkitWorld())) {
                 same.add(p);
             }
         }
@@ -330,7 +333,7 @@ public final class BotManager {
     }
 
     private static double dist(Bot bot, Player p) {
-        return p.getWorld().equals(bot.world()) ? bot.distanceTo(p) : 1.0E7;
+        return p.getWorld().equals(bot.bukkitWorld()) ? bot.distanceTo(p) : 1.0E7;
     }
 
     private static Player byDistance(Bot bot, List<Player> pool, boolean closest) {
@@ -523,7 +526,7 @@ public final class BotManager {
 
     private List<Bot> spawnBots(Location pos, String name, SkinData skin, int count, BotDifficulty difficulty, int startPhase, int aggression) {
         List<Bot> created = new ArrayList<>();
-        World world = pos.getWorld();
+        GameWorld world = PaperWorld.of(pos.getWorld());
         String visual = visualNameOf(name);
         SpawnMode mode = settings().spawnMode.get();
         double radius = ringRadius(count);
@@ -565,7 +568,7 @@ public final class BotManager {
     }
 
     /** Ground height near a ring point (so it doesn't spawn inside blocks or in the air). */
-    private static double surfaceNear(World w, Location spawn, double refY) {
+    private static double surfaceNear(GameWorld w, Location spawn, double refY) {
         Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 4; dy++) {
             for (int sign : new int[]{1, -1}) {
@@ -579,7 +582,7 @@ public final class BotManager {
     }
 
     /** If the point falls inside blocks, moves up to the first free space (up to 16 blocks). */
-    private static double freeSpaceAbove(World w, Location spawn) {
+    private static double freeSpaceAbove(GameWorld w, Location spawn) {
         Pos p = Locations.pos(spawn);
         for (int dy = 0; dy <= 16; dy++) {
             Pos c = p.above(dy);
@@ -631,7 +634,7 @@ public final class BotManager {
         if (!bot.isAlive()) {
             return;
         }
-        if (!bot.world().equals(dest.getWorld())) {
+        if (!bot.bukkitWorld().equals(dest.getWorld())) {
             plugin.glow().remove(bot);
         }
         bot.relocate(dest);
@@ -682,7 +685,7 @@ public final class BotManager {
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
             // bots waiting in a ring stay there until the start
-            if (b.world().equals(from) && target.getUniqueId().equals(b.targetPlayerId()) && b.idle() == null) {
+            if (b.bukkitWorld().equals(from) && target.getUniqueId().equals(b.targetPlayerId()) && b.idle() == null) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
             }
@@ -855,7 +858,7 @@ public final class BotManager {
 
     /** A spot 100–200 blocks from the target, out of their line of sight (only in loaded chunks). */
     private static Location findHiddenLocation(Player target) {
-        World w = target.getWorld();
+        GameWorld w = PaperWorld.of(target.getWorld());
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 40; i++) {
             double angle = r.nextDouble() * Math.PI * 2;
@@ -865,7 +868,7 @@ public final class BotManager {
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            int y = w.getEnvironment() == World.Environment.NETHER ? (int) target.getY() : WorldUtil.surfaceY(w, x, z);
+            int y = w.dimension() == Dimension.NETHER ? (int) target.getY() : WorldUtil.surfaceY(w, x, z);
             Vec3 candidate = new Vec3(x + 0.5, y + 1, z + 0.5);
             if (!WorldUtil.clearLine(w, Locations.vec(target.getEyeLocation()), candidate)) {
                 return Locations.location(candidate, w);
@@ -876,10 +879,10 @@ public final class BotManager {
 
     /** Safe ground near the point (rings of up to 24 blocks); in the Nether it also searches vertically. */
     public static Location resolveSurface(Location anchor) {
-        World w = anchor.getWorld();
+        GameWorld w = PaperWorld.of(anchor.getWorld());
         int bx = anchor.getBlockX();
         int bz = anchor.getBlockZ();
-        boolean nether = w.getEnvironment() == World.Environment.NETHER;
+        boolean nether = w.dimension() == Dimension.NETHER;
         for (int radius = 0; radius <= 24; radius++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
@@ -893,17 +896,17 @@ public final class BotManager {
                     }
                     if (nether) {
                         int baseY = anchor.getBlockY();
-                        for (int y = Math.min(w.getMaxHeight() - 4, Math.min(118, baseY + 20)); y >= Math.max(w.getMinHeight() + 3, baseY - 20); y--) {
+                        for (int y = Math.min(w.maxHeight() - 4, Math.min(118, baseY + 20)); y >= Math.max(w.minHeight() + 3, baseY - 20); y--) {
                             Pos feet = new Pos(x, y, z);
                             if (WorldUtil.isSafeStand(w, feet) && WorldUtil.countOpenSides(w, feet) >= 2) {
-                                return new Location(w, x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
+                                return new Location(PaperWorld.bukkit(w), x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
                             }
                         }
                     } else {
-                        int y = w.getEnvironment() == World.Environment.NORMAL ? WorldUtil.surfaceYNoLeaves(w, x, z) : WorldUtil.surfaceY(w, x, z);
+                        int y = w.dimension() == Dimension.NORMAL ? WorldUtil.surfaceYNoLeaves(w, x, z) : WorldUtil.surfaceY(w, x, z);
                         Pos feet = new Pos(x, y, z);
                         if (WorldUtil.isSafeStand(w, feet) && WorldUtil.countOpenSides(w, feet) >= 1) {
-                            return new Location(w, x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
+                            return new Location(PaperWorld.bukkit(w), x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
                         }
                     }
                 }
@@ -1066,8 +1069,8 @@ public final class BotManager {
     private void checkStrandedBots() {
         for (Bot b : aliveBots()) {
             Player t = b.target();
-            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.world()) && b.idle() == null) {
-                requestDimensionChange(t, b.world());
+            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.bukkitWorld()) && b.idle() == null) {
+                requestDimensionChange(t, b.bukkitWorld());
             }
         }
     }
@@ -1102,7 +1105,7 @@ public final class BotManager {
             Bot farthest = null;
             double max = 0;
             for (Bot b : bots.values()) {
-                if (!b.isAlive() || !b.world().equals(p.getWorld()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
+                if (!b.isAlive() || !b.bukkitWorld().equals(p.getWorld()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
                     continue;
                 }
                 double d = b.distanceTo(p);

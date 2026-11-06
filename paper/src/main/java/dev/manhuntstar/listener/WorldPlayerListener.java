@@ -53,7 +53,7 @@ public final class WorldPlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         Block b = event.getBlockPlaced();
-        plugin.botManager().blockTracker().markPlaced(b.getWorld(), Locations.pos(b));
+        plugin.botManager().blockTracker().markPlaced(PaperWorld.of(b.getWorld()), Locations.pos(b));
         plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
     }
 
@@ -61,10 +61,10 @@ public final class WorldPlayerListener implements Listener {
     public void onBreak(BlockBreakEvent event) {
         Block b = event.getBlock();
         Pos p = Locations.pos(b);
-        plugin.botManager().blockTracker().unmark(b.getWorld(), p);
+        plugin.botManager().blockTracker().unmark(PaperWorld.of(b.getWorld()), p);
         plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         if (b.getType().name().endsWith("_BED")) {
-            plugin.botManager().caveAmbush().onBlockBroken(b.getWorld(), p);
+            plugin.botManager().caveAmbush().onBlockBroken(PaperWorld.of(b.getWorld()), p);
         }
     }
 
@@ -131,7 +131,7 @@ public final class WorldPlayerListener implements Listener {
         Player p = event.getPlayer();
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (Bot b : plugin.botManager().aliveBots()) {
-                if (!b.world().equals(p.getWorld())) {
+                if (!b.bukkitWorld().equals(p.getWorld())) {
                     continue;
                 }
                 double d = Math.hypot(b.pos().x() - p.getX(), b.pos().z() - p.getZ());

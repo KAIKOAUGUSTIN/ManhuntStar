@@ -453,7 +453,7 @@ public final class ManhuntCommand {
         CommandSender s = sender(ctx);
         msg().send(s, "command.list-title", Messages.p("amount", manager().allBots().size()), Messages.p("alive", manager().aliveCount()));
         for (Bot b : manager().allBots()) {
-            String where = b.isAlive() ? String.format(Locale.ROOT, "%s %.0f %.0f %.0f", b.world().getName(), b.pos().x(), b.pos().y(), b.pos().z())
+            String where = b.isAlive() ? String.format(Locale.ROOT, "%s %.0f %.0f %.0f", b.world().name(), b.pos().x(), b.pos().y(), b.pos().z())
                     : msg().raw("command.list-dead");
             Player t = b.target();
             s.sendMessage(msg().get("command.list-line", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
@@ -490,7 +490,7 @@ public final class ManhuntCommand {
                 Messages.p("hunger", b.hunger().foodLevel()), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
                 Messages.p("target", t == null ? "-" : t.getName()), Messages.p("kills", b.kills()), Messages.p("aggression", b.aggression()),
                 Messages.p("alive", msg().yesNo(b.isAlive())), Messages.c("state", b.isAlive() ? stateOf(b) : brainState(b)),
-                Messages.p("location", b.isAlive() ? String.format(Locale.ROOT, "%s %.1f %.1f %.1f", b.world().getName(), b.pos().x(), b.pos().y(), b.pos().z()) : "-"),
+                Messages.p("location", b.isAlive() ? String.format(Locale.ROOT, "%s %.1f %.1f %.1f", b.world().name(), b.pos().x(), b.pos().y(), b.pos().z()) : "-"),
                 Messages.p("speed", String.format(Locale.ROOT, "%.2f", b.velocity().horizontalLength() * 20)),
                 Messages.p("on-ground", msg().yesNo(b.onGround()))));
         return Command.SINGLE_SUCCESS;

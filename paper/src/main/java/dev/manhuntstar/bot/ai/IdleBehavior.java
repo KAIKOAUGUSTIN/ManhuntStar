@@ -74,7 +74,7 @@ public final class IdleBehavior {
         Player best = null;
         double bestDist = WATCH_RANGE * WATCH_RANGE;
         Vec3 p = bot.pos();
-        for (Player pl : bot.world().getPlayers()) {
+        for (Player pl : bot.bukkitWorld().getPlayers()) {
             if (!BotManager.isActivePlayer(pl)) {
                 continue;
             }

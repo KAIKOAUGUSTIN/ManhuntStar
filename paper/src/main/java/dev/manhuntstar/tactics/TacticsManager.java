@@ -2,6 +2,10 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
@@ -11,7 +15,6 @@ import dev.manhuntstar.util.WorldUtil;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,7 +27,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
@@ -241,7 +243,7 @@ public final class TacticsManager {
             if (playerCooldown.getOrDefault(p.getUniqueId(), Long.MIN_VALUE) > now) {
                 continue;
             }
-            if (CaveAmbush.isInCave(p.getWorld(), Locations.pos(p.getLocation())) && isVulnerable(p, now)) {
+            if (CaveAmbush.isInCave(PaperWorld.of(p.getWorld()), Locations.pos(p.getLocation())) && isVulnerable(p, now)) {
                 Bot bot = selectBot(p, now, false, 1);
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
@@ -276,7 +278,7 @@ public final class TacticsManager {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
             // bots waiting in the ring don't leave it to ambush
-            if (!b.world().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
+            if (!b.bukkitWorld().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
                     || b.idle() != null) {
                 continue;
             }
@@ -311,7 +313,7 @@ public final class TacticsManager {
         long now = Bukkit.getCurrentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
-                if (!CaveAmbush.isInCave(player.getWorld(), Locations.pos(player.getLocation()))) {
+                if (!CaveAmbush.isInCave(PaperWorld.of(player.getWorld()), Locations.pos(player.getLocation()))) {
                     return "not-in-cave";
                 }
                 Bot bot = selectBot(player, now, true, 1);
@@ -353,7 +355,7 @@ public final class TacticsManager {
 
     /** Called by the AI when the player goes too long without being hit (bow pressure). */
     public boolean tryStartBowBurst(Bot bot, Player player, long now) {
-        if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.getWorld()) || bot.progression().phase() < 4) {
+        if (!bot.isAlive() || player.isDead() || !bot.bukkitWorld().equals(player.getWorld()) || bot.progression().phase() < 4) {
             return false;
         }
         if (!player.getUniqueId().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.getUniqueId()) || isBusy(bot)) {
@@ -508,7 +510,7 @@ public final class TacticsManager {
     }
 
     /** Follows the arrow's trajectory tick by tick (moves, loses 1% and drops 0.05) up to the flight time, without hitting a block. */
-    private static boolean arrowPathClear(World w, Vec3 from, Vec3 velocity, double ticks) {
+    private static boolean arrowPathClear(GameWorld w, Vec3 from, Vec3 velocity, double ticks) {
         Vec3 p = from;
         Vec3 v = velocity;
         for (int t = 0; t < ticks; t++) {
@@ -649,7 +651,7 @@ public final class TacticsManager {
     // ------------------------------------------------------------------ TNT ambush
 
     private boolean startTntAmbush(Player player, Bot bot, long now, boolean ignoreCooldown) {
-        World w = player.getWorld();
+        GameWorld w = PaperWorld.of(player.getWorld());
         Pos stand = findAmbushStart(w, player);
         if (stand == null) {
             return false;
@@ -661,7 +663,7 @@ public final class TacticsManager {
         }
         prepare(bot);
         activeBotByPlayer.put(player.getUniqueId(), bot.id());
-        manager.teleportBot(bot, new Location(w, stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
+        manager.teleportBot(bot, new Location(PaperWorld.bukkit(w), stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
         bot.lookAt(Locations.vec(player.getEyeLocation()));
         bot.setSneaking(true);
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.TNT));
@@ -676,7 +678,7 @@ public final class TacticsManager {
             cancelTnt(a, bot);
             return false;
         }
-        World w = p.getWorld();
+        GameWorld w = PaperWorld.of(p.getWorld());
         if (!a.placed) {
             bot.lookAt(Locations.vec(p.getEyeLocation()));
             bot.setSneaking(true);
@@ -693,10 +695,10 @@ public final class TacticsManager {
                     cancelTnt(a, bot);
                     return false;
                 }
-                Locations.block(tntPos, w).setType(Material.TNT);
+                w.block(tntPos).setType(Blocks.TNT);
                 // if the ambush ends before lighting (the bot died, the player ran), the TNT disappears
-                manager.temporaryBlocks().add(w, tntPos, Material.TNT, 40);
-                w.playSound(Locations.location(tntPos, w), Sound.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
+                manager.temporaryBlocks().add(w, tntPos, Blocks.TNT, 40);
+                w.playSound(Vec3.of(tntPos), Sounds.BLOCK_GRASS_PLACE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
                 bot.swing();
                 a.tntPos = tntPos;
                 a.placed = true;
@@ -709,18 +711,18 @@ public final class TacticsManager {
             if (now < a.igniteAt) {
                 return true;
             }
-            if (a.tntPos == null || Locations.block(a.tntPos, w).getType() != Material.TNT) {
+            if (a.tntPos == null || w.block(a.tntPos).type() != Blocks.TNT) {
                 cancelTnt(a, bot);
                 return false;
             }
             manager.temporaryBlocks().remove(w, a.tntPos);
-            Locations.block(a.tntPos, w).setType(Material.AIR);
-            Location at = new Location(w, a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
-            w.spawn(at, TNTPrimed.class, t -> {
+            w.block(a.tntPos).setType(Blocks.AIR);
+            Location at = new Location(PaperWorld.bukkit(w), a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
+            PaperWorld.bukkit(w).spawn(at, TNTPrimed.class, t -> {
                 t.setFuseTicks(40);
                 t.setSource(bot.entity());
             });
-            w.playSound(at, Sound.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS, 1f, 1f);
+            w.playSound(Locations.vec(at), Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
             bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.FLINT_AND_STEEL));
             bot.swing();
             a.ignited = true;
@@ -747,14 +749,14 @@ public final class TacticsManager {
     }
 
     private boolean tntStillValid(TntAmbush a, Bot bot, Player p) {
-        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.world().equals(p.getWorld())) {
+        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.bukkitWorld().equals(p.getWorld())) {
             return false;
         }
         Pos pp = Locations.pos(p.getLocation());
-        if (!CaveAmbush.isInCave(p.getWorld(), pp) || !CaveAmbush.isSameCave(p.getWorld(), pp, a.stand)) {
+        if (!CaveAmbush.isInCave(PaperWorld.of(p.getWorld()), pp) || !CaveAmbush.isSameCave(PaperWorld.of(p.getWorld()), pp, a.stand)) {
             return false;
         }
-        return a.tntPos == null || CaveAmbush.isSameCave(p.getWorld(), pp, a.tntPos);
+        return a.tntPos == null || CaveAmbush.isSameCave(PaperWorld.of(p.getWorld()), pp, a.tntPos);
     }
 
     private void cancelTnt(TntAmbush a, Bot bot) {
@@ -766,7 +768,7 @@ public final class TacticsManager {
         activeBotByPlayer.remove(a.player);
     }
 
-    private static Pos findAmbushStart(World w, Player player) {
+    private static Pos findAmbushStart(GameWorld w, Player player) {
         Vec3 look = Locations.vec(player.getLocation().getDirection()).horizontal();
         look = look.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : look.normalize();
         Vec3 side = new Vec3(-look.z(), 0, look.x());
@@ -790,7 +792,7 @@ public final class TacticsManager {
         return null;
     }
 
-    private static boolean validCaveStand(World w, Pos playerPos, Pos pos) {
+    private static boolean validCaveStand(GameWorld w, Pos playerPos, Pos pos) {
         if (!WorldUtil.isLoaded(w, pos) || WorldUtil.hasCollision(w, pos) || WorldUtil.hasCollision(w, pos.above())) {
             return false;
         }
@@ -803,7 +805,7 @@ public final class TacticsManager {
         return CaveAmbush.isSameCave(w, playerPos, pos);
     }
 
-    private static Pos findTntPos(World w, Player player, Pos botPos) {
+    private static Pos findTntPos(GameWorld w, Player player, Pos botPos) {
         Vec3 flat = Locations.vec(player.getLocation()).subtract(Vec3.center(botPos)).horizontal();
         BlockFace forward = Locations.faceFromYaw(flat.yaw());
         Pos center = Locations.pos(player.getLocation());
@@ -819,7 +821,7 @@ public final class TacticsManager {
     }
 
     private static boolean validContext(Bot bot, Player p) {
-        return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.world().equals(p.getWorld());
+        return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.bukkitWorld().equals(p.getWorld());
     }
 
     public void clear() {

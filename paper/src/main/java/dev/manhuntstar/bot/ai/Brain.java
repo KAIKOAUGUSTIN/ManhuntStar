@@ -10,8 +10,16 @@ import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.paper.Kinds;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.AStar;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.EntityKind;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -20,14 +28,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.Tag;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Enemy;
@@ -35,8 +40,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.util.RayTraceResult;
-import org.bukkit.util.Vector;
 
 /**
  * The bot's brain (the mod's {@code runAI}): picks the target (player, hostile mob or bot from an enemy
@@ -232,7 +235,7 @@ public final class Brain {
     }
 
     private boolean deepInLava() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         return WorldUtil.isLava(w, bot.blockPos()) || WorldUtil.isLava(w, bot.eyePos().toPos());
     }
 
@@ -279,11 +282,11 @@ public final class Brain {
         // in the ring the bot doesn't take off, and an escaper doesn't fly toward the target
         elytra.tick(escaping ? null : chosenTarget);
         if (playerTarget != null) {
-            if (!playerTarget.getWorld().equals(bot.world())) {
+            if (!playerTarget.getWorld().equals(bot.bukkitWorld())) {
                 state("target-in-other-dimension");
                 dimensionStuckTimer++;
                 if (dimensionStuckTimer > 20 && !teleporting) {
-                    bot.manager().requestDimensionChange(playerTarget, bot.world());
+                    bot.manager().requestDimensionChange(playerTarget, bot.bukkitWorld());
                     teleporting = true;
                 }
                 bot.motor().stopWalk();
@@ -454,17 +457,17 @@ public final class Brain {
         if (bot.mining().isMining()) {
             return true;
         }
-        World w = bot.world();
-        RayTraceResult hit = WorldUtil.rayBlocks(w, bot.eyePos(), eyes(target), false);
-        if (hit == null || hit.getHitBlock() == null) {
+        GameWorld w = bot.world();
+        RayHit hit = WorldUtil.rayBlocks(w, bot.eyePos(), eyes(target), false);
+        if (hit == null) {
             hit = WorldUtil.rayBlocks(w, bot.eyePos(), Locations.vec(target.getLocation()).add(0, 0.5, 0), false);
         }
-        if (hit == null || hit.getHitBlock() == null || hit.getHitBlock().getType().getHardness() < 0) {
+        if (hit == null || w.block(hit.block()).type().hardness() < 0) {
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAtBlock(Locations.pos(hit.getHitBlock()));
-        return bot.mining().startNoStop(Locations.pos(hit.getHitBlock()));
+        bot.lookAtBlock(hit.block());
+        return bot.mining().startNoStop(hit.block());
     }
 
     /**
@@ -472,15 +475,15 @@ public final class Brain {
      * head or the feet are inside a solid block, the bot digs its way out (as the player would).
      */
     private boolean escapeSuffocation() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos feet = bot.blockPos();
         Pos head = bot.eyePos().toPos();
         for (Pos p : new Pos[]{head, feet}) {
             if (!WorldUtil.collides(w, p)) {
                 continue;
             }
-            Block b = Locations.block(p, w);
-            if (b.getType().getHardness() < 0 || !b.getBoundingBox().overlaps(bot.boundingBox().clone().expand(-0.05))) {
+            GameBlock b = w.block(p);
+            if (b.type().hardness() < 0 || !b.boundingBox().overlaps(Locations.box(bot.boundingBox()).expand(-0.05))) {
                 continue;
             }
             bot.motor().stopWalk();
@@ -501,10 +504,10 @@ public final class Brain {
             LivingEntity closest = null;
             double closestDist = Double.MAX_VALUE;
             Location loc = bot.location();
-            boolean end = bot.world().getEnvironment() == World.Environment.THE_END;
+            boolean end = bot.world().dimension() == Dimension.THE_END;
             BotGroup group = bot.group();
             Set<EntityKind> allowed = group == null ? null : group.allowedMobTargets();
-            for (Mob mob : bot.world().getNearbyEntitiesByType(Mob.class, loc, 30.0)) {
+            for (Mob mob : bot.bukkitWorld().getNearbyEntitiesByType(Mob.class, loc, 30.0)) {
                 if (!(mob instanceof Enemy) || mob.isDead() || mob instanceof EnderDragon) {
                     continue;
                 }
@@ -528,7 +531,7 @@ public final class Brain {
                 m = closest;
             }
         }
-        if (m instanceof EnderDragon || (m != null && (m.isDead() || !m.isValid() || !m.getWorld().equals(bot.world())))) {
+        if (m instanceof EnderDragon || (m != null && (m.isDead() || !m.isValid() || !m.getWorld().equals(bot.bukkitWorld())))) {
             m = null;
             bot.combat().setMobAttacker(null);
         }
@@ -753,7 +756,7 @@ public final class Brain {
         if (dir.horizontal().lengthSqr() < 1.0E-4) {
             return false;
         }
-        World w = bot.world();
+        GameWorld w = bot.world();
         // already in the air over the gap (jumping a hole), stopping would only make it fall in
         if (!bot.onGround() && isDrop(w, bot.blockPos())) {
             return false;
@@ -761,7 +764,7 @@ public final class Brain {
         return isDrop(w, bot.pos().add(dir.horizontal().normalize().scale(0.8)).toPos());
     }
 
-    private static boolean isDrop(World w, Pos feet) {
+    private static boolean isDrop(GameWorld w, Pos feet) {
         if (WorldUtil.collides(w, feet)) {
             return false;
         }
@@ -820,9 +823,9 @@ public final class Brain {
             return false;
         }
         Pos feet = Locations.pos(target.getLocation());
-        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(target.getWorld(), feet.below());
+        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(PaperWorld.of(target.getWorld()), feet.below());
         boolean rising = target.getVelocity().getY() > 0.08;
-        int surface = WorldUtil.surfaceYNoLeaves(target.getWorld(), feet.x(), feet.z());
+        int surface = WorldUtil.surfaceYNoLeaves(PaperWorld.of(target.getWorld()), feet.x(), feet.z());
         boolean high = target.getY() - surface >= 6.0;
         return playerSupport || rising || high;
     }
@@ -884,7 +887,7 @@ public final class Brain {
     }
 
     private boolean isTargetOutOfWater(LivingEntity target) {
-        World w = target.getWorld();
+        GameWorld w = PaperWorld.of(target.getWorld());
         Pos feet = Locations.pos(target.getLocation());
         return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !target.isInWater();
     }
@@ -903,13 +906,13 @@ public final class Brain {
     }
 
     private boolean hasShorelineExitAhead() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos ahead = Locations.relative(bot.blockPos(), bot.facing());
         Pos below = ahead.below();
         boolean clearFeet = !WorldUtil.hasCollision(w, ahead) && !WorldUtil.hasFluid(w, ahead);
         boolean clearHead = !WorldUtil.hasCollision(w, ahead.above()) && !WorldUtil.hasFluid(w, ahead.above());
-        Block b = Locations.block(below, w);
-        boolean solidBelow = !b.getType().isAir() && !WorldUtil.hasFluid(w, below) && (b.getType().isSolid() || WorldUtil.isSturdyTop(w, below));
+        GameBlock b = w.block(below);
+        boolean solidBelow = !b.type().is(BlockTrait.AIR) && !WorldUtil.hasFluid(w, below) && (b.type().is(BlockTrait.SOLID) || WorldUtil.isSturdyTop(w, below));
         return clearFeet && clearHead && solidBelow;
     }
 
@@ -927,7 +930,7 @@ public final class Brain {
                 finalTarget = detourPos;
             }
         }
-        World w = bot.world();
+        GameWorld w = bot.world();
         double distToFinal = bot.pos().distanceTo(finalTarget);
         if (bot.horizontalCollision()) {
             Pos front = Locations.relative(bot.blockPos(), bot.facing());
@@ -961,7 +964,7 @@ public final class Brain {
         Vec3 lookAhead = moveDir.scale(plannerActive ? Math.min(1.5, toTarget.length()) : 1.5);
         Pos lookAheadBlock = bot.pos().add(lookAhead).toPos();
         boolean cliff = !WorldUtil.blocksMotion(w, lookAheadBlock.below());
-        if (w.getEnvironment() == World.Environment.NETHER && cliff
+        if (w.dimension() == Dimension.NETHER && cliff
                 && (isLavaBelow(bot.pos().add(lookAhead)) || isLavaBelow(bot.eyePos().add(lookAhead)))) {
             lastSafetySneakTick = Bukkit.getCurrentTick();
             bot.setSneaking(true);
@@ -1009,7 +1012,7 @@ public final class Brain {
     private void findDetour(Vec3 dir) {
         int[] angles = {45, -45, 65, -65, 90, -90, 145, -145};
         double[] radii = {5.5, 8.5};
-        World w = bot.world();
+        GameWorld w = bot.world();
         for (double radius : radii) {
             for (int angle : angles) {
                 Vec3 trial = dir.horizontal().rotateY(Math.toRadians(angle)).normalize().scale(radius);
@@ -1026,37 +1029,37 @@ public final class Brain {
     }
 
     private boolean isPathBlocked(Pos pos) {
-        World w = bot.world();
+        GameWorld w = bot.world();
         if (!WorldUtil.isLoaded(w, pos)) {
             return true;
         }
-        Material legs = Locations.block(pos, w).getType();
-        Material head = Locations.block(pos.above(), w).getType();
-        Material ground = Locations.block(pos.below(), w).getType();
-        if (legs == Material.LAVA || ground == Material.LAVA || legs == Material.FIRE || ground == Material.FIRE
-                || legs == Material.POWDER_SNOW || ground == Material.POWDER_SNOW || legs == Material.SWEET_BERRY_BUSH) {
+        BlockType legs = w.block(pos).type();
+        BlockType head = w.block(pos.above()).type();
+        BlockType ground = w.block(pos.below()).type();
+        if (legs == Blocks.LAVA || ground == Blocks.LAVA || legs == Blocks.FIRE || ground == Blocks.FIRE
+                || legs == Blocks.POWDER_SNOW || ground == Blocks.POWDER_SNOW || legs == Blocks.SWEET_BERRY_BUSH) {
             return true;
         }
-        if (!legs.isSolid() && !head.isSolid()) {
+        if (!legs.is(BlockTrait.SOLID) && !head.is(BlockTrait.SOLID)) {
             return false;
         }
-        if (Locations.block(pos, w).isPassable()) {
+        if (w.block(pos).isPassable()) {
             // feet free but the head bumps (leaves, slab): the bot is almost 2 blocks tall and doesn't fit
-            return head.isSolid() && !Locations.block(pos.above(), w).isPassable();
+            return head.is(BlockTrait.SOLID) && !w.block(pos.above()).isPassable();
         }
-        if (Tag.DOORS.isTagged(legs) || Tag.FENCE_GATES.isTagged(legs)) {
+        if (legs.is(BlockTrait.DOOR) || legs.is(BlockTrait.FENCE_GATE)) {
             return false;
         }
-        if (legs.isSolid() && !head.isSolid()) {
-            return Locations.block(bot.blockPos().above(2), w).getType().isSolid();
+        if (legs.is(BlockTrait.SOLID) && !head.is(BlockTrait.SOLID)) {
+            return w.block(bot.blockPos().above(2)).type().is(BlockTrait.SOLID);
         }
-        return legs.isSolid() && head.isSolid();
+        return legs.is(BlockTrait.SOLID) && head.is(BlockTrait.SOLID);
     }
 
     private boolean isLavaBelow(Vec3 from) {
-        World w = bot.world();
-        RayTraceResult r = w.rayTraceBlocks(Locations.location(from, w), new Vector(0, -1, 0), 100, FluidCollisionMode.ALWAYS, true);
-        return r != null && r.getHitBlock() != null && r.getHitBlock().getType() == Material.LAVA;
+        GameWorld w = bot.world();
+        RayHit r = w.rayTraceBlocks(from, new Vec3(0, -1, 0), 100, true, true);
+        return r != null && w.block(r.block()).type() == Blocks.LAVA;
     }
 
     private Vec3 swarmSeparation() {
@@ -1166,6 +1169,7 @@ public final class Brain {
             return;
         }
         World w = target.getWorld();
+        GameWorld gw = PaperWorld.of(w);
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 15; i++) {
             double distance = 50 + r.nextDouble() * 50;
@@ -1176,17 +1180,17 @@ public final class Brain {
                 continue;
             }
             Pos spawn = null;
-            if (w.getEnvironment() == World.Environment.NETHER) {
+            if (gw.dimension() == Dimension.NETHER) {
                 for (int y = 5; y < 120; y++) {
                     Pos c = new Pos(x, y, z);
-                    if (WorldUtil.isAir(w, c) && WorldUtil.isAir(w, c.above()) && WorldUtil.blocksMotion(w, c.below()) && !WorldUtil.isLava(w, c.below())) {
+                    if (WorldUtil.isAir(gw, c) && WorldUtil.isAir(gw, c.above()) && WorldUtil.blocksMotion(gw, c.below()) && !WorldUtil.isLava(gw, c.below())) {
                         spawn = c;
                         break;
                     }
                 }
             } else {
-                Pos c = new Pos(x, WorldUtil.surfaceYNoLeaves(w, x, z), z);
-                if (!WorldUtil.isLava(w, c.below())) {
+                Pos c = new Pos(x, WorldUtil.surfaceYNoLeaves(gw, x, z), z);
+                if (!WorldUtil.isLava(gw, c.below())) {
                     spawn = c;
                 }
             }
@@ -1197,7 +1201,7 @@ public final class Brain {
             Vec3 eye = eyes(target);
             Vec3 look = Locations.vec(target.getLocation().getDirection());
             double dot = look.dot(spawnVec.subtract(eye).normalize());
-            boolean obscured = !WorldUtil.clearLine(w, eye, spawnVec);
+            boolean obscured = !WorldUtil.clearLine(gw, eye, spawnVec);
             boolean behind = dot < -0.5;
             if (!obscured && !behind) {
                 continue;
@@ -1214,7 +1218,7 @@ public final class Brain {
     }
 
     private Pos findSafeNetherSpot() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos base = bot.blockPos();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 50; i++) {
@@ -1236,7 +1240,7 @@ public final class Brain {
     /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
     private void handleOffensivePearl(LivingEntity target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        World w = bot.world();
+        GameWorld w = bot.world();
         double currentDist = bot.distanceTo(target);
         double angle = r.nextDouble() * Math.PI * 2;
         double fromPlayer = 15 + r.nextDouble() * 15;

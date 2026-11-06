@@ -1,11 +1,11 @@
 package dev.manhuntstar.bot.world;
 
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Pos;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
-import org.bukkit.World;
 
 /**
  * Blocos colocados por jogadores (para reconhecer torres e skybases). Corrige o mod, que registrava
@@ -19,8 +19,8 @@ public final class PlayerBlockTracker {
 
     private final Map<UUID, Map<Long, Long>> placed = new HashMap<>();
 
-    public void markPlaced(World world, Pos pos) {
-        Map<Long, Long> m = placed.computeIfAbsent(world.getUID(), k -> new HashMap<>());
+    public void markPlaced(GameWorld world, Pos pos) {
+        Map<Long, Long> m = placed.computeIfAbsent(world.id(), k -> new HashMap<>());
         if (m.size() >= MAX_PER_WORLD) {
             purge();
             if (m.size() >= MAX_PER_WORLD) {
@@ -34,15 +34,15 @@ public final class PlayerBlockTracker {
         m.put(pos.asLong(), System.currentTimeMillis() + TTL_MS);
     }
 
-    public void unmark(World world, Pos pos) {
-        Map<Long, Long> m = placed.get(world.getUID());
+    public void unmark(GameWorld world, Pos pos) {
+        Map<Long, Long> m = placed.get(world.id());
         if (m != null) {
             m.remove(pos.asLong());
         }
     }
 
-    public boolean isPlayerPlaced(World world, Pos pos) {
-        Map<Long, Long> m = placed.get(world.getUID());
+    public boolean isPlayerPlaced(GameWorld world, Pos pos) {
+        Map<Long, Long> m = placed.get(world.id());
         if (m == null) {
             return false;
         }

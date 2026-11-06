@@ -1,6 +1,8 @@
 package dev.manhuntstar.bot;
 
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameWorld;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -65,8 +67,8 @@ public final class Progression {
             tickRegeneration();
             return;
         }
-        World w = bot.world();
-        if (!netherUnlocked && w != null && w.getEnvironment() == World.Environment.NETHER) {
+        GameWorld w = bot.world();
+        if (!netherUnlocked && w != null && w.dimension() == Dimension.NETHER) {
             netherUnlocked = true;
             if (phase < 5) {
                 setPhase(5);

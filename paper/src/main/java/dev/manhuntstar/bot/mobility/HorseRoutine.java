@@ -568,7 +568,7 @@ public final class HorseRoutine {
         double direct = me.distanceTo(goal);
         Horse best = null;
         double bestDetour = MAX_DETOUR;
-        for (Horse h : bot.world().getNearbyEntitiesByType(Horse.class, bot.location(), SEARCH_RADIUS)) {
+        for (Horse h : bot.bukkitWorld().getNearbyEntitiesByType(Horse.class, bot.location(), SEARCH_RADIUS)) {
             if (!eligible(h)) {
                 continue;
             }

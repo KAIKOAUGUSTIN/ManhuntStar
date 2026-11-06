@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.motor;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -8,7 +9,6 @@ import dev.manhuntstar.util.WorldUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Mannequin;
@@ -335,7 +335,7 @@ public final class Motor {
             return;
         }
         boolean headInWater = bot.isEyeInWater();
-        World w = bot.world();
+        GameWorld w = bot.world();
         Vec3 p = bot.pos();
         boolean nearSurface = headInWater || WorldUtil.hasFluid(w, new Vec3(p.x(), p.y() + 0.15, p.z()).toPos());
         if (nearSurface) {
@@ -358,7 +358,7 @@ public final class Motor {
     }
 
     public boolean isOnClimbable() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         return w != null && WorldUtil.isClimbable(w, bot.blockPos());
     }
 
@@ -383,7 +383,7 @@ public final class Motor {
 
     /** 1-block step ahead with room above: jumps. */
     public void handleObstacles() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos front = Locations.relative(bot.blockPos(), bot.facing());
         if (WorldUtil.isTrulySolid(w, front) && !WorldUtil.isTrulySolid(w, front.above()) && onGround) {
             sprinting = true;
@@ -392,7 +392,7 @@ public final class Motor {
     }
 
     public boolean shouldHandleGapAhead() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos ahead = Locations.relative(bot.blockPos(), bot.facing());
         if (WorldUtil.isTrulySolid(w, ahead) && !WorldUtil.isTrulySolid(w, ahead.above())) {
             return false;
@@ -402,7 +402,7 @@ public final class Motor {
 
     /** Hole ahead: jumps if there is ground within 5 blocks, otherwise places a block (only near the target). */
     public void handleGaps() {
-        World w = bot.world();
+        GameWorld w = bot.world();
         int now = Bukkit.getCurrentTick();
         Pos current = bot.blockPos();
         BlockFace facing = bot.facing();

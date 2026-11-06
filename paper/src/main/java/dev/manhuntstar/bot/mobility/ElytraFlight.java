@@ -1,13 +1,13 @@
 package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
@@ -40,7 +40,7 @@ public final class ElytraFlight {
     }
 
     public void tick(Player target) {
-        if (target == null || !bot.settings().useElytra.on() || !target.getWorld().equals(bot.world())) {
+        if (target == null || !bot.settings().useElytra.on() || !target.getWorld().equals(bot.bukkitWorld())) {
             forceLand();
             return;
         }
@@ -141,7 +141,7 @@ public final class ElytraFlight {
                 look.z() * 0.1 + (look.z() * 1.5 - v.z()) * 0.5));
         if ((boostTicks & 1) == 0) {
             Vec3 p = bot.pos();
-            bot.world().spawnParticle(Particle.FIREWORK, p.x(), p.y(), p.z(), 1, 0, 0, 0, 0.02);
+            bot.bukkitWorld().spawnParticle(Particle.FIREWORK, p.x(), p.y(), p.z(), 1, 0, 0, 0, 0.02);
         }
     }
 
@@ -149,7 +149,7 @@ public final class ElytraFlight {
         ItemStack previous = bot.getItem(EquipmentSlot.HAND).clone();
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.FIREWORK_ROCKET));
         bot.swing();
-        bot.world().playSound(bot.location(), Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3f, 1f);
+        bot.world().playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, dev.manhuntstar.platform.SoundCategory.AMBIENT, 3f, 1f);
         boostTicks = BOOST_TICKS;
         fireworkCooldown = 60;
         bot.setItem(EquipmentSlot.HAND, previous);

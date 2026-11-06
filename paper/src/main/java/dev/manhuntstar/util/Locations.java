@@ -1,10 +1,13 @@
 package dev.manhuntstar.util;
 
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.GameWorld;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 /**
@@ -39,6 +42,22 @@ public final class Locations {
         return new Vec3(l.getX(), l.getY(), l.getZ());
     }
 
+    public static Location location(Pos p, GameWorld world) {
+        return location(p, PaperWorld.bukkit(world));
+    }
+
+    public static Location location(Vec3 v, GameWorld world) {
+        return location(v, PaperWorld.bukkit(world));
+    }
+
+    public static Location location(Vec3 v, GameWorld world, float yaw, float pitch) {
+        return location(v, PaperWorld.bukkit(world), yaw, pitch);
+    }
+
+    public static Block block(Pos p, GameWorld world) {
+        return block(p, PaperWorld.bukkit(world));
+    }
+
     public static Location location(Pos p, World world) {
         return new Location(world, p.x(), p.y(), p.z());
     }
@@ -49,6 +68,14 @@ public final class Locations {
 
     public static Location location(Vec3 v, World world, float yaw, float pitch) {
         return new Location(world, v.x(), v.y(), v.z(), yaw, pitch);
+    }
+
+    public static Box box(BoundingBox b) {
+        return new Box(b.getMinX(), b.getMinY(), b.getMinZ(), b.getMaxX(), b.getMaxY(), b.getMaxZ());
+    }
+
+    public static BoundingBox boundingBox(Box b) {
+        return new BoundingBox(b.minX(), b.minY(), b.minZ(), b.maxX(), b.maxY(), b.maxZ());
     }
 
     public static Vector vector(Vec3 v) {

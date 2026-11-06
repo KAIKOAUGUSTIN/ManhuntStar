@@ -7,6 +7,14 @@ public record Pos(int x, int y, int z) {
         return new Pos(x + dx, y + dy, z + dz);
     }
 
+    public Pos relative(Face face) {
+        return new Pos(x + face.modX(), y + face.modY(), z + face.modZ());
+    }
+
+    public Pos relative(Face face, int n) {
+        return new Pos(x + face.modX() * n, y + face.modY() * n, z + face.modZ() * n);
+    }
+
     public Pos above() {
         return new Pos(x, y + 1, z);
     }

@@ -5,6 +5,11 @@ public record Vec3(double x, double y, double z) {
 
     public static final Vec3 ZERO = new Vec3(0, 0, 0);
 
+    /** The block's corner with the lowest coordinates (where Bukkit's Block.getLocation() points). */
+    public static Vec3 of(Pos p) {
+        return new Vec3(p.x(), p.y(), p.z());
+    }
+
     public static Vec3 center(Pos p) {
         return new Vec3(p.x() + 0.5, p.y() + 0.5, p.z() + 0.5);
     }

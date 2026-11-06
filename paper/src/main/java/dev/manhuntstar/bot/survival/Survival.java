@@ -2,6 +2,12 @@ package dev.manhuntstar.bot.survival;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -11,8 +17,6 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
@@ -39,7 +43,7 @@ public final class Survival {
     private int fireEscapeTicks;
     private Vec3 fireEscapeSource;
     private Pos fireEscapeWaterPos;
-    private World fireEscapeWaterWorld;
+    private GameWorld fireEscapeWaterWorld;
     private int fireEscapeWaterCleanupTicks;
 
     public Survival(Bot bot) {
@@ -110,11 +114,11 @@ public final class Survival {
 
     private boolean isInCombat() {
         Player t = bot.target();
-        if (t != null && !t.isDead() && t.getWorld().equals(bot.world()) && bot.distanceTo(t) < 16) {
+        if (t != null && !t.isDead() && t.getWorld().equals(bot.bukkitWorld()) && bot.distanceTo(t) < 16) {
             return true;
         }
         LivingEntity mob = bot.combat().mobAttacker();
-        return mob != null && !mob.isDead() && mob.getWorld().equals(bot.world()) && bot.distanceTo(mob) < 12;
+        return mob != null && !mob.isDead() && mob.getWorld().equals(bot.bukkitWorld()) && bot.distanceTo(mob) < 12;
     }
 
     private static ItemStack selectPhaseFood(int phase) {
@@ -135,8 +139,8 @@ public final class Survival {
         if (!s.fireWaterEscape.on() || bot.progression().phase() < 3 || !bot.isOnFire()) {
             return false;
         }
-        World w = bot.world();
-        if (w.getEnvironment() == World.Environment.NETHER || bot.isInLava() || bot.isInWater()) {
+        GameWorld w = bot.world();
+        if (w.dimension() == Dimension.NETHER || bot.isInLava() || bot.isInWater()) {
             return false;
         }
         Mannequin e = bot.entity();
@@ -171,7 +175,7 @@ public final class Survival {
         if (!bot.onGround()) {
             return;
         }
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos waterPos = bot.blockPos();
         if (!WorldUtil.canBeReplaced(w, waterPos)) {
             if (!WorldUtil.canBeReplaced(w, waterPos.above())) {
@@ -182,11 +186,11 @@ public final class Survival {
         ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.WATER_BUCKET));
         bot.setPitchNow(90f);
-        Locations.block(waterPos, w).setType(Material.WATER);
+        w.block(waterPos).setType(Blocks.WATER);
         bot.swing();
-        w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_EMPTY, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         // if the bot dies before picking it up, the water disappears all the same
-        bot.manager().temporaryBlocks().add(w, waterPos, Material.WATER, FIRE_WATER_PICKUP_TICKS + 40);
+        bot.manager().temporaryBlocks().add(w, waterPos, Blocks.WATER, FIRE_WATER_PICKUP_TICKS + 40);
         fireEscapeWaterPos = waterPos;
         fireEscapeWaterWorld = w;
         fireEscapeWaterCleanupTicks = 0;
@@ -201,10 +205,10 @@ public final class Survival {
         if (++fireEscapeWaterCleanupTicks < FIRE_WATER_PICKUP_TICKS) {
             return;
         }
-        World w = fireEscapeWaterWorld;
-        Block b = Locations.block(fireEscapeWaterPos, w);
+        GameWorld w = fireEscapeWaterWorld;
+        GameBlock b = w.block(fireEscapeWaterPos);
         // in another world the bot can't reach it: the temporary block registry picks it up
-        if (w.equals(bot.world()) && b.getType() == Material.WATER) {
+        if (w.equals(bot.world()) && b.type() == Blocks.WATER) {
             bot.manager().temporaryBlocks().remove(w, fireEscapeWaterPos);
             ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
             bot.motor().stopWalk();
@@ -212,9 +216,9 @@ public final class Survival {
             bot.lookAt(Vec3.center(fireEscapeWaterPos));
             bot.setPitchNow(90f);
             bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.BUCKET));
-            b.setType(Material.AIR);
+            b.setType(Blocks.AIR);
             bot.swing();
-            w.playSound(b.getLocation(), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1.0f, 1.0f);
+            w.playSound(Vec3.of(fireEscapeWaterPos), Sounds.ITEM_BUCKET_FILL, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
             bot.setItem(EquipmentSlot.HAND, oldMain);
         }
         fireEscapeWaterPos = null;
@@ -254,10 +258,10 @@ public final class Survival {
         bot.motor().setSprinting(false);
         Mannequin e = bot.entity();
         if (eatingTicks % 4 == 0 && eatingTicks < EAT_TICKS - 6 && e != null) {
-            World w = e.getWorld();
+            GameWorld w = PaperWorld.of(e.getWorld());
             Vec3 mouth = bot.eyePos().add(bot.lookVector().scale(0.3)).add(0, -0.1, 0);
-            w.spawnParticle(Particle.ITEM, mouth.x(), mouth.y(), mouth.z(), 5, 0.1, 0.1, 0.1, 0.05, currentFood);
-            w.playSound(e.getLocation(), Sound.ENTITY_GENERIC_EAT, SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
+            PaperWorld.bukkit(w).spawnParticle(Particle.ITEM, mouth.x(), mouth.y(), mouth.z(), 5, 0.1, 0.1, 0.1, 0.05, currentFood);
+            w.playSound(Locations.vec(e.getLocation()), Sounds.ENTITY_GENERIC_EAT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
                     (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 0.2f + 1.0f);
         }
         if (--eatingTicks > 0) {

@@ -35,7 +35,7 @@ public final class DebugRenderer {
         if (bot.world() == null) {
             return;
         }
-        paths.put(bot.id(), new Snapshot(bot.world().getUID(), List.copyOf(path), index, Set.copyOf(mine), Set.copyOf(place)));
+        paths.put(bot.id(), new Snapshot(bot.world().id(), List.copyOf(path), index, Set.copyOf(mine), Set.copyOf(place)));
     }
 
     public void clear(UUID botId) {

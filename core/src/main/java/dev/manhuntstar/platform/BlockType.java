@@ -20,6 +20,7 @@ public final class BlockType {
     private volatile int id = -1;
     private volatile long traits;
     private volatile float hardness;
+    private volatile float slipperiness = 0.6f;
 
     private BlockType(String name) {
         this.name = name;
@@ -52,12 +53,18 @@ public final class BlockType {
         return out;
     }
 
+    /** Registers a block type with the usual friction (see the other {@code register}). */
+    public static BlockType register(int id, String name, float hardness, BlockTrait... traits) {
+        return register(id, name, hardness, 0.6f, traits);
+    }
+
     /**
      * Registers a block type of the game (called by the platform when it starts).
      *
      * @param hardness the game's hardness (time to break); negative = unbreakable
+     * @param slipperiness the game's friction (0.6 for most blocks, 0.98 for ice)
      */
-    public static synchronized BlockType register(int id, String name, float hardness, BlockTrait... traits) {
+    public static synchronized BlockType register(int id, String name, float hardness, float slipperiness, BlockTrait... traits) {
         BlockType type = of(name);
         long bits = 0;
         for (BlockTrait t : traits) {
@@ -65,6 +72,7 @@ public final class BlockType {
         }
         type.traits = bits;
         type.hardness = hardness;
+        type.slipperiness = slipperiness;
         type.id = id;
         BlockType[] table = byId;
         if (id >= table.length) {
@@ -92,6 +100,10 @@ public final class BlockType {
 
     public float hardness() {
         return hardness;
+    }
+
+    public float slipperiness() {
+        return slipperiness;
     }
 
     @Override

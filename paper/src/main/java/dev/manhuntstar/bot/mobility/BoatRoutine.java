@@ -2,6 +2,11 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -18,9 +23,6 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.Levelled;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -183,9 +185,9 @@ public final class BoatRoutine {
         }
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.OAK_BOAT));
         bot.lookAt(Vec3.center(water));
-        World w = bot.world();
-        Location loc = new Location(w, water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
-        if (!(w.spawnEntity(loc, EntityType.OAK_BOAT) instanceof Boat boat)) {
+        GameWorld w = bot.world();
+        Location loc = new Location(PaperWorld.bukkit(w), water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
+        if (!(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT) instanceof Boat boat)) {
             return false;
         }
         bot.brain().mlg().trackSpawnedBoat(boat);
@@ -203,7 +205,7 @@ public final class BoatRoutine {
 
     private boolean handleCrossing(Entity vehicle) {
         LivingEntity follow = crossingFollow;
-        boolean followGone = follow == null || follow.isDead() || !follow.getWorld().equals(bot.world());
+        boolean followGone = follow == null || follow.isDead() || !follow.getWorld().equals(bot.bukkitWorld());
         if (vehicle instanceof Boat mounted && isRiderBoat(mounted)) {
             crossingTicks++;
             if (!followGone && bot.tickDelay(10)) {
@@ -470,7 +472,7 @@ public final class BoatRoutine {
         if (known != null) {
             return known;
         }
-        World w = bot.world();
+        GameWorld w = bot.world();
         boolean result = false;
         for (int[] d : CARDINALS) {
             Pos side = p.offset(d[0], 0, d[1]);
@@ -517,7 +519,7 @@ public final class BoatRoutine {
     }
 
     private Pos surfaceWaterInColumn(int x, int z, int anchorY, int yRange) {
-        World w = bot.world();
+        GameWorld w = bot.world();
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
@@ -533,12 +535,12 @@ public final class BoatRoutine {
         return best;
     }
 
-    private static boolean isSurfaceWater(World w, Pos p) {
+    private static boolean isSurfaceWater(GameWorld w, Pos p) {
         if (!WorldUtil.isWater(w, p) || WorldUtil.hasFluid(w, p.above())) {
             return false;
         }
-        Block above = Locations.block(p.above(), w);
-        return above.getType().isAir() || above.isReplaceable();
+        GameBlock above = w.block(p.above());
+        return above.type().is(BlockTrait.AIR) || above.isReplaceable();
     }
 
     private void clearSurfacePath() {
@@ -670,7 +672,7 @@ public final class BoatRoutine {
     private Player findNearbyBoatingPlayer() {
         Player best = null;
         double bestDist = Double.MAX_VALUE;
-        for (Player p : bot.world().getPlayers()) {
+        for (Player p : bot.bukkitWorld().getPlayers()) {
             if (p.isDead() || !(p.getVehicle() instanceof Boat) || !bot.manager().isEligibleTarget(p)) {
                 continue;
             }
@@ -711,7 +713,7 @@ public final class BoatRoutine {
         Pos origin = bot.blockPos();
         Pos best = null;
         double bestDist = Double.MAX_VALUE;
-        World w = bot.world();
+        GameWorld w = bot.world();
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -730,24 +732,24 @@ public final class BoatRoutine {
         return best;
     }
 
-    private static boolean canPlaceBoat(World w, Pos water) {
+    private static boolean canPlaceBoat(GameWorld w, Pos water) {
         if (!isWaterSource(w, water)) {
             return false;
         }
-        Block above = Locations.block(water.above(), w);
-        if (!above.getType().isAir() && !above.isReplaceable()) {
+        GameBlock above = w.block(water.above());
+        if (!above.type().is(BlockTrait.AIR) && !above.isReplaceable()) {
             return false;
         }
         return !WorldUtil.hasFluid(w, water.above()) && countSurfaceWater(w, water, 2) >= 5;
     }
 
-    private static boolean isWaterSource(World w, Pos p) {
-        Block b = Locations.block(p, w);
-        return b.getType() == Material.WATER && b.getBlockData() instanceof Levelled l && l.getLevel() == 0;
+    private static boolean isWaterSource(GameWorld w, Pos p) {
+        GameBlock b = w.block(p);
+        return b.type() == Blocks.WATER && b.fluidLevel() == 0;
     }
 
     /** How many water sources with air above there are within a radius (at the same height). */
-    static int countSurfaceWater(World w, Pos center, int radius) {
+    static int countSurfaceWater(GameWorld w, Pos center, int radius) {
         int count = 0;
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -755,8 +757,8 @@ public final class BoatRoutine {
                 if (!isWaterSource(w, water)) {
                     continue;
                 }
-                Block above = Locations.block(water.above(), w);
-                if ((above.getType().isAir() || above.isReplaceable()) && !WorldUtil.hasFluid(w, water.above())) {
+                GameBlock above = w.block(water.above());
+                if ((above.type().is(BlockTrait.AIR) || above.isReplaceable()) && !WorldUtil.hasFluid(w, water.above())) {
                     count++;
                 }
             }
@@ -765,7 +767,7 @@ public final class BoatRoutine {
     }
 
     private boolean shouldDismountNearShore(Boat boat) {
-        World w = bot.world();
+        GameWorld w = bot.world();
         Pos center = Locations.pos(boat.getLocation());
         if (WorldUtil.isWater(w, center) || WorldUtil.isWater(w, center.below())) {
             return false;
@@ -777,16 +779,16 @@ public final class BoatRoutine {
         return hasLandAround(bot.world(), Locations.pos(boat.getLocation()), 0);
     }
 
-    private static boolean hasLandAround(World w, Pos center, int maxDy) {
+    private static boolean hasLandAround(GameWorld w, Pos center, int maxDy) {
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 for (int dy = -1; dy <= maxDy; dy++) {
                     Pos p = center.offset(dx, dy, dz);
-                    Block b = Locations.block(p, w);
-                    if (b.getType().isAir() || WorldUtil.hasFluid(w, p)) {
+                    GameBlock b = w.block(p);
+                    if (b.type().is(BlockTrait.AIR) || WorldUtil.hasFluid(w, p)) {
                         continue;
                     }
-                    if (b.getType().isSolid() || WorldUtil.isSturdyTop(w, p)) {
+                    if (b.type().is(BlockTrait.SOLID) || WorldUtil.isSturdyTop(w, p)) {
                         return true;
                     }
                 }

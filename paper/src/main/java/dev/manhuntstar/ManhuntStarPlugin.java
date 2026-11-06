@@ -69,6 +69,11 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         return instance;
     }
 
+    /** The server as core sees it. */
+    public GameServer server() {
+        return server;
+    }
+
     /** Reads and writes the plugin's YAML files (config.yml, languages). */
     public YamlFiles yaml() {
         return yaml;

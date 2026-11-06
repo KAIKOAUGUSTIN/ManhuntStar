@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.manhuntstar.platform.BlockSnapshot;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.FakeWorld;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Pos;
@@ -82,19 +83,13 @@ class ChunkCostsTest {
         }
     }
 
-    private static final class World implements GameWorld {
-        final UUID id = UUID.randomUUID();
+    /** The fake world with its loaded chunks and a count of the copies taken. */
+    private static final class World extends FakeWorld {
         final Set<Long> loaded = new HashSet<>();
         final Map<Long, Integer> copies = new HashMap<>();
 
-        @Override
-        public UUID id() {
-            return id;
-        }
-
-        @Override
-        public String name() {
-            return "test";
+        World() {
+            super(p -> p.y() <= 63 ? stone : air);
         }
 
         @Override

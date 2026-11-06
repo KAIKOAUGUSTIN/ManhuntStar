@@ -3,6 +3,13 @@ package dev.manhuntstar.bot.mobility;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -11,15 +18,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.Orientable;
 import org.bukkit.entity.Player;
 
 /**
@@ -112,21 +114,21 @@ public final class PortalEntrance {
         if (!bot.isAlive()) {
             return;
         }
-        World w = player.getWorld();
+        GameWorld w = PaperWorld.of(player.getWorld());
         Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, Locations.pos(player.getLocation()));
-        Location dest = new Location(w, spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
+        Location dest = new Location(PaperWorld.bukkit(w), spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
         bot.lookAt(Locations.vec(player.getLocation()));
-        w.playSound(dest, portalPos != null ? Sound.BLOCK_PORTAL_TRAVEL : Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.6f, 1f);
+        w.playSound(Locations.vec(dest), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
     // ------------------------------------------------------------------ portal
 
     private void spawnPortal(Player player) {
-        World w = player.getWorld();
+        GameWorld w = PaperWorld.of(player.getWorld());
         portalPos = findPortalLocation(player);
-        boolean end = w.getEnvironment() == World.Environment.THE_END;
+        boolean end = w.dimension() == Dimension.THE_END;
         if (portalPos == null) {
             portalPos = Locations.relative(Locations.pos(player.getLocation()), Locations.faceFromYaw(player.getLocation().getYaw()), 15);
         }
@@ -134,9 +136,9 @@ public final class PortalEntrance {
             if (!WorldUtil.blocksMotion(w, portalPos.below())) {
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
-                        Block b = Locations.block(portalPos.offset(x, -1, z), w);
-                        if (!b.getType().isSolid()) {
-                            b.setType(Material.OBSIDIAN);
+                        GameBlock b = w.block(portalPos.offset(x, -1, z));
+                        if (!b.type().is(BlockTrait.SOLID)) {
+                            b.setType(Blocks.OBSIDIAN);
                         }
                     }
                 }
@@ -144,44 +146,39 @@ public final class PortalEntrance {
             return;
         }
         buildNetherPortal(w, portalPos);
-        manager.plugin().pathService().invalidate(PaperWorld.of(w), portalPos);
+        manager.plugin().pathService().invalidate(w, portalPos);
     }
 
     /** 2x3 portal with an obsidian frame along the X axis, obsidian floor where there is no support. */
-    public static void buildNetherPortal(World w, Pos pos) {
+    public static void buildNetherPortal(GameWorld w, Pos pos) {
         for (int x = -1; x <= 2; x++) {
             for (int z = -1; z <= 2; z++) {
-                Block floor = Locations.block(pos.offset(x, -1, z), w);
-                if (!floor.getType().isSolid() || floor.getType() == Material.LAVA) {
-                    floor.setType(Material.OBSIDIAN);
+                GameBlock floor = w.block(pos.offset(x, -1, z));
+                if (!floor.type().is(BlockTrait.SOLID) || floor.type() == Blocks.LAVA) {
+                    floor.setType(Blocks.OBSIDIAN);
                 }
             }
         }
         for (int x = -1; x <= 2; x++) {
             for (int y = 0; y <= 3; y++) {
-                Locations.block(pos.offset(x, y, 0), w).setType(Material.AIR, false);
+                w.block(pos.offset(x, y, 0)).setType(Blocks.AIR, false);
             }
         }
         for (int[] f : FRAME) {
-            Locations.block(pos.offset(f[0], f[1], 0), w).setType(Material.OBSIDIAN, false);
+            w.block(pos.offset(f[0], f[1], 0)).setType(Blocks.OBSIDIAN, false);
         }
         for (int x = 0; x <= 1; x++) {
             for (int y = 0; y <= 2; y++) {
-                Block b = Locations.block(pos.offset(x, y, 0), w);
-                b.setType(Material.NETHER_PORTAL, false);
-                if (b.getBlockData() instanceof Orientable o) {
-                    o.setAxis(Axis.X);
-                    b.setBlockData(o, false);
-                }
+                w.block(pos.offset(x, y, 0)).setPortalX();
             }
         }
     }
 
     private Pos findPortalLocation(Player player) {
-        World w = player.getWorld();
+        GameWorld w = PaperWorld.of(player.getWorld());
         Vec3 pp = Locations.vec(player.getLocation());
-        boolean nether = w.getEnvironment() == World.Environment.NETHER;
-        boolean end = w.getEnvironment() == World.Environment.THE_END;
+        boolean nether = w.dimension() == Dimension.NETHER;
+        boolean end = w.dimension() == Dimension.THE_END;
         for (int dist = 100; dist >= 10; dist -= 5) {
             for (int i = 0; i < 12; i++) {
                 double angle = Math.toRadians(i * 30);
@@ -203,7 +200,7 @@ public final class PortalEntrance {
                     }
                 } else if (end) {
                     int ty = WorldUtil.surfaceY(w, tx, tz);
-                    if (ty > w.getMinHeight() + 1) {
+                    if (ty > w.minHeight() + 1) {
                         candidate = new Pos(tx, ty, tz);
                     }
                 } else {
@@ -228,10 +225,10 @@ public final class PortalEntrance {
         if (look.dot(center.subtract(eye).normalize()) < 0.5) {
             return false;
         }
-        return WorldUtil.clearLine(player.getWorld(), eye, center.add(0, 1, 0));
+        return WorldUtil.clearLine(PaperWorld.of(player.getWorld()), eye, center.add(0, 1, 0));
     }
 
-    private static Pos exitSpot(World w, Pos base) {
+    private static Pos exitSpot(GameWorld w, Pos base) {
         Pos[] preferred = {base.offset(0, 0, 1), base.offset(1, 0, 1), base.offset(0, 0, -1), base.offset(1, 0, -1), base.offset(-2, 0, 0), base.offset(3, 0, 0)};
         for (Pos c : preferred) {
             if (isSafeSpot(w, c)) {
@@ -252,7 +249,7 @@ public final class PortalEntrance {
     }
 
     /** A safe spot out of the player's sight, 15–40 blocks away (entrance without a portal). */
-    private static Pos hiddenSpot(World w, Pos center) {
+    private static Pos hiddenSpot(GameWorld w, Pos center) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 30; i++) {
             int x = center.x() + r.nextInt(50) - 25;
@@ -260,8 +257,8 @@ public final class PortalEntrance {
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            if (w.getEnvironment() == World.Environment.NETHER) {
-                for (int y = Math.min(w.getMaxHeight() - 3, center.y() + 24); y >= Math.max(w.getMinHeight() + 2, center.y() - 24); y--) {
+            if (w.dimension() == Dimension.NETHER) {
+                for (int y = Math.min(w.maxHeight() - 3, center.y() + 24); y >= Math.max(w.minHeight() + 2, center.y() - 24); y--) {
                     Pos c = new Pos(x, y, z);
                     if (isSafeSpot(w, c)) {
                         return c;
@@ -277,16 +274,16 @@ public final class PortalEntrance {
         return center;
     }
 
-    static boolean isSafeSpot(World w, Pos c) {
+    static boolean isSafeSpot(GameWorld w, Pos c) {
         if (!WorldUtil.isSafeStand(w, c)) {
             return false;
         }
-        Material feet = Locations.block(c, w).getType();
-        Material head = Locations.block(c.above(), w).getType();
-        if (feet == Material.NETHER_PORTAL || head == Material.NETHER_PORTAL) {
+        BlockType feet = w.block(c).type();
+        BlockType head = w.block(c.above()).type();
+        if (feet == Blocks.NETHER_PORTAL || head == Blocks.NETHER_PORTAL) {
             return false;
         }
         int open = WorldUtil.countOpenSides(w, c);
-        return w.getEnvironment() == World.Environment.NETHER ? open >= 2 : open >= 1;
+        return w.dimension() == Dimension.NETHER ? open >= 2 : open >= 1;
     }
 }

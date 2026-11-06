@@ -9,8 +9,18 @@ import dev.manhuntstar.bot.motor.Motor;
 import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperBlocks;
 import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameSound;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.SoundGroup;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.ChunkTickets;
+import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -26,16 +36,11 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
@@ -323,7 +328,12 @@ public final class Bot {
         return entity != null && entity.isValid() && !entity.isDead();
     }
 
-    public World world() {
+    public GameWorld world() {
+        return PaperWorld.of(bukkitWorld());
+    }
+
+    /** The Bukkit world of {@link #world()}, while the code still uses it. */
+    public World bukkitWorld() {
         return entity != null ? entity.getWorld() : (lastKnownWorld == null ? null : Bukkit.getWorld(lastKnownWorld));
     }
 
@@ -451,7 +461,7 @@ public final class Bot {
 
     /** Line of sight from the eyes to the point, ignoring blocks without collision. */
     public boolean canSee(Vec3 target) {
-        World w = world();
+        GameWorld w = world();
         return w != null && WorldUtil.clearLine(w, eyePos(), target);
     }
 
@@ -492,7 +502,7 @@ public final class Bot {
     public Player fallbackTarget() {
         Player best = null;
         double bestDist = Double.MAX_VALUE;
-        World w = world();
+        World w = bukkitWorld();
         Vec3 p = pos();
         for (Player pl : Bukkit.getOnlinePlayers()) {
             if (!manager.isEligibleTarget(pl)) {
@@ -508,7 +518,7 @@ public final class Bot {
     }
 
     public boolean isWithinToweringRange(Player target, double maxAxisDistance) {
-        if (target == null || target.isDead() || !target.getWorld().equals(world())) {
+        if (target == null || target.isDead() || !target.getWorld().equals(bukkitWorld())) {
             return false;
         }
         Vec3 p = pos();
@@ -682,7 +692,7 @@ public final class Bot {
      * of 10 blocks every 10 seconds. Oak leaves are temporary and disappear after 100 s.
      */
     public boolean placeBlock(Pos pos, Material material, boolean allowSelfOverlap) {
-        World w = world();
+        GameWorld w = world();
         if (w == null || entity == null) {
             return false;
         }
@@ -711,21 +721,17 @@ public final class Bot {
             setItem(EquipmentSlot.HAND, new ItemStack(material));
         }
         lookAt(Vec3.center(pos));
-        Block b = Locations.block(pos, w);
-        BlockData data = material.createBlockData();
-        if (data instanceof Leaves leaves) {
-            // with no log nearby the leaves would decay on their own and drop saplings and apples
-            leaves.setPersistent(true);
-        }
-        b.setBlockData(data, true);
+        GameBlock b = w.block(pos);
+        b.place(PaperBlocks.of(material));
         swing();
-        w.playSound(b.getLocation().add(0.5, 0.5, 0.5), data.getSoundGroup().getPlaceSound(), SoundCategory.BLOCKS,
-                (data.getSoundGroup().getVolume() + 1.0f) / 2.0f, data.getSoundGroup().getPitch() * 0.8f);
+        SoundGroup sounds = b.soundGroup();
+        w.playSound(Vec3.center(pos), sounds.placeSound(), dev.manhuntstar.platform.SoundCategory.BLOCKS,
+                (sounds.volume() + 1.0f) / 2.0f, sounds.pitch() * 0.8f);
         blocksPlacedInWindow++;
         if (material == Material.OAK_LEAVES) {
-            manager.temporaryBlocks().add(w, pos, Material.OAK_LEAVES, LEAF_LIFETIME_TICKS);
+            manager.temporaryBlocks().add(w, pos, Blocks.OAK_LEAVES, LEAF_LIFETIME_TICKS);
         }
-        manager.plugin().pathService().invalidate(PaperWorld.of(w), pos);
+        manager.plugin().pathService().invalidate(w, pos);
         return true;
     }
 
@@ -734,16 +740,16 @@ public final class Bot {
     }
 
     public boolean canPlaceLeafAt(Pos pos) {
-        World w = world();
+        GameWorld w = world();
         if (!WorldUtil.canBeReplaced(w, pos) || WorldUtil.hasFluid(w, pos)) {
             return false;
         }
-        for (Pos check : new Pos[]{pos.below(), Locations.relative(pos, BlockFace.NORTH), Locations.relative(pos, BlockFace.SOUTH), Locations.relative(pos, BlockFace.EAST), Locations.relative(pos, BlockFace.WEST)}) {
-            Block b = Locations.block(check, w);
-            if (b.getType().isAir() || WorldUtil.hasFluid(w, check) || Tag.LEAVES.isTagged(b.getType())) {
+        for (Pos check : new Pos[]{pos.below(), pos.relative(Face.NORTH), pos.relative(Face.SOUTH), pos.relative(Face.EAST), pos.relative(Face.WEST)}) {
+            BlockType type = w.type(check.x(), check.y(), check.z());
+            if (type.is(BlockTrait.AIR) || WorldUtil.hasFluid(w, check) || type.is(BlockTrait.LEAVES)) {
                 continue;
             }
-            if (b.getType().isOccluding()) {
+            if (type.is(BlockTrait.OCCLUDING)) {
                 return true;
             }
         }
@@ -755,7 +761,7 @@ public final class Bot {
         if (!allowSelfOverlap && boundingBox().overlaps(box)) {
             return true;
         }
-        for (Entity e : world().getNearbyEntities(box)) {
+        for (Entity e : bukkitWorld().getNearbyEntities(box)) {
             if (e != entity && e instanceof LivingEntity le && !le.isDead()) {
                 return true;
             }
@@ -800,21 +806,20 @@ public final class Bot {
 
     /** Opens closed doors, gates and trapdoors like a player right-clicking. */
     public boolean tryOpen(Pos pos) {
-        World w = world();
-        Block b = Locations.block(pos, w);
-        Material m = b.getType();
-        boolean openable = Tag.DOORS.isTagged(m) || Tag.FENCE_GATES.isTagged(m) || Tag.TRAPDOORS.isTagged(m);
-        if (!openable || m == Material.IRON_DOOR || m == Material.IRON_TRAPDOOR) {
+        GameWorld w = world();
+        GameBlock b = w.block(pos);
+        BlockType m = b.type();
+        boolean openable = m.is(BlockTrait.DOOR) || m.is(BlockTrait.FENCE_GATE) || m.is(BlockTrait.TRAPDOOR);
+        if (!openable || m == Blocks.IRON_DOOR || m == Blocks.IRON_TRAPDOOR) {
             return false;
         }
-        if (b.getBlockData() instanceof org.bukkit.block.data.Openable o && !o.isOpen()) {
+        if (b.isOpenable() && !b.isOpen()) {
             motor.stopWalk();
             lookAt(Vec3.center(pos));
             swing();
-            o.setOpen(true);
-            b.setBlockData(o, true);
-            Sound s = Tag.DOORS.isTagged(m) ? Sound.BLOCK_WOODEN_DOOR_OPEN : Tag.FENCE_GATES.isTagged(m) ? Sound.BLOCK_FENCE_GATE_OPEN : Sound.BLOCK_WOODEN_TRAPDOOR_OPEN;
-            w.playSound(b.getLocation().add(0.5, 0.5, 0.5), s, SoundCategory.BLOCKS, 1.0f, 0.9f + ThreadLocalRandom.current().nextFloat() * 0.1f);
+            b.setOpen(true);
+            GameSound s = m.is(BlockTrait.DOOR) ? Sounds.BLOCK_WOODEN_DOOR_OPEN : m.is(BlockTrait.FENCE_GATE) ? Sounds.BLOCK_FENCE_GATE_OPEN : Sounds.BLOCK_WOODEN_TRAPDOOR_OPEN;
+            w.playSound(Vec3.center(pos), s, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1.0f, 0.9f + ThreadLocalRandom.current().nextFloat() * 0.1f);
             return true;
         }
         return false;
@@ -874,15 +879,16 @@ public final class Bot {
 
     private static Location adjustOutOfLava(Location loc) {
         World w = loc.getWorld();
+        GameWorld gw = PaperWorld.of(w);
         Pos p = Locations.pos(loc);
-        if (WorldUtil.isLava(w, p) || WorldUtil.isLava(w, p.below())) {
+        if (WorldUtil.isLava(gw, p) || WorldUtil.isLava(gw, p.below())) {
             for (int i = 0; i < 20; i++) {
                 Pos check = p.above(i);
-                if (WorldUtil.isAir(w, check) && WorldUtil.isAir(w, check.above())) {
+                if (WorldUtil.isAir(gw, check) && WorldUtil.isAir(gw, check.above())) {
                     return new Location(w, loc.getX(), check.y(), loc.getZ(), loc.getYaw(), loc.getPitch());
                 }
             }
-            int surface = WorldUtil.highestY(w, p.x(), p.z()) + 1;
+            int surface = WorldUtil.highestY(gw, p.x(), p.z()) + 1;
             return new Location(w, loc.getX(), surface, loc.getZ(), loc.getYaw(), loc.getPitch());
         }
         return loc;
@@ -978,7 +984,7 @@ public final class Bot {
             inv.add(inventory.get(i).clone());
         }
         long horseLeft = Math.max(0, horseRideBlockedUntil - Bukkit.getCurrentTick());
-        return new BotSnapshot(id, name, visualName, skin, lastKnownWorld == null && world() != null ? world().getName() : lastKnownWorld,
+        return new BotSnapshot(id, name, visualName, skin, lastKnownWorld == null && world() != null ? world().name() : lastKnownWorld,
                 p.x(), p.y(), p.z(), yaw(), pitch(), alive ? health() : maxHealth(), hunger.foodLevel(), hunger.saturation(),
                 difficulty, progression.phase(), progression.progressionEnabled(), inv,
                 getItem(EquipmentSlot.HAND).clone(), getItem(EquipmentSlot.OFF_HAND).clone(), getItem(EquipmentSlot.HEAD).clone(),

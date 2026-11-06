@@ -478,7 +478,7 @@ public final class BotInventory {
             return;
         }
         Vec3 p = bot.pos();
-        Item item = bot.world().dropItemNaturally(Locations.location(p.add(0, 1.0, 0), bot.world()), stack);
+        Item item = bot.bukkitWorld().dropItemNaturally(Locations.location(p.add(0, 1.0, 0), bot.world()), stack);
         item.setPickupDelay(40);
     }
 }

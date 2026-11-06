@@ -1,17 +1,19 @@
 package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperBlock;
 import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
-import org.bukkit.Tag;
-import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
@@ -44,9 +46,9 @@ public final class Mining {
         if (bot.capacityLocked() || miningPos == null || bot.entity() == null) {
             return;
         }
-        World w = bot.world();
-        Block b = Locations.block(miningPos, w);
-        if (b.getType().isAir()) {
+        GameWorld w = bot.world();
+        GameBlock b = w.block(miningPos);
+        if (b.type().is(BlockTrait.AIR)) {
             clear(false);
             return;
         }
@@ -57,7 +59,7 @@ public final class Mining {
         }
         bot.lookAtBlock(miningPos);
         equipBestTool(b);
-        if (b.getType() == Material.BEDROCK || b.getType().getHardness() < 0) {
+        if (b.type() == Blocks.BEDROCK || b.type().hardness() < 0) {
             clear(true);
             return;
         }
@@ -65,23 +67,23 @@ public final class Mining {
         int progress = 9 - Math.max(0, ticksRemaining * 9 / Math.max(1, totalTicks));
         sendCrack(w, miningPos, progress / 10.0f);
         if (ticksRemaining % 6 == 0) {
-            w.playSound(b.getLocation().add(0.5, 0.5, 0.5), b.getBlockData().getSoundGroup().getHitSound(), SoundCategory.BLOCKS, 0.8f, 1.0f);
+            w.playSound(Vec3.center(miningPos), b.soundGroup().hitSound(), dev.manhuntstar.platform.SoundCategory.BLOCKS, 0.8f, 1.0f);
             bot.swing();
         }
         if (ticksRemaining <= 0) {
             ItemStack tool = bot.getItem(EquipmentSlot.HAND);
-            b.breakNaturally(tool, true);
+            ((PaperBlock) b).bukkit().breakNaturally(tool, true);
             sendCrack(w, miningPos, 0f);
-            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), miningPos);
+            bot.manager().plugin().pathService().invalidate(w, miningPos);
             miningPos = null;
             bot.inventory().restorePreferredMainHand();
         }
     }
 
-    private void sendCrack(World w, Pos pos, float progress) {
-        Location loc = new Location(w, pos.x(), pos.y(), pos.z());
+    private void sendCrack(GameWorld w, Pos pos, float progress) {
+        Location loc = new Location(PaperWorld.bukkit(w), pos.x(), pos.y(), pos.z());
         int id = bot.entity() == null ? bot.id().hashCode() : bot.entity().getEntityId();
-        for (Player p : w.getPlayers()) {
+        for (Player p : PaperWorld.bukkit(w).getPlayers()) {
             if (p.getLocation().distanceSquared(loc) < 64 * 64) {
                 p.sendBlockDamage(loc, progress, id);
             }
@@ -112,12 +114,12 @@ public final class Mining {
     }
 
     public boolean startNoStop(Pos pos) {
-        World w = bot.world();
+        GameWorld w = bot.world();
         if (w == null || !WorldUtil.isLoaded(w, pos)) {
             return false;
         }
-        Block b = Locations.block(pos, w);
-        if (b.getType().isAir() || b.getType() == Material.BEDROCK || b.getType().getHardness() < 0) {
+        GameBlock b = w.block(pos);
+        if (b.type().is(BlockTrait.AIR) || b.type() == Blocks.BEDROCK || b.type().hardness() < 0) {
             return false;
         }
         miningPos = pos;
@@ -127,23 +129,23 @@ public final class Mining {
     }
 
     /** The mod's break time: hardness * 30 / speed (8 with the right tool) * 2, at least 5 ticks. */
-    private static int breakTimeTicks(Block b) {
-        float hardness = b.getType().getHardness();
+    private static int breakTimeTicks(GameBlock b) {
+        float hardness = b.type().hardness();
         if (hardness < 0) {
             return Integer.MAX_VALUE;
         }
         if (hardness == 0) {
             return 1;
         }
-        Material m = b.getType();
-        float toolSpeed = (Tag.MINEABLE_PICKAXE.isTagged(m) || Tag.MINEABLE_AXE.isTagged(m) || Tag.MINEABLE_SHOVEL.isTagged(m)) ? 8f : 1f;
+        BlockType m = b.type();
+        float toolSpeed = (m.is(BlockTrait.MINEABLE_PICKAXE) || m.is(BlockTrait.MINEABLE_AXE) || m.is(BlockTrait.MINEABLE_SHOVEL)) ? 8f : 1f;
         float ticks = hardness * 30f / toolSpeed * 2.0f;
         return Math.max(5, (int) Math.ceil(ticks));
     }
 
-    private void equipBestTool(Block b) {
-        Material m = b.getType();
-        boolean toolBlock = Tag.MINEABLE_PICKAXE.isTagged(m) || Tag.MINEABLE_SHOVEL.isTagged(m) || Tag.MINEABLE_AXE.isTagged(m) || Tag.MINEABLE_HOE.isTagged(m);
+    private void equipBestTool(GameBlock b) {
+        BlockType m = b.type();
+        boolean toolBlock = m.is(BlockTrait.MINEABLE_PICKAXE) || m.is(BlockTrait.MINEABLE_SHOVEL) || m.is(BlockTrait.MINEABLE_AXE) || m.is(BlockTrait.MINEABLE_HOE);
         ItemStack tool = toolBlock ? bot.inventory().preferredPickaxe() : bot.inventory().preferredMainHand();
         if (!tool.isEmpty() && !tool.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
             bot.setItem(EquipmentSlot.HAND, tool);

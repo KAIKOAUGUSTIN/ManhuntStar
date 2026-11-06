@@ -1,9 +1,11 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -19,9 +21,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Tag;
-import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Boat;
@@ -123,7 +122,7 @@ public final class Navigator {
         this.personality = new Personality(bot.id());
     }
 
-    private World world() {
+    private GameWorld world() {
         return bot.world();
     }
 
@@ -162,7 +161,7 @@ public final class Navigator {
         int dist = 40 + r.nextInt(30);
         int tx = bot.blockPos().x() + (int) (dir.x() * dist);
         int tz = bot.blockPos().z() + (int) (dir.z() * dist);
-        World w = world();
+        GameWorld w = world();
         int ty = w.isChunkLoaded(tx >> 4, tz >> 4) ? WorldUtil.surfaceY(w, tx, tz) : bot.blockPos().y();
         return new Pos(tx, ty, tz);
     }
@@ -261,7 +260,7 @@ public final class Navigator {
             return null;
         }
         List<Pos> path = current.path();
-        World w = world();
+        GameWorld w = world();
         int start = -1;
         for (int i = pathIndex; i < Math.min(path.size(), pathIndex + 3); i++) {
             if (isBoatWater(w, path.get(i))) {
@@ -282,7 +281,7 @@ public final class Navigator {
         return path.get(end);
     }
 
-    private static boolean isBoatWater(World w, Pos p) {
+    private static boolean isBoatWater(GameWorld w, Pos p) {
         return WorldUtil.isWater(w, p) && !WorldUtil.hasFluid(w, p.above());
     }
 
@@ -347,7 +346,7 @@ public final class Navigator {
             return;
         }
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
-        task = bot.manager().plugin().pathService().findPath(PaperWorld.of(world()), start, target, allowPlacement, boatsAllowed());
+        task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement, boatsAllowed());
         lastTarget = target;
         // the extra stretch continues the old path: counting it as a new computation kept the path from going stale
         if (!lookahead) {
@@ -437,7 +436,7 @@ public final class Navigator {
      * height. A step up doesn't pass (the step's block is at feet height), so going up never cuts corners.
      */
     private boolean straightWalkClear(Vec3 from, Pos node) {
-        World w = world();
+        GameWorld w = world();
         Vec3 to = Vec3.bottomCenter(node);
         double dx = to.x() - from.x();
         double dz = to.z() - from.z();
@@ -459,7 +458,7 @@ public final class Navigator {
         if (bot.isRiding() || current == null) {
             return;
         }
-        World w = world();
+        GameWorld w = world();
         // To climb a step the body goes 2 blocks above the current node. The A* relies on digging that
         // block, which is neither the next node's feet nor its head; without this the bot gets stuck under it.
         if (node.y() > from.y() && WorldUtil.collides(w, from.above(2))) {
@@ -495,7 +494,7 @@ public final class Navigator {
         if (bot.mining().isMining()) {
             return true;
         }
-        World w = world();
+        GameWorld w = world();
         while (!mineQueue.isEmpty()) {
             Pos next = mineQueue.peekFirst();
             if (!WorldUtil.collides(w, next)) {
@@ -581,7 +580,7 @@ public final class Navigator {
         if (next1.y() != cur.y()) {
             return false;
         }
-        World w = world();
+        GameWorld w = world();
         boolean ceiling = WorldUtil.collides(w, cur.above(2)) || WorldUtil.collides(w, next1.above(2));
         if (ceiling) {
             return true;
@@ -599,17 +598,17 @@ public final class Navigator {
         }
         Vec3 unit = dir.normalize().scale(0.5);
         int steps = (int) Math.ceil(len / 0.5);
-        World w = world();
+        GameWorld w = world();
         for (int i = 1; i <= steps; i++) {
             Pos check = from.add(unit.scale(i)).toPos();
             if (!WorldUtil.isLoaded(w, check)) {
                 return false;
             }
-            Block b = Locations.block(check, w);
-            if (b.getType().isAir() || b.isPassable()) {
+            GameBlock b = w.block(check);
+            if (b.type().is(BlockTrait.AIR) || b.isPassable()) {
                 continue;
             }
-            float h = b.getType().getHardness();
+            float h = b.type().hardness();
             if (h >= 50f || h < 0f) {
                 return true;
             }
@@ -678,7 +677,7 @@ public final class Navigator {
             }
             return lastResolved;
         }
-        World w = world();
+        GameWorld w = world();
         // The approach point is for a target above the bot (tower, platform in the sky). With the bot already at the
         // target's level and close, it sent the bot somewhere else (up to the ceiling of a glass box) and not to the target.
         // With the bot above the target (on the ceiling of its box), it sent it down to the ground under the platform.
@@ -742,7 +741,7 @@ public final class Navigator {
         if (flat.lengthSqr() < 1.0E-6) {
             return null;
         }
-        World w = world();
+        GameWorld w = world();
         boolean ceiling = w.hasCeiling();
         Vec3 dir = flat.normalize();
         ColumnSearch ground = (x, z) -> {
@@ -833,22 +832,22 @@ public final class Navigator {
         if (botToStep < STEP_KEEP || stepToTarget > botToTarget - STEP_KEEP) {
             return false;
         }
-        World w = world();
+        GameWorld w = world();
         return WorldUtil.isLoaded(w, keptStep) && (WorldUtil.isWater(w, keptStep) || isStandableApproach(keptStep, false));
     }
 
     /** Column ground for the intermediate point: the highest standing spot near the terrain, ignoring tree canopies. */
     private Pos groundInColumn(int x, int z) {
-        World w = world();
+        GameWorld w = world();
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
         int surface = WorldUtil.surfaceYNoLeaves(w, x, z);
-        int top = Math.min(w.getMaxHeight() - 2, surface + 4);
-        int bottom = Math.max(w.getMinHeight() + 1, surface - 8);
+        int top = Math.min(w.maxHeight() - 2, surface + 4);
+        int bottom = Math.max(w.minHeight() + 1, surface - 8);
         for (int y = top; y >= bottom; y--) {
             Pos feet = new Pos(x, y, z);
-            if (isStandableApproach(feet, false) && !Tag.LEAVES.isTagged(Locations.block(feet.below(), w).getType())) {
+            if (isStandableApproach(feet, false) && !w.block(feet.below()).type().is(BlockTrait.LEAVES)) {
                 return feet;
             }
         }
@@ -860,12 +859,12 @@ public final class Navigator {
      * bot's height, below the ceiling.
      */
     private Pos groundNearY(int x, int z, int refY) {
-        World w = world();
+        GameWorld w = world();
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
-        int low = Math.max(w.getMinHeight() + 1, refY - CEILING_BAND);
-        int high = Math.min(w.getLogicalHeight() - 1, refY + CEILING_BAND);
+        int low = Math.max(w.minHeight() + 1, refY - CEILING_BAND);
+        int high = Math.min(w.logicalHeight() - 1, refY + CEILING_BAND);
         for (int i = 0; i <= 2 * CEILING_BAND; i++) {
             // refY, refY+1, refY-1, refY+2, ...: closest to the bot's height first
             int y = refY + ((i + 1) >> 1) * ((i & 1) == 1 ? 1 : -1);
@@ -910,13 +909,13 @@ public final class Navigator {
     }
 
     private Pos standableInColumn(int x, int z, int targetY, boolean avoidElevated) {
-        World w = world();
+        GameWorld w = world();
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
         int surface = WorldUtil.surfaceYNoLeaves(w, x, z);
-        int top = Math.min(w.getMaxHeight() - 2, Math.max(targetY, surface + 4));
-        int bottom = Math.max(w.getMinHeight() + 1, surface - 8);
+        int top = Math.min(w.maxHeight() - 2, Math.max(targetY, surface + 4));
+        int bottom = Math.max(w.minHeight() + 1, surface - 8);
         if (avoidElevated) {
             top = Math.min(top, naturalColumnTopY(x, z, targetY) + 4);
         }
@@ -930,11 +929,11 @@ public final class Navigator {
     }
 
     private int naturalColumnTopY(int x, int z, int targetY) {
-        World w = world();
-        for (int y = Math.min(targetY, w.getMaxHeight() - 2); y >= w.getMinHeight(); y--) {
+        GameWorld w = world();
+        for (int y = Math.min(targetY, w.maxHeight() - 2); y >= w.minHeight(); y--) {
             Pos p = new Pos(x, y, z);
-            Block b = Locations.block(p, w);
-            if (b.getType().isAir() || b.isReplaceable()) {
+            GameBlock b = w.block(p);
+            if (b.type().is(BlockTrait.AIR) || b.isReplaceable()) {
                 continue;
             }
             if (!WorldUtil.hasFluid(w, p) && hasLargeAirGapBelow(w, p)) {
@@ -946,13 +945,13 @@ public final class Navigator {
     }
 
     private boolean isStandableApproach(Pos feet, boolean avoidElevated) {
-        World w = world();
+        GameWorld w = world();
         boolean clearFeet = !WorldUtil.hasCollision(w, feet) && !WorldUtil.hasFluid(w, feet);
         boolean clearHead = !WorldUtil.hasCollision(w, feet.above()) && !WorldUtil.hasFluid(w, feet.above());
         Pos floor = feet.below();
-        Block fb = Locations.block(floor, w);
-        boolean safeFloor = !fb.getType().isAir() && !WorldUtil.hasFluid(w, floor)
-                && (fb.getType().isSolid() || WorldUtil.isSturdyTop(w, floor));
+        GameBlock fb = w.block(floor);
+        boolean safeFloor = !fb.type().is(BlockTrait.AIR) && !WorldUtil.hasFluid(w, floor)
+                && (fb.type().is(BlockTrait.SOLID) || WorldUtil.isSturdyTop(w, floor));
         if (!clearFeet || !clearHead || !safeFloor) {
             return false;
         }
@@ -969,7 +968,7 @@ public final class Navigator {
                 && Math.hypot(botPos.x() - target.x(), botPos.z() - target.z()) <= SAME_LEVEL_RADIUS;
     }
 
-    private boolean isTargetAirborneOrSkybasing(World w, Pos target) {
+    private boolean isTargetAirborneOrSkybasing(GameWorld w, Pos target) {
         if (hasNearbyWater(w, target)) {
             return false;
         }
@@ -991,11 +990,11 @@ public final class Navigator {
         }
         for (int i = 1; i <= 64; i++) {
             Pos p = target.below(i);
-            if (p.y() < w.getMinHeight()) {
+            if (p.y() < w.minHeight()) {
                 break;
             }
-            Block b = Locations.block(p, w);
-            boolean empty = b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
+            GameBlock b = w.block(p);
+            boolean empty = b.type().is(BlockTrait.AIR) || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
             if (empty || isPlayerPlaced(p)) {
                 continue;
             }
@@ -1004,14 +1003,14 @@ public final class Navigator {
         return true;
     }
 
-    private Pos firstNaturalSupportBelow(World w, Pos start) {
+    private Pos firstNaturalSupportBelow(GameWorld w, Pos start) {
         for (int i = 1; i <= 64; i++) {
             Pos p = start.below(i);
-            if (p.y() < w.getMinHeight()) {
+            if (p.y() < w.minHeight()) {
                 return null;
             }
-            Block b = Locations.block(p, w);
-            boolean empty = b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
+            GameBlock b = w.block(p);
+            boolean empty = b.type().is(BlockTrait.AIR) || (b.isReplaceable() && !WorldUtil.hasFluid(w, p));
             if (!empty && !isPlayerPlaced(p)) {
                 return p;
             }
@@ -1019,11 +1018,11 @@ public final class Navigator {
         return null;
     }
 
-    private static Pos firstSupportBelow(World w, Pos target) {
-        for (int y = target.y() - 1; y >= Math.max(w.getMinHeight(), target.y() - 8); y--) {
+    private static Pos firstSupportBelow(GameWorld w, Pos target) {
+        for (int y = target.y() - 1; y >= Math.max(w.minHeight(), target.y() - 8); y--) {
             Pos p = new Pos(target.x(), y, target.z());
-            Block b = Locations.block(p, w);
-            if (b.getType().isAir() || (b.isReplaceable() && !WorldUtil.hasFluid(w, p))) {
+            GameBlock b = w.block(p);
+            if (b.type().is(BlockTrait.AIR) || (b.isReplaceable() && !WorldUtil.hasFluid(w, p))) {
                 continue;
             }
             return p;
@@ -1031,9 +1030,9 @@ public final class Navigator {
         return null;
     }
 
-    private static boolean hasLargeAirGapBelow(World w, Pos support) {
+    private static boolean hasLargeAirGapBelow(GameWorld w, Pos support) {
         int open = 0;
-        for (int y = support.y() - 1; y >= Math.max(w.getMinHeight(), support.y() - 8); y--) {
+        for (int y = support.y() - 1; y >= Math.max(w.minHeight(), support.y() - 8); y--) {
             Pos p = new Pos(support.x(), y, support.z());
             if (WorldUtil.hasCollision(w, p) || WorldUtil.hasFluid(w, p)) {
                 return false;
@@ -1045,7 +1044,7 @@ public final class Navigator {
         return false;
     }
 
-    private static boolean hasNearbyWater(World w, Pos target) {
+    private static boolean hasNearbyWater(GameWorld w, Pos target) {
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 for (int dy = 2; dy >= -6; dy--) {
@@ -1090,7 +1089,7 @@ public final class Navigator {
     }
 
     private Vec3 boatSurfaceTarget(Vec3 finalTarget) {
-        World w = world();
+        GameWorld w = world();
         Pos t = finalTarget.toPos();
         Pos best = null;
         double bestDist = Double.MAX_VALUE;
@@ -1113,21 +1112,21 @@ public final class Navigator {
     }
 
     private boolean isDryLandTarget(Vec3 finalTarget) {
-        World w = world();
+        GameWorld w = world();
         Pos feet = finalTarget.toPos();
         if (WorldUtil.isWater(w, feet) || WorldUtil.isWater(w, feet.below())) {
             return false;
         }
-        Block below = Locations.block(feet.below(), w);
-        return !below.getType().isAir() && !WorldUtil.hasFluid(w, feet.below()) && below.getType().isOccluding();
+        GameBlock below = w.block(feet.below());
+        return !below.type().is(BlockTrait.AIR) && !WorldUtil.hasFluid(w, feet.below()) && below.type().is(BlockTrait.OCCLUDING);
     }
 
     /** The target isn't on solid ground (it's in the water/in the air): navigate through the water instead of going straight. */
     private boolean isTargetOffSolidGround(Vec3 finalTarget) {
-        World w = world();
+        GameWorld w = world();
         Pos below = finalTarget.toPos().below();
-        Block b = Locations.block(below, w);
-        return !(!b.getType().isAir() && !WorldUtil.hasFluid(w, below) && b.getType().isOccluding());
+        GameBlock b = w.block(below);
+        return !(!b.type().is(BlockTrait.AIR) && !WorldUtil.hasFluid(w, below) && b.type().is(BlockTrait.OCCLUDING));
     }
 
     private void updateWaterMode() {
@@ -1150,7 +1149,7 @@ public final class Navigator {
      * farthest exit won when the target went along the bank, and the bot swam along the edge without getting out.
      */
     private ShoreExit shoreExitToward(Vec3 finalTarget) {
-        World w = world();
+        GameWorld w = world();
         Pos botPos = bot.blockPos();
         Pos targetPos = finalTarget.toPos();
         Vec3 toward = finalTarget.subtract(bot.pos()).horizontal();
@@ -1167,11 +1166,11 @@ public final class Navigator {
                     for (BlockFace face : Locations.HORIZONTALS) {
                         Pos landFeet = Locations.relative(water, face);
                         Pos landBelow = landFeet.below();
-                        Block lb = Locations.block(landBelow, w);
-                        if (lb.getType().isAir() || WorldUtil.hasFluid(w, landBelow)) {
+                        GameBlock lb = w.block(landBelow);
+                        if (lb.type().is(BlockTrait.AIR) || WorldUtil.hasFluid(w, landBelow)) {
                             continue;
                         }
-                        if (!lb.getType().isSolid() && !WorldUtil.isSturdyTop(w, landBelow)) {
+                        if (!lb.type().is(BlockTrait.SOLID) && !WorldUtil.isSturdyTop(w, landBelow)) {
                             continue;
                         }
                         if (WorldUtil.hasCollision(w, landFeet) || WorldUtil.hasCollision(w, landFeet.above())
@@ -1194,7 +1193,7 @@ public final class Navigator {
     }
 
     private Pos cruiseNodeToward(Vec3 finalTarget) {
-        World w = world();
+        GameWorld w = world();
         Pos botPos = bot.blockPos();
         Pos target = finalTarget.toPos();
         Pos best = null;
@@ -1208,7 +1207,7 @@ public final class Navigator {
                     continue;
                 }
                 int surface = y;
-                while (surface < w.getMaxHeight() - 1 && WorldUtil.isWater(w, new Pos(x, surface + 1, z))) {
+                while (surface < w.maxHeight() - 1 && WorldUtil.isWater(w, new Pos(x, surface + 1, z))) {
                     surface++;
                 }
                 Pos c = new Pos(x, surface - 2, z);
@@ -1233,7 +1232,7 @@ public final class Navigator {
     }
 
     private Pos breathingNode() {
-        World w = world();
+        GameWorld w = world();
         Pos botPos = bot.blockPos();
         Pos best = null;
         double bestScore = Double.MAX_VALUE;
@@ -1245,7 +1244,7 @@ public final class Navigator {
                         continue;
                     }
                     Pos air = water.above();
-                    if (!Locations.block(air, w).getType().isAir() || WorldUtil.hasFluid(w, air)) {
+                    if (!w.block(air).type().is(BlockTrait.AIR) || WorldUtil.hasFluid(w, air)) {
                         continue;
                     }
                     double score = water.distSqr(botPos);
@@ -1278,8 +1277,8 @@ public final class Navigator {
         }
         // In the air (jumping, falling) the path starts where it will land. Starting from the point in the air the A*
         // finds no support and returns only that node: the bot landed and stayed under it, jumping and looking up.
-        World w = world();
-        for (int i = 0; i < LANDING_SCAN && p.y() - i > w.getMinHeight(); i++) {
+        GameWorld w = world();
+        for (int i = 0; i < LANDING_SCAN && p.y() - i > w.minHeight(); i++) {
             Pos feet = p.below(i);
             if (WorldUtil.hasFluid(w, feet) || WorldUtil.collides(w, feet.below())) {
                 return feet;

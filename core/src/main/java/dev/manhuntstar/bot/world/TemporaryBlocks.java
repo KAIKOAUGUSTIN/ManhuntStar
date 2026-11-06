@@ -1,21 +1,22 @@
 package dev.manhuntstar.bot.world;
 
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.PathService;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameServer;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.SoundCategory;
+import dev.manhuntstar.platform.SoundGroup;
 import dev.manhuntstar.util.Pos;
+import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 
 /**
  * Blocks the bots place only for a while: leaves for the water bridge, MLG and fire water, bucket
@@ -28,28 +29,30 @@ public final class TemporaryBlocks {
     private record Key(UUID world, Pos pos) {
     }
 
-    private record Entry(Material material, long expiresAt) {
+    private record Entry(BlockType material, long expiresAt) {
     }
 
+    private final GameServer server;
     private final Supplier<PathService> paths;
     private final Map<Key, Entry> entries = new LinkedHashMap<>();
 
-    public TemporaryBlocks(Supplier<PathService> paths) {
+    public TemporaryBlocks(GameServer server, Supplier<PathService> paths) {
+        this.server = server;
         this.paths = paths;
     }
 
     /** The {@code material} block at {@code p} goes back to air in {@code ticks}, if it's still there. */
-    public void add(World w, Pos p, Material material, int ticks) {
-        entries.put(new Key(w.getUID(), p), new Entry(material, (long) Bukkit.getCurrentTick() + ticks));
+    public void add(GameWorld w, Pos p, BlockType material, int ticks) {
+        entries.put(new Key(w.id(), p), new Entry(material, (long) server.currentTick() + ticks));
     }
 
     /** Whoever placed it has already picked the block up. */
-    public void remove(World w, Pos p) {
-        entries.remove(new Key(w.getUID(), p));
+    public void remove(GameWorld w, Pos p) {
+        entries.remove(new Key(w.id(), p));
     }
 
     public void tick() {
-        long now = Bukkit.getCurrentTick();
+        long now = server.currentTick();
         if (entries.isEmpty() || now % 10 != 0) {
             return;
         }
@@ -59,7 +62,7 @@ public final class TemporaryBlocks {
             if (now < e.getValue().expiresAt()) {
                 continue;
             }
-            World w = Bukkit.getWorld(e.getKey().world());
+            GameWorld w = server.world(e.getKey().world());
             if (w != null && !WorldUtil.isLoaded(w, e.getKey().pos())) {
                 // waits for the chunk to come back instead of loading it just for this
                 continue;
@@ -72,27 +75,27 @@ public final class TemporaryBlocks {
     /** Shutdown: undoes everything right away. */
     public void revertAll() {
         for (Map.Entry<Key, Entry> e : entries.entrySet()) {
-            revert(Bukkit.getWorld(e.getKey().world()), e.getKey().pos(), e.getValue().material(), false);
+            revert(server.world(e.getKey().world()), e.getKey().pos(), e.getValue().material(), false);
         }
         entries.clear();
     }
 
-    private void revert(World w, Pos p, Material material, boolean sound) {
+    private void revert(GameWorld w, Pos p, BlockType material, boolean sound) {
         if (w == null) {
             return;
         }
-        Block b = Locations.block(p, w);
-        if (b.getType() != material) {
+        GameBlock b = w.block(p);
+        if (b.type() != material) {
             return;
         }
-        BlockData data = b.getBlockData();
-        b.setType(Material.AIR);
-        if (sound && material.isSolid()) {
-            w.playSound(b.getLocation().add(0.5, 0.5, 0.5), data.getSoundGroup().getBreakSound(), SoundCategory.BLOCKS, 0.8f, 1.0f);
+        SoundGroup sounds = b.soundGroup();
+        b.setType(Blocks.AIR);
+        if (sound && material.is(BlockTrait.SOLID)) {
+            w.playSound(Vec3.center(p), sounds.breakSound(), SoundCategory.BLOCKS, 0.8f, 1.0f);
         }
         PathService ps = paths.get();
         if (ps != null) {
-            ps.invalidate(PaperWorld.of(w), p);
+            ps.invalidate(w, p);
         }
     }
 }
