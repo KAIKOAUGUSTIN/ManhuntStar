@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Estado salvo de um bot (para reiniciar o servidor ou renascer): identidade, posição, vida, fome,
- * fase, inventário, equipamento e equipamento persistente.
+ * Saved state of a bot (to restart the server or respawn): identity, position, health, hunger,
+ * phase, inventory, equipment and persistent equipment.
  */
 public record BotSnapshot(
         UUID id,

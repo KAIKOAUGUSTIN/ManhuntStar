@@ -7,7 +7,7 @@ import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.ItemTrait;
 
-/** Pontuação de espadas, picaretas e armaduras para escolher o melhor equipamento. */
+/** Scoring of swords, pickaxes and armor to pick the best equipment. */
 public final class GearScoring {
 
     private GearScoring() {
@@ -48,7 +48,7 @@ public final class GearScoring {
         return s.equipSlot() == slot;
     }
 
-    /** Soma dos modificadores de um atributo do item ativos no grupo de slot informado. */
+    /** Sum of the item's modifiers of an attribute that are active in the given slot group. */
     public static double attributeAmount(GameItem s, Attr attribute, EquipSlot slot) {
         if (isEmpty(s)) {
             return 0;
@@ -56,12 +56,12 @@ public final class GearScoring {
         return s.attributeAmount(attribute, slot);
     }
 
-    /** Dano extra da arma na mão (sem contar o 1 base do jogador). */
+    /** Extra damage of the weapon in hand (without the player's base 1). */
     public static double weaponDamage(GameItem s) {
         return attributeAmount(s, Attr.ATTACK_DAMAGE, EquipSlot.HAND);
     }
 
-    /** Velocidade de ataque efetiva (base 4.0 do jogador + modificador do item). */
+    /** Effective attack speed (the player's base 4.0 + the item's modifier). */
     public static double attackSpeed(GameItem s) {
         return Math.max(0.25, 4.0 + attributeAmount(s, Attr.ATTACK_SPEED, EquipSlot.HAND));
     }
