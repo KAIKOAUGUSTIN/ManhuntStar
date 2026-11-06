@@ -2,29 +2,19 @@ package dev.manhuntstar.listener;
 
 import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import dev.manhuntstar.ManhuntStarPlugin;
-import dev.manhuntstar.api.BotEvents;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
-import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.bot.GameEvents;
 import dev.manhuntstar.paper.PaperBotDeath;
 import dev.manhuntstar.paper.PaperDamageInfo;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.GameProjectile;
 import dev.manhuntstar.util.Locations;
-import dev.manhuntstar.util.Vec3;
-import org.bukkit.Bukkit;
-import org.bukkit.GameRules;
-import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -37,7 +27,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.world.EntitiesLoadEvent;
 
-/** Bot damage, death, totem, pearl and teleport (what the mod did inside the fake player). */
+/** Bot damage, death, totem, pearl and teleport (what the mod did inside the fake player), handed to {@link GameEvents}. */
 public final class BotEntityListener implements Listener {
 
     private final ManhuntStarPlugin plugin;
@@ -50,8 +40,8 @@ public final class BotEntityListener implements Listener {
         return plugin.botManager();
     }
 
-    private Settings settings() {
-        return plugin.settings();
+    private GameEvents events() {
+        return plugin.gameEvents();
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -60,58 +50,14 @@ public final class BotEntityListener implements Listener {
         if (bot == null) {
             return;
         }
-        DamageSource src = event.getDamageSource();
-        boolean bypass = src.getDamageType().equals(DamageType.OUT_OF_WORLD) || src.getDamageType().equals(DamageType.GENERIC_KILL);
-        if (!bypass && (manager().pause().isPaused() || settings().countdownInvulnerable.on() && manager().rings().holds(bot))) {
+        GameEvents.DamageDecision d = events().botDamaged(bot, new PaperDamageInfo(event.getDamageSource()), event.getDamage());
+        if (d.cancelled()) {
             event.setCancelled(true);
-            return;
+        } else {
+            event.setDamage(d.damage());
         }
-        if (!bypass && settings().botInvincible.on()) {
-            event.setCancelled(true);
-            return;
-        }
-        Entity attacker = src.getCausingEntity();
-        if (attacker instanceof Projectile proj && proj.getShooter() instanceof Entity shooter) {
-            attacker = shooter;
-        }
-        if (attacker instanceof Player p) {
-            BotEvents.BotDamageByPlayerEvent api = new BotEvents.BotDamageByPlayerEvent(bot, p, event.getDamage());
-            Bukkit.getPluginManager().callEvent(api);
-            if (api.isCancelled()) {
-                event.setCancelled(true);
-                return;
-            }
-            event.setDamage(api.getDamage());
-        }
-        if (src.getDamageType().equals(DamageType.FALL)) {
-            BotEvents.BotFallDamageEvent api = new BotEvents.BotFallDamageEvent(bot, event.getDamage());
-            Bukkit.getPluginManager().callEvent(api);
-            if (api.isCancelled()) {
-                event.setCancelled(true);
-                return;
-            }
-        }
-        if (attacker instanceof LivingEntity le && le != PaperEntities.bukkit(bot.entity())) {
-            bot.rememberFireSource(Locations.vec(le.getLocation()));
-            Vec3 dir = Locations.vec(le.getLocation()).subtract(bot.pos());
-            bot.setYawNow(dir.yaw());
-            if (!(le instanceof Player) && !(le instanceof EnderDragon) && manager().byEntity(PaperEntities.of(le)) == null) {
-                bot.combat().setMobAttacker(PaperEntities.of(le));
-            }
-        }
-        if (bot.combat().isBlocking() && bot.combat().canBlockDamage(new PaperDamageInfo(event.getDamageSource()))) {
-            event.setCancelled(true);
-            Mannequin e = PaperEntities.bukkit(bot.entity());
-            e.getWorld().playSound(e.getLocation(), Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1f, 0.8f + (float) Math.random() * 0.4f);
-            return;
-        }
-        event.setDamage(event.getDamage() * bot.difficulty().damageTakenMultiplier());
     }
 
-    /**
-     * Spear charge of a bot on horseback (the game's own damage, see HorseRoutine): doesn't hit allies,
-     * respects PvP being off and takes the difficulty's attack multiplier, like the sword hit.
-     */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onBotSpear(EntityDamageEvent event) {
         DamageSource src = event.getDamageSource();
@@ -122,13 +68,12 @@ public final class BotEntityListener implements Listener {
         if (bot == null) {
             return;
         }
-        Entity victim = event.getEntity();
-        if (manager().isAlly(bot, PaperEntities.of(victim)) || (victim instanceof Player && settings().respectPvp.on()
-                && Boolean.FALSE.equals(victim.getWorld().getGameRuleValue(GameRules.PVP)))) {
+        GameEvents.DamageDecision d = events().botSpearHits(bot, PaperEntities.of(event.getEntity()), event.getDamage());
+        if (d.cancelled()) {
             event.setCancelled(true);
-            return;
+        } else {
+            event.setDamage(d.damage());
         }
-        event.setDamage(event.getDamage() * bot.difficulty().attackMultiplier());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -137,7 +82,7 @@ public final class BotEntityListener implements Listener {
         if (src.getDamageType().equals(DamageType.SPEAR)) {
             Bot bot = manager().byEntity(PaperEntities.of(src.getCausingEntity()));
             if (bot != null) {
-                bot.brain().horse().onLanceHit();
+                events().botSpearLanded(bot);
             }
         }
     }
@@ -146,7 +91,7 @@ public final class BotEntityListener implements Listener {
     public void onDamageApplied(EntityDamageByEntityEvent event) {
         Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null && event.getFinalDamage() > 0) {
-            bot.brain().onKnockback();
+            events().botKnockedBack(bot);
         }
     }
 
@@ -160,21 +105,14 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        Bot killer = manager().byEntity(PaperEntities.of(event.getDamageSource().getCausingEntity()));
-        if (killer != null) {
-            killer.incrementKills();
-        }
+        events().playerDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onResurrect(EntityResurrectEvent event) {
         Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (bot.isAlive()) {
-                    bot.onTotemConsumed();
-                }
-            });
+            events().botUsedTotem(bot);
         }
     }
 
@@ -182,15 +120,10 @@ public final class BotEntityListener implements Listener {
     public void onTeleport(EntityTeleportEvent event) {
         Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                if (bot.isAlive()) {
-                    bot.onEntityTeleported();
-                }
-            });
+            events().botTeleported(bot);
         }
     }
 
-    /** The bot's pearl: teleports (if the game didn't) and deals the pearl's 5 damage, as with the player. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPearlHit(ProjectileHitEvent event) {
         if (!(event.getEntity() instanceof EnderPearl pearl) || !(pearl.getShooter() instanceof Mannequin m)) {
@@ -200,33 +133,16 @@ public final class BotEntityListener implements Listener {
         if (bot == null) {
             return;
         }
-        Location hit = pearl.getLocation().clone();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!bot.isAlive()) {
-                return;
-            }
-            Mannequin e = PaperEntities.bukkit(bot.entity());
-            if (!e.getWorld().equals(hit.getWorld()) || e.getLocation().distanceSquared(hit) > 4.0) {
-                hit.setYaw(e.getLocation().getYaw());
-                hit.setPitch(e.getLocation().getPitch());
-                manager().teleportBot(bot, Locations.place(hit));
-            } else {
-                bot.onEntityTeleported();
-            }
-            bot.motor().resetFallTracking();
-            PaperEntities.bukkit(bot.entity()).damage(5.0, DamageSource.builder(DamageType.ENDER_PEARL).withDirectEntity(pearl).withCausingEntity(PaperEntities.bukkit(bot.entity())).build());
-            hit.getWorld().playSound(hit, Sound.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
-        });
+        events().botPearlLanded(bot, (GameProjectile) PaperEntities.of(pearl), Locations.place(pearl.getLocation()));
     }
 
-    /** Bot entity removed without dying (command, another plugin): comes back in the same place. */
     @EventHandler
     public void onRemoved(EntityRemoveFromWorldEvent event) {
         Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot == null) {
             return;
         }
-        Bukkit.getScheduler().runTask(plugin, () -> manager().onEntityLost(bot));
+        events().botBodyRemoved(bot);
     }
 
     @EventHandler

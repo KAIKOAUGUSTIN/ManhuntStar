@@ -58,6 +58,11 @@ public final class PaperServer implements GameServer {
     }
 
     @Override
+    public int maxPlayers() {
+        return Bukkit.getMaxPlayers();
+    }
+
+    @Override
     public GameWorld defaultWorld() {
         return PaperWorld.of(Bukkit.getWorlds().getFirst());
     }

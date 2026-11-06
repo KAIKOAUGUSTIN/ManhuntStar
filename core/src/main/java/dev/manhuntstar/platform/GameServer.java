@@ -22,6 +22,9 @@ public interface GameServer {
 
     List<GameWorld> worlds();
 
+    /** The player limit shown in the server list and in /list. */
+    int maxPlayers();
+
     Collection<? extends GamePlayer> onlinePlayers();
 
     /** An online player, or null. */

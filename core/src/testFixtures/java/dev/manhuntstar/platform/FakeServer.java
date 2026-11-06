@@ -91,6 +91,11 @@ public class FakeServer implements GameServer {
     public final List<Component> broadcasts = new ArrayList<>();
 
     @Override
+    public int maxPlayers() {
+        return 20;
+    }
+
+    @Override
     public GameWorld defaultWorld() {
         return worlds.isEmpty() ? null : worlds.getFirst();
     }

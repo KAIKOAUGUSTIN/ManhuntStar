@@ -2,6 +2,7 @@ package dev.manhuntstar;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.bot.GameEvents;
 import dev.manhuntstar.command.ManhuntCommand;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
@@ -74,6 +75,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     private final ChunkTickets chunkTickets = new ChunkTickets();
     private final BotEventSink events = new PaperBotEvents();
     private final AimDiagnostics aim = new PaperAimDiagnostics();
+    private final GameEvents gameEvents = new GameEvents(this);
     private BukkitTask tickTask;
 
     public static ManhuntStarPlugin instance() {
@@ -306,6 +308,11 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     }
 
     // ------------------------------------------------------------------ access
+
+    /** What the bots do when the game reports something; the listeners call it. */
+    public GameEvents gameEvents() {
+        return gameEvents;
+    }
 
     @Override
     public Logger logger() {

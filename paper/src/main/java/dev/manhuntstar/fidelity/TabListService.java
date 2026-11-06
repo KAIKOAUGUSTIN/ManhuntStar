@@ -5,6 +5,8 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.SkinData;
 import dev.manhuntstar.host.BotTabList;
+import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.GamePlayer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -142,6 +144,11 @@ public final class TabListService implements BotTabList {
     }
 
     /** A player joined: they get all the bots. */
+    @Override
+    public void sendAll(GamePlayer player) {
+        sendAll(PaperEntities.bukkit(player));
+    }
+
     public void sendAll(Player player) {
         if (!active() || listed.isEmpty()) {
             return;
