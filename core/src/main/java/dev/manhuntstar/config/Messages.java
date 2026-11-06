@@ -1,6 +1,8 @@
 package dev.manhuntstar.config;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.platform.ConfigNode;
+import dev.manhuntstar.platform.YamlFiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,7 +23,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
  * The plugin's texts (MiniMessage format), one file per language in the {@code lang/} folder. Underneath
@@ -54,20 +55,20 @@ public final class Messages {
      * changed, {@code version} field) goes to {@code lang/old/<language>-v<version>.yml} and is
      * replaced by the new one.
      */
-    public static void install(File langDir, Function<String, InputStream> resources, Logger logger) {
+    public static void install(YamlFiles yaml, File langDir, Function<String, InputStream> resources, Logger logger) {
         if (!langDir.isDirectory() && !langDir.mkdirs()) {
             logger.warning("Could not create the " + FOLDER + " folder.");
             return;
         }
         for (String lang : BUNDLED_LANGUAGES) {
             File file = new File(langDir, lang + ".yml");
-            YamlConfiguration bundled = bundled(resources, lang, logger);
+            ConfigNode bundled = bundled(yaml, resources, lang, logger);
             if (bundled == null) {
                 continue;
             }
             try {
                 if (file.exists()) {
-                    int current = YamlConfiguration.loadConfiguration(file).getInt("version", 1);
+                    int current = yaml.load(file).getInt("version", 1);
                     int latest = bundled.getInt("version", 1);
                     if (current >= latest) {
                         continue;
@@ -104,12 +105,12 @@ public final class Messages {
         return new ArrayList<>(out);
     }
 
-    private static YamlConfiguration bundled(Function<String, InputStream> resources, String lang, Logger logger) {
+    private static ConfigNode bundled(YamlFiles yaml, Function<String, InputStream> resources, String lang, Logger logger) {
         try (InputStream in = resources.apply(resource(lang))) {
             if (in == null) {
                 return null;
             }
-            return YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+            return yaml.load(new InputStreamReader(in, StandardCharsets.UTF_8));
         } catch (IOException e) {
             logger.warning("Could not read the bundled language " + lang + ": " + e.getMessage());
             return null;
@@ -120,10 +121,10 @@ public final class Messages {
      * Loads a language: the English inside the plugin, on top of it the language inside the plugin and on
      * top of that the server's {@code lang/<language>.yml}. A language that doesn't exist becomes English, with a warning.
      */
-    public void load(File langDir, String requested, Function<String, InputStream> resources, Logger logger) {
+    public void load(YamlFiles yaml, File langDir, String requested, Function<String, InputStream> resources, Logger logger) {
         String lang = normalize(requested);
         File file = new File(langDir, lang + ".yml");
-        YamlConfiguration own = bundled(resources, lang, logger);
+        ConfigNode own = bundled(yaml, resources, lang, logger);
         if (own == null && !file.exists()) {
             logger.warning("Language '" + lang + "' not found in " + FOLDER + "/; using " + DEFAULT_LANGUAGE + ".");
             lang = DEFAULT_LANGUAGE;
@@ -131,22 +132,22 @@ public final class Messages {
             own = null;
         }
         values.clear();
-        put(bundled(resources, DEFAULT_LANGUAGE, logger));
+        put(bundled(yaml, resources, DEFAULT_LANGUAGE, logger));
         if (!lang.equals(DEFAULT_LANGUAGE)) {
             put(own);
         }
         if (file.exists()) {
-            put(YamlConfiguration.loadConfiguration(file));
+            put(yaml.load(file));
         }
         language = lang;
         prefix = values.getOrDefault("prefix", "");
     }
 
-    private void put(YamlConfiguration cfg) {
+    private void put(ConfigNode cfg) {
         if (cfg == null) {
             return;
         }
-        for (String key : cfg.getKeys(true)) {
+        for (String key : cfg.keys(true)) {
             if (cfg.isString(key)) {
                 values.put(key, cfg.getString(key));
             }

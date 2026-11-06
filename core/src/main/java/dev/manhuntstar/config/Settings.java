@@ -11,6 +11,9 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.config.Setting.Category;
+import dev.manhuntstar.platform.ConfigNode;
+import dev.manhuntstar.platform.EntityKind;
+import dev.manhuntstar.platform.YamlFiles;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,9 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.EntityType;
 
 /**
  * Every plugin option. The command keys ({@code /manhunt settings <key>}) and config.yml
@@ -160,7 +160,7 @@ public final class Settings {
     /** Languages shown in the Tab completion of {@code /manhunt settings language} (the files in the lang/ folder). */
     private volatile Supplier<List<String>> languages = () -> Messages.BUNDLED_LANGUAGES;
 
-    private volatile Set<EntityType> excludedMobs = Set.of();
+    private volatile Set<EntityKind> excludedMobs = Set.of();
     private volatile List<String> playerList = List.of();
     private volatile RingPoint ringPoint;
 
@@ -211,7 +211,7 @@ public final class Settings {
         this.languages = languages;
     }
 
-    public Set<EntityType> excludedMobs() {
+    public Set<EntityKind> excludedMobs() {
         return excludedMobs;
     }
 
@@ -268,30 +268,30 @@ public final class Settings {
     }
 
     /** Does config.yml still have the Portuguese keys from versions up to 1.5? */
-    public static boolean isLegacy(File file) {
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+    public static boolean isLegacy(YamlFiles yaml, File file) {
+        ConfigNode cfg = yaml.load(file);
         for (String section : LEGACY_SECTIONS) {
-            if (cfg.isConfigurationSection(section)) {
+            if (cfg.isSection(section)) {
                 return true;
             }
         }
         return false;
     }
 
-    public void load(File file, Logger logger) {
-        load(YamlConfiguration.loadConfiguration(file), false, logger);
+    public void load(YamlFiles yaml, File file, Logger logger) {
+        load(yaml.load(file), false, logger);
     }
 
     /**
      * Reads a config.yml with Portuguese keys (versions up to 1.5). The new file is written afterwards
      * with {@link #save}; the language is set to pt-br, which was the only one there was.
      */
-    public void loadLegacy(File file, Logger logger) {
-        load(YamlConfiguration.loadConfiguration(file), true, logger);
+    public void loadLegacy(YamlFiles yaml, File file, Logger logger) {
+        load(yaml.load(file), true, logger);
         language.set("pt-br");
     }
 
-    private void load(YamlConfiguration cfg, boolean legacy, Logger logger) {
+    private void load(ConfigNode cfg, boolean legacy, Logger logger) {
         for (Setting<?> s : byKey.values()) {
             if (legacy) {
                 s.load(cfg, s.legacyPath(), LEGACY_VALUES);
@@ -299,11 +299,12 @@ public final class Settings {
                 s.load(cfg);
             }
         }
-        Set<EntityType> excluded = new HashSet<>();
+        Set<EntityKind> excluded = new HashSet<>();
         for (String name : cfg.getStringList(legacy ? LEGACY_MOBS_PATH : MOBS_PATH)) {
-            try {
-                excluded.add(EntityType.valueOf(name.trim().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
+            EntityKind kind = EntityKind.find(name.trim().toUpperCase(Locale.ROOT));
+            if (kind != null) {
+                excluded.add(kind);
+            } else {
                 logger.warning("Unknown mob type in " + MOBS_PATH + ": " + name);
             }
         }
@@ -316,19 +317,18 @@ public final class Settings {
             }
         }
         playerList = List.copyOf(names);
-        ConfigurationSection point = cfg.getConfigurationSection(legacy ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
+        ConfigNode point = cfg.section(legacy ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
         String worldKey = legacy ? "mundo" : "world";
         ringPoint = point == null || !point.isString(worldKey) ? null
-                : new RingPoint(point.getString(worldKey), point.getDouble("x"), point.getDouble("y"), point.getDouble("z"));
+                : new RingPoint(point.getString(worldKey), point.getDouble("x", 0), point.getDouble("y", 0), point.getDouble("z", 0));
         if (minNetherDelay.value() > maxNetherDelay.value()) {
             maxNetherDelay.set(minNetherDelay.value());
         }
     }
 
     /** Writes the current values keeping the file's comments and extra keys. */
-    public void save(File file, Logger logger) {
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-        cfg.options().parseComments(true);
+    public void save(YamlFiles yaml, File file, Logger logger) {
+        ConfigNode cfg = yaml.load(file);
         for (Setting<?> s : byKey.values()) {
             s.save(cfg);
         }
@@ -336,7 +336,7 @@ public final class Settings {
             cfg.set(path, null);
         }
         List<String> mobs = new ArrayList<>();
-        for (EntityType type : excludedMobs) {
+        for (EntityKind type : excludedMobs) {
             mobs.add(type.name());
         }
         mobs.sort(null);
@@ -352,7 +352,7 @@ public final class Settings {
             cfg.set(RING_POINT_PATH + ".z", point.z());
         }
         try {
-            cfg.save(file);
+            yaml.save(cfg, file);
         } catch (IOException e) {
             logger.warning("Could not save config.yml: " + e.getMessage());
         }

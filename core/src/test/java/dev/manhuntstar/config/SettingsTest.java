@@ -14,16 +14,12 @@ import dev.manhuntstar.bot.Modes.PearlDimension;
 import dev.manhuntstar.bot.Modes.PlayerListMode;
 import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.TargetMode;
+import dev.manhuntstar.platform.ConfigNode;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.logging.Logger;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.EntityType;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 /** Options: keys, ranges and text conversion. */
 class SettingsTest {
@@ -146,10 +142,10 @@ class SettingsTest {
     @Test
     void everyOptionIsInTheBundledConfig() throws Exception {
         Settings s = new Settings();
-        YamlConfiguration cfg;
+        ConfigNode cfg;
         try (InputStream in = SettingsTest.class.getResourceAsStream("/config.yml")) {
             assertNotNull(in, "config.yml not found");
-            cfg = YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+            cfg = new SnakeYamlFiles(Logger.getAnonymousLogger()).load(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
         for (Setting<?> each : s.all()) {
             assertTrue(cfg.contains(each.path()), "falta no config.yml: " + each.path());
@@ -157,58 +153,6 @@ class SettingsTest {
             each.setFromText(String.valueOf(cfg.get(each.path())));
             assertEquals(def, each.get(), "default differs from config.yml: " + each.path());
         }
-    }
-
-    /** A config.yml from the versions with Portuguese keys is read from the old paths, and its Portuguese values are converted. */
-    @Test
-    void legacyConfigIsMigrated(@TempDir Path dir) throws Exception {
-        Path file = dir.resolve("config.yml");
-        Files.writeString(file, """
-                geral:
-                  tab-list: false
-                bots:
-                  vida-maxima: 40
-                  dificuldade-padrao: dificil
-                  mobs-que-nao-atacam-bots: [CREEPER]
-                combate:
-                  modo-alvo: perto
-                mobilidade:
-                  perolas: "nao"
-                  dimensao-perolas: ambas
-                manhunt:
-                  centro-roda: fixo
-                  quem-entra-no-meio: cacado
-                  lista-modo: permitidos
-                  lista-jogadores: [Steve]
-                  ponto-roda: {mundo: world, x: 1.0, y: 64.0, z: -2.0}
-                """);
-        assertTrue(Settings.isLegacy(file.toFile()));
-        Settings s = new Settings();
-        s.loadLegacy(file.toFile(), Logger.getAnonymousLogger());
-        assertFalse(s.tabList.on());
-        assertEquals(40.0, s.botHealth.value());
-        assertSame(BotDifficulty.HARD, s.defaultDifficulty.get());
-        assertSame(TargetMode.CLOSEST_PLAYER, s.targetMode.get());
-        assertFalse(s.allowPearl.on());
-        assertSame(PearlDimension.BOTH, s.pearlDimension.get());
-        assertSame(RingCenter.MANUAL, s.ringCenter.get());
-        assertSame(LateJoin.HUNTED, s.lateJoin.get());
-        assertSame(PlayerListMode.ALLOWLIST, s.playerListMode.get());
-        assertTrue(s.isListed("steve"));
-        assertTrue(s.excludedMobs().contains(EntityType.CREEPER));
-        assertEquals(new Settings.RingPoint("world", 1.0, 64.0, -2.0), s.ringPoint());
-        assertEquals("pt-br", s.language.get());
-
-        Path migrated = dir.resolve("new.yml");
-        s.save(migrated.toFile(), Logger.getAnonymousLogger());
-        assertFalse(Settings.isLegacy(migrated.toFile()));
-        Settings again = new Settings();
-        again.load(migrated.toFile(), Logger.getAnonymousLogger());
-        assertEquals(40.0, again.botHealth.value());
-        assertSame(PlayerListMode.ALLOWLIST, again.playerListMode.get());
-        assertEquals(new Settings.RingPoint("world", 1.0, 64.0, -2.0), again.ringPoint());
-        assertTrue(again.excludedMobs().contains(EntityType.CREEPER));
-        assertEquals("pt-br", again.language.get());
     }
 
     /** The language only takes one of the files that exist, treating "PT_BR" and "pt-br" the same. */

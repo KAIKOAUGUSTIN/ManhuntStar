@@ -1,11 +1,12 @@
 package dev.manhuntstar.listener;
 
-import dev.manhuntstar.ManhuntStarPlugin;
-import dev.manhuntstar.bot.Bot;
 import com.destroystokyo.paper.entity.ai.Goal;
 import com.destroystokyo.paper.entity.ai.GoalKey;
 import com.destroystokyo.paper.entity.ai.GoalType;
 import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
+import dev.manhuntstar.ManhuntStarPlugin;
+import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.Kinds;
 import java.util.EnumSet;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
@@ -59,7 +60,7 @@ public final class MobTargeting implements Listener {
     }
 
     private boolean enabledFor(Mob mob) {
-        return plugin.settings().mobsAttackBots.on() && !plugin.settings().excludedMobs().contains(mob.getType());
+        return plugin.settings().mobsAttackBots.on() && !plugin.settings().excludedMobs().contains(Kinds.of(mob.getType()));
     }
 
     private static boolean isHostile(Entity e) {

@@ -1,12 +1,12 @@
 package dev.manhuntstar.config;
 
+import dev.manhuntstar.platform.ConfigNode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
-import org.bukkit.configuration.ConfigurationSection;
 
 /**
  * A plugin option: path in config.yml (and the Portuguese path from old versions, read during
@@ -79,7 +79,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         return v == null ? defaultValue : v;
     }
 
-    void load(ConfigurationSection cfg) {
+    void load(ConfigNode cfg) {
         load(cfg, path, Map.of());
     }
 
@@ -87,7 +87,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
      * Reads the option from another path (the old one, when migrating config.yml). {@code oldValues}
      * turns values that no longer exist into today's ones ("protegido" becomes "protected").
      */
-    void load(ConfigurationSection cfg, String from, Map<String, String> oldValues) {
+    void load(ConfigNode cfg, String from, Map<String, String> oldValues) {
         Object raw = from == null ? null : cfg.get(from);
         if (raw == null) {
             value = defaultValue;
@@ -102,7 +102,7 @@ public abstract sealed class Setting<T> permits Setting.Bool, Setting.Int, Setti
         }
     }
 
-    void save(ConfigurationSection cfg) {
+    void save(ConfigNode cfg) {
         cfg.set(path, serialize(value));
     }
 

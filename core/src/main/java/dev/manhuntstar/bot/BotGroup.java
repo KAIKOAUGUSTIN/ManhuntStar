@@ -1,12 +1,12 @@
 package dev.manhuntstar.bot;
 
 import dev.manhuntstar.bot.Modes.BotRole;
+import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.util.Vec3;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
-import org.bukkit.entity.EntityType;
 
 /** Grupo de bots criados juntos: papel (caçar/fugir), grupos inimigos, mobs permitidos e ponto de respawn. */
 public final class BotGroup {
@@ -15,7 +15,7 @@ public final class BotGroup {
     private BotRole role = BotRole.HUNTER;
     private boolean trackPlayers = true;
     private final Set<String> enemies = new LinkedHashSet<>();
-    private Set<EntityType> allowedMobTargets;
+    private Set<EntityKind> allowedMobTargets;
     private Vec3 spawnpoint;
     private String spawnWorld;
 
@@ -60,11 +60,11 @@ public final class BotGroup {
     }
 
     /** null = segue a regra global; conjunto = só ataca esses tipos de mob. */
-    public Set<EntityType> allowedMobTargets() {
+    public Set<EntityKind> allowedMobTargets() {
         return allowedMobTargets;
     }
 
-    public void setAllowedMobTargets(Set<EntityType> types) {
+    public void setAllowedMobTargets(Set<EntityKind> types) {
         this.allowedMobTargets = types == null ? null : new LinkedHashSet<>(types);
     }
 

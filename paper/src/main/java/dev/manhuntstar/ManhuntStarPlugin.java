@@ -15,8 +15,11 @@ import dev.manhuntstar.listener.BotEntityListener;
 import dev.manhuntstar.listener.MobTargeting;
 import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.metrics.MetricsService;
+import dev.manhuntstar.paper.BukkitYamlFiles;
+import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
+import dev.manhuntstar.platform.YamlFiles;
 import dev.manhuntstar.skin.SkinService;
 import dev.manhuntstar.update.UpdateChecker;
 import dev.manhuntstar.util.ChunkTickets;
@@ -40,6 +43,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     private static ManhuntStarPlugin instance;
 
+    private final YamlFiles yaml = new BukkitYamlFiles();
     private final Settings settings = new Settings();
     private final Messages messages = new Messages();
     private PathService pathService;
@@ -61,6 +65,11 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         return instance;
     }
 
+    /** Reads and writes the plugin's YAML files (config.yml, languages). */
+    public YamlFiles yaml() {
+        return yaml;
+    }
+
     public ChunkTickets chunkTickets() {
         return chunkTickets;
     }
@@ -68,9 +77,10 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        Kinds.init();
         migrateLegacyFiles();
         saveDefaultConfig();
-        Messages.install(langFolder(), this::getResource, getLogger());
+        Messages.install(yaml, langFolder(), this::getResource, getLogger());
         settings.setLanguages(() -> Messages.available(langFolder()));
         loadConfigFiles();
 
@@ -176,12 +186,12 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     }
 
     private void loadConfigFiles() {
-        settings.load(new File(getDataFolder(), "config.yml"), getLogger());
+        settings.load(yaml, new File(getDataFolder(), "config.yml"), getLogger());
         loadMessages();
     }
 
     private void loadMessages() {
-        messages.load(langFolder(), settings.language.get(), this::getResource, getLogger());
+        messages.load(yaml, langFolder(), settings.language.get(), this::getResource, getLogger());
     }
 
     /**
@@ -191,13 +201,13 @@ public final class ManhuntStarPlugin extends JavaPlugin {
      */
     private void migrateLegacyFiles() {
         File config = new File(getDataFolder(), "config.yml");
-        if (config.exists() && Settings.isLegacy(config)) {
-            settings.loadLegacy(config, getLogger());
+        if (config.exists() && Settings.isLegacy(yaml, config)) {
+            settings.loadLegacy(yaml, config, getLogger());
             File backup = new File(getDataFolder(), "config-old.yml");
             try {
                 Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 saveResource("config.yml", false);
-                settings.save(config, getLogger());
+                settings.save(yaml, config, getLogger());
                 getLogger().info("config.yml moved to the new English keys (language pt-br); the old file is config-old.yml.");
             } catch (IOException e) {
                 getLogger().warning("Could not migrate config.yml: " + e.getMessage());
@@ -231,7 +241,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     /** Grava o config.yml (opções, lista de jogadores e ponto da roda). */
     public void saveSettings() {
-        settings.save(new File(getDataFolder(), "config.yml"), getLogger());
+        settings.save(yaml, new File(getDataFolder(), "config.yml"), getLogger());
     }
 
     private void applySideEffects(Setting<?> s) {

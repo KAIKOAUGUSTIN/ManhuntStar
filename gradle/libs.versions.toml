@@ -5,6 +5,11 @@
 paper-api-min = "26.2.build.135-stable"
 # Newest supported Paper API: tests and the compileAgainstLatest check. Updated by Dependabot.
 paper-api = "26.3.build.231-stable"
+# Libraries that Paper already brings (the versions of paper-api-min): core compiles against them
+# without bundling them, so they stay out of [libraries], where Dependabot would move them past what
+# the oldest supported Paper has.
+adventure = "5.2.0"
+snakeyaml = "2.2"
 junit = "6.1.3"
 bstats = "3.2.1"
 shadow = "9.6.1"

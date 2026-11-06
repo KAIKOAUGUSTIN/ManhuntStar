@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.platform.ConfigNode;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -13,32 +14,34 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
 /** The plugin's languages have the same keys and the same placeholders as English. */
 class LanguageFilesTest {
 
+    /** The Brain source, which stays in the paper module until the AI moves to core. */
+    private static final String BRAIN = "../paper/src/main/java/dev/manhuntstar/bot/ai/Brain.java";
     private static final Pattern TAG = Pattern.compile("<([a-z0-9_-]+)>");
     private static final Pattern LITERAL = Pattern.compile("\"([a-z-]+)\"");
     private static final Set<String> STYLE = Set.of("bold", "b", "italic", "i", "em", "underlined", "u", "strikethrough", "st",
             "obfuscated", "obf", "reset", "newline", "br");
 
-    private static YamlConfiguration load(String lang) throws Exception {
+    private static ConfigNode load(String lang) throws Exception {
         try (InputStream in = LanguageFilesTest.class.getResourceAsStream("/lang/" + lang + ".yml")) {
             assertNotNull(in, "language not found: " + lang);
-            return YamlConfiguration.loadConfiguration(new InputStreamReader(in, StandardCharsets.UTF_8));
+            return new SnakeYamlFiles(Logger.getAnonymousLogger()).load(new InputStreamReader(in, StandardCharsets.UTF_8));
         }
     }
 
-    private static Set<String> keys(YamlConfiguration cfg) {
+    private static Set<String> keys(ConfigNode cfg) {
         Set<String> out = new TreeSet<>();
-        for (String key : cfg.getKeys(true)) {
-            if (!cfg.isConfigurationSection(key)) {
+        for (String key : cfg.keys(true)) {
+            if (!cfg.isSection(key)) {
                 out.add(key);
             }
         }
@@ -60,10 +63,10 @@ class LanguageFilesTest {
 
     @Test
     void everyLanguageMatchesEnglish() throws Exception {
-        YamlConfiguration en = load("en");
+        ConfigNode en = load("en");
         Set<String> enKeys = keys(en);
         for (String lang : Messages.BUNDLED_LANGUAGES) {
-            YamlConfiguration other = load(lang);
+            ConfigNode other = load(lang);
             assertEquals(enKeys, keys(other), "keys differ from English in " + lang);
             for (String key : enKeys) {
                 if (en.isString(key)) {
@@ -76,7 +79,7 @@ class LanguageFilesTest {
 
     @Test
     void everyOptionCategoryAndDifficultyHasText() throws Exception {
-        YamlConfiguration en = load("en");
+        ConfigNode en = load("en");
         Settings settings = new Settings();
         for (Setting<?> s : settings.all()) {
             assertTrue(en.isString("options." + s.key() + ".name"), "no name: " + s.key());
@@ -93,9 +96,9 @@ class LanguageFilesTest {
     /** Every state the Brain uses ({@code state("...")}) has a text. */
     @Test
     void everyBrainStateHasText() throws Exception {
-        YamlConfiguration en = load("en");
+        ConfigNode en = load("en");
         Set<String> used = new TreeSet<>();
-        try (Stream<String> lines = Files.lines(Path.of("src/main/java/dev/manhuntstar/bot/ai/Brain.java"))) {
+        try (Stream<String> lines = Files.lines(Path.of(BRAIN))) {
             lines.filter(line -> line.contains("state(") && !line.contains("void state(")).forEach(line -> {
                 Matcher m = LITERAL.matcher(line);
                 while (m.find()) {

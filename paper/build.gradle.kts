@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.bstats.bukkit)
 
     testImplementation(libs.paper.api)
+    testImplementation(testFixtures(project(":core")))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -9,7 +9,9 @@ import dev.manhuntstar.bot.mobility.ElytraFlight;
 import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.pathfinding.AStar;
+import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -30,7 +32,6 @@ import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Enemy;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -502,7 +503,7 @@ public final class Brain {
             Location loc = bot.location();
             boolean end = bot.world().getEnvironment() == World.Environment.THE_END;
             BotGroup group = bot.group();
-            Set<EntityType> allowed = group == null ? null : group.allowedMobTargets();
+            Set<EntityKind> allowed = group == null ? null : group.allowedMobTargets();
             for (Mob mob : bot.world().getNearbyEntitiesByType(Mob.class, loc, 30.0)) {
                 if (!(mob instanceof Enemy) || mob.isDead() || mob instanceof EnderDragon) {
                     continue;
@@ -510,7 +511,7 @@ public final class Brain {
                 if (end && mob instanceof Enderman) {
                     continue;
                 }
-                if (allowed != null && !allowed.contains(mob.getType())) {
+                if (allowed != null && !allowed.contains(Kinds.of(mob.getType()))) {
                     continue;
                 }
                 if (!bot.canSee(eyes(mob))) {

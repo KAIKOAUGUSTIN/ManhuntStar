@@ -6,6 +6,7 @@ import dev.manhuntstar.bot.BotSnapshot;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.PersistentGear;
 import dev.manhuntstar.bot.SkinData;
+import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.util.Vec3;
 import java.io.File;
 import java.io.IOException;
@@ -28,7 +29,6 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -73,7 +73,7 @@ public final class BotStorage {
             s.set("inimigos", new ArrayList<>(g.enemies()));
             if (g.allowedMobTargets() != null) {
                 List<String> mobs = new ArrayList<>();
-                for (EntityType t : g.allowedMobTargets()) {
+                for (EntityKind t : g.allowedMobTargets()) {
                     mobs.add(t.name());
                 }
                 s.set("mobs-permitidos", mobs);
@@ -192,13 +192,13 @@ public final class BotStorage {
                     g.addEnemy(e);
                 }
                 if (s.isList("mobs-permitidos")) {
-                    Set<EntityType> types = new HashSet<>();
+                    Set<EntityKind> types = new HashSet<>();
                     for (String m : s.getStringList("mobs-permitidos")) {
-                        try {
-                            types.add(EntityType.valueOf(m));
-                        } catch (IllegalArgumentException ignored) {
-                            // tipo removido do jogo
+                        EntityKind kind = EntityKind.find(m);
+                        if (kind != null) {
+                            types.add(kind);
                         }
+                        // otherwise a type removed from the game
                     }
                     g.setAllowedMobTargets(types);
                 }
