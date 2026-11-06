@@ -32,8 +32,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Salva e lê os bots, grupos, rodas e a caçada em andamento em {@code bots.yml}. O texto é montado na thread principal e gravado
- * numa thread separada, num arquivo temporário trocado de uma vez (não corrompe se o servidor cair).
+ * Saves and reads the bots, groups, rings and the hunt in progress in {@code bots.yml}. The text is built on the main thread and
+ * written on a separate thread, to a temporary file swapped in at once (it doesn't get corrupted if the server crashes).
  */
 public final class BotStorage {
 
@@ -45,11 +45,11 @@ public final class BotStorage {
         return t;
     });
     private String lastWritten;
-    /** Ordem dos salvamentos (montados na thread principal) e o último que foi para o disco. */
+    /** Order of the saves (built on the main thread) and the last one that went to disk. */
     private long saveSeq;
     private long writtenSeq;
 
-    /** @param manhunt rodas e caçada em andamento (null se não houver) */
+    /** @param manhunt rings and hunt in progress (null if there's none) */
     public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigurationSection manhunt) {
     }
 
@@ -58,7 +58,7 @@ public final class BotStorage {
         this.logger = logger;
     }
 
-    /** @param manhunt escreve as rodas e a caçada na seção "manhunt" (null = não salva) */
+    /** @param manhunt writes the rings and the hunt in the "manhunt" section (null = not saved) */
     public void save(List<BotSnapshot> bots, List<BotGroup> groups, Consumer<ConfigurationSection> manhunt, boolean async) {
         YamlConfiguration y = new YamlConfiguration();
         y.set("versao", 1);
@@ -146,8 +146,8 @@ public final class BotStorage {
     }
 
     private synchronized void write(long seq, String text) {
-        // um salvamento direto (desligar, apagar tudo) pode passar na frente de um que ainda estava na
-        // fila; o da fila, mais velho, não pode gravar por cima
+        // a direct save (shutdown, delete all) can jump ahead of one that was still in the
+        // queue; the queued one, older, must not write over it
         if (seq <= writtenSeq) {
             return;
         }

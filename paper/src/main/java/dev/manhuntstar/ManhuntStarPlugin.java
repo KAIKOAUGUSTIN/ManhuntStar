@@ -36,8 +36,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 /**
- * Manhunt*: bots caçadores de ManHunt para Paper, recriados a partir de um mod Fabric de OpaleMC (CC0).
- * Liga os serviços, registra eventos e comandos e roda um único tick global para todos os bots.
+ * Manhunt*: ManHunt hunter bots for Paper, recreated from a Fabric mod by OpaleMC (CC0).
+ * Starts the services, registers events and commands and runs a single global tick for all bots.
  */
 public final class ManhuntStarPlugin extends JavaPlugin {
 
@@ -165,7 +165,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         tabList.tick(now);
     }
 
-    /** Mannequins de bots que ficaram no mundo (ex.: queda do servidor): remove antes de restaurar. */
+    /** Bot mannequins left in the world (e.g. a server crash): removed before restoring. */
     private void removeOrphans() {
         for (World w : getServer().getWorlds()) {
             for (Entity e : w.getEntitiesByClass(Mannequin.class)) {
@@ -179,7 +179,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
     }
 
-    // ------------------------------------------------------------------ configuração
+    // ------------------------------------------------------------------ configuration
 
     private File langFolder() {
         return new File(getDataFolder(), Messages.FOLDER);
@@ -195,9 +195,9 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     }
 
     /**
-     * Arquivos das versões até a 1.5, com as chaves em português: o config.yml antigo vira
-     * config-old.yml e os valores dele vão para um config.yml novo (com o idioma em pt-br, que era o
-     * único); o messages.yml vira messages-old.yml, porque os textos agora ficam na pasta lang/.
+     * Files from versions up to 1.5, with Portuguese keys: the old config.yml becomes
+     * config-old.yml and its values go into a new config.yml (with the language set to pt-br, the only
+     * one there was); messages.yml becomes messages-old.yml, because the texts now live in the lang/ folder.
      */
     private void migrateLegacyFiles() {
         File config = new File(getDataFolder(), "config.yml");
@@ -225,7 +225,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
     }
 
-    /** /manhunt reload: relê o config.yml e os arquivos de idioma e aplica. */
+    /** /manhunt reload: reads config.yml and the language files again and applies them. */
     public void reloadAll() {
         loadConfigFiles();
         for (Setting<?> s : settings.all()) {
@@ -233,13 +233,13 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
     }
 
-    /** Uma opção mudou (comando ou menu): aplica o efeito e grava no config.yml. */
+    /** An option changed (command or menu): applies its effect and writes config.yml. */
     public void onSettingChanged(Setting<?> s) {
         applySideEffects(s);
         saveSettings();
     }
 
-    /** Grava o config.yml (opções, lista de jogadores e ponto da roda). */
+    /** Writes config.yml (options, player list and ring point). */
     public void saveSettings() {
         settings.save(yaml, new File(getDataFolder(), "config.yml"), getLogger());
     }
@@ -279,7 +279,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         }
     }
 
-    // ------------------------------------------------------------------ acesso
+    // ------------------------------------------------------------------ access
 
     public Settings settings() {
         return settings;

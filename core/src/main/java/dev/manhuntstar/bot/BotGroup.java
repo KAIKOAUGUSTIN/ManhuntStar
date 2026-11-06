@@ -8,7 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 
-/** Grupo de bots criados juntos: papel (caçar/fugir), grupos inimigos, mobs permitidos e ponto de respawn. */
+/** Bots created together: role (hunt/escape), enemy groups, allowed mobs and respawn point. */
 public final class BotGroup {
 
     private final String name;
@@ -59,7 +59,7 @@ public final class BotGroup {
         return other != null && enemies.contains(other.toLowerCase(Locale.ROOT));
     }
 
-    /** null = segue a regra global; conjunto = só ataca esses tipos de mob. */
+    /** null = follows the global rule; a set = only attacks these mob types. */
     public Set<EntityKind> allowedMobTargets() {
         return allowedMobTargets;
     }

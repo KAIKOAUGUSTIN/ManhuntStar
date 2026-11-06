@@ -42,12 +42,12 @@ import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Mobs hostis atacam os bots como atacariam jogadores. No mod os bots eram jogadores; com o
- * Mannequin isso é recriado: cada mob hostil ganha um objetivo de alvo "bot mais próximo à vista"
- * (como o objetivo do jogo para jogadores); mobs com cérebro (piglin, hoglin, warden...) recebem o
- * alvo periodicamente; slimes e cubos de magma dão dano de contato (no jogo isso só vale para
- * jogadores). Regras do jogo respeitadas: piglin ignora quem usa ouro; enderman e piglin zumbi só
- * revidam; aranha só ataca no escuro.
+ * Hostile mobs attack the bots as they would attack players. In the mod the bots were players; with the
+ * Mannequin this is recreated: each hostile mob gets a "nearest visible bot" target goal (like the
+ * game's goal for players); mobs with a brain (piglin, hoglin, warden...) get the target
+ * periodically; slimes and magma cubes deal contact damage (in the game that only applies to
+ * players). The game's rules are respected: piglins ignore whoever wears gold; endermen and zombified
+ * piglins only fight back; spiders only attack in the dark.
  */
 public final class MobTargeting implements Listener {
 
@@ -79,7 +79,7 @@ public final class MobTargeting implements Listener {
         }
     }
 
-    /** Instala o objetivo nos mobs já carregados (ao ligar o plugin). */
+    /** Installs the goal on the mobs already loaded (when the plugin starts). */
     public void installAll() {
         for (org.bukkit.World w : plugin.getServer().getWorlds()) {
             for (Mob m : w.getEntitiesByClass(Mob.class)) {
@@ -98,7 +98,7 @@ public final class MobTargeting implements Listener {
         }
     }
 
-    /** Alvo para mobs com cérebro e dano de contato de slimes (chamado a cada tick). */
+    /** Target for mobs with a brain and contact damage from slimes (called every tick). */
     public void tick(int now) {
         if (!plugin.settings().mobsAttackBots.on()) {
             return;
@@ -179,7 +179,7 @@ public final class MobTargeting implements Listener {
         return a == null ? 16.0 : a.getValue();
     }
 
-    /** "Bot mais próximo à vista" (o NearestAttackableTargetGoal do jogo, para bots). */
+    /** "Nearest visible bot" (the game's NearestAttackableTargetGoal, for bots). */
     private final class TargetBotGoal implements Goal<Mob> {
 
         private final Mob mob;
