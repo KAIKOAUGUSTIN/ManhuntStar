@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Tickets de chunk do plugin com contagem de referências. O Paper guarda um único ticket por chunk
- * para o plugin inteiro: se dois bots seguram o mesmo chunk e um deles se afasta, a remoção soltava
- * o chunk do outro, que congelava (com o cavalo dele) quando não havia jogador perto.
+ * The plugin's chunk tickets with reference counting. Paper keeps a single ticket per chunk for the
+ * whole plugin: if two bots held the same chunk and one of them moved away, the removal released the
+ * other's chunk, which froze (with its horse) when no player was near.
  */
 public final class ChunkTickets {
 
@@ -43,7 +43,7 @@ public final class ChunkTickets {
         }
     }
 
-    /** Desligamento: solta tudo. */
+    /** Shutdown: releases everything. */
     public void releaseAll() {
         for (GameWorld w : Platform.server().worlds()) {
             w.removeAllChunkTickets();
