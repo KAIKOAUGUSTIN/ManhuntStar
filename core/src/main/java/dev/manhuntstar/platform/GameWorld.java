@@ -95,4 +95,24 @@ public interface GameWorld {
 
     /** Drops an item at a point with a small random offset and push, like a broken block's drop. */
     GameItemEntity dropItemNaturally(Vec3 at, GameItem item);
+
+    /** Creates a bot's body (the vanilla Mannequin). */
+    BotBody spawnBotBody(Place at, BodySpec spec);
+
+    /** Places an oak boat. */
+    GameBoat spawnBoat(Place at);
+
+    /** Primed TNT; {@code source} is who lit it (gets the kills). */
+    GameEntity spawnTnt(Vec3 at, int fuseTicks, GameEntity source);
+
+    /** A firework rocket shot at an angle (as from a crossbow), with the effects and flight of {@code rocket}. */
+    GameProjectile spawnFirework(Vec3 at, GameItem rocket, GameLiving shooter, Vec3 velocity);
+
+    /** Keeps a chunk loaded and ticking until {@link #removeChunkTicket}. */
+    void addChunkTicket(int chunkX, int chunkZ);
+
+    void removeChunkTicket(int chunkX, int chunkZ);
+
+    /** Removes every chunk ticket of the plugin or mod in this world. */
+    void removeAllChunkTickets();
 }

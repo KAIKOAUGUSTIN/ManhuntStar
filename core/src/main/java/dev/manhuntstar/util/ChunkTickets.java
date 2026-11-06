@@ -1,11 +1,10 @@
 package dev.manhuntstar.util;
 
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.plugin.Plugin;
 
 /**
  * Tickets de chunk do plugin com contagem de referências. O Paper guarda um único ticket por chunk
@@ -14,26 +13,21 @@ import org.bukkit.plugin.Plugin;
  */
 public final class ChunkTickets {
 
-    private final Plugin plugin;
     private final Map<UUID, Map<Long, Integer>> counts = new HashMap<>();
-
-    public ChunkTickets(Plugin plugin) {
-        this.plugin = plugin;
-    }
 
     public static long key(int x, int z) {
         return ((long) x << 32) | (z & 0xFFFFFFFFL);
     }
 
-    public void acquire(World w, long key) {
-        Map<Long, Integer> m = counts.computeIfAbsent(w.getUID(), k -> new HashMap<>());
+    public void acquire(GameWorld w, long key) {
+        Map<Long, Integer> m = counts.computeIfAbsent(w.id(), k -> new HashMap<>());
         if (m.merge(key, 1, Integer::sum) == 1) {
-            w.addPluginChunkTicket((int) (key >> 32), (int) key, plugin);
+            w.addChunkTicket((int) (key >> 32), (int) key);
         }
     }
 
-    public void release(World w, long key) {
-        Map<Long, Integer> m = counts.get(w.getUID());
+    public void release(GameWorld w, long key) {
+        Map<Long, Integer> m = counts.get(w.id());
         if (m == null) {
             return;
         }
@@ -43,7 +37,7 @@ public final class ChunkTickets {
         }
         if (n <= 1) {
             m.remove(key);
-            w.removePluginChunkTicket((int) (key >> 32), (int) key, plugin);
+            w.removeChunkTicket((int) (key >> 32), (int) key);
         } else {
             m.put(key, n - 1);
         }
@@ -51,8 +45,8 @@ public final class ChunkTickets {
 
     /** Desligamento: solta tudo. */
     public void releaseAll() {
-        for (World w : Bukkit.getWorlds()) {
-            w.removePluginChunkTickets(plugin);
+        for (GameWorld w : Platform.server().worlds()) {
+            w.removeAllChunkTickets();
         }
         counts.clear();
     }

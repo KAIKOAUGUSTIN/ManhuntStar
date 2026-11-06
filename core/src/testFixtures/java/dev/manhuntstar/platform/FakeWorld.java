@@ -206,6 +206,44 @@ public class FakeWorld implements GameWorld {
     public Vec3 spawn = Vec3.ZERO;
 
     @Override
+    public BotBody spawnBotBody(Place at, BodySpec spec) {
+        throw new UnsupportedOperationException("the fake world has no bodies");
+    }
+
+    @Override
+    public GameBoat spawnBoat(Place at) {
+        throw new UnsupportedOperationException("the fake world has no boats");
+    }
+
+    @Override
+    public GameEntity spawnTnt(Vec3 at, int fuseTicks, GameEntity source) {
+        throw new UnsupportedOperationException("the fake world has no TNT");
+    }
+
+    @Override
+    public GameProjectile spawnFirework(Vec3 at, GameItem rocket, GameLiving shooter, Vec3 velocity) {
+        throw new UnsupportedOperationException("the fake world has no fireworks");
+    }
+
+    /** Chunks held by tickets, as {@code chunkX,chunkZ}. */
+    public final java.util.Set<String> chunkTickets = new java.util.HashSet<>();
+
+    @Override
+    public void addChunkTicket(int chunkX, int chunkZ) {
+        chunkTickets.add(chunkX + "," + chunkZ);
+    }
+
+    @Override
+    public void removeChunkTicket(int chunkX, int chunkZ) {
+        chunkTickets.remove(chunkX + "," + chunkZ);
+    }
+
+    @Override
+    public void removeAllChunkTickets() {
+        chunkTickets.clear();
+    }
+
+    @Override
     public String chunkLoadLevel(int chunkX, int chunkZ) {
         return isChunkLoaded(chunkX, chunkZ) ? "LOADED" : "UNLOADED";
     }

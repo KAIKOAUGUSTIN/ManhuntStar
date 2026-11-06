@@ -280,7 +280,7 @@ public final class Brain {
                 state("target-in-other-dimension");
                 dimensionStuckTimer++;
                 if (dimensionStuckTimer > 20 && !teleporting) {
-                    bot.manager().requestDimensionChange(playerTarget, bot.bukkitWorld());
+                    bot.manager().requestDimensionChange(playerTarget, bot.world());
                     teleporting = true;
                 }
                 bot.motor().stopWalk();
@@ -820,9 +820,9 @@ public final class Brain {
             return false;
         }
         Pos feet = target.blockPos();
-        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(PaperWorld.of(PaperWorld.bukkit(target.world())), feet.below());
+        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(target.world(), feet.below());
         boolean rising = target.velocity().y() > 0.08;
-        int surface = WorldUtil.surfaceYNoLeaves(PaperWorld.of(PaperWorld.bukkit(target.world())), feet.x(), feet.z());
+        int surface = WorldUtil.surfaceYNoLeaves(target.world(), feet.x(), feet.z());
         boolean high = target.position().y() - surface >= 6.0;
         return playerSupport || rising || high;
     }

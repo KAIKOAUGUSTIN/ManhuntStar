@@ -116,6 +116,11 @@ public class FakeServer implements GameServer {
     }
 
     @Override
+    public GameItem newFireworkRocket(int flight, FireworkShape shape, int... colors) {
+        return new FakeItem(ItemType.of("FIREWORK_ROCKET"), 1);
+    }
+
+    @Override
     public GameItem emptyItem() {
         return new FakeItem(ItemType.of("AIR"), 0);
     }

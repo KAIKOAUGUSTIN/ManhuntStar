@@ -3,21 +3,23 @@ package dev.manhuntstar.tactics;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.FireworkShape;
+import dev.manhuntstar.platform.GameArrow;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Pickup;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.ProjectileKind;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Face;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -31,17 +33,8 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import org.bukkit.Color;
-import org.bukkit.FireworkEffect;
-import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Firework;
-import org.bukkit.entity.TNTPrimed;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.util.Vector;
 
 /**
  * Special abilities (the mod's BotAggressive), which take control of the bot for a few seconds:
@@ -247,7 +240,7 @@ public final class TacticsManager {
             if (playerCooldown.getOrDefault(p.uuid(), Long.MIN_VALUE) > now) {
                 continue;
             }
-            if (CaveAmbush.isInCave(PaperWorld.of(PaperWorld.bukkit(p.world())), p.blockPos()) && isVulnerable(p, now)) {
+            if (CaveAmbush.isInCave(p.world(), p.blockPos()) && isVulnerable(p, now)) {
                 Bot bot = selectBot(p, now, false, 1);
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
@@ -317,7 +310,7 @@ public final class TacticsManager {
         long now = Platform.server().currentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
-                if (!CaveAmbush.isInCave(PaperWorld.of(PaperWorld.bukkit(player.world())), player.blockPos())) {
+                if (!CaveAmbush.isInCave(player.world(), player.blockPos())) {
                     return "not-in-cave";
                 }
                 Bot bot = selectBot(player, now, true, 1);
@@ -461,11 +454,11 @@ public final class TacticsManager {
         double spread = Math.min(0.22, 0.02 + dist * 0.005) * bot.settings().projInaccuracy.value();
         point = point.add((r.nextDouble() - 0.5) * spread, (r.nextDouble() - 0.5) * spread * 0.35, (r.nextDouble() - 0.5) * spread);
         Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, speed);
-        Vector vel = shootVector(Locations.vector(aim), (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
-        Arrow arrow = PaperEntities.bukkit(e).launchProjectile(Arrow.class, vel);
-        dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), PaperEntities.bukkit(player));
-        arrow.setShooter(PaperEntities.bukkit(e));
-        arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
+        Vec3 vel = shootVector(aim, (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
+        GameArrow arrow = (GameArrow) e.launchProjectile(ProjectileKind.ARROW, vel);
+        dev.manhuntstar.debug.AimDebug.track(PaperEntities.bukkit(arrow), bot.name(), PaperEntities.bukkit(player));
+        arrow.setShooter(e);
+        arrow.setPickup(Pickup.ALLOWED);
         // as in the game: an arrow from a fully drawn bow is critical
         arrow.setCritical(speed >= Ballistics.bowSpeed(BOW_MAX_DRAW));
         e.world().playSound(e.position(), Sounds.ENTITY_ARROW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
@@ -529,11 +522,11 @@ public final class TacticsManager {
     }
 
     /** The game's {@code shoot}: normalizes, adds gaussian noise * 0.0075 * inaccuracy and scales. */
-    public static Vector shootVector(Vector dir, float speed, float inaccuracy) {
+    public static Vec3 shootVector(Vec3 dir, float speed, float inaccuracy) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        Vector v = dir.clone().normalize();
-        v.add(new Vector(r.nextGaussian() * 0.0075 * inaccuracy, r.nextGaussian() * 0.0075 * inaccuracy, r.nextGaussian() * 0.0075 * inaccuracy));
-        return v.multiply(speed);
+        Vec3 v = dir.normalizeUnchecked();
+        v = v.add(new Vec3(r.nextGaussian() * 0.0075 * inaccuracy, r.nextGaussian() * 0.0075 * inaccuracy, r.nextGaussian() * 0.0075 * inaccuracy));
+        return v.scale(speed);
     }
 
     // ------------------------------------------------------------------ firework crossbow
@@ -612,29 +605,14 @@ public final class TacticsManager {
         double inacc = 0.04 + dist * 0.006;
         point = point.add((r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc);
         Vec3 aim = Ballistics.aim(from, point, playerVelocity, FIREWORK_SPEED, 0, 1);
-        Vector vel = shootVector(Locations.vector(aim), (float) FIREWORK_SPEED, 0.65f);
-        Location at = Locations.location(from, e.world());
-        PaperWorld.bukkit(e.world()).spawn(at, Firework.class, fw -> {
-            // Paper rolls the lifetime from the flight duration, like the game
-            fw.setFireworkMeta((FireworkMeta) fireworkRocketStack().getItemMeta());
-            fw.setShooter(PaperEntities.bukkit(e));
-            fw.setShotAtAngle(true);
-            fw.setVelocity(vel);
-        });
+        Vec3 vel = shootVector(aim, (float) FIREWORK_SPEED, 0.65f);
+        e.world().spawnFirework(from, fireworkRocket(), e, vel);
         e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
+    /** Red and orange large ball (Bukkit's Color.RED and Color.ORANGE). */
     private static GameItem fireworkRocket() {
-        return PaperItems.of(fireworkRocketStack());
-    }
-
-    private static ItemStack fireworkRocketStack() {
-        ItemStack rocket = new ItemStack(Material.FIREWORK_ROCKET);
-        rocket.editMeta(FireworkMeta.class, meta -> {
-            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL_LARGE).withColor(Color.RED, Color.ORANGE).build());
-            meta.setPower(FIREWORK_FLIGHT);
-        });
-        return rocket;
+        return Platform.server().newFireworkRocket(FIREWORK_FLIGHT, FireworkShape.BALL_LARGE, 0xFF0000, 0xFFA500);
     }
 
     private static Vec3 fireworkOrigin(Bot bot) {
@@ -659,7 +637,7 @@ public final class TacticsManager {
     // ------------------------------------------------------------------ TNT ambush
 
     private boolean startTntAmbush(GamePlayer player, Bot bot, long now, boolean ignoreCooldown) {
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        GameWorld w = player.world();
         Pos stand = findAmbushStart(w, player);
         if (stand == null) {
             return false;
@@ -686,7 +664,7 @@ public final class TacticsManager {
             cancelTnt(a, bot);
             return false;
         }
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(p.world()));
+        GameWorld w = p.world();
         if (!a.placed) {
             bot.lookAt(p.eyePosition());
             bot.setSneaking(true);
@@ -725,12 +703,9 @@ public final class TacticsManager {
             }
             manager.temporaryBlocks().remove(w, a.tntPos);
             w.block(a.tntPos).setType(Blocks.AIR);
-            Location at = new Location(PaperWorld.bukkit(w), a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
-            PaperWorld.bukkit(w).spawn(at, TNTPrimed.class, t -> {
-                t.setFuseTicks(40);
-                t.setSource(bot.mannequin());
-            });
-            w.playSound(Locations.vec(at), Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
+            Vec3 at = new Vec3(a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
+            w.spawnTnt(at, 40, bot.entity());
+            w.playSound(at, Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
             bot.setItem(EquipSlot.HAND, GameItem.of(Items.FLINT_AND_STEEL));
             bot.swing();
             a.ignited = true;
@@ -764,7 +739,7 @@ public final class TacticsManager {
         if (!CaveAmbush.isInCave(p.world(), pp) || !CaveAmbush.isSameCave(p.world(), pp, a.stand)) {
             return false;
         }
-        return a.tntPos == null || CaveAmbush.isSameCave(PaperWorld.of(PaperWorld.bukkit(p.world())), pp, a.tntPos);
+        return a.tntPos == null || CaveAmbush.isSameCave(p.world(), pp, a.tntPos);
     }
 
     private void cancelTnt(TntAmbush a, Bot bot) {

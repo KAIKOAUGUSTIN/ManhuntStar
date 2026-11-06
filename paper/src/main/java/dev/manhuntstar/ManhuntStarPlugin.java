@@ -65,7 +65,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private MobTargeting mobTargeting;
     private UpdateChecker updates;
     private MetricsService metrics;
-    private final ChunkTickets chunkTickets = new ChunkTickets(this);
+    private final ChunkTickets chunkTickets = new ChunkTickets();
     private BukkitTask tickTask;
 
     public static ManhuntStarPlugin instance() {

@@ -81,4 +81,12 @@ public interface GameLiving extends GameEntity {
 
     /** Shows the entity picking up an item lying on the ground. */
     void playPickupAnimation(GameItemEntity item, int amount);
+
+    /** Launches a projectile from the entity's eyes with this velocity. */
+    GameProjectile launchProjectile(ProjectileKind kind, Vec3 velocity);
+
+    /** The active potion effects, to give them back with {@link #restoreEffects} (also on another entity). */
+    EffectsSnapshot saveEffects();
+
+    void restoreEffects(EffectsSnapshot effects);
 }

@@ -10,13 +10,25 @@ import dev.manhuntstar.util.PaperCompat;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
 /** A Bukkit {@link Entity} as a core {@link GameEntity}: every call is the Bukkit one. */
 public class PaperEntity implements GameEntity {
+
+    private static final Map<String, NamespacedKey> MARK_KEYS = new ConcurrentHashMap<>();
+
+    /** The Bukkit key of a mark: the plugin's namespace and the mark's name. */
+    static NamespacedKey markKey(String key) {
+        return MARK_KEYS.computeIfAbsent(key, k -> new NamespacedKey(PaperServer.plugin(), k));
+    }
 
     protected final Entity entity;
 
@@ -52,6 +64,26 @@ public class PaperEntity implements GameEntity {
     public Vec3 position() {
         Location l = entity.getLocation();
         return new Vec3(l.getX(), l.getY(), l.getZ());
+    }
+
+    @Override
+    public boolean hasMark(String key) {
+        return entity.getPersistentDataContainer().has(markKey(key), PersistentDataType.STRING);
+    }
+
+    @Override
+    public void setMark(String key, String value) {
+        entity.getPersistentDataContainer().set(markKey(key), PersistentDataType.STRING, value);
+    }
+
+    @Override
+    public void removeMark(String key) {
+        entity.getPersistentDataContainer().remove(markKey(key));
+    }
+
+    @Override
+    public void setCustomName(Component name) {
+        entity.customName(name);
     }
 
     @Override

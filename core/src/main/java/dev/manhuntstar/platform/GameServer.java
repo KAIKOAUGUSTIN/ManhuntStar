@@ -39,6 +39,9 @@ public interface GameServer {
     /** A new empty stack (see {@link GameItem#empty}). */
     GameItem emptyItem();
 
+    /** A firework rocket item that flies {@code flight} (1 to 3) and explodes with this shape and colors (0xRRGGBB). */
+    GameItem newFireworkRocket(int flight, FireworkShape shape, int... colors);
+
     /** A stack written by {@link GameItem#serialize()}. */
     GameItem deserializeItem(byte[] data);
 

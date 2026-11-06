@@ -71,7 +71,7 @@ public final class CaveAmbush {
         long now = Platform.server().currentTick();
         long cooldown = manager.plugin().settings().caveAmbushCooldown.value() * 20L;
         for (GamePlayer p : Platform.server().onlinePlayers()) {
-            if (!manager.isEligibleTarget(p) || !isInCave(PaperWorld.of(PaperWorld.bukkit(p.world())), p.blockPos())) {
+            if (!manager.isEligibleTarget(p) || !isInCave(p.world(), p.blockPos())) {
                 continue;
             }
             Long last = lastAmbushTick.get(p.uuid());
@@ -99,7 +99,7 @@ public final class CaveAmbush {
             return false;
         }
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+        GameWorld w = target.world();
         // the player's cave is scanned only once; hiding spot and bed only look up the result
         Set<Long> cave = caveRegion(w, target.blockPos());
         if (cave == null) {
@@ -243,7 +243,7 @@ public final class CaveAmbush {
                 toCleanup.add(e.getKey());
                 continue;
             }
-            GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+            GameWorld w = target.world();
             boolean valid = w.id().equals(bed.worldId()) && isInCave(w, target.blockPos())
                     && isBedValid(bed) && isSameCave(w, target.blockPos(), bed.foot());
             if (!valid) {

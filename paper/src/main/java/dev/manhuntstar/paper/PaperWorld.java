@@ -2,18 +2,24 @@ package dev.manhuntstar.paper;
 
 import dev.manhuntstar.platform.BlockSnapshot;
 import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.BodySpec;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Difficulty;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.Fluid;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameBoat;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameItemEntity;
+import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameProjectile;
 import dev.manhuntstar.platform.GameRule;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.util.Box;
@@ -29,9 +35,17 @@ import org.bukkit.GameRules;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TNTPrimed;
+import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -233,6 +247,70 @@ public final class PaperWorld implements GameWorld {
             out.add(PaperEntities.of(e));
         }
         return out;
+    }
+
+    @Override
+    public BotBody spawnBotBody(Place at, BodySpec spec) {
+        Location loc = new Location(world, at.x(), at.y(), at.z(), at.yaw(), at.pitch());
+        Mannequin spawned = world.spawn(loc, Mannequin.class, m -> {
+            m.setPersistent(false);
+            m.setDescription(null);
+            m.setProfile(PaperBotBody.profile(spec.profile()));
+            m.customName(spec.name());
+            m.setCustomNameVisible(spec.nameVisible());
+            m.setRemoveWhenFarAway(false);
+            m.setCanPickupItems(false);
+            m.setImmovable(false);
+            AttributeInstance hp = m.getAttribute(Attribute.MAX_HEALTH);
+            if (hp != null) {
+                hp.setBaseValue(spec.health());
+            }
+            m.setHealth(spec.health());
+            m.getPersistentDataContainer().set(PaperEntity.markKey(spec.markKey()), PersistentDataType.STRING, spec.markValue());
+        });
+        return PaperEntities.of(spawned);
+    }
+
+    @Override
+    public GameBoat spawnBoat(Place at) {
+        Location loc = new Location(world, at.x(), at.y(), at.z(), at.yaw(), at.pitch());
+        return PaperEntities.of(world.spawnEntity(loc, EntityType.OAK_BOAT)) instanceof GameBoat boat ? boat : null;
+    }
+
+    @Override
+    public GameEntity spawnTnt(Vec3 at, int fuseTicks, GameEntity source) {
+        return PaperEntities.of(world.spawn(new Location(world, at.x(), at.y(), at.z()), TNTPrimed.class, t -> {
+            t.setFuseTicks(fuseTicks);
+            t.setSource(PaperEntities.bukkit(source));
+        }));
+    }
+
+    @Override
+    public GameProjectile spawnFirework(Vec3 at, GameItem rocket, GameLiving shooter, Vec3 velocity) {
+        Vector vel = new Vector(velocity.x(), velocity.y(), velocity.z());
+        Firework spawned = world.spawn(new Location(world, at.x(), at.y(), at.z()), Firework.class, fw -> {
+            // Paper rolls the lifetime from the flight duration, like the game
+            fw.setFireworkMeta((FireworkMeta) PaperItems.stack(rocket).getItemMeta());
+            fw.setShooter(PaperEntities.bukkit(shooter));
+            fw.setShotAtAngle(true);
+            fw.setVelocity(vel);
+        });
+        return (GameProjectile) PaperEntities.of(spawned);
+    }
+
+    @Override
+    public void addChunkTicket(int chunkX, int chunkZ) {
+        world.addPluginChunkTicket(chunkX, chunkZ, PaperServer.plugin());
+    }
+
+    @Override
+    public void removeChunkTicket(int chunkX, int chunkZ) {
+        world.removePluginChunkTicket(chunkX, chunkZ, PaperServer.plugin());
+    }
+
+    @Override
+    public void removeAllChunkTickets() {
+        world.removePluginChunkTickets(PaperServer.plugin());
     }
 
     @Override

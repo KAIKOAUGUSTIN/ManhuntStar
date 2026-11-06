@@ -224,7 +224,7 @@ public final class PortalEntrance {
         if (look.dot(center.subtract(eye).normalize()) < 0.5) {
             return false;
         }
-        return WorldUtil.clearLine(PaperWorld.of(PaperWorld.bukkit(player.world())), eye, center.add(0, 1, 0));
+        return WorldUtil.clearLine(player.world(), eye, center.add(0, 1, 0));
     }
 
     private static Pos exitSpot(GameWorld w, Pos base) {

@@ -62,6 +62,12 @@ public record Vec3(double x, double y, double z) {
         return x * x + z * z;
     }
 
+    /** Like Bukkit's Vector.normalize: divides by the length with no check for zero (which gives NaN). */
+    public Vec3 normalizeUnchecked() {
+        double len = length();
+        return new Vec3(x / len, y / len, z / len);
+    }
+
     public Vec3 normalize() {
         double len = length();
         return len < 1.0E-5 ? ZERO : new Vec3(x / len, y / len, z / len);

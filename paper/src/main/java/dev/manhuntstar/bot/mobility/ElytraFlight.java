@@ -140,7 +140,7 @@ public final class ElytraFlight {
                 look.z() * 0.1 + (look.z() * 1.5 - v.z()) * 0.5));
         if ((boostTicks & 1) == 0) {
             Vec3 p = bot.pos();
-            bot.bukkitWorld().spawnParticle(Particle.FIREWORK, p.x(), p.y(), p.z(), 1, 0, 0, 0, 0.02);
+            bot.world().spawnParticle(dev.manhuntstar.platform.Particle.FIREWORK, p, 1, 0, 0, 0, 0.02);
         }
     }
 

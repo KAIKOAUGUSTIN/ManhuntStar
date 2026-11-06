@@ -5,6 +5,7 @@ import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.List;
 import java.util.UUID;
+import net.kyori.adventure.text.Component;
 
 /**
  * An entity of the server, like Bukkit's Entity: reading it reads the entity as it is now. The platform
@@ -111,6 +112,17 @@ public interface GameEntity {
     boolean isInvulnerable();
 
     void setInvulnerable(boolean invulnerable);
+
+    /** The entity has a persistent mark (saved with it) with this key. */
+    boolean hasMark(String key);
+
+    /** Sets a persistent mark (saved with the entity in the world). */
+    void setMark(String key, String value);
+
+    void removeMark(String key);
+
+    /** The name shown over the entity. */
+    void setCustomName(Component name);
 
     /** Entities whose box is within the given distances of this one's box. */
     List<GameEntity> nearbyEntities(double x, double y, double z);

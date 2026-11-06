@@ -2,8 +2,6 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.EquipSlot;
@@ -30,8 +28,6 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 
 /**
@@ -188,8 +184,8 @@ public final class BoatRoutine {
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.OAK_BOAT));
         bot.lookAt(Vec3.center(water));
         GameWorld w = bot.world();
-        Location loc = new Location(PaperWorld.bukkit(w), water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
-        if (!(PaperEntities.of(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT)) instanceof GameBoat boat)) {
+        Place loc = new Place(w, water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
+        if (!(w.spawnBoat(loc) instanceof GameBoat boat)) {
             return false;
         }
         bot.brain().mlg().trackSpawnedBoat(boat);

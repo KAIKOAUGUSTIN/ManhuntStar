@@ -1,6 +1,5 @@
 package dev.manhuntstar.bot;
 
-import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.manhuntstar.bot.ability.PearlAbility;
 import dev.manhuntstar.bot.ai.Brain;
 import dev.manhuntstar.bot.ai.IdleBehavior;
@@ -14,7 +13,11 @@ import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BodyProfile;
+import dev.manhuntstar.platform.BodySpec;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.DamageKind;
+import dev.manhuntstar.platform.EffectsSnapshot;
 import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameEntity;
@@ -34,11 +37,9 @@ import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.ChunkTickets;
 import dev.manhuntstar.util.Face;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -49,8 +50,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Mannequin;
 
 /**
@@ -99,7 +98,7 @@ public final class Bot {
     private int blocksPlacedInWindow;
     private long lastBlockWindowReset;
     private final Set<Long> chunkTickets = new HashSet<>();
-    private World ticketWorld;
+    private GameWorld ticketWorld;
     private Vec3 lastKnownPos;
     private String lastKnownWorld;
     private Pos pendingPillar;
@@ -144,7 +143,7 @@ public final class Bot {
     public void setVisualName(String visualName) {
         this.visualName = visualName;
         if (entity != null) {
-            PaperEntities.bukkit(entity).customName(Component.text(visualName));
+            entity.setCustomName(Component.text(visualName));
         }
     }
 
@@ -155,7 +154,7 @@ public final class Bot {
     public void setSkin(SkinData skin) {
         this.skin = skin;
         if (entity != null) {
-            PaperEntities.bukkit(entity).setProfile(buildProfile());
+            entity.setProfile(bodyProfile());
         }
     }
 
@@ -831,12 +830,9 @@ public final class Bot {
 
     // ------------------------------------------------------------------ entity life cycle
 
-    ResolvableProfile buildProfile() {
-        ResolvableProfile.Builder b = ResolvableProfile.resolvableProfile().name(profileName()).uuid(id);
-        if (skin != null && skin.valid()) {
-            b.addProperty(new ProfileProperty("textures", skin.value(), skin.signature()));
-        }
-        return b.build();
+    BodyProfile bodyProfile() {
+        boolean hasSkin = skin != null && skin.valid();
+        return new BodyProfile(profileName(), id, hasSkin ? skin.value() : null, hasSkin ? skin.signature() : null);
     }
 
     /** Profile name (what shows in TAB and /list): the internal name, valid for the game. */
@@ -852,23 +848,8 @@ public final class Bot {
     BotBody spawnEntity(Place loc) {
         Place safe = adjustOutOfLava(loc);
         Settings s = settings();
-        Mannequin spawned = PaperWorld.bukkit(safe.world()).spawn(Locations.location(safe), Mannequin.class, m -> {
-            m.setPersistent(false);
-            m.setDescription(null);
-            m.setProfile(buildProfile());
-            m.customName(Component.text(visualName));
-            m.setCustomNameVisible(s.showNameTag.on());
-            m.setRemoveWhenFarAway(false);
-            m.setCanPickupItems(false);
-            m.setImmovable(false);
-            AttributeInstance hp = m.getAttribute(Attribute.MAX_HEALTH);
-            if (hp != null) {
-                hp.setBaseValue(s.botHealth.value());
-            }
-            m.setHealth(s.botHealth.value());
-            m.getPersistentDataContainer().set(manager.botKey(), org.bukkit.persistence.PersistentDataType.STRING, id.toString());
-        });
-        entity = PaperEntities.of(spawned);
+        entity = safe.world().spawnBotBody(safe, new BodySpec(bodyProfile(), Component.text(visualName), s.showNameTag.on(),
+                s.botHealth.value(), BotManager.BOT_MARK, id.toString()));
         aliveTicks = 0;
         targetYaw = null;
         targetPitch = null;
@@ -959,7 +940,7 @@ public final class Bot {
         double hp = entity.health();
         int fire = entity.fireTicks();
         int air = entity.remainingAir();
-        var effects = new java.util.ArrayList<>(PaperEntities.bukkit(entity).getActivePotionEffects());
+        EffectsSnapshot effects = entity.saveEffects();
         Map<EquipSlot, GameItem> equipment = new java.util.EnumMap<>(EquipSlot.class);
         for (EquipSlot slot : new EquipSlot[]{EquipSlot.HAND, EquipSlot.OFF_HAND, EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET}) {
             equipment.put(slot, getItem(slot).copy());
@@ -975,7 +956,7 @@ public final class Bot {
         entity.setHealth(Math.max(0.5, Math.min(maxHealth(), hp)));
         entity.setFireTicks(fire);
         entity.setRemainingAir(air);
-        PaperEntities.bukkit(entity).addPotionEffects(effects);
+        entity.restoreEffects(effects);
         brain.navigator().reset();
     }
 
@@ -1051,7 +1032,7 @@ public final class Bot {
         if (!force && !tickDelay(20)) {
             return;
         }
-        World w = PaperWorld.bukkit(entity.world());
+        GameWorld w = entity.world();
         Pos block = entity.blockPos();
         int cx = block.x() >> 4;
         int cz = block.z() >> 4;
@@ -1061,7 +1042,7 @@ public final class Bot {
                 wanted.add(ChunkTickets.key(cx + dx, cz + dz));
             }
         }
-        if (ticketWorld != null && !ticketWorld.equals(w)) {
+        if (ticketWorld != null && ticketWorld != w) {
             releaseChunkTickets();
         }
         ticketWorld = w;
@@ -1161,7 +1142,7 @@ public final class Bot {
         if (delta > 0) {
             entity.setHealth(Math.min(max, entity.health() + delta));
         } else if (delta < 0) {
-            PaperEntities.bukkit(entity).damage(-delta, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.STARVE).build());
+            entity.damage(-delta, DamageKind.STARVE, null, null);
         }
     }
 

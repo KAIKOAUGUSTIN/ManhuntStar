@@ -5,7 +5,6 @@ import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
 import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.DamageKind;
@@ -13,6 +12,7 @@ import dev.manhuntstar.platform.Effect;
 import dev.manhuntstar.platform.Enchant;
 import dev.manhuntstar.platform.EntityTrait;
 import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameArrow;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
@@ -22,7 +22,9 @@ import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Pickup;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.ProjectileKind;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
@@ -39,12 +41,9 @@ import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Trident;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.tag.DamageTypeTags;
-import org.bukkit.util.Vector;
 
 /**
  * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
@@ -472,7 +471,7 @@ public final class Combat {
      * computed with the game's physics and the target led. The error is the mod's: an offset on the aimed
      * point that grows with distance, plus the game's shot spread.
      */
-    private Vector aimProjectile(GameLiving target, double speed, double scatterPerBlock) {
+    private Vec3 aimProjectile(GameLiving target, double speed, double scatterPerBlock) {
         BotBody me = bot.entity();
         Vec3 from = new Vec3(me.position().x(), me.eyePosition().y() - 0.1, me.position().z());
         Vec3 point = new Vec3(target.position().x(), target.position().y() + target.height() * 0.5, target.position().z());
@@ -482,18 +481,18 @@ public final class Combat {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         point = point.add((r.nextDouble() - 0.5) * scatter, (r.nextDouble() - 0.5) * scatter, (r.nextDouble() - 0.5) * scatter);
         Vec3 v = Ballistics.aimArrow(from, point, aimTracker.velocity(), speed);
-        return TacticsManager.shootVector(Locations.vector(v), (float) speed, (float) inaccuracy);
+        return TacticsManager.shootVector(v, (float) speed, (float) inaccuracy);
     }
 
     private void performCrossbowShot(GameLiving target) {
         BotBody me = bot.entity();
         me.clearActiveItem();
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        Vector dir = aimProjectile(target, 1.6, 0.015);
-        Arrow arrow = PaperEntities.bukkit(me).launchProjectile(Arrow.class, dir);
-        AimDebug.track(arrow, bot.name(), PaperEntities.bukkit(target));
-        arrow.setShooter(PaperEntities.bukkit(me));
-        arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
+        Vec3 dir = aimProjectile(target, 1.6, 0.015);
+        GameArrow arrow = (GameArrow) me.launchProjectile(ProjectileKind.ARROW, dir);
+        AimDebug.track(PaperEntities.bukkit(arrow), bot.name(), PaperEntities.bukkit(target));
+        arrow.setShooter(me);
+        arrow.setPickup(Pickup.ALLOWED);
         me.world().playSound(me.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f / (r.nextFloat() * 0.4f + 0.8f));
         bot.swing();
     }
@@ -598,14 +597,14 @@ public final class Combat {
     private void performTridentThrow(GameLiving target) {
         BotBody me = bot.entity();
         me.clearActiveItem();
-        Vector dir = aimProjectile(target, 2.5, 0.02);
-        Trident t = PaperEntities.bukkit(me).launchProjectile(Trident.class, dir);
-        AimDebug.track(t, bot.name(), PaperEntities.bukkit(target));
-        t.setShooter(PaperEntities.bukkit(me));
-        t.setItemStack(PaperItems.stack(loyaltyTrident()));
-        t.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+        Vec3 dir = aimProjectile(target, 2.5, 0.02);
+        GameArrow t = (GameArrow) me.launchProjectile(ProjectileKind.TRIDENT, dir);
+        AimDebug.track(PaperEntities.bukkit(t), bot.name(), PaperEntities.bukkit(target));
+        t.setShooter(me);
+        t.setItem(loyaltyTrident());
+        t.setPickup(Pickup.DISALLOWED);
         me.world().playSound(me.position(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
-        thrownTrident = PaperEntities.of(t);
+        thrownTrident = t;
         tridentFlightTicks = 0;
         bot.swing();
     }

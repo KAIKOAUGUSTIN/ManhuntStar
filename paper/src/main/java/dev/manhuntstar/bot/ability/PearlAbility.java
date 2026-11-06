@@ -5,7 +5,6 @@ import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.PearlDimension;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
@@ -14,16 +13,16 @@ import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameProjectile;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.ProjectileKind;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.EnderPearl;
-import org.bukkit.util.Vector;
 
 /** Ender pearls: rescue (void/lava) and quick approach to the target (Terminator only). */
 public final class PearlAbility {
@@ -141,11 +140,11 @@ public final class PearlAbility {
         GameItem previous = bot.getItem(EquipSlot.HAND).copy();
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.ENDER_PEARL));
         Vec3 dir = target.subtract(bot.eyePos()).normalize();
-        Vector vel = new Vector(dir.x(), dir.y() + 0.2, dir.z()).normalize().multiply(1.5);
+        Vec3 vel = new Vec3(dir.x(), dir.y() + 0.2, dir.z()).normalizeUnchecked().scale(1.5);
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        vel.add(new Vector(r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075).multiply(1.5));
-        EnderPearl pearl = PaperEntities.bukkit(me).launchProjectile(EnderPearl.class, vel);
-        pearl.setShooter(PaperEntities.bukkit(me));
+        vel = vel.add(new Vec3(r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075).scale(1.5));
+        GameProjectile pearl = me.launchProjectile(ProjectileKind.ENDER_PEARL, vel);
+        pearl.setShooter(me);
         bot.swing();
         me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
         Platform.server().runNextTick(() -> {
@@ -169,9 +168,9 @@ public final class PearlAbility {
         double dy = target.y() - p.y() + horiz * 0.45;
         bot.lookAt(new Vec3(target.x(), p.y() + horiz * 0.45, target.z()));
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.ENDER_PEARL));
-        Vector vel = new Vector(dx, dy, dz).normalize().multiply(1.5);
-        EnderPearl pearl = PaperEntities.bukkit(me).launchProjectile(EnderPearl.class, vel);
-        pearl.setShooter(PaperEntities.bukkit(me));
+        Vec3 vel = new Vec3(dx, dy, dz).normalizeUnchecked().scale(1.5);
+        GameProjectile pearl = me.launchProjectile(ProjectileKind.ENDER_PEARL, vel);
+        pearl.setShooter(me);
         me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         bot.swing();
         Platform.server().runNextTick(() -> {

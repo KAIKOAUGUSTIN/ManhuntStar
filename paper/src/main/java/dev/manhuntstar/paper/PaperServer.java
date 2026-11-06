@@ -1,5 +1,6 @@
 package dev.manhuntstar.paper;
 
+import dev.manhuntstar.platform.FireworkShape;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
@@ -12,19 +13,31 @@ import java.util.List;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.plugin.Plugin;
 
 /** The Bukkit server as a core {@link GameServer}: every call is the Bukkit one. */
 public final class PaperServer implements GameServer {
 
+    private static volatile Plugin current;
+
     private final Plugin plugin;
 
-    /** The scheduled tasks belong to {@code plugin}. */
+    /** The scheduled tasks, chunk tickets and entity marks belong to {@code plugin}. */
     public PaperServer(Plugin plugin) {
         this.plugin = plugin;
+        current = plugin;
+    }
+
+    /** The plugin that owns the scheduled tasks, chunk tickets and entity marks. */
+    static Plugin plugin() {
+        return current;
     }
 
     @Override
@@ -88,6 +101,20 @@ public final class PaperServer implements GameServer {
     @Override
     public GameItem emptyItem() {
         return PaperItems.of(ItemStack.empty());
+    }
+
+    @Override
+    public GameItem newFireworkRocket(int flight, FireworkShape shape, int... colors) {
+        ItemStack rocket = new ItemStack(Material.FIREWORK_ROCKET);
+        Color[] bukkitColors = new Color[colors.length];
+        for (int i = 0; i < colors.length; i++) {
+            bukkitColors[i] = Color.fromRGB(colors[i]);
+        }
+        rocket.editMeta(FireworkMeta.class, meta -> {
+            meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.valueOf(shape.name())).withColor(bukkitColors).build());
+            meta.setPower(flight);
+        });
+        return PaperItems.of(rocket);
     }
 
     @Override

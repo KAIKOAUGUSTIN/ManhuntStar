@@ -47,11 +47,9 @@ import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.persistence.PersistentDataType;
 
 /**
  * Registry and life cycle of every bot: creation (with skin), choosing the target player, death,
@@ -63,9 +61,12 @@ public final class BotManager {
     private static final double MIN_SILENT_DEATH_DISTANCE = 200.0;
     private static final double MAX_SILENT_DEATH_DISTANCE = 1000.0;
     private static final int PERSIST_INTERVAL_TICKS = 100;
+    /** Mark on the bots' bodies (value: the bot's id). */
+    public static final String BOT_MARK = "bot";
+    /** Mark on a horse whose AI a bot turned off (value: the bot's id). */
+    private static final String HORSE_MARK = "cavalo_controlado";
 
     private final ManhuntStarPlugin plugin;
-    private final NamespacedKey botKey;
     private final Map<UUID, Bot> bots = new LinkedHashMap<>();
     private final Map<UUID, Bot> byEntity = new HashMap<>();
     private final Map<String, BotGroup> groups = new LinkedHashMap<>();
@@ -73,7 +74,6 @@ public final class BotManager {
     private final Map<UUID, Long> pendingSilentDeaths = new HashMap<>();
     private final Map<UUID, Place> customSpawnpoints = new HashMap<>();
     private final Map<UUID, Long> inaccessibleHorses = new HashMap<>();
-    private final NamespacedKey horseKey;
     private final Map<UUID, UUID> controlledHorses = new HashMap<>();
     private final List<PortalEntrance> entrances = new ArrayList<>();
     private final PlayerBlockTracker blockTracker = new PlayerBlockTracker();
@@ -93,8 +93,6 @@ public final class BotManager {
 
     public BotManager(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
-        this.botKey = new NamespacedKey(plugin, "bot");
-        this.horseKey = new NamespacedKey(plugin, "cavalo_controlado");
         this.temporaryBlocks = new TemporaryBlocks(plugin.server(), plugin::pathService);
         this.rings = new RingService(plugin);
         this.policy = new HuntPolicy(plugin);
@@ -111,10 +109,6 @@ public final class BotManager {
 
     private Settings settings() {
         return plugin.settings();
-    }
-
-    public NamespacedKey botKey() {
-        return botKey;
     }
 
     public RingService rings() {
@@ -213,7 +207,7 @@ public final class BotManager {
     }
 
     public boolean isBotEntity(GameEntity e) {
-        return e instanceof BotBody && PaperEntities.bukkit(e).getPersistentDataContainer().has(botKey, PersistentDataType.STRING);
+        return e instanceof BotBody && e.hasMark(BOT_MARK);
     }
 
     void registerEntity(Bot bot, BotBody m) {
@@ -436,15 +430,15 @@ public final class BotManager {
         }
         horse.stopPathfinding();
         horse.setAware(false);
-        PaperEntities.bukkit(horse).getPersistentDataContainer().set(horseKey, PersistentDataType.STRING, bot.id().toString());
+        horse.setMark(HORSE_MARK, bot.id().toString());
         controlledHorses.put(horse.uuid(), bot.id());
     }
 
     /** Gives the horse back its own AI. */
     public void releaseHorse(GameHorse horse) {
         controlledHorses.remove(horse.uuid());
-        if (PaperEntities.bukkit(horse).getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
-            PaperEntities.bukkit(horse).getPersistentDataContainer().remove(horseKey);
+        if (horse.hasMark(HORSE_MARK)) {
+            horse.removeMark(HORSE_MARK);
             horse.setAware(true);
             horse.setPortalCooldown(0);
         }
@@ -676,7 +670,7 @@ public final class BotManager {
     }
 
     /** The target went to another dimension: opens a portal entrance for the bots following them. */
-    public void requestDimensionChange(GamePlayer target, World from) {
+    public void requestDimensionChange(GamePlayer target, GameWorld from) {
         for (PortalEntrance e : entrances) {
             if (e.playerId().equals(target.uuid()) && e.worldId().equals(target.world().id())) {
                 return;
@@ -685,7 +679,7 @@ public final class BotManager {
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
             // bots waiting in a ring stay there until the start
-            if (b.bukkitWorld().equals(from) && target.uuid().equals(b.targetPlayerId()) && b.idle() == null) {
+            if (b.world() == from && target.uuid().equals(b.targetPlayerId()) && b.idle() == null) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
             }
@@ -1072,7 +1066,7 @@ public final class BotManager {
         for (Bot b : aliveBots()) {
             GamePlayer t = b.target();
             if (t != null && isEligibleTarget(t) && !t.world().equals(b.world()) && b.idle() == null) {
-                requestDimensionChange(t, b.bukkitWorld());
+                requestDimensionChange(t, b.world());
             }
         }
     }
@@ -1155,7 +1149,7 @@ public final class BotManager {
         if (isBotEntity(e) && byEntity(e) == null) {
             e.remove();
         } else if (e instanceof GameHorse h && !controlledHorses.containsKey(h.uuid())
-                && PaperEntities.bukkit(h).getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
+                && h.hasMark(HORSE_MARK)) {
             // a horse left without AI (the server went down with the bot mounted)
             releaseHorse(h);
         }

@@ -3,17 +3,28 @@ package dev.manhuntstar.paper;
 import dev.manhuntstar.platform.Attr;
 import dev.manhuntstar.platform.DamageKind;
 import dev.manhuntstar.platform.Effect;
+import dev.manhuntstar.platform.EffectsSnapshot;
 import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GameProjectile;
+import dev.manhuntstar.platform.ProjectileKind;
+import dev.manhuntstar.util.Vec3;
+import java.util.ArrayList;
+import java.util.List;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.damage.DamageSource;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Trident;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.util.Vector;
 
 /** A Bukkit {@link LivingEntity} as a core {@link GameLiving}: every call is the Bukkit one. */
 public class PaperLiving extends PaperEntity implements GameLiving {
@@ -192,6 +203,29 @@ public class PaperLiving extends PaperEntity implements GameLiving {
         if (a != null) {
             a.setBaseValue(base);
         }
+    }
+
+    @Override
+    public GameProjectile launchProjectile(ProjectileKind kind, Vec3 velocity) {
+        Class<? extends Projectile> type = switch (kind) {
+            case ARROW -> Arrow.class;
+            case TRIDENT -> Trident.class;
+            case ENDER_PEARL -> EnderPearl.class;
+        };
+        return (GameProjectile) PaperEntities.of(living().launchProjectile(type, new Vector(velocity.x(), velocity.y(), velocity.z())));
+    }
+
+    @Override
+    public EffectsSnapshot saveEffects() {
+        return new SavedEffects(new ArrayList<>(living().getActivePotionEffects()));
+    }
+
+    @Override
+    public void restoreEffects(EffectsSnapshot effects) {
+        living().addPotionEffects(((SavedEffects) effects).effects());
+    }
+
+    private record SavedEffects(List<PotionEffect> effects) implements EffectsSnapshot {
     }
 
     @Override

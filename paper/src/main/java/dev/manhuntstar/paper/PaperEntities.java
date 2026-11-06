@@ -7,9 +7,11 @@ import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GameMob;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameProjectile;
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;
+import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
@@ -18,6 +20,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 
 /**
  * Wraps Bukkit entities as core ones. The same Bukkit entity always gives the same wrapper (while
@@ -54,6 +57,10 @@ public final class PaperEntities {
             fresh = new PaperBoat(b);
         } else if (entity instanceof Item i) {
             fresh = new PaperItemEntity(i);
+        } else if (entity instanceof AbstractArrow a) {
+            fresh = new PaperArrow(a);
+        } else if (entity instanceof Projectile p) {
+            fresh = new PaperProjectile(p);
         } else {
             fresh = new PaperEntity(entity);
         }
@@ -108,6 +115,10 @@ public final class PaperEntities {
 
     public static AbstractHorse bukkit(GameHorse horse) {
         return horse == null ? null : ((PaperHorse) horse).bukkit();
+    }
+
+    public static Projectile bukkit(GameProjectile projectile) {
+        return projectile == null ? null : ((PaperProjectile) projectile).bukkit();
     }
 
     public static Item bukkit(GameItemEntity item) {
