@@ -29,10 +29,10 @@ import java.util.logging.Logger;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 /**
- * Skins dos bots: pega a skin do jogador com o mesmo nome na Mojang; se não existir, usa a primeira
- * imagem .png da pasta {@code plugins/ManhuntStar/skins/} ou a skin de robô do mod, enviada uma
- * vez ao MineSkin para ganhar assinatura (como o mod fazia). Tudo fica em cache em disco.
- * Corrige o mod, que procurava as skins numa pasta fixa do computador do autor.
+ * The bots' skins: takes the skin of the player with the same name from Mojang; if there is none, uses
+ * the first .png image in the {@code plugins/ManhuntStar/skins/} folder or the mod's robot skin, sent
+ * once to MineSkin to get a signature (as the mod did). Everything is cached on disk.
+ * Fixes the mod, which looked for the skins in a fixed folder on the author's computer.
  */
 public final class SkinService implements SkinSource {
 
@@ -64,7 +64,7 @@ public final class SkinService implements SkinSource {
         loadCache();
     }
 
-    /** Skin para o nome (assíncrono); nunca falha: no pior caso devolve null (skin padrão do jogo). */
+    /** Skin for the name (asynchronous); never fails: at worst it gives null (the game's default skin). */
     @Override
     public CompletableFuture<SkinData> resolve(String name) {
         String key = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
@@ -82,13 +82,13 @@ public final class SkinService implements SkinSource {
                 saveCache();
                 return skin;
             }
-            // A reserva não fica guardada com o nome: se a Mojang só estava fora do ar, a skin
-            // certa volta na próxima criação em vez de ficar 7 dias no robô.
+            // The fallback isn't stored under the name: if Mojang was just down, the right skin
+            // comes back on the next creation instead of staying on the robot for 7 days.
             return robotSkin();
         }, executor).exceptionally(t -> null);
     }
 
-    /** Só a skin de um jogador real (usado por /manhunt skin). */
+    /** Only a real player's skin (used by /manhunt skin). */
     public CompletableFuture<SkinData> fetchPlayerSkin(String name) {
         String key = name.trim().toLowerCase(Locale.ROOT);
         return CompletableFuture.supplyAsync(() -> {
@@ -129,7 +129,7 @@ public final class SkinService implements SkinSource {
         return null;
     }
 
-    /** Skin de reserva: PNG da pasta de skins ou o robô do mod, assinada pelo MineSkin (com cache). */
+    /** Fallback skin: a PNG from the skins folder or the mod's robot, signed by MineSkin (cached). */
     private SkinData robotSkin() {
         CachedSkin c = cache.get(ROBOT_KEY);
         if (c != null) {
@@ -204,7 +204,7 @@ public final class SkinService implements SkinSource {
         return null;
     }
 
-    /** API nova do MineSkin: {"skin":{"texture":{"data":{"value","signature"}}}}. */
+    /** MineSkin's new API: {"skin":{"texture":{"data":{"value","signature"}}}}. */
     private static JsonObject findTexture(JsonObject root) {
         if (root.has("skin") && root.get("skin").isJsonObject()) {
             JsonObject skin = root.getAsJsonObject("skin");

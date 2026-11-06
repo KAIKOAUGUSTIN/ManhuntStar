@@ -25,10 +25,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 /**
- * Bots na lista do TAB, como jogadores de verdade (com skin, ping e modo sobrevivência), por meio
- * dos pacotes de informação de jogador. O servidor 26.x usa os nomes da Mojang, então as classes são
- * encontradas por reflexão sem dependência extra; se a estrutura mudar numa versão futura, só esta
- * função desliga (com aviso no log) e o resto do plugin continua.
+ * Bots in the TAB list, like real players (with skin, ping and survival mode), through the player info
+ * packets. The 26.x server uses Mojang's names, so the classes are found by reflection with no extra
+ * dependency; if the structure changes in a future version, only this feature turns off (with a
+ * warning in the log) and the rest of the plugin goes on.
  */
 public final class TabListService implements BotTabList {
 
@@ -56,7 +56,7 @@ public final class TabListService implements BotTabList {
         this.enabledSetting = enabledSetting;
     }
 
-    /** Descobre as classes e construtores (chamar uma vez ao ligar). */
+    /** Finds the classes and constructors (call once on enable). */
     public void init() {
         try {
             updatePacketClass = Class.forName(PKT + "ClientboundPlayerInfoUpdatePacket");
@@ -132,7 +132,7 @@ public final class TabListService implements BotTabList {
         }
     }
 
-    /** Atualiza nome/skin (ex.: depois de /manhunt skin). */
+    /** Updates name/skin (e.g. after /manhunt skin). */
     public void refresh(Bot bot) {
         if (!active() || !listed.containsKey(bot.id())) {
             return;
@@ -141,7 +141,7 @@ public final class TabListService implements BotTabList {
         broadcast(addPacket(List.of(bot)));
     }
 
-    /** Jogador entrou: recebe todos os bots. */
+    /** A player joined: they get all the bots. */
     public void sendAll(Player player) {
         if (!active() || listed.isEmpty()) {
             return;
@@ -149,7 +149,7 @@ public final class TabListService implements BotTabList {
         send(player, addPacket(new ArrayList<>(listed.values())));
     }
 
-    /** Liga/desliga pela opção "tab-list". */
+    /** Turns it on/off with the "tab-list" option. */
     public void resync() {
         if (!available) {
             return;
@@ -163,7 +163,7 @@ public final class TabListService implements BotTabList {
         }
     }
 
-    /** Ping que varia um pouco, como o de um jogador real (a cada 5 s). */
+    /** A ping that varies a little, like a real player's (every 5 s). */
     public void tick(int now) {
         if (!active() || listed.isEmpty() || now % 100 != 0) {
             return;
@@ -183,7 +183,7 @@ public final class TabListService implements BotTabList {
             try {
                 set.add(action(n));
             } catch (IllegalArgumentException ignored) {
-                // ação inexistente nesta versão
+                // action that doesn't exist in this version
             }
         }
         return set;
@@ -196,7 +196,7 @@ public final class TabListService implements BotTabList {
         listed.clear();
     }
 
-    // ------------------------------------------------------------------ pacotes
+    // ------------------------------------------------------------------ packets
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Object action(String name) {
@@ -272,7 +272,7 @@ public final class TabListService implements BotTabList {
         return null;
     }
 
-    /** GameProfile pelo perfil do Paper (funciona com o GameProfile antigo e com o novo em forma de record). */
+    /** GameProfile from Paper's profile (works with the old GameProfile and with the new record one). */
     private static Object gameProfile(UUID id, String name, SkinData skin) throws Exception {
         PlayerProfile pp = Bukkit.createProfile(id, name);
         if (skin != null && skin.valid()) {
@@ -283,7 +283,7 @@ public final class TabListService implements BotTabList {
                 Method method = pp.getClass().getMethod(m);
                 return method.invoke(pp);
             } catch (NoSuchMethodException ignored) {
-                // tenta o próximo
+                // try the next one
             }
         }
         throw new NoSuchMethodException("CraftPlayerProfile#buildGameProfile");
