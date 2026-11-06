@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class LanguageFilesTest {
 
     /** The Brain source, which stays in the paper module until the AI moves to core. */
-    private static final String BRAIN = "../paper/src/main/java/dev/manhuntstar/bot/ai/Brain.java";
+    private static final String BRAIN = "src/main/java/dev/manhuntstar/bot/ai/Brain.java";
     private static final Pattern TAG = Pattern.compile("<([a-z0-9_-]+)>");
     private static final Pattern LITERAL = Pattern.compile("\"([a-z-]+)\"");
     private static final Set<String> STYLE = Set.of("bold", "b", "italic", "i", "em", "underlined", "u", "strikethrough", "st",
