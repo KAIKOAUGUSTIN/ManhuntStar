@@ -5,7 +5,7 @@ import dev.manhuntstar.platform.BlockType;
 import java.util.Set;
 
 /**
- * Tabela de custo por material, calculada uma vez na thread principal e lida pelas threads de pathfinding.
+ * Cost table per block type, built once on the main thread and read by the pathfinding threads.
  */
 public final class BlockCosts {
 
@@ -20,7 +20,7 @@ public final class BlockCosts {
     private BlockCosts() {
     }
 
-    /** Monta a tabela (chamar uma vez ao ligar o plugin). */
+    /** Builds the table (call once when the plugin starts, after the platform registered the block types). */
     public static synchronized void init() {
         if (costs != null) {
             return;
@@ -57,7 +57,7 @@ public final class BlockCosts {
             return CostProvider.UNBREAKABLE;
         }
         int cost = (int) (4f + hardness * 2.0f);
-        // byte vai só até 127: acima disso o custo virava negativo e o bloco contava como ar
+        // a byte only goes up to 127: above that the cost became negative and the block counted as air
         return (byte) Math.min(Byte.MAX_VALUE, Math.max(1, cost));
     }
 

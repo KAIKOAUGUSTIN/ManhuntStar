@@ -14,13 +14,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Serviço de pathfinding compartilhado por todos os bots. As cópias de chunk são tiradas na thread
- * principal e o A* roda num pool fixo de threads. No modo síncrono o A* roda na
- * thread principal com orçamento curto de tempo.
+ * Pathfinding service shared by all bots. The chunk copies are taken on the main
+ * thread and the A* runs on a fixed thread pool. In synchronous mode the A* runs on the
+ * main thread with a short time budget.
  */
 public final class PathService {
 
-    /** Raio (em blocos) da região copiada em volta do bot para o A*. */
+    /** Radius (in blocks) of the region copied around the bot for the A*. */
     public static final int ASTAR_REGION_RADIUS = 48;
     private static final long ASYNC_TIME_BUDGET_MS = 250L;
     private static final long SYNC_TIME_BUDGET_MS = 20L;
@@ -58,8 +58,8 @@ public final class PathService {
     // ------------------------------------------------------------------ A*
 
     /**
-     * Pede um caminho. Assíncrono: devolve um future completado numa thread do pool (ler só com
-     * {@code isDone()/join()} na thread principal). Síncrono: já vem completado.
+     * Asks for a path. Asynchronous: returns a future completed on a pool thread (only read it with
+     * {@code isDone()/join()} on the main thread). Synchronous: it comes already completed.
      */
     public CompletableFuture<PathResult> findPath(GameWorld world, Pos start, Pos target, boolean allowPlacement, boolean allowBoat) {
         if (closed) {
@@ -101,9 +101,9 @@ public final class PathService {
         totalMs.addAndGet(ms);
     }
 
-    // ------------------------------------------------------------------ manutenção
+    // ------------------------------------------------------------------ maintenance
 
-    /** Um bloco mudou: descarta a cópia do chunk para o próximo cálculo ver o mundo atual. */
+    /** A block changed: drops the chunk copy so the next computation sees the current world. */
     public void invalidate(GameWorld world, Pos pos) {
         snapshots.invalidate(world, pos.x(), pos.z());
     }
@@ -112,7 +112,7 @@ public final class PathService {
         snapshots.invalidate(world, x, z);
     }
 
-    /** Chamado uma vez por tick pelo plugin. */
+    /** Called once per tick by the plugin. */
     public void tick() {
         int now = server.currentTick();
         if (now % 20 == 0) {
@@ -123,7 +123,7 @@ public final class PathService {
         }
     }
 
-    /** Ajuste dinâmico do mod: média > 500 ms reduz 20%, < 125 ms aumenta 10% (50..5000). */
+    /** The mod's dynamic adjustment: an average > 500 ms lowers it 20%, < 125 ms raises it 10% (50..5000). */
     private void adjustNodeCap() {
         int n = samples.getAndSet(0);
         long total = totalMs.getAndSet(0);
@@ -142,7 +142,7 @@ public final class PathService {
         return settings.dynamicNodes.on() ? effectiveNodeCap : settings.nodeCap.value();
     }
 
-    /** Volta o limite efetivo ao valor configurado (quando o admin muda o limite). */
+    /** Brings the effective limit back to the configured value (when the admin changes the limit). */
     public void resetNodeCap() {
         effectiveNodeCap = settings.nodeCap.value();
     }

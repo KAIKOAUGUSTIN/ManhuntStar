@@ -4,9 +4,9 @@ import dev.manhuntstar.platform.BlockSnapshot;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Cópia imutável de um chunk com os custos de cada seção 16x16x16 calculados sob demanda.
- * Pode ser lida por várias threads ao mesmo tempo: cada seção é calculada uma vez e publicada
- * com segurança (se duas threads calcularem a mesma seção, o resultado é idêntico).
+ * Immutable copy of a chunk with the costs of each 16x16x16 section computed on demand.
+ * Can be read by several threads at the same time: each section is computed once and safely
+ * published (if two threads compute the same section, the result is identical).
  */
 final class CostChunk {
 

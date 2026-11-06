@@ -1,9 +1,9 @@
 package dev.manhuntstar.pathfinding;
 
 /**
- * Grade de custos sobre uma região de {@link CostChunk}s, feita para ser lida fora da thread principal.
- * Chunks não carregados (ou fora da região capturada) contam como {@link CostProvider#AVOID}:
- * o bot não planeja por onde não conhece.
+ * Cost grid over a region of {@link CostChunk}s, made to be read off the main thread.
+ * Unloaded chunks (or ones outside the captured region) count as {@link CostProvider#AVOID}:
+ * the bot doesn't plan through places it doesn't know.
  */
 public final class SnapshotGrid implements CostProvider {
 

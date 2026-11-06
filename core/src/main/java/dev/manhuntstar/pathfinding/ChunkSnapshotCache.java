@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Cópias de chunk usadas pelo pathfinding (só na thread principal). Cada cópia vale por
- * {@link #TTL_TICKS} ticks ou até um bloco dela mudar; vários bots perto um do outro
- * reaproveitam as mesmas cópias.
+ * Chunk copies used by the pathfinding (main thread only). Each copy is good for
+ * {@link #TTL_TICKS} ticks or until one of its blocks changes; several bots close to each other
+ * reuse the same copies.
  */
 final class ChunkSnapshotCache {
 
@@ -24,7 +24,7 @@ final class ChunkSnapshotCache {
         this.server = server;
     }
 
-    /** Captura (ou reaproveita) os chunks carregados num raio em blocos em volta do centro. */
+    /** Captures (or reuses) the loaded chunks within a radius in blocks around the center. */
     SnapshotGrid capture(GameWorld world, int centerX, int centerZ, int radiusBlocks) {
         long now = server.currentTick();
         Map<Long, CostChunk> cache = worlds.computeIfAbsent(world.id(), k -> new HashMap<>());
