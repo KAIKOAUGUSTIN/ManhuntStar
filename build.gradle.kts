@@ -7,6 +7,7 @@
 plugins {
     // "clean" also removes build/libs/ at the root, where the plugin jar goes
     base
+    alias(libs.plugins.sonarqube)
 }
 
 subprojects {
@@ -25,5 +26,29 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+    }
+
+    // Test coverage for SonarQube Cloud: the sonar task reads each module's XML report.
+    pluginManager.withPlugin("java") {
+        apply(plugin = "jacoco")
+        tasks.named<Test>("test") {
+            finalizedBy(tasks.named("jacocoTestReport"))
+        }
+        tasks.named<JacocoReport>("jacocoTestReport") {
+            dependsOn(tasks.named("test"))
+            reports {
+                xml.required.set(true)
+            }
+        }
+    }
+}
+
+// SonarQube Cloud analysis (./gradlew build sonar, run by the Build workflow). The token comes from
+// the SONAR_TOKEN environment variable (the SONAR_TOKEN secret in the workflow).
+sonar {
+    properties {
+        property("sonar.projectKey", "kaikoaugustin_manhunt-star")
+        property("sonar.organization", "kaikoaugustin")
+        property("sonar.host.url", "https://sonarcloud.io")
     }
 }

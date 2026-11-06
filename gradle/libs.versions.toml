@@ -8,6 +8,7 @@ paper-api = "26.3.build.231-stable"
 junit = "6.1.3"
 bstats = "3.2.1"
 shadow = "9.6.1"
+sonarqube = "7.5.0.8588"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
@@ -18,3 +19,4 @@ bstats-bukkit = { module = "org.bstats:bstats-bukkit", version.ref = "bstats" }
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
