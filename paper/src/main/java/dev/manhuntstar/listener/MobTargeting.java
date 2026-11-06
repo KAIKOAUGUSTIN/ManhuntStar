@@ -104,7 +104,7 @@ public final class MobTargeting implements Listener {
             return;
         }
         for (Bot bot : plugin.botManager().aliveBots()) {
-            Mannequin me = bot.mannequin();
+            Mannequin me = PaperEntities.bukkit(bot.entity());
             if (bot.tickDelay(20)) {
                 for (Mob mob : me.getWorld().getNearbyEntitiesByType(Mob.class, me.getLocation(), 24.0)) {
                     if (!isHostile(mob) || !isBrainMob(mob) || !enabledFor(mob)) {
@@ -120,7 +120,7 @@ public final class MobTargeting implements Listener {
     }
 
     private void brainTarget(Mob mob, Bot bot) {
-        Mannequin e = bot.mannequin();
+        Mannequin e = PaperEntities.bukkit(bot.entity());
         if (mob instanceof Warden warden) {
             if (warden.getLocation().distanceSquared(e.getLocation()) < 16 * 16) {
                 warden.increaseAnger(e, 20);

@@ -1,9 +1,10 @@
 package dev.manhuntstar.fidelity;
 
-import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.bot.SkinData;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.bot.SkinData;
+import dev.manhuntstar.host.BotTabList;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -29,7 +30,7 @@ import org.bukkit.entity.Player;
  * encontradas por reflexão sem dependência extra; se a estrutura mudar numa versão futura, só esta
  * função desliga (com aviso no log) e o resto do plugin continua.
  */
-public final class TabListService {
+public final class TabListService implements BotTabList {
 
     private static final String PKT = "net.minecraft.network.protocol.game.";
 
@@ -113,6 +114,7 @@ public final class TabListService {
 
     // ------------------------------------------------------------------ API
 
+    @Override
     public void add(Bot bot) {
         listed.put(bot.id(), bot);
         latency.put(bot.id(), 20 + ThreadLocalRandom.current().nextInt(60));
@@ -121,6 +123,7 @@ public final class TabListService {
         }
     }
 
+    @Override
     public void remove(Bot bot) {
         listed.remove(bot.id());
         latency.remove(bot.id());

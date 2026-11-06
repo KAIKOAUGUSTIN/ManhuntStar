@@ -2,7 +2,6 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
@@ -12,6 +11,7 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Pos;
@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /**
  * Bots following the target to another dimension: after 30–60 s (a tenth of that in the End), a Nether
@@ -119,7 +118,7 @@ public final class PortalEntrance {
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
         bot.lookAt(player.position());
-        w.playSound(dest.pos(), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.6f, 1f);
+        w.playSound(dest.pos(), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
     // ------------------------------------------------------------------ portal

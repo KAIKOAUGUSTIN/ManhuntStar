@@ -1,7 +1,6 @@
 package dev.manhuntstar.bot;
 
-import dev.manhuntstar.ManhuntStarPlugin;
-import dev.manhuntstar.api.BotEvents;
+import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
@@ -62,7 +61,7 @@ public final class BotManager {
     /** Mark on a horse whose AI a bot turned off (value: the bot's id). */
     private static final String HORSE_MARK = "cavalo_controlado";
 
-    private final ManhuntStarPlugin plugin;
+    private final ManhuntHost plugin;
     private final Map<UUID, Bot> bots = new LinkedHashMap<>();
     private final Map<UUID, Bot> byEntity = new HashMap<>();
     private final Map<String, BotGroup> groups = new LinkedHashMap<>();
@@ -87,7 +86,7 @@ public final class BotManager {
     private record PendingRespawn(UUID botId, long respawnAt, String world, Vec3 deathPos) {
     }
 
-    public BotManager(ManhuntStarPlugin plugin) {
+    public BotManager(ManhuntHost plugin) {
         this.plugin = plugin;
         this.temporaryBlocks = new TemporaryBlocks(plugin.server(), plugin::pathService);
         this.rings = new RingService(plugin);
@@ -99,7 +98,7 @@ public final class BotManager {
 
     // ------------------------------------------------------------------ access
 
-    public ManhuntStarPlugin plugin() {
+    public ManhuntHost plugin() {
         return plugin;
     }
 
@@ -703,9 +702,9 @@ public final class BotManager {
             }
         }
         GameEntity killer = death.source().causingEntity();
-        BotEvents.fireDeath(bot, death.source());
+        plugin.events().botDied(bot, death.source());
         if (killer instanceof GamePlayer p) {
-            BotEvents.fireKilledByPlayer(bot, p);
+            plugin.events().botKilledByPlayer(bot, p);
         } else {
             Bot killerBot = byEntity(killer);
             if (killerBot != null) {
@@ -999,7 +998,7 @@ public final class BotManager {
                 Long last = tickErrorLog.get(bot.id());
                 if (last == null || now - last > 60_000) {
                     tickErrorLog.put(bot.id(), now);
-                    plugin.getLogger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
+                    plugin.logger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
                 }
             }
         }
@@ -1239,7 +1238,7 @@ public final class BotManager {
                 notePhaseReached(bot.progression().phase());
                 n++;
             } catch (RuntimeException ex) {
-                plugin.getLogger().log(Level.WARNING, "Could not restore bot " + s.name(), ex);
+                plugin.logger().log(Level.WARNING, "Could not restore bot " + s.name(), ex);
             }
         }
         return n;

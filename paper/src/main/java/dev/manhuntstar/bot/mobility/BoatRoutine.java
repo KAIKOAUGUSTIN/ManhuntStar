@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.UUID;
-import org.bukkit.Bukkit;
-import org.bukkit.util.Vector;
 
 /**
  * Boat: chasing someone in a boat (or, from phase 6 on, someone swimming), placing its own boat on the

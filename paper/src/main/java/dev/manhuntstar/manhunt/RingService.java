@@ -1,6 +1,6 @@
 package dev.manhuntstar.manhunt;
 
-import dev.manhuntstar.ManhuntStarPlugin;
+import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.ai.IdleBehavior;
@@ -12,6 +12,7 @@ import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Vec3;
 import java.time.Duration;
@@ -25,7 +26,6 @@ import java.util.UUID;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
-import org.bukkit.SoundCategory;
 
 /**
  * Bot rings before the hunt. A ring has no owner: the first player who was inside it and
@@ -40,10 +40,10 @@ public final class RingService {
     /** Margin beyond the ring's radius to count as "inside" and as "left". */
     private static final double LEAVE_MARGIN = 1.5;
 
-    private final ManhuntStarPlugin plugin;
+    private final ManhuntHost plugin;
     private final Map<UUID, Ring> rings = new LinkedHashMap<>();
 
-    public RingService(ManhuntStarPlugin plugin) {
+    public RingService(ManhuntHost plugin) {
         this.plugin = plugin;
     }
 
@@ -221,7 +221,7 @@ public final class RingService {
                     showTitle(r, m.get("countdown.title-number", Messages.p("seconds", s)), m.get("countdown.subtitle"), Sounds.BLOCK_NOTE_BLOCK_PLING);
                 } else if (s == 10) {
                     for (GamePlayer p : audience(r)) {
-                        p.playSound(p.position(), Sounds.BLOCK_NOTE_BLOCK_HAT, dev.manhuntstar.platform.SoundCategory.MASTER, 1f, 1f);
+                        p.playSound(p.position(), Sounds.BLOCK_NOTE_BLOCK_HAT, SoundCategory.MASTER, 1f, 1f);
                     }
                 }
             }
@@ -263,7 +263,7 @@ public final class RingService {
         Title t = Title.title(title, subtitle, Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(900), Duration.ofMillis(300)));
         for (GamePlayer p : audience(r)) {
             p.showTitle(t);
-            p.playSound(p.position(), sound, dev.manhuntstar.platform.SoundCategory.MASTER, 1f, 1f);
+            p.playSound(p.position(), sound, SoundCategory.MASTER, 1f, 1f);
         }
     }
 

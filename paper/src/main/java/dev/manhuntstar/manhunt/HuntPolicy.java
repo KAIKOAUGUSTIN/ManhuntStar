@@ -1,6 +1,6 @@
 package dev.manhuntstar.manhunt;
 
-import dev.manhuntstar.ManhuntStarPlugin;
+import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.GamePlayer;
@@ -28,14 +28,14 @@ public final class HuntPolicy {
     /** Minimum protection for someone who just joined, even with a countdown of 0. */
     public static final int MIN_PROTECTION_SECONDS = 5;
 
-    private final ManhuntStarPlugin plugin;
+    private final ManhuntHost plugin;
     private boolean active;
     private int protectionSeconds = MIN_PROTECTION_SECONDS;
     private final Set<UUID> participants = new HashSet<>();
     private final Set<UUID> excluded = new HashSet<>();
     private final Map<UUID, Long> protectedUntil = new HashMap<>();
 
-    public HuntPolicy(ManhuntStarPlugin plugin) {
+    public HuntPolicy(ManhuntHost plugin) {
         this.plugin = plugin;
     }
 

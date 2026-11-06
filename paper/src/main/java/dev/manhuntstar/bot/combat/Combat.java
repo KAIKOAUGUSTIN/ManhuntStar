@@ -3,8 +3,6 @@ package dev.manhuntstar.bot.combat;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.debug.AimDebug;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.DamageInfo;
@@ -27,6 +25,7 @@ import dev.manhuntstar.platform.Pickup;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.ProjectileKind;
 import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
@@ -37,8 +36,6 @@ import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
-import org.bukkit.entity.Arrow;
 
 /**
  * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
@@ -407,7 +404,7 @@ public final class Combat {
 
     private void playSound(GameSound s) {
         Vec3 p = bot.pos();
-        bot.world().playSound(p, s, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(p, s, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     // ------------------------------------------------------------------ crossbow
@@ -421,7 +418,7 @@ public final class Combat {
             return false;
         }
         if (!chargingCrossbow) {
-            if (dist >= 12 && dist <= 20 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 12 && dist <= 20 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < bot.manager().plugin().aim().shotChance(0.01)) {
                 startCrossbowCharge();
                 return true;
             }
@@ -433,7 +430,7 @@ public final class Combat {
         swimWhileCharging(target);
         crossbowChargeTicks++;
         if (crossbowChargeTicks == 1 || crossbowChargeTicks == 10 || crossbowChargeTicks == 20) {
-            bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_MIDDLE, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+            bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_MIDDLE, SoundCategory.PLAYERS, 1.0f, 1.0f);
         }
         if (crossbowChargeTicks >= 25) {
             performCrossbowShot(target);
@@ -458,7 +455,7 @@ public final class Combat {
         aimTracker.reset();
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.CROSSBOW));
         bot.entity().startUsingItem(EquipSlot.HAND);
-        bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
     /**
@@ -485,10 +482,10 @@ public final class Combat {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vec3 dir = aimProjectile(target, 1.6, 0.015);
         GameArrow arrow = (GameArrow) me.launchProjectile(ProjectileKind.ARROW, dir);
-        AimDebug.track(PaperEntities.bukkit(arrow), bot.name(), PaperEntities.bukkit(target));
+        bot.manager().plugin().aim().track(arrow, bot.name(), target);
         arrow.setShooter(me);
         arrow.setPickup(Pickup.ALLOWED);
-        me.world().playSound(me.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f / (r.nextFloat() * 0.4f + 0.8f));
+        me.world().playSound(me.position(), Sounds.ITEM_CROSSBOW_SHOOT, SoundCategory.PLAYERS, 1.0f, 1.0f / (r.nextFloat() * 0.4f + 0.8f));
         bot.swing();
     }
 
@@ -538,7 +535,7 @@ public final class Combat {
             booster.lookAt(me);
             Vec3 boost = toPlayer.scale(0.8);
             bot.motor().setVelocity(new Vec3(boost.x(), 0.35, boost.z()));
-            bot.world().playSound(bot.pos(), Sounds.ENTITY_PLAYER_HURT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 1.5f);
+            bot.world().playSound(bot.pos(), Sounds.ENTITY_PLAYER_HURT, SoundCategory.PLAYERS, 0.5f, 1.5f);
             return;
         }
     }
@@ -554,7 +551,7 @@ public final class Combat {
             return false;
         }
         if (!chargingTrident) {
-            if (dist >= 15 && dist <= 25 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 15 && dist <= 25 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < bot.manager().plugin().aim().shotChance(0.01)) {
                 startTridentCharge();
                 return true;
             }
@@ -566,7 +563,7 @@ public final class Combat {
         swimWhileCharging(target);
         tridentChargeTicks++;
         if (tridentChargeTicks == 1 || tridentChargeTicks == 10) {
-            bot.world().playSound(bot.pos(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 0.8f);
+            bot.world().playSound(bot.pos(), Sounds.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 0.5f, 0.8f);
         }
         if (tridentChargeTicks >= 20) {
             performTridentThrow(target);
@@ -594,11 +591,11 @@ public final class Combat {
         me.clearActiveItem();
         Vec3 dir = aimProjectile(target, 2.5, 0.02);
         GameArrow t = (GameArrow) me.launchProjectile(ProjectileKind.TRIDENT, dir);
-        AimDebug.track(PaperEntities.bukkit(t), bot.name(), PaperEntities.bukkit(target));
+        bot.manager().plugin().aim().track(t, bot.name(), target);
         t.setShooter(me);
         t.setItem(loyaltyTrident());
         t.setPickup(Pickup.DISALLOWED);
-        me.world().playSound(me.position(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        me.world().playSound(me.position(), Sounds.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.0f, 1.0f);
         thrownTrident = t;
         tridentFlightTicks = 0;
         bot.swing();
@@ -653,7 +650,7 @@ public final class Combat {
             return;
         }
         if (sound && bot.world() != null) {
-            bot.world().playSound(bot.pos(), Sounds.ENTITY_ITEM_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, 1.0f);
+            bot.world().playSound(bot.pos(), Sounds.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.5f, 1.0f);
         }
         thrownTrident.remove();
         thrownTrident = null;
@@ -702,7 +699,7 @@ public final class Combat {
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.LAVA_BUCKET));
         placeAt.setType(Blocks.LAVA);
         bot.swing();
-        w.playSound(Vec3.of(p), Sounds.ITEM_BUCKET_EMPTY_LAVA, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        w.playSound(Vec3.of(p), Sounds.ITEM_BUCKET_EMPTY_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
         placedLavaPos = p;
         placedLavaWorld = w;
         lavaCleanupTicks = 0;
@@ -741,7 +738,7 @@ public final class Combat {
         if (sameWorld && b.type() == Blocks.LAVA) {
             bot.manager().temporaryBlocks().remove(w, placedLavaPos);
             b.setType(Blocks.AIR);
-            w.playSound(Vec3.of(placedLavaPos), Sounds.ITEM_BUCKET_FILL_LAVA, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+            w.playSound(Vec3.of(placedLavaPos), Sounds.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
             bot.manager().plugin().pathService().invalidate(w, placedLavaPos);
             if (canReach) {
                 hasLavaBucket = true;

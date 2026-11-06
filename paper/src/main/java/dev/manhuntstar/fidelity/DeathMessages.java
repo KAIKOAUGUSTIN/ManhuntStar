@@ -2,6 +2,7 @@ package dev.manhuntstar.fidelity;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.host.DeathMessageSource;
 import dev.manhuntstar.paper.PaperDamageInfo;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.DamageInfo;
@@ -17,7 +18,7 @@ import org.bukkit.inventory.ItemStack;
  * Bot death messages in the game's format ("X was slain by Y", "X fell from a high place"...),
  * using the client's own translation keys, so they show up in each player's language.
  */
-public final class DeathMessages {
+public final class DeathMessages implements DeathMessageSource {
 
     private final BotManager manager;
 
@@ -25,6 +26,7 @@ public final class DeathMessages {
         this.manager = manager;
     }
 
+    @Override
     public Component build(Bot bot, DamageInfo info) {
         DamageSource src = PaperDamageInfo.bukkit(info);
         Component victim = Component.text(bot.visualName());

@@ -132,7 +132,7 @@ public final class WorldPlayerListener implements Listener {
         Player p = event.getPlayer();
         Bukkit.getScheduler().runTask(plugin, () -> {
             for (Bot b : plugin.botManager().aliveBots()) {
-                if (!b.bukkitWorld().equals(p.getWorld())) {
+                if (!PaperWorld.bukkit(b.world()).equals(p.getWorld())) {
                     continue;
                 }
                 double d = Math.hypot(b.pos().x() - p.getX(), b.pos().z() - p.getZ());

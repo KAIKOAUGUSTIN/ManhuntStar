@@ -14,12 +14,12 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /** Survival: eating when hungry, golden apple in combat and escaping fire by placing water. */
 public final class Survival {
@@ -184,7 +184,7 @@ public final class Survival {
         bot.setPitchNow(90f);
         w.block(waterPos).setType(Blocks.WATER);
         bot.swing();
-        w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_EMPTY, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1.0f, 1.0f);
         // if the bot dies before picking it up, the water disappears all the same
         bot.manager().temporaryBlocks().add(w, waterPos, Blocks.WATER, FIRE_WATER_PICKUP_TICKS + 40);
         fireEscapeWaterPos = waterPos;
@@ -214,7 +214,7 @@ public final class Survival {
             bot.setItem(EquipSlot.HAND, GameItem.of(Items.BUCKET));
             b.setType(Blocks.AIR);
             bot.swing();
-            w.playSound(Vec3.of(fireEscapeWaterPos), Sounds.ITEM_BUCKET_FILL, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+            w.playSound(Vec3.of(fireEscapeWaterPos), Sounds.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1.0f, 1.0f);
             bot.setItem(EquipSlot.HAND, oldMain);
         }
         fireEscapeWaterPos = null;
@@ -257,7 +257,7 @@ public final class Survival {
             GameWorld w = e.world();
             Vec3 mouth = bot.eyePos().add(bot.lookVector().scale(0.3)).add(0, -0.1, 0);
             w.spawnItemParticle(mouth, 5, 0.1, 0.1, 0.1, 0.05, currentFood);
-            w.playSound(e.position(), Sounds.ENTITY_GENERIC_EAT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
+            w.playSound(e.position(), Sounds.ENTITY_GENERIC_EAT, SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
                     (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 0.2f + 1.0f);
         }
         if (--eatingTicks > 0) {
@@ -265,7 +265,7 @@ public final class Survival {
         }
         if (e != null) {
             e.clearActiveItem();
-            e.world().playSound(e.position(), Sounds.ENTITY_PLAYER_BURP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
+            e.world().playSound(e.position(), Sounds.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
         }
         applyFood(currentFood, eatingGoldenApple);
         // The offhand isn't touched while eating; putting back the previous one would bring back a totem

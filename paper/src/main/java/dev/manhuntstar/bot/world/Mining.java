@@ -9,11 +9,10 @@ import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import org.bukkit.SoundCategory;
-import org.bukkit.block.Block;
 
 /** Block breaking by the bot, with time, crack animation, sound and drops like a player. */
 public final class Mining {
@@ -63,7 +62,7 @@ public final class Mining {
         int progress = 9 - Math.max(0, ticksRemaining * 9 / Math.max(1, totalTicks));
         sendCrack(w, miningPos, progress / 10.0f);
         if (ticksRemaining % 6 == 0) {
-            w.playSound(Vec3.center(miningPos), b.soundGroup().hitSound(), dev.manhuntstar.platform.SoundCategory.BLOCKS, 0.8f, 1.0f);
+            w.playSound(Vec3.center(miningPos), b.soundGroup().hitSound(), SoundCategory.BLOCKS, 0.8f, 1.0f);
             bot.swing();
         }
         if (ticksRemaining <= 0) {

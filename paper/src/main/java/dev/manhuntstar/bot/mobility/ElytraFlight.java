@@ -6,12 +6,12 @@ import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Particle;
-import org.bukkit.SoundCategory;
 
 /**
  * Elytra ({@code mobility.elytra} option, off by default): with the target more than 80 blocks away and open sky, the bot
@@ -140,7 +140,7 @@ public final class ElytraFlight {
                 look.z() * 0.1 + (look.z() * 1.5 - v.z()) * 0.5));
         if ((boostTicks & 1) == 0) {
             Vec3 p = bot.pos();
-            bot.world().spawnParticle(dev.manhuntstar.platform.Particle.FIREWORK, p, 1, 0, 0, 0, 0.02);
+            bot.world().spawnParticle(Particle.FIREWORK, p, 1, 0, 0, 0, 0.02);
         }
     }
 
@@ -148,7 +148,7 @@ public final class ElytraFlight {
         GameItem previous = bot.getItem(EquipSlot.HAND).copy();
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.FIREWORK_ROCKET));
         bot.swing();
-        bot.world().playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, dev.manhuntstar.platform.SoundCategory.AMBIENT, 3f, 1f);
+        bot.world().playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3f, 1f);
         boostTicks = BOOST_TICKS;
         fireworkCooldown = 60;
         bot.setItem(EquipSlot.HAND, previous);

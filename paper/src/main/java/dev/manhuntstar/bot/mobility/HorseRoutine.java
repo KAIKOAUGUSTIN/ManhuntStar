@@ -19,13 +19,11 @@ import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Vec3;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
-import org.bukkit.SoundCategory;
-import org.bukkit.util.Vector;
 
 /**
  * Horse (phase 4+): with the target more than 32 blocks away, looks for an adult horse within 40 blocks,
@@ -252,7 +250,7 @@ public final class HorseRoutine {
         int phase = untamedTicks % 20;
         if (phase == 1) {
             horse.setRearing(true);
-            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_ANGRY, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 1f, 1f);
+            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_ANGRY, SoundCategory.NEUTRAL, 1f, 1f);
         } else if (phase == 12) {
             horse.setRearing(false);
             float yaw = horse.yaw() + (float) ThreadLocalRandom.current().nextDouble(-35, 35);
@@ -268,7 +266,7 @@ public final class HorseRoutine {
 
     private void mount(GameHorse horse) {
         if (horse.addPassenger(bot.entity())) {
-            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
+            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, SoundCategory.NEUTRAL, 0.5f, 1f);
         }
         noMoveTicks = 0;
         lastSetVelocity = null;
@@ -292,7 +290,7 @@ public final class HorseRoutine {
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.SADDLE));
         bot.swing();
         horse.setSaddle(GameItem.of(Items.SADDLE));
-        horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
+        horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, SoundCategory.NEUTRAL, 0.5f, 1f);
         actionCooldown = 8;
         Platform.server().runLater(() -> {
             if (bot.isAlive()) {
@@ -376,7 +374,7 @@ public final class HorseRoutine {
         if (onGround && !inWater && jumpCooldown <= 0 && shouldJump(horse, hl, navTarget, to, fx, fz)) {
             // the player's charged jump: the horse's jump strength and a forward boost of 0.4
             v = v.withY(horse.jumpStrength()).add(fx * 0.4 * forward, 0, fz * 0.4 * forward);
-            horse.world().playSound(hl.pos(), Sounds.ENTITY_HORSE_JUMP, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.4f, 1f);
+            horse.world().playSound(hl.pos(), Sounds.ENTITY_HORSE_JUMP, SoundCategory.NEUTRAL, 0.4f, 1f);
             jumpCooldown = 10;
         }
         if (inWater) {

@@ -1,6 +1,7 @@
 package dev.manhuntstar.debug;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.host.PathDebug;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import org.bukkit.entity.Player;
  * green = path, red = blocks to dig, blue = blocks to place. In the mod this was a client-side drawing
  * that only worked in single player.
  */
-public final class DebugRenderer {
+public final class DebugRenderer implements PathDebug {
 
     private static final Particle.DustOptions PATH = new Particle.DustOptions(Color.LIME, 0.8f);
     private static final Particle.DustOptions DONE = new Particle.DustOptions(Color.fromRGB(80, 120, 80), 0.6f);
@@ -31,6 +32,7 @@ public final class DebugRenderer {
 
     private final Map<UUID, Snapshot> paths = new HashMap<>();
 
+    @Override
     public void update(Bot bot, List<Pos> path, int index, Set<Pos> mine, Set<Pos> place) {
         if (bot.world() == null) {
             return;
@@ -38,6 +40,7 @@ public final class DebugRenderer {
         paths.put(bot.id(), new Snapshot(bot.world().id(), List.copyOf(path), index, Set.copyOf(mine), Set.copyOf(place)));
     }
 
+    @Override
     public void clear(UUID botId) {
         paths.remove(botId);
     }

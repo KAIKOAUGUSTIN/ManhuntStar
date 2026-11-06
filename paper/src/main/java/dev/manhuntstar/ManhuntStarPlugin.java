@@ -11,13 +11,17 @@ import dev.manhuntstar.fidelity.DeathMessages;
 import dev.manhuntstar.fidelity.GlowService;
 import dev.manhuntstar.fidelity.TabListService;
 import dev.manhuntstar.gui.MenuManager;
+import dev.manhuntstar.host.AimDiagnostics;
+import dev.manhuntstar.host.BotEventSink;
 import dev.manhuntstar.listener.BotEntityListener;
 import dev.manhuntstar.listener.MobTargeting;
 import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.metrics.MetricsService;
 import dev.manhuntstar.paper.BukkitYamlFiles;
 import dev.manhuntstar.paper.Kinds;
+import dev.manhuntstar.paper.PaperAimDiagnostics;
 import dev.manhuntstar.paper.PaperBlocks;
+import dev.manhuntstar.paper.PaperBotEvents;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperServer;
@@ -34,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.logging.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
@@ -45,7 +50,7 @@ import org.bukkit.scheduler.BukkitTask;
  * Manhunt*: ManHunt hunter bots for Paper, recreated from a Fabric mod by OpaleMC (CC0).
  * Starts the services, registers events and commands and runs a single global tick for all bots.
  */
-public final class ManhuntStarPlugin extends JavaPlugin {
+public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
 
     private static ManhuntStarPlugin instance;
 
@@ -66,6 +71,8 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private UpdateChecker updates;
     private MetricsService metrics;
     private final ChunkTickets chunkTickets = new ChunkTickets();
+    private final BotEventSink events = new PaperBotEvents();
+    private final AimDiagnostics aim = new PaperAimDiagnostics();
     private BukkitTask tickTask;
 
     public static ManhuntStarPlugin instance() {
@@ -73,15 +80,18 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     }
 
     /** The server as core sees it. */
+    @Override
     public GameServer server() {
         return server;
     }
 
     /** Reads and writes the plugin's YAML files (config.yml, languages). */
+    @Override
     public YamlFiles yaml() {
         return yaml;
     }
 
+    @Override
     public ChunkTickets chunkTickets() {
         return chunkTickets;
     }
@@ -270,11 +280,11 @@ public final class ManhuntStarPlugin extends JavaPlugin {
             pathService.resetNodeCap();
         } else if (s == settings.showNameTag) {
             for (Bot b : botManager.aliveBots()) {
-                b.mannequin().setCustomNameVisible(settings.showNameTag.on());
+                PaperEntities.bukkit(b.entity()).setCustomNameVisible(settings.showNameTag.on());
             }
         } else if (s == settings.botHealth) {
             for (Bot b : botManager.aliveBots()) {
-                var attr = b.mannequin().getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                var attr = PaperEntities.bukkit(b.entity()).getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
                 if (attr != null) {
                     attr.setBaseValue(settings.botHealth.value());
                 }
@@ -296,42 +306,67 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     // ------------------------------------------------------------------ access
 
+    @Override
+    public Logger logger() {
+        return getLogger();
+    }
+
+    @Override
+    public BotEventSink events() {
+        return events;
+    }
+
+    @Override
+    public AimDiagnostics aim() {
+        return aim;
+    }
+
+    @Override
     public Settings settings() {
         return settings;
     }
 
+    @Override
     public Messages messages() {
         return messages;
     }
 
+    @Override
     public PathService pathService() {
         return pathService;
     }
 
+    @Override
     public DebugRenderer debugRenderer() {
         return debugRenderer;
     }
 
+    @Override
     public SkinService skins() {
         return skins;
     }
 
+    @Override
     public TabListService tabList() {
         return tabList;
     }
 
+    @Override
     public GlowService glow() {
         return glow;
     }
 
+    @Override
     public DeathMessages deathMessages() {
         return deathMessages;
     }
 
+    @Override
     public BotStorage storage() {
         return storage;
     }
 
+    @Override
     public BotManager botManager() {
         return botManager;
     }

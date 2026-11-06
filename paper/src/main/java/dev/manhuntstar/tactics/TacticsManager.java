@@ -2,8 +2,6 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.EquipSlot;
@@ -17,6 +15,7 @@ import dev.manhuntstar.platform.Pickup;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.ProjectileKind;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Face;
@@ -32,9 +31,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
-import org.bukkit.Color;
-import org.bukkit.SoundCategory;
-import org.bukkit.entity.Arrow;
 
 /**
  * Special abilities (the mod's BotAggressive), which take control of the bot for a few seconds:
@@ -456,12 +452,12 @@ public final class TacticsManager {
         Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, speed);
         Vec3 vel = shootVector(aim, (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
         GameArrow arrow = (GameArrow) e.launchProjectile(ProjectileKind.ARROW, vel);
-        dev.manhuntstar.debug.AimDebug.track(PaperEntities.bukkit(arrow), bot.name(), PaperEntities.bukkit(player));
+        bot.manager().plugin().aim().track(arrow, bot.name(), player);
         arrow.setShooter(e);
         arrow.setPickup(Pickup.ALLOWED);
         // as in the game: an arrow from a fully drawn bow is critical
         arrow.setCritical(speed >= Ballistics.bowSpeed(BOW_MAX_DRAW));
-        e.world().playSound(e.position(), Sounds.ENTITY_ARROW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+        e.world().playSound(e.position(), Sounds.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
     private static Vec3 arrowOrigin(Bot bot) {
@@ -557,7 +553,7 @@ public final class TacticsManager {
                 bot.setItem(EquipSlot.HAND, GameItem.of(Items.CROSSBOW));
                 bot.setItem(EquipSlot.OFF_HAND, fireworkRocket());
                 e.startUsingItem(EquipSlot.HAND);
-                e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
+                e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1f, 1f);
                 s.step = 1;
                 s.nextAction = now + 25;
             }
@@ -607,7 +603,7 @@ public final class TacticsManager {
         Vec3 aim = Ballistics.aim(from, point, playerVelocity, FIREWORK_SPEED, 0, 1);
         Vec3 vel = shootVector(aim, (float) FIREWORK_SPEED, 0.65f);
         e.world().spawnFirework(from, fireworkRocket(), e, vel);
-        e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+        e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
     /** Red and orange large ball (Bukkit's Color.RED and Color.ORANGE). */
@@ -684,7 +680,7 @@ public final class TacticsManager {
                 w.block(tntPos).setType(Blocks.TNT);
                 // if the ambush ends before lighting (the bot died, the player ran), the TNT disappears
                 manager.temporaryBlocks().add(w, tntPos, Blocks.TNT, 40);
-                w.playSound(Vec3.of(tntPos), Sounds.BLOCK_GRASS_PLACE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
+                w.playSound(Vec3.of(tntPos), Sounds.BLOCK_GRASS_PLACE, SoundCategory.BLOCKS, 1f, 1f);
                 bot.swing();
                 a.tntPos = tntPos;
                 a.placed = true;
@@ -705,7 +701,7 @@ public final class TacticsManager {
             w.block(a.tntPos).setType(Blocks.AIR);
             Vec3 at = new Vec3(a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
             w.spawnTnt(at, 40, bot.entity());
-            w.playSound(at, Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
+            w.playSound(at, Sounds.ITEM_FLINTANDSTEEL_USE, SoundCategory.BLOCKS, 1f, 1f);
             bot.setItem(EquipSlot.HAND, GameItem.of(Items.FLINT_AND_STEEL));
             bot.swing();
             a.ignited = true;

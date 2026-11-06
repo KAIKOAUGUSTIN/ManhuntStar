@@ -1,10 +1,11 @@
 package dev.manhuntstar.skin;
 
-import dev.manhuntstar.bot.SkinData;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.manhuntstar.bot.SkinData;
+import dev.manhuntstar.host.SkinSource;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -33,7 +34,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
  * vez ao MineSkin para ganhar assinatura (como o mod fazia). Tudo fica em cache em disco.
  * Corrige o mod, que procurava as skins numa pasta fixa do computador do autor.
  */
-public final class SkinService {
+public final class SkinService implements SkinSource {
 
     private static final long CACHE_TTL_MS = 7L * 24 * 60 * 60 * 1000;
     private static final String ROBOT_KEY = "#robo";
@@ -64,6 +65,7 @@ public final class SkinService {
     }
 
     /** Skin para o nome (assíncrono); nunca falha: no pior caso devolve null (skin padrão do jogo). */
+    @Override
     public CompletableFuture<SkinData> resolve(String name) {
         String key = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
         CachedSkin c = cache.get(key);

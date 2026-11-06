@@ -91,7 +91,7 @@ public final class BotEntityListener implements Listener {
                 return;
             }
         }
-        if (attacker instanceof LivingEntity le && le != bot.mannequin()) {
+        if (attacker instanceof LivingEntity le && le != PaperEntities.bukkit(bot.entity())) {
             bot.rememberFireSource(Locations.vec(le.getLocation()));
             Vec3 dir = Locations.vec(le.getLocation()).subtract(bot.pos());
             bot.setYawNow(dir.yaw());
@@ -101,7 +101,7 @@ public final class BotEntityListener implements Listener {
         }
         if (bot.combat().isBlocking() && bot.combat().canBlockDamage(new PaperDamageInfo(event.getDamageSource()))) {
             event.setCancelled(true);
-            Mannequin e = bot.mannequin();
+            Mannequin e = PaperEntities.bukkit(bot.entity());
             e.getWorld().playSound(e.getLocation(), Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1f, 0.8f + (float) Math.random() * 0.4f);
             return;
         }
@@ -205,7 +205,7 @@ public final class BotEntityListener implements Listener {
             if (!bot.isAlive()) {
                 return;
             }
-            Mannequin e = bot.mannequin();
+            Mannequin e = PaperEntities.bukkit(bot.entity());
             if (!e.getWorld().equals(hit.getWorld()) || e.getLocation().distanceSquared(hit) > 4.0) {
                 hit.setYaw(e.getLocation().getYaw());
                 hit.setPitch(e.getLocation().getPitch());
@@ -214,7 +214,7 @@ public final class BotEntityListener implements Listener {
                 bot.onEntityTeleported();
             }
             bot.motor().resetFallTracking();
-            bot.mannequin().damage(5.0, DamageSource.builder(DamageType.ENDER_PEARL).withDirectEntity(pearl).withCausingEntity(bot.mannequin()).build());
+            PaperEntities.bukkit(bot.entity()).damage(5.0, DamageSource.builder(DamageType.ENDER_PEARL).withDirectEntity(pearl).withCausingEntity(PaperEntities.bukkit(bot.entity())).build());
             hit.getWorld().playSound(hit, Sound.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
         });
     }

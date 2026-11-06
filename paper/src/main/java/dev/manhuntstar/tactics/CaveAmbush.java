@@ -2,7 +2,6 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BedPart;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;

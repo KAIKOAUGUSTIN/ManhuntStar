@@ -13,6 +13,7 @@ import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -22,7 +23,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /**
  * MLG: falling fast (≥ 0.6 blocks/tick) within 4.5 blocks of the ground, the bot places water (or a boat,
@@ -69,7 +69,7 @@ public final class MlgClutch {
             if (w.equals(bot.world()) && w.block(waterPos).type() == Blocks.WATER) {
                 bot.manager().temporaryBlocks().remove(w, waterPos);
                 w.block(waterPos).setType(Blocks.AIR);
-                w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_FILL, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
+                w.playSound(Vec3.of(waterPos), Sounds.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
                 bot.manager().plugin().pathService().invalidate(w, waterPos);
             }
             waterPos = null;
@@ -143,7 +143,7 @@ public final class MlgClutch {
         if (b.passengers().contains(bot.entity())) {
             b.removePassenger(bot.entity());
         }
-        b.world().playSound(b.position(), Sounds.ENTITY_PLAYER_ATTACK_WEAK, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.8f, 1f);
+        b.world().playSound(b.position(), Sounds.ENTITY_PLAYER_ATTACK_WEAK, SoundCategory.PLAYERS, 0.8f, 1f);
         spawnedBoats.remove(b.uuid());
         b.remove();
     }
@@ -205,7 +205,7 @@ public final class MlgClutch {
         }
         if (WorldUtil.canBeReplaced(w, water)) {
             w.block(water).setType(Blocks.WATER);
-            w.playSound(Vec3.of(water), Sounds.ITEM_BUCKET_EMPTY, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
+            w.playSound(Vec3.of(water), Sounds.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1f, 1f);
             bot.swing();
             bot.motor().resetFallTracking();
             bot.manager().plugin().pathService().invalidate(w, water);

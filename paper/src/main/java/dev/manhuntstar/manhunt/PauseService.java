@@ -1,6 +1,6 @@
 package dev.manhuntstar.manhunt;
 
-import dev.manhuntstar.ManhuntStarPlugin;
+import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GamePlayer;
@@ -23,7 +23,7 @@ import net.kyori.adventure.text.Component;
  */
 public final class PauseService {
 
-    private final ManhuntStarPlugin plugin;
+    private final ManhuntHost plugin;
     private final Map<UUID, Frozen> frozen = new HashMap<>();
     private final BossBar bar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
     private final Set<UUID> viewers = new HashSet<>();
@@ -48,7 +48,7 @@ public final class PauseService {
         }
     }
 
-    public PauseService(ManhuntStarPlugin plugin) {
+    public PauseService(ManhuntHost plugin) {
         this.plugin = plugin;
     }
 

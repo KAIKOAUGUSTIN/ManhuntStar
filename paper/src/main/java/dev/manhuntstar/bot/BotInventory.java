@@ -7,6 +7,7 @@ import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /**
  * The bot's virtual inventory (36 slots, like a player's) and handling of the best equipment:
@@ -335,11 +335,11 @@ public final class BotInventory {
                 } else {
                     item.setItem(left);
                 }
-                e.world().playSound(e.position(), Sounds.ENTITY_ITEM_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.2f,
+                e.world().playSound(e.position(), Sounds.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f,
                         (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 1.4f + 2.0f);
             } else if (near.is(EntityTrait.EXPERIENCE_ORB) && near.isValid()) {
                 near.remove();
-                e.world().playSound(e.position(), Sounds.ENTITY_EXPERIENCE_ORB_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.1f,
+                e.world().playSound(e.position(), Sounds.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.1f,
                         0.5f + ThreadLocalRandom.current().nextFloat() * 0.6f);
             }
         }

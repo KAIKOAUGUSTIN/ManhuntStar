@@ -9,7 +9,6 @@ import dev.manhuntstar.bot.mobility.ElytraFlight;
 import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
@@ -26,6 +25,7 @@ import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -33,7 +33,6 @@ import dev.manhuntstar.util.WorldUtil;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /**
  * The bot's brain (the mod's {@code runAI}): picks the target (player, hostile mob or bot from an enemy
@@ -1208,7 +1207,7 @@ public final class Brain {
             bot.mining().cancel();
             stuckMiningMode = false;
             bot.lookAt(target.position());
-            gw.playSound(dest.pos(), Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
+            gw.playSound(dest.pos(), Sounds.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
             return;
         }
     }

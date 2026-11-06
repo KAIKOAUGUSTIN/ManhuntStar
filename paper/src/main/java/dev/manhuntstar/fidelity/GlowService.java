@@ -4,6 +4,8 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.host.BotGlow;
+import dev.manhuntstar.paper.PaperEntities;
 import java.util.Collection;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Mannequin;
@@ -14,7 +16,7 @@ import org.bukkit.scoreboard.Team;
  * Glow (an outline visible through walls) on the hunters and, separately, on the runners.
  * The color comes from a scoreboard team that holds only the bots' entities.
  */
-public final class GlowService {
+public final class GlowService implements BotGlow {
 
     private static final String HUNTER_TEAM = "mhs_cacadores";
     private static final String ESCAPE_TEAM = "mhs_fugitivos";
@@ -38,8 +40,9 @@ public final class GlowService {
         return t;
     }
 
+    @Override
     public void apply(Bot bot) {
-        Mannequin e = bot.mannequin();
+        Mannequin e = PaperEntities.bukkit(bot.entity());
         if (e == null) {
             return;
         }
@@ -67,8 +70,9 @@ public final class GlowService {
         e.setGlowing(glow);
     }
 
+    @Override
     public void remove(Bot bot) {
-        Mannequin e = bot.mannequin();
+        Mannequin e = PaperEntities.bukkit(bot.entity());
         if (e == null) {
             return;
         }

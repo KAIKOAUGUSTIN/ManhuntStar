@@ -8,8 +8,6 @@ import dev.manhuntstar.bot.motor.Motor;
 import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
@@ -32,6 +30,7 @@ import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Pose;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.SoundGroup;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Box;
@@ -47,10 +46,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.SoundCategory;
-import org.bukkit.World;
-import org.bukkit.entity.Mannequin;
 
 /**
  * A hunter bot. Holds the identity and the persistent state; the {@link Mannequin} entity
@@ -321,11 +316,6 @@ public final class Bot {
 
     // ------------------------------------------------------------------ entity
 
-    /** The Bukkit entity of the body, while the code still uses it. */
-    public Mannequin mannequin() {
-        return PaperEntities.bukkit(entity);
-    }
-
     public BotBody entity() {
         return entity;
     }
@@ -336,11 +326,6 @@ public final class Bot {
 
     public GameWorld world() {
         return entity != null ? entity.world() : (lastKnownWorld == null ? null : Platform.server().world(lastKnownWorld));
-    }
-
-    /** The Bukkit world of {@link #world()}, while the code still uses it. */
-    public World bukkitWorld() {
-        return PaperWorld.bukkit(world());
     }
 
     public Vec3 pos() {
@@ -728,7 +713,7 @@ public final class Bot {
         b.place(material);
         swing();
         SoundGroup sounds = b.soundGroup();
-        w.playSound(Vec3.center(pos), sounds.placeSound(), dev.manhuntstar.platform.SoundCategory.BLOCKS,
+        w.playSound(Vec3.center(pos), sounds.placeSound(), SoundCategory.BLOCKS,
                 (sounds.volume() + 1.0f) / 2.0f, sounds.pitch() * 0.8f);
         blocksPlacedInWindow++;
         if (material == Blocks.OAK_LEAVES) {
@@ -822,7 +807,7 @@ public final class Bot {
             swing();
             b.setOpen(true);
             GameSound s = m.is(BlockTrait.DOOR) ? Sounds.BLOCK_WOODEN_DOOR_OPEN : m.is(BlockTrait.FENCE_GATE) ? Sounds.BLOCK_FENCE_GATE_OPEN : Sounds.BLOCK_WOODEN_TRAPDOOR_OPEN;
-            w.playSound(Vec3.center(pos), s, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1.0f, 0.9f + ThreadLocalRandom.current().nextFloat() * 0.1f);
+            w.playSound(Vec3.center(pos), s, SoundCategory.BLOCKS, 1.0f, 0.9f + ThreadLocalRandom.current().nextFloat() * 0.1f);
             return true;
         }
         return false;

@@ -18,11 +18,11 @@ import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.ProjectileKind;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.SoundCategory;
 
 /** Ender pearls: rescue (void/lava) and quick approach to the target (Terminator only). */
 public final class PearlAbility {
@@ -146,7 +146,7 @@ public final class PearlAbility {
         GameProjectile pearl = me.launchProjectile(ProjectileKind.ENDER_PEARL, vel);
         pearl.setShooter(me);
         bot.swing();
-        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
+        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
         Platform.server().runNextTick(() -> {
             if (bot.isAlive()) {
                 bot.setItem(EquipSlot.HAND, previous);
@@ -171,7 +171,7 @@ public final class PearlAbility {
         Vec3 vel = new Vec3(dx, dy, dz).normalizeUnchecked().scale(1.5);
         GameProjectile pearl = me.launchProjectile(ProjectileKind.ENDER_PEARL, vel);
         pearl.setShooter(me);
-        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, SoundCategory.PLAYERS, 1.0f, 1.0f);
         bot.swing();
         Platform.server().runNextTick(() -> {
             if (bot.isAlive()) {
