@@ -4,6 +4,7 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Locations;
@@ -715,7 +716,7 @@ public final class Combat {
         hasLavaBucket = false;
         // if the bot dies or disappears before picking it up, the lava doesn't stay in the world forever
         bot.manager().temporaryBlocks().add(w, p, Material.LAVA, 60 + 40);
-        bot.manager().plugin().pathService().invalidate(w, p);
+        bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), p);
         bot.inventory().restorePreferredMainHand();
         return true;
     }
@@ -747,7 +748,7 @@ public final class Combat {
             bot.manager().temporaryBlocks().remove(w, placedLavaPos);
             b.setType(Material.AIR);
             w.playSound(b.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 1.0f, 1.0f);
-            bot.manager().plugin().pathService().invalidate(w, placedLavaPos);
+            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), placedLavaPos);
             if (canReach) {
                 hasLavaBucket = true;
             } else {

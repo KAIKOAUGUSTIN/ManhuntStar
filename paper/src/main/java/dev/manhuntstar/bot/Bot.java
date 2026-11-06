@@ -1,5 +1,6 @@
 package dev.manhuntstar.bot;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
 import dev.manhuntstar.bot.ability.PearlAbility;
 import dev.manhuntstar.bot.ai.Brain;
 import dev.manhuntstar.bot.ai.IdleBehavior;
@@ -8,12 +9,12 @@ import dev.manhuntstar.bot.motor.Motor;
 import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.ChunkTickets;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import com.destroystokyo.paper.profile.ProfileProperty;
 import io.papermc.paper.datacomponent.item.ResolvableProfile;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -724,7 +725,7 @@ public final class Bot {
         if (material == Material.OAK_LEAVES) {
             manager.temporaryBlocks().add(w, pos, Material.OAK_LEAVES, LEAF_LIFETIME_TICKS);
         }
-        manager.plugin().pathService().invalidate(w, pos);
+        manager.plugin().pathService().invalidate(PaperWorld.of(w), pos);
         return true;
     }
 

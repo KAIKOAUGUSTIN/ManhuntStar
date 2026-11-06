@@ -1,5 +1,6 @@
 package dev.manhuntstar.bot.world;
 
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -91,7 +92,7 @@ public final class TemporaryBlocks {
         }
         PathService ps = paths.get();
         if (ps != null) {
-            ps.invalidate(w, p);
+            ps.invalidate(PaperWorld.of(w), p);
         }
     }
 }

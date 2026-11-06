@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -72,7 +73,7 @@ public final class MlgClutch {
                 bot.manager().temporaryBlocks().remove(w, waterPos);
                 Locations.block(waterPos, w).setType(Material.AIR);
                 w.playSound(Locations.location(waterPos, w), Sound.ITEM_BUCKET_FILL, SoundCategory.PLAYERS, 1f, 1f);
-                bot.manager().plugin().pathService().invalidate(w, waterPos);
+                bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), waterPos);
             }
             waterPos = null;
             waterTicks = 0;
@@ -211,7 +212,7 @@ public final class MlgClutch {
             w.playSound(Locations.location(water, w), Sound.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 1f, 1f);
             bot.swing();
             bot.motor().resetFallTracking();
-            bot.manager().plugin().pathService().invalidate(w, water);
+            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), water);
             // if the bot dies before picking it up, the water disappears all the same
             bot.manager().temporaryBlocks().add(w, water, Material.WATER, 15 + 40);
             waterPos = water;

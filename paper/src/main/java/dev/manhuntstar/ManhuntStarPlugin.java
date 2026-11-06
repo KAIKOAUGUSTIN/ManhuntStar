@@ -17,8 +17,11 @@ import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.metrics.MetricsService;
 import dev.manhuntstar.paper.BukkitYamlFiles;
 import dev.manhuntstar.paper.Kinds;
+import dev.manhuntstar.paper.PaperBlocks;
+import dev.manhuntstar.paper.PaperServer;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
+import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.YamlFiles;
 import dev.manhuntstar.skin.SkinService;
 import dev.manhuntstar.update.UpdateChecker;
@@ -43,6 +46,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     private static ManhuntStarPlugin instance;
 
+    private final GameServer server = new PaperServer();
     private final YamlFiles yaml = new BukkitYamlFiles();
     private final Settings settings = new Settings();
     private final Messages messages = new Messages();
@@ -78,13 +82,14 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         Kinds.init();
+        PaperBlocks.init();
         migrateLegacyFiles();
         saveDefaultConfig();
         Messages.install(yaml, langFolder(), this::getResource, getLogger());
         settings.setLanguages(() -> Messages.available(langFolder()));
         loadConfigFiles();
 
-        pathService = new PathService(settings, getLogger());
+        pathService = new PathService(server, settings, getLogger());
         debugRenderer = new DebugRenderer();
         skins = new SkinService(getDataFolder(), getLogger(), settings.skinFallbackUpload::on);
         tabList = new TabListService(getLogger(), settings.tabList::on);

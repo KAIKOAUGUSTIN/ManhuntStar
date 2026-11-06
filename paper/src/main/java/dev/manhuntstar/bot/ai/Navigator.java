@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
 import dev.manhuntstar.util.Locations;
@@ -346,7 +347,7 @@ public final class Navigator {
             return;
         }
         boolean allowPlacement = bot.brain().canPlaceToweringBlocksNearTarget();
-        task = bot.manager().plugin().pathService().findPath(world(), start, target, allowPlacement, boatsAllowed());
+        task = bot.manager().plugin().pathService().findPath(PaperWorld.of(world()), start, target, allowPlacement, boatsAllowed());
         lastTarget = target;
         // the extra stretch continues the old path: counting it as a new computation kept the path from going stale
         if (!lookahead) {

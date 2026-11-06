@@ -1,10 +1,11 @@
 package dev.manhuntstar.listener;
 
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
-import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -53,7 +54,7 @@ public final class WorldPlayerListener implements Listener {
     public void onPlace(BlockPlaceEvent event) {
         Block b = event.getBlockPlaced();
         plugin.botManager().blockTracker().markPlaced(b.getWorld(), Locations.pos(b));
-        plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
+        plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -61,7 +62,7 @@ public final class WorldPlayerListener implements Listener {
         Block b = event.getBlock();
         Pos p = Locations.pos(b);
         plugin.botManager().blockTracker().unmark(b.getWorld(), p);
-        plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
+        plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         if (b.getType().name().endsWith("_BED")) {
             plugin.botManager().caveAmbush().onBlockBroken(b.getWorld(), p);
         }
@@ -70,27 +71,27 @@ public final class WorldPlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         for (Block b : event.blockList()) {
-            plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
+            plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
         for (Block b : event.blockList()) {
-            plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
+            plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFlow(BlockFromToEvent event) {
         Block to = event.getToBlock();
-        plugin.pathService().invalidate(to.getWorld(), to.getX(), to.getZ());
+        plugin.pathService().invalidate(PaperWorld.of(to.getWorld()), to.getX(), to.getZ());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBurn(BlockBurnEvent event) {
         Block b = event.getBlock();
-        plugin.pathService().invalidate(b.getWorld(), b.getX(), b.getZ());
+        plugin.pathService().invalidate(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
     }
 
     // ------------------------------------------------------------------ crafting table

@@ -2,6 +2,7 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -163,8 +164,8 @@ public final class CaveAmbush {
                         }
                         placeBedHalf(w, foot, facing, Bed.Part.FOOT);
                         placeBedHalf(w, head, facing, Bed.Part.HEAD);
-                        manager.plugin().pathService().invalidate(w, foot);
-                        manager.plugin().pathService().invalidate(w, head);
+                        manager.plugin().pathService().invalidate(PaperWorld.of(w), foot);
+                        manager.plugin().pathService().invalidate(PaperWorld.of(w), head);
                         bot.lookAt(Vec3.center(foot));
                         bot.swing();
                         return new AmbushBed(bot.id(), target.getUniqueId(), w.getUID(), foot, head, restorePhase);

@@ -1,6 +1,8 @@
 package dev.manhuntstar.pathfinding;
 
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.platform.GameServer;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Pos;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -10,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
 
 /**
  * Serviço de pathfinding compartilhado por todos os bots. As cópias de chunk são tiradas na thread
@@ -25,10 +25,11 @@ public final class PathService {
     private static final long ASYNC_TIME_BUDGET_MS = 250L;
     private static final long SYNC_TIME_BUDGET_MS = 20L;
 
+    private final GameServer server;
     private final Settings settings;
     private final Logger logger;
     private final ExecutorService pool;
-    private final ChunkSnapshotCache snapshots = new ChunkSnapshotCache();
+    private final ChunkSnapshotCache snapshots;
     private final AtomicInteger activeTasks = new AtomicInteger();
     private final AtomicInteger samples = new AtomicInteger();
     private final AtomicLong totalMs = new AtomicLong();
@@ -36,7 +37,10 @@ public final class PathService {
     private long lastCaptureMs;
     private boolean closed;
 
-    public PathService(Settings settings, Logger logger) {
+    /** The platform must have registered the block types ({@link dev.manhuntstar.platform.BlockType}) before. */
+    public PathService(GameServer server, Settings settings, Logger logger) {
+        this.server = server;
+        this.snapshots = new ChunkSnapshotCache(server);
         this.settings = settings;
         this.logger = logger;
         this.effectiveNodeCap = settings.nodeCap.value();
@@ -57,7 +61,7 @@ public final class PathService {
      * Pede um caminho. Assíncrono: devolve um future completado numa thread do pool (ler só com
      * {@code isDone()/join()} na thread principal). Síncrono: já vem completado.
      */
-    public CompletableFuture<PathResult> findPath(World world, Pos start, Pos target, boolean allowPlacement, boolean allowBoat) {
+    public CompletableFuture<PathResult> findPath(GameWorld world, Pos start, Pos target, boolean allowPlacement, boolean allowBoat) {
         if (closed) {
             return CompletableFuture.completedFuture(null);
         }
@@ -100,17 +104,17 @@ public final class PathService {
     // ------------------------------------------------------------------ manutenção
 
     /** Um bloco mudou: descarta a cópia do chunk para o próximo cálculo ver o mundo atual. */
-    public void invalidate(World world, Pos pos) {
+    public void invalidate(GameWorld world, Pos pos) {
         snapshots.invalidate(world, pos.x(), pos.z());
     }
 
-    public void invalidate(World world, int x, int z) {
+    public void invalidate(GameWorld world, int x, int z) {
         snapshots.invalidate(world, x, z);
     }
 
     /** Chamado uma vez por tick pelo plugin. */
     public void tick() {
-        int now = Bukkit.getCurrentTick();
+        int now = server.currentTick();
         if (now % 20 == 0) {
             adjustNodeCap();
         }

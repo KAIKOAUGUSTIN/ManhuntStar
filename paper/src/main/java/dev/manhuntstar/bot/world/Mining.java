@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -71,7 +72,7 @@ public final class Mining {
             ItemStack tool = bot.getItem(EquipmentSlot.HAND);
             b.breakNaturally(tool, true);
             sendCrack(w, miningPos, 0f);
-            bot.manager().plugin().pathService().invalidate(w, miningPos);
+            bot.manager().plugin().pathService().invalidate(PaperWorld.of(w), miningPos);
             miningPos = null;
             bot.inventory().restorePreferredMainHand();
         }

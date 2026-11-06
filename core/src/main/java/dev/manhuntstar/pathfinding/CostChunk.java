@@ -1,10 +1,7 @@
 package dev.manhuntstar.pathfinding;
 
+import dev.manhuntstar.platform.BlockSnapshot;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import org.bukkit.ChunkSnapshot;
-import org.bukkit.Material;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Waterlogged;
 
 /**
  * Cópia imutável de um chunk com os custos de cada seção 16x16x16 calculados sob demanda.
@@ -13,12 +10,12 @@ import org.bukkit.block.data.Waterlogged;
  */
 final class CostChunk {
 
-    final ChunkSnapshot snapshot;
+    final BlockSnapshot snapshot;
     final int minY;
     final long capturedTick;
     private final AtomicReferenceArray<byte[]> sections;
 
-    CostChunk(ChunkSnapshot snapshot, int minY, int maxY, long capturedTick) {
+    CostChunk(BlockSnapshot snapshot, int minY, int maxY, long capturedTick) {
         this.snapshot = snapshot;
         this.minY = minY;
         this.capturedTick = capturedTick;
@@ -41,13 +38,10 @@ final class CostChunk {
             int y = baseY + ly;
             for (int lz = 0; lz < 16; lz++) {
                 for (int lx = 0; lx < 16; lx++) {
-                    Material m = snapshot.getBlockType(lx, y, lz);
-                    byte c = BlockCosts.cost(m);
-                    if (c == CostProvider.AIR && BlockCosts.waterloggable(m)) {
-                        BlockData d = snapshot.getBlockData(lx, y, lz);
-                        if (d instanceof Waterlogged w && w.isWaterlogged()) {
-                            c = CostProvider.WATER;
-                        }
+                    int type = snapshot.typeId(lx, y, lz);
+                    byte c = BlockCosts.cost(type);
+                    if (c == CostProvider.AIR && BlockCosts.waterloggable(type) && snapshot.waterlogged(lx, y, lz)) {
+                        c = CostProvider.WATER;
                     }
                     out[lx | (lz << 4) | (ly << 8)] = c;
                 }

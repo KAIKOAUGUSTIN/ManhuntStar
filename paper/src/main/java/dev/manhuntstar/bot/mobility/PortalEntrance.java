@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -143,7 +144,7 @@ public final class PortalEntrance {
             return;
         }
         buildNetherPortal(w, portalPos);
-        manager.plugin().pathService().invalidate(w, portalPos);
+        manager.plugin().pathService().invalidate(PaperWorld.of(w), portalPos);
     }
 
     /** 2x3 portal with an obsidian frame along the X axis, obsidian floor where there is no support. */
