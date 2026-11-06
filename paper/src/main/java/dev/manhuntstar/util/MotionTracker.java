@@ -1,9 +1,9 @@
 package dev.manhuntstar.util;
 
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import java.util.UUID;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
-import org.bukkit.entity.Entity;
 
 /**
  * A target's horizontal velocity measured from the change in position between ticks. On the server a
@@ -12,17 +12,17 @@ import org.bukkit.entity.Entity;
 public final class MotionTracker {
 
     private UUID entity;
-    private World world;
+    private GameWorld world;
     private Vec3 last;
     private long lastTick;
     private Vec3 velocity = Vec3.ZERO;
 
-    public void observe(Entity e) {
-        long now = Bukkit.getCurrentTick();
-        Vec3 p = Locations.vec(e.getLocation());
-        if (last == null || !e.getUniqueId().equals(entity) || e.getWorld() != world || now - lastTick > 10) {
-            entity = e.getUniqueId();
-            world = e.getWorld();
+    public void observe(GameEntity e) {
+        long now = Platform.server().currentTick();
+        Vec3 p = e.position();
+        if (last == null || !e.uuid().equals(entity) || e.world() != world || now - lastTick > 10) {
+            entity = e.uuid();
+            world = e.world();
             last = p;
             lastTick = now;
             velocity = Vec3.ZERO;

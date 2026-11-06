@@ -1,13 +1,14 @@
 package dev.manhuntstar.listener;
 
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.api.BotEvents;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
-import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
@@ -53,7 +54,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot == null) {
             return;
         }
@@ -88,17 +89,17 @@ public final class BotEntityListener implements Listener {
                 return;
             }
         }
-        if (attacker instanceof LivingEntity le && le != bot.entity()) {
+        if (attacker instanceof LivingEntity le && le != bot.mannequin()) {
             bot.rememberFireSource(Locations.vec(le.getLocation()));
             Vec3 dir = Locations.vec(le.getLocation()).subtract(bot.pos());
             bot.setYawNow(dir.yaw());
-            if (!(le instanceof Player) && !(le instanceof EnderDragon) && manager().byEntity(le) == null) {
-                bot.combat().setMobAttacker(le);
+            if (!(le instanceof Player) && !(le instanceof EnderDragon) && manager().byEntity(PaperEntities.of(le)) == null) {
+                bot.combat().setMobAttacker(PaperEntities.of(le));
             }
         }
         if (bot.combat().isBlocking() && bot.combat().canBlockDamage(event)) {
             event.setCancelled(true);
-            Mannequin e = bot.entity();
+            Mannequin e = bot.mannequin();
             e.getWorld().playSound(e.getLocation(), Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1f, 0.8f + (float) Math.random() * 0.4f);
             return;
         }
@@ -115,12 +116,12 @@ public final class BotEntityListener implements Listener {
         if (!src.getDamageType().equals(DamageType.SPEAR)) {
             return;
         }
-        Bot bot = manager().byEntity(src.getCausingEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(src.getCausingEntity()));
         if (bot == null) {
             return;
         }
         Entity victim = event.getEntity();
-        if (manager().isAlly(bot, victim) || (victim instanceof Player && settings().respectPvp.on()
+        if (manager().isAlly(bot, PaperEntities.of(victim)) || (victim instanceof Player && settings().respectPvp.on()
                 && Boolean.FALSE.equals(victim.getWorld().getGameRuleValue(GameRules.PVP)))) {
             event.setCancelled(true);
             return;
@@ -132,7 +133,7 @@ public final class BotEntityListener implements Listener {
     public void onBotSpearHit(EntityDamageEvent event) {
         DamageSource src = event.getDamageSource();
         if (src.getDamageType().equals(DamageType.SPEAR)) {
-            Bot bot = manager().byEntity(src.getCausingEntity());
+            Bot bot = manager().byEntity(PaperEntities.of(src.getCausingEntity()));
             if (bot != null) {
                 bot.brain().horse().onLanceHit();
             }
@@ -141,7 +142,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDamageApplied(EntityDamageByEntityEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null && event.getFinalDamage() > 0) {
             bot.brain().onKnockback();
         }
@@ -149,7 +150,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onDeath(EntityDeathEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
             manager().handleDeath(bot, event);
         }
@@ -157,7 +158,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        Bot killer = manager().byEntity(event.getDamageSource().getCausingEntity());
+        Bot killer = manager().byEntity(PaperEntities.of(event.getDamageSource().getCausingEntity()));
         if (killer != null) {
             killer.incrementKills();
         }
@@ -165,7 +166,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onResurrect(EntityResurrectEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (bot.isAlive()) {
@@ -177,7 +178,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTeleport(EntityTeleportEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot != null) {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (bot.isAlive()) {
@@ -193,7 +194,7 @@ public final class BotEntityListener implements Listener {
         if (!(event.getEntity() instanceof EnderPearl pearl) || !(pearl.getShooter() instanceof Mannequin m)) {
             return;
         }
-        Bot bot = manager().byEntity(m);
+        Bot bot = manager().byEntity(PaperEntities.of(m));
         if (bot == null) {
             return;
         }
@@ -202,7 +203,7 @@ public final class BotEntityListener implements Listener {
             if (!bot.isAlive()) {
                 return;
             }
-            Mannequin e = bot.entity();
+            Mannequin e = bot.mannequin();
             if (!e.getWorld().equals(hit.getWorld()) || e.getLocation().distanceSquared(hit) > 4.0) {
                 hit.setYaw(e.getLocation().getYaw());
                 hit.setPitch(e.getLocation().getPitch());
@@ -211,7 +212,7 @@ public final class BotEntityListener implements Listener {
                 bot.onEntityTeleported();
             }
             bot.motor().resetFallTracking();
-            bot.entity().damage(5.0, DamageSource.builder(DamageType.ENDER_PEARL).withDirectEntity(pearl).withCausingEntity(bot.entity()).build());
+            bot.mannequin().damage(5.0, DamageSource.builder(DamageType.ENDER_PEARL).withDirectEntity(pearl).withCausingEntity(bot.mannequin()).build());
             hit.getWorld().playSound(hit, Sound.ENTITY_PLAYER_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
         });
     }
@@ -219,7 +220,7 @@ public final class BotEntityListener implements Listener {
     /** Bot entity removed without dying (command, another plugin): comes back in the same place. */
     @EventHandler
     public void onRemoved(EntityRemoveFromWorldEvent event) {
-        Bot bot = manager().byEntity(event.getEntity());
+        Bot bot = manager().byEntity(PaperEntities.of(event.getEntity()));
         if (bot == null) {
             return;
         }
@@ -229,7 +230,7 @@ public final class BotEntityListener implements Listener {
     @EventHandler
     public void onEntitiesLoad(EntitiesLoadEvent event) {
         for (Entity e : event.getEntities()) {
-            manager().removeOrphan(e);
+            manager().removeOrphan(PaperEntities.of(e));
         }
     }
 }

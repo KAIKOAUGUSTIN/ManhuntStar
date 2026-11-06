@@ -18,10 +18,12 @@ import dev.manhuntstar.metrics.MetricsService;
 import dev.manhuntstar.paper.BukkitYamlFiles;
 import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.paper.PaperBlocks;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperServer;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.platform.GameServer;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.YamlFiles;
 import dev.manhuntstar.skin.SkinService;
 import dev.manhuntstar.update.UpdateChecker;
@@ -86,6 +88,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        Platform.set(server);
         Kinds.init();
         PaperBlocks.init();
         migrateLegacyFiles();
@@ -179,12 +182,12 @@ public final class ManhuntStarPlugin extends JavaPlugin {
     private void removeOrphans() {
         for (World w : getServer().getWorlds()) {
             for (Entity e : w.getEntitiesByClass(Mannequin.class)) {
-                if (botManager.isBotEntity(e)) {
+                if (botManager.isBotEntity(PaperEntities.of(e))) {
                     e.remove();
                 }
             }
             for (Entity e : w.getEntitiesByClass(org.bukkit.entity.AbstractHorse.class)) {
-                botManager.removeOrphan(e);
+                botManager.removeOrphan(PaperEntities.of(e));
             }
         }
     }
@@ -265,11 +268,11 @@ public final class ManhuntStarPlugin extends JavaPlugin {
             pathService.resetNodeCap();
         } else if (s == settings.showNameTag) {
             for (Bot b : botManager.aliveBots()) {
-                b.entity().setCustomNameVisible(settings.showNameTag.on());
+                b.mannequin().setCustomNameVisible(settings.showNameTag.on());
             }
         } else if (s == settings.botHealth) {
             for (Bot b : botManager.aliveBots()) {
-                var attr = b.entity().getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                var attr = b.mannequin().getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
                 if (attr != null) {
                     attr.setBaseValue(settings.botHealth.value());
                 }

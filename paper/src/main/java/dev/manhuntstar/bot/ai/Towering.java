@@ -1,7 +1,9 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -11,7 +13,6 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
 
 /**
  * Tower (pillar under its own feet) and bridge to a player on a skybase/tower, and the quick crouching
@@ -48,9 +49,9 @@ final class Towering {
     // ------------------------------------------------------------------ tower / bridge to a skybase
 
     /** @return true if it took control of movement this tick. */
-    boolean handle(Player sky, Navigator nav) {
+    boolean handle(GamePlayer sky, Navigator nav) {
         Vec3 p = bot.pos();
-        Vec3 t = Locations.vec(sky.getLocation());
+        Vec3 t = sky.position();
         double yDiff = t.y() - p.y();
         double horizontal = Math.hypot(t.x() - p.x(), t.z() - p.z());
         double lookAngle = Math.toDegrees(Math.atan2(yDiff, horizontal));
@@ -96,7 +97,7 @@ final class Towering {
                     lastPlaceTick = Bukkit.getCurrentTick();
                     bot.setSneaking(false);
                     if (sky.isValid()) {
-                        bot.lookAt(Locations.vec(sky.getLocation()));
+                        bot.lookAt(sky.position());
                     }
                 });
             }
@@ -130,10 +131,10 @@ final class Towering {
     }
 
     /** Chance of this bot being one of the builders, by the number of bots after the same player. */
-    private double towerProbability(Player target) {
+    private double towerProbability(GamePlayer target) {
         int n = 0;
         for (Bot other : bot.manager().aliveBots()) {
-            if (target.getUniqueId().equals(other.targetPlayerId())) {
+            if (target.uuid().equals(other.targetPlayerId())) {
                 n++;
             }
         }
@@ -166,8 +167,8 @@ final class Towering {
         bot.setSneaking(false);
     }
 
-    private boolean shouldUseTowering(Player target, double yDiff, double lookAngle, Navigator nav) {
-        if (yDiff < 8.0 || target.getY() <= bot.pos().y() + 1.5) {
+    private boolean shouldUseTowering(GamePlayer target, double yDiff, double lookAngle, Navigator nav) {
+        if (yDiff < 8.0 || target.position().y() <= bot.pos().y() + 1.5) {
             return false;
         }
         if (lookAngle < 20.0 && yDiff < 12.0) {
@@ -183,15 +184,15 @@ final class Towering {
         return isDirectChaseUnsupported(target) || isTargetOnIsolatedSupport(target) || yDiff >= 12.0;
     }
 
-    private boolean shouldForceCloseVerticalPillar(Player target, double yDiff) {
+    private boolean shouldForceCloseVerticalPillar(GamePlayer target, double yDiff) {
         if (yDiff < 3.0 || bot.isInWater() || bot.isInLava() || bot.isRiding()) {
             return false;
         }
         Vec3 p = bot.pos();
-        return Math.abs(target.getX() - p.x()) <= 0.6 && Math.abs(target.getZ() - p.z()) <= 0.6;
+        return Math.abs(target.position().x() - p.x()) <= 0.6 && Math.abs(target.position().z() - p.z()) <= 0.6;
     }
 
-    private boolean shouldUseBridgeAssist(Player target, double yDiff, double horizontal) {
+    private boolean shouldUseBridgeAssist(GamePlayer target, double yDiff, double horizontal) {
         if (yDiff < -2.0 || yDiff > 6.0 || horizontal <= 3.0) {
             return false;
         }
@@ -201,8 +202,8 @@ final class Towering {
         return bridgePhase == 1 || isDirectChaseUnsupported(target);
     }
 
-    private boolean hasStairLikeRouteAhead(Player target) {
-        Vec3 flat = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal();
+    private boolean hasStairLikeRouteAhead(GamePlayer target) {
+        Vec3 flat = target.position().subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -237,8 +238,8 @@ final class Towering {
         return Integer.MIN_VALUE;
     }
 
-    private boolean hasAStarAscendingRoute(Player target, Navigator nav) {
-        if (target.getY() <= bot.pos().y()) {
+    private boolean hasAStarAscendingRoute(GamePlayer target, Navigator nav) {
+        if (target.position().y() <= bot.pos().y()) {
             return false;
         }
         List<Pos> path = nav.currentPath();
@@ -250,7 +251,7 @@ final class Towering {
             return false;
         }
         int botY = bot.blockPos().y();
-        int required = Math.max(1, Math.min(6, target.getLocation().getBlockY() - botY));
+        int required = Math.max(1, Math.min(6, PaperEntities.bukkit(target).getLocation().getBlockY() - botY));
         int max = Math.min(path.size() - 1, idx + 14);
         int highest = 0;
         for (int i = idx; i <= max; i++) {
@@ -259,8 +260,8 @@ final class Towering {
         return highest >= required;
     }
 
-    private boolean isDirectChaseUnsupported(Player target) {
-        Vec3 flat = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal();
+    private boolean isDirectChaseUnsupported(GamePlayer target) {
+        Vec3 flat = target.position().subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -270,8 +271,8 @@ final class Towering {
         return missingSupport || wall;
     }
 
-    private boolean isTargetOnIsolatedSupport(Player target) {
-        Pos support = Locations.pos(target.getLocation()).below();
+    private boolean isTargetOnIsolatedSupport(GamePlayer target) {
+        Pos support = target.blockPos().below();
         if (!solid(support)) {
             return true;
         }

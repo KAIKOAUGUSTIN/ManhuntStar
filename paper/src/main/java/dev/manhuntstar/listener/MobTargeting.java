@@ -7,6 +7,7 @@ import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.paper.Kinds;
+import dev.manhuntstar.paper.PaperEntities;
 import java.util.EnumSet;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
@@ -31,7 +32,6 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.PigZombie;
 import org.bukkit.entity.Piglin;
 import org.bukkit.entity.PiglinAbstract;
-import org.bukkit.entity.PiglinBrute;
 import org.bukkit.entity.Slime;
 import org.bukkit.entity.Spider;
 import org.bukkit.entity.Warden;
@@ -104,7 +104,7 @@ public final class MobTargeting implements Listener {
             return;
         }
         for (Bot bot : plugin.botManager().aliveBots()) {
-            Mannequin me = bot.entity();
+            Mannequin me = bot.mannequin();
             if (bot.tickDelay(20)) {
                 for (Mob mob : me.getWorld().getNearbyEntitiesByType(Mob.class, me.getLocation(), 24.0)) {
                     if (!isHostile(mob) || !isBrainMob(mob) || !enabledFor(mob)) {
@@ -120,7 +120,7 @@ public final class MobTargeting implements Listener {
     }
 
     private void brainTarget(Mob mob, Bot bot) {
-        Mannequin e = bot.entity();
+        Mannequin e = bot.mannequin();
         if (mob instanceof Warden warden) {
             if (warden.getLocation().distanceSquared(e.getLocation()) < 16 * 16) {
                 warden.increaseAnger(e, 20);
@@ -235,7 +235,7 @@ public final class MobTargeting implements Listener {
             Mannequin best = null;
             double bestDist = range * range;
             for (Mannequin m : mob.getWorld().getNearbyEntitiesByType(Mannequin.class, mob.getLocation(), range)) {
-                Bot bot = plugin.botManager().byEntity(m);
+                Bot bot = plugin.botManager().byEntity(PaperEntities.of(m));
                 if (bot == null || m.isDead()) {
                     continue;
                 }

@@ -2,6 +2,7 @@ package dev.manhuntstar.api;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperEntities;
 import java.util.Collection;
 import java.util.UUID;
 import org.bukkit.entity.Entity;
@@ -33,10 +34,10 @@ public final class ManhuntStarAPI {
 
     /** O bot dono desta entidade (Mannequin), ou null se não for um bot. */
     public static Bot getBot(Entity entity) {
-        return plugin().botManager().byEntity(entity);
+        return plugin().botManager().byEntity(PaperEntities.of(entity));
     }
 
     public static boolean isBot(Entity entity) {
-        return plugin().botManager().isBotEntity(entity);
+        return plugin().botManager().isBotEntity(PaperEntities.of(entity));
     }
 }

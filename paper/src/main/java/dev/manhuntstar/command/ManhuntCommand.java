@@ -1,5 +1,16 @@
 package dev.manhuntstar.command;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotDifficulty;
@@ -12,18 +23,8 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.util.Locations;
-import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.ArgumentBuilder;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
@@ -455,7 +456,7 @@ public final class ManhuntCommand {
         for (Bot b : manager().allBots()) {
             String where = b.isAlive() ? String.format(Locale.ROOT, "%s %.0f %.0f %.0f", b.world().name(), b.pos().x(), b.pos().y(), b.pos().z())
                     : msg().raw("command.list-dead");
-            Player t = b.target();
+            Player t = PaperEntities.bukkit(b.target());
             s.sendMessage(msg().get("command.list-line", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
                     Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
                     Messages.p("health", String.format(Locale.ROOT, "%.0f", b.health())), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
@@ -483,7 +484,7 @@ public final class ManhuntCommand {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
-        Player t = b.target();
+        Player t = PaperEntities.bukkit(b.target());
         sender(ctx).sendMessage(msg().get("command.info", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
                 Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
                 Messages.p("health", String.format(Locale.ROOT, "%.1f/%.0f", b.health(), b.maxHealth())),
@@ -504,7 +505,7 @@ public final class ManhuntCommand {
             return 0;
         }
         String name = StringArgumentType.getString(ctx, "bot");
-        int n = manager().teleportBotsToPlayer(name, dest);
+        int n = manager().teleportBotsToPlayer(name, PaperEntities.of(dest));
         if (n == 0) {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
@@ -520,7 +521,7 @@ public final class ManhuntCommand {
             msg().send(sender(ctx), "command.players-only");
             return 0;
         }
-        int n = manager().teleportAllTo(dest);
+        int n = manager().teleportAllTo(PaperEntities.of(dest));
         msg().send(sender(ctx), "command.tp-all", Messages.p("amount", n), Messages.p("player", dest.getName()));
         return Command.SINGLE_SUCCESS;
     }
@@ -613,7 +614,7 @@ public final class ManhuntCommand {
             return 0;
         }
         String cap = StringArgumentType.getString(ctx, "ability");
-        String err = manager().tactics().debugExecute(p, cap);
+        String err = manager().tactics().debugExecute(PaperEntities.of(p), cap);
         if (err == null) {
             msg().send(p, "ability.started", Messages.p("ability", cap));
             return Command.SINGLE_SUCCESS;

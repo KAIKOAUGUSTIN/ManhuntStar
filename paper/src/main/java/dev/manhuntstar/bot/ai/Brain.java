@@ -9,7 +9,6 @@ import dev.manhuntstar.bot.mobility.ElytraFlight;
 import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.platform.BlockTrait;
@@ -17,7 +16,12 @@ import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.EntityKind;
+import dev.manhuntstar.platform.EntityTrait;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GameMob;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.util.Locations;
@@ -33,13 +37,6 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
-import org.bukkit.entity.EnderDragon;
-import org.bukkit.entity.Enderman;
-import org.bukkit.entity.Enemy;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mob;
-import org.bukkit.entity.Player;
 
 /**
  * The bot's brain (the mod's {@code runAI}): picks the target (player, hostile mob or bot from an enemy
@@ -81,7 +78,7 @@ public final class Brain {
     private boolean sneakyMode;
     private int sneakyIdleTimer;
     private Vec3 sneakyIdleTarget;
-    private Entity sneakyLookTarget;
+    private GameEntity sneakyLookTarget;
     private int sneakyWindowTimer;
     private boolean sneakyChance;
     private int sneakyBehavior = -1;
@@ -244,9 +241,9 @@ public final class Brain {
     }
 
     private void runAI() {
-        Player playerTarget = bot.manager().resolvePlayerTarget(bot);
+        GamePlayer playerTarget = bot.manager().resolvePlayerTarget(bot);
         if (playerTarget != null) {
-            bot.setTargetPlayer(playerTarget.getUniqueId());
+            bot.setTargetPlayer(playerTarget.uuid());
         }
         if (stabilizeTicks > 0) {
             stabilizeTicks--;
@@ -268,7 +265,7 @@ public final class Brain {
             state("suffocating");
             return;
         }
-        Player chosenTarget = playerTarget;
+        GamePlayer chosenTarget = playerTarget;
         if (playerTarget == null || playerTarget.isDead()) {
             playerTarget = bot.manager().isTrackingPlayers(bot) ? bot.fallbackTarget() : null;
         }
@@ -282,7 +279,7 @@ public final class Brain {
         // in the ring the bot doesn't take off, and an escaper doesn't fly toward the target
         elytra.tick(escaping ? null : chosenTarget);
         if (playerTarget != null) {
-            if (!playerTarget.getWorld().equals(bot.bukkitWorld())) {
+            if (!playerTarget.world().equals(bot.world())) {
                 state("target-in-other-dimension");
                 dimensionStuckTimer++;
                 if (dimensionStuckTimer > 20 && !teleporting) {
@@ -307,10 +304,10 @@ public final class Brain {
             }
         }
 
-        LivingEntity mobTarget = updateMobTarget();
+        GameLiving mobTarget = updateMobTarget();
         Bot enemyBot = updateEnemyBot();
-        LivingEntity enemyBotEntity = enemyBot == null ? null : enemyBot.entity();
-        LivingEntity active = chooseTarget(playerTarget, mobTarget, enemyBotEntity);
+        GameLiving enemyBotEntity = enemyBot == null ? null : enemyBot.entity();
+        GameLiving active = chooseTarget(playerTarget, mobTarget, enemyBotEntity);
         if (active == null) {
             horse.handle(null);
             state("no-target");
@@ -321,8 +318,8 @@ public final class Brain {
             }
             return;
         }
-        String who = active instanceof Player pl ? pl.getName() : bot.manager().byEntity(active) != null
-                ? bot.manager().byEntity(active).name() : active.getType().name().toLowerCase(java.util.Locale.ROOT);
+        String who = active instanceof GamePlayer pl ? pl.name() : bot.manager().byEntity(active) != null
+                ? bot.manager().byEntity(active).name() : active.kind().name().toLowerCase(java.util.Locale.ROOT);
         if (escaping) {
             state("fleeing", who, "");
             flee(active, plannerEnabled());
@@ -332,7 +329,7 @@ public final class Brain {
             state(boat.isCrossing() ? "boat-crossing" : "boat");
             return;
         }
-        LivingEntity horseTarget = playerTarget;
+        GameLiving horseTarget = playerTarget;
         if (horseTarget == null && HORSE_ANY_TARGET) {
             horseTarget = enemyBotEntity;
         }
@@ -342,7 +339,7 @@ public final class Brain {
         }
         double dist = bot.distanceTo(active);
         boolean los = hasFullLineOfSight(active);
-        if (active instanceof Player p && tryTriggerNonHitBowPressure(p, dist)) {
+        if (active instanceof GamePlayer p && tryTriggerNonHitBowPressure(p, dist)) {
             state("bow-burst");
             return;
         }
@@ -362,7 +359,7 @@ public final class Brain {
             flee(active, plannerEnabled());
             return;
         }
-        if (active instanceof Player p && forceTunnelForLineOfSight(p, dist, los)) {
+        if (active instanceof GamePlayer p && forceTunnelForLineOfSight(p, dist, los)) {
             state("tunneling");
             return;
         }
@@ -388,26 +385,26 @@ public final class Brain {
         if (bot.combat().isBlocking()) {
             bot.combat().stopBlock();
         }
-        if (stuckMiningMode && active instanceof Player p) {
+        if (stuckMiningMode && active instanceof GamePlayer p) {
             state("stuck-digging");
             bot.mining().executeHardcodedMining(p);
             if (bot.isInWater()) {
                 bot.motor().setShouldBeSwimming(true);
                 bot.setSwimmingPose(true);
-                Vec3 flat = new Vec3(p.getX(), bot.pos().y(), p.getZ());
+                Vec3 flat = new Vec3(p.position().x(), bot.pos().y(), p.position().z());
                 bot.motor().walk(flat.subtract(bot.pos()).normalize());
-                if (p.getY() > bot.pos().y() + 0.5) {
+                if (p.position().y() > bot.pos().y() + 0.5) {
                     bot.motor().jump();
                 }
             }
             return;
         }
-        if (active instanceof Player sky && towering.handle(sky, navigator)) {
+        if (active instanceof GamePlayer sky && towering.handle(sky, navigator)) {
             state("towering", who, "");
             return;
         }
         if (bot.isInWater()) {
-            if (active instanceof Player wp && handleWaterBuilding(wp)) {
+            if (active instanceof GamePlayer wp && handleWaterBuilding(wp)) {
                 return;
             }
             boolean deep = WorldUtil.isWater(bot.world(), bot.blockPos().above());
@@ -421,11 +418,11 @@ public final class Brain {
             bot.setSwimmingPose(false);
         }
         boolean usePlanner = plannerEnabled();
-        if (!usePlanner && active instanceof Player p0 && navigator.hasIndestructibleBlockInPath(eyes(p0))) {
+        if (!usePlanner && active instanceof GamePlayer p0 && navigator.hasIndestructibleBlockInPath(eyes(p0))) {
             usePlanner = true;
             stuckMiningMode = false;
         }
-        Vec3 targetLoc = Locations.vec(active.getLocation());
+        Vec3 targetLoc = active.position();
         boolean hasPath = false;
         if (usePlanner) {
             if (navigator.isParkouring()) {
@@ -453,14 +450,14 @@ public final class Brain {
     }
 
     /** Target close but behind a block: digs the block in the line of sight (as a player would). */
-    private boolean openPassageTo(LivingEntity target) {
+    private boolean openPassageTo(GameLiving target) {
         if (bot.mining().isMining()) {
             return true;
         }
         GameWorld w = bot.world();
         RayHit hit = WorldUtil.rayBlocks(w, bot.eyePos(), eyes(target), false);
         if (hit == null) {
-            hit = WorldUtil.rayBlocks(w, bot.eyePos(), Locations.vec(target.getLocation()).add(0, 0.5, 0), false);
+            hit = WorldUtil.rayBlocks(w, bot.eyePos(), target.position().add(0, 0.5, 0), false);
         }
         if (hit == null || w.block(hit.block()).type().hardness() < 0) {
             return false;
@@ -483,7 +480,7 @@ public final class Brain {
                 continue;
             }
             GameBlock b = w.block(p);
-            if (b.type().hardness() < 0 || !b.boundingBox().overlaps(Locations.box(bot.boundingBox()).expand(-0.05))) {
+            if (b.type().hardness() < 0 || !b.boundingBox().overlaps(bot.boundingBox().expand(-0.05))) {
                 continue;
             }
             bot.motor().stopWalk();
@@ -497,30 +494,33 @@ public final class Brain {
 
     // ------------------------------------------------------------------ target choice
 
-    private LivingEntity updateMobTarget() {
-        LivingEntity m = bot.combat().mobAttacker();
+    private GameLiving updateMobTarget() {
+        GameLiving m = bot.combat().mobAttacker();
         double priority = settings().targetPriority.value();
         if (priority < 5.0 && (m == null || m.isDead() || !m.isValid()) && bot.tickDelay(10)) {
-            LivingEntity closest = null;
+            GameLiving closest = null;
             double closestDist = Double.MAX_VALUE;
             Location loc = bot.location();
             boolean end = bot.world().dimension() == Dimension.THE_END;
             BotGroup group = bot.group();
             Set<EntityKind> allowed = group == null ? null : group.allowedMobTargets();
-            for (Mob mob : bot.bukkitWorld().getNearbyEntitiesByType(Mob.class, loc, 30.0)) {
-                if (!(mob instanceof Enemy) || mob.isDead() || mob instanceof EnderDragon) {
+            for (GameEntity nearby : bot.world().nearbyEntities(Locations.vec(loc), 30.0, 30.0, 30.0)) {
+                if (!(nearby instanceof GameMob mob)) {
                     continue;
                 }
-                if (end && mob instanceof Enderman) {
+                if (!mob.is(EntityTrait.ENEMY) || mob.isDead() || mob.is(EntityTrait.ENDER_DRAGON)) {
                     continue;
                 }
-                if (allowed != null && !allowed.contains(Kinds.of(mob.getType()))) {
+                if (end && mob.is(EntityTrait.ENDERMAN)) {
+                    continue;
+                }
+                if (allowed != null && !allowed.contains(mob.kind())) {
                     continue;
                 }
                 if (!bot.canSee(eyes(mob))) {
                     continue;
                 }
-                double d = bot.pos().distanceToSqr(Locations.vec(mob.getLocation()));
+                double d = bot.pos().distanceToSqr(mob.position());
                 if (d < closestDist) {
                     closestDist = d;
                     closest = mob;
@@ -531,7 +531,7 @@ public final class Brain {
                 m = closest;
             }
         }
-        if (m instanceof EnderDragon || (m != null && (m.isDead() || !m.isValid() || !m.getWorld().equals(bot.bukkitWorld())))) {
+        if ((m != null && m.is(EntityTrait.ENDER_DRAGON)) || (m != null && (m.isDead() || !m.isValid() || !m.world().equals(bot.world())))) {
             m = null;
             bot.combat().setMobAttacker(null);
         }
@@ -550,9 +550,9 @@ public final class Brain {
     }
 
     /** The mod's weights: player and enemy bot weigh (5 - priority), mob weighs (5 + priority); lowest score wins. */
-    private LivingEntity chooseTarget(Player player, LivingEntity mob, LivingEntity enemyBot) {
+    private GameLiving chooseTarget(GamePlayer player, GameLiving mob, GameLiving enemyBot) {
         double priority = settings().targetPriority.value();
-        LivingEntity active;
+        GameLiving active;
         if (priority >= 5.0) {
             active = player;
         } else if (priority <= -5.0) {
@@ -560,7 +560,7 @@ public final class Brain {
         } else {
             double wPlayer = 5.0 + priority;
             double wMob = 5.0 - priority;
-            LivingEntity best = null;
+            GameLiving best = null;
             double bestScore = Double.MAX_VALUE;
             if (player != null) {
                 double s = bot.distanceTo(player) * wMob;
@@ -587,7 +587,7 @@ public final class Brain {
         if (active == null && enemyBot != null) {
             active = enemyBot;
         }
-        if (active instanceof EnderDragon) {
+        if (active != null && active.is(EntityTrait.ENDER_DRAGON)) {
             active = player;
         }
         return active;
@@ -595,8 +595,8 @@ public final class Brain {
 
     // ------------------------------------------------------------------ fleeing
 
-    private void flee(LivingEntity threat, boolean usePlanner) {
-        Vec3 threatPos = Locations.vec(threat.getLocation());
+    private void flee(GameLiving threat, boolean usePlanner) {
+        Vec3 threatPos = threat.position();
         if (usePlanner) {
             if (navigator.isParkouring()) {
                 navigator.executeParkourTick();
@@ -651,13 +651,13 @@ public final class Brain {
         }
     }
 
-    private void melee(LivingEntity target, double dist) {
+    private void melee(GameLiving target, double dist) {
         stuckMiningMode = false;
-        bot.lookAt(Locations.vec(target.getLocation()).add(0, target.getEyeHeight() * 0.7, 0));
+        bot.lookAt(target.position().add(0, target.eyeHeight() * 0.7, 0));
         boolean aggressive = bot.health() > 14f;
         bot.inventory().restorePreferredMainHand();
         long now = Bukkit.getCurrentTick();
-        Vec3 forward = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
+        Vec3 forward = target.position().subtract(bot.pos()).horizontal().normalize();
         Vec3 left = new Vec3(-forward.z(), 0, forward.x()).normalize();
         Vec3 strafe = left.scale(strafeDirection * 0.25);
         // In the water walking doesn't climb the bank: swims to the target and jumps to get out (without this it got stuck at the edge).
@@ -673,7 +673,7 @@ public final class Brain {
             }
             if (inFluid) {
                 bot.motor().setSprinting(true);
-                swimToward(Locations.vec(target.getLocation()), target);
+                swimToward(target.position(), target);
             } else if (dist > 2.5 && !ledge) {
                 bot.motor().walk(forward.add(strafe));
                 bot.motor().setSprinting(true);
@@ -697,7 +697,7 @@ public final class Brain {
         boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand();
         if (canShield) {
             if (inFluid) {
-                swimToward(Locations.vec(target.getLocation()), target);
+                swimToward(target.position(), target);
             } else {
                 bot.motor().stopWalk();
             }
@@ -725,7 +725,7 @@ public final class Brain {
         }
         bot.motor().setSprinting(!ledge);
         if (inFluid) {
-            swimToward(Locations.vec(target.getLocation()), target);
+            swimToward(target.position(), target);
         } else if (ledge) {
             holdAtLedge(strafe);
         } else {
@@ -780,15 +780,15 @@ public final class Brain {
         return true;
     }
 
-    private void jumpForCritIfNeeded(LivingEntity target, double dist) {
-        if (bot.onGround() && (bot.horizontalCollision() || target.getY() > bot.pos().y() + 0.5 || dist < 3.0)) {
+    private void jumpForCritIfNeeded(GameLiving target, double dist) {
+        if (bot.onGround() && (bot.horizontalCollision() || target.position().y() > bot.pos().y() + 0.5 || dist < 3.0)) {
             bot.motor().jump();
         }
     }
 
     // ------------------------------------------------------------------ bow pressure and tunnel
 
-    private boolean tryTriggerNonHitBowPressure(Player target, double dist) {
+    private boolean tryTriggerNonHitBowPressure(GamePlayer target, double dist) {
         if (!settings().bowPressure.on() || target.isDead()) {
             return false;
         }
@@ -814,37 +814,37 @@ public final class Brain {
         return false;
     }
 
-    private boolean isLikelyToweringOrSkybase(Player target, double dist) {
+    private boolean isLikelyToweringOrSkybase(GamePlayer target, double dist) {
         if (dist > 40.0) {
             return false;
         }
-        double yDiff = target.getY() - bot.pos().y();
+        double yDiff = target.position().y() - bot.pos().y();
         if (yDiff < 3.0) {
             return false;
         }
-        Pos feet = Locations.pos(target.getLocation());
-        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(PaperWorld.of(target.getWorld()), feet.below());
-        boolean rising = target.getVelocity().getY() > 0.08;
-        int surface = WorldUtil.surfaceYNoLeaves(PaperWorld.of(target.getWorld()), feet.x(), feet.z());
-        boolean high = target.getY() - surface >= 6.0;
+        Pos feet = target.blockPos();
+        boolean playerSupport = bot.manager().blockTracker().isPlayerPlaced(PaperWorld.of(PaperWorld.bukkit(target.world())), feet.below());
+        boolean rising = target.velocity().y() > 0.08;
+        int surface = WorldUtil.surfaceYNoLeaves(PaperWorld.of(PaperWorld.bukkit(target.world())), feet.x(), feet.z());
+        boolean high = target.position().y() - surface >= 6.0;
         return playerSupport || rising || high;
     }
 
-    private boolean hasFullLineOfSight(LivingEntity target) {
+    private boolean hasFullLineOfSight(GameLiving target) {
         if (target == null || target.isDead()) {
             return false;
         }
-        Vec3 feet = Locations.vec(target.getLocation());
-        Vec3 chest = feet.add(0, Math.max(0.7, target.getHeight() * 0.5), 0);
+        Vec3 feet = target.position();
+        Vec3 chest = feet.add(0, Math.max(0.7, target.height() * 0.5), 0);
         return bot.canSee(feet) && bot.canSee(chest) && bot.canSee(eyes(target));
     }
 
-    private boolean forceTunnelForLineOfSight(Player target, double dist, boolean los) {
+    private boolean forceTunnelForLineOfSight(GamePlayer target, double dist, boolean los) {
         if (los || bot.isRiding() || bot.isInWater() || bot.isInLava()) {
             return false;
         }
-        double horizontal = Math.hypot(target.getX() - bot.pos().x(), target.getZ() - bot.pos().z());
-        double yDiff = target.getY() - bot.pos().y();
+        double horizontal = Math.hypot(target.position().x() - bot.pos().x(), target.position().z() - bot.pos().z());
+        double yDiff = target.position().y() - bot.pos().y();
         if (dist > 12.0 || (yDiff > 1.5 && horizontal > 5.0)) {
             stuckMiningMode = false;
             return false;
@@ -859,8 +859,8 @@ public final class Brain {
 
     // ------------------------------------------------------------------ water
 
-    private boolean handleWaterBuilding(Player target) {
-        if (target.getY() <= bot.pos().y() + 1.0) {
+    private boolean handleWaterBuilding(GamePlayer target) {
+        if (target.position().y() <= bot.pos().y() + 1.0) {
             return false;
         }
         Pos current = bot.blockPos();
@@ -886,14 +886,14 @@ public final class Brain {
         }
     }
 
-    private boolean isTargetOutOfWater(LivingEntity target) {
-        GameWorld w = PaperWorld.of(target.getWorld());
-        Pos feet = Locations.pos(target.getLocation());
+    private boolean isTargetOutOfWater(GameLiving target) {
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+        Pos feet = target.blockPos();
         return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !target.isInWater();
     }
 
     /** Swims to the point; with the target out of the water, aims above the bank and jumps to climb it. */
-    private void swimToward(Vec3 finalTarget, LivingEntity lookTarget) {
+    private void swimToward(Vec3 finalTarget, GameLiving lookTarget) {
         Vec3 swimTarget = finalTarget;
         if (bot.isInWater() && lookTarget != null && isTargetOutOfWater(lookTarget)) {
             swimTarget = new Vec3(finalTarget.x(), Math.max(finalTarget.y() + 1.0, bot.pos().y() + 0.35), finalTarget.z());
@@ -919,7 +919,7 @@ public final class Brain {
     // ------------------------------------------------------------------ "Dumb*" movement
 
     /** Walks to the point avoiding obstacles, opening doors, jumping steps and swimming. */
-    public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, LivingEntity lookTarget) {
+    public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, GameLiving lookTarget) {
         if (plannerActive) {
             // a detour from when there was no path no longer applies
             detourPos = null;
@@ -1081,13 +1081,13 @@ public final class Brain {
 
     // ------------------------------------------------------------------ sneaky play
 
-    private boolean handleSneakyPlay(Player player) {
+    private boolean handleSneakyPlay(GamePlayer player) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         if (--sneakyWindowTimer <= 0) {
             sneakyWindowTimer = 600;
             sneakyChance = r.nextBoolean();
         }
-        Vec3 playerPos = Locations.vec(player.getLocation());
+        Vec3 playerPos = player.position();
         Vec3 playerVel = lastTargetPos == null ? Vec3.ZERO : playerPos.subtract(lastTargetPos);
         lastTargetPos = playerPos;
         if (!sneakyChance) {
@@ -1136,7 +1136,7 @@ public final class Brain {
         if (--sneakyIdleTimer <= 0) {
             sneakyIdleTimer = 50 + r.nextInt(70);
             if (r.nextDouble() < 0.4) {
-                List<Entity> near = bot.entity().getNearbyEntities(12, 12, 12);
+                List<GameEntity> near = bot.entity().nearbyEntities(12, 12, 12);
                 if (!near.isEmpty()) {
                     sneakyLookTarget = near.get(r.nextInt(near.size()));
                 }
@@ -1146,7 +1146,7 @@ public final class Brain {
             }
         }
         if (sneakyLookTarget != null && sneakyLookTarget.isValid()) {
-            bot.lookAt(sneakyLookTarget instanceof LivingEntity le ? eyes(le) : Locations.vec(sneakyLookTarget.getLocation()));
+            bot.lookAt(sneakyLookTarget instanceof GameLiving le ? eyes(le) : sneakyLookTarget.position());
         } else if (sneakyIdleTarget != null) {
             bot.lookAt(sneakyIdleTarget);
         }
@@ -1156,11 +1156,11 @@ public final class Brain {
     // ------------------------------------------------------------------ redistribution and pearls
 
     /** A bot that is too far (> redistribution distance) reappears hidden 50–100 blocks from the target. */
-    private void handleAutoRedistribution(Player target) {
+    private void handleAutoRedistribution(GamePlayer target) {
         if (!settings().allowRedistribution.on()) {
             return;
         }
-        double horizontal = Math.hypot(bot.pos().x() - target.getX(), bot.pos().z() - target.getZ());
+        double horizontal = Math.hypot(bot.pos().x() - target.position().x(), bot.pos().z() - target.position().z());
         if (horizontal <= settings().redistDistance.value()) {
             return;
         }
@@ -1168,14 +1168,14 @@ public final class Brain {
             redistributionCooldown--;
             return;
         }
-        World w = target.getWorld();
+        World w = PaperWorld.bukkit(target.world());
         GameWorld gw = PaperWorld.of(w);
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 15; i++) {
             double distance = 50 + r.nextDouble() * 50;
             double angle = r.nextDouble() * Math.PI * 2;
-            int x = (int) (target.getX() + Math.cos(angle) * distance);
-            int z = (int) (target.getZ() + Math.sin(angle) * distance);
+            int x = (int) (target.position().x() + Math.cos(angle) * distance);
+            int z = (int) (target.position().z() + Math.sin(angle) * distance);
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
@@ -1199,7 +1199,7 @@ public final class Brain {
             }
             Vec3 spawnVec = Vec3.center(spawn);
             Vec3 eye = eyes(target);
-            Vec3 look = Locations.vec(target.getLocation().getDirection());
+            Vec3 look = target.direction();
             double dot = look.dot(spawnVec.subtract(eye).normalize());
             boolean obscured = !WorldUtil.clearLine(gw, eye, spawnVec);
             boolean behind = dot < -0.5;
@@ -1211,7 +1211,7 @@ public final class Brain {
             bot.manager().teleportBot(bot, dest);
             bot.mining().cancel();
             stuckMiningMode = false;
-            bot.lookAt(Locations.vec(target.getLocation()));
+            bot.lookAt(target.position());
             w.playSound(dest, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
             return;
         }
@@ -1238,17 +1238,17 @@ public final class Brain {
     }
 
     /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
-    private void handleOffensivePearl(LivingEntity target) {
+    private void handleOffensivePearl(GameLiving target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         GameWorld w = bot.world();
         double currentDist = bot.distanceTo(target);
         double angle = r.nextDouble() * Math.PI * 2;
         double fromPlayer = 15 + r.nextDouble() * 15;
-        double tx = target.getX() + Math.cos(angle) * fromPlayer;
-        double tz = target.getZ() + Math.sin(angle) * fromPlayer;
-        double ty = target.getY();
+        double tx = target.position().x() + Math.cos(angle) * fromPlayer;
+        double tz = target.position().z() + Math.sin(angle) * fromPlayer;
+        double ty = target.position().y();
         Vec3 landing = new Vec3(tx, ty, tz);
-        if (landing.distanceTo(Locations.vec(target.getLocation())) >= currentDist) {
+        if (landing.distanceTo(target.position()) >= currentDist) {
             return;
         }
         Pos base = new Pos((int) Math.floor(tx), (int) Math.floor(ty), (int) Math.floor(tz));
@@ -1287,7 +1287,7 @@ public final class Brain {
 
     // ------------------------------------------------------------------ util
 
-    static Vec3 eyes(LivingEntity e) {
-        return Locations.vec(e.getEyeLocation());
+    static Vec3 eyes(GameLiving e) {
+        return e.eyePosition();
     }
 }

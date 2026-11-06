@@ -4,6 +4,15 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.bot.Progression;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import io.papermc.paper.datacomponent.DataComponentTypes;
@@ -11,21 +20,13 @@ import io.papermc.paper.datacomponent.item.KineticWeapon;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
-import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Horse;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -84,7 +85,7 @@ public final class HorseRoutine {
     private int lockTicks;
     private UUID untamedHorse;
     private int untamedTicks;
-    private Vector lastSetVelocity;
+    private Vec3 lastSetVelocity;
     private String detail = "";
     /** Ticks with the spear raised (0 = lowered). */
     private int lanceRaisedTicks;
@@ -123,7 +124,7 @@ public final class HorseRoutine {
 
     /** No spear on foot: if the bot got off (or was knocked off) the horse holding it, it goes back to the sword. */
     public void tickLance() {
-        if (!bot.isAlive() || bot.vehicle() instanceof Horse) {
+        if (!bot.isAlive() || (bot.vehicle() instanceof GameHorse ridden && ridden.isHorse())) {
             return;
         }
         if (lanceRaisedTicks > 0 || runoutTicks > 0 || GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
@@ -140,32 +141,32 @@ public final class HorseRoutine {
     }
 
     /** @return true if the horse controlled the bot this tick. */
-    public boolean handle(LivingEntity target) {
-        Entity vehicle = bot.vehicle();
+    public boolean handle(GameLiving target) {
+        GameEntity vehicle = bot.vehicle();
         if (bot.isHorseRidingBlocked()) {
-            if (vehicle instanceof Horse h) {
+            if (vehicle instanceof GameHorse h && h.isHorse()) {
                 dismount(h);
             }
             resetTarget();
             return false;
         }
         if (!bot.settings().allowHorse.on() || bot.progression().phase() < 4 || target == null || target.isDead()) {
-            if (vehicle instanceof Horse h) {
+            if (vehicle instanceof GameHorse h && h.isHorse()) {
                 // no target to chase: gets off (mounted the bot neither walks nor fights properly)
                 dismount(h);
                 actionCooldown = Math.max(actionCooldown, 10);
             }
             return false;
         }
-        if (vehicle instanceof Horse mounted) {
+        if (vehicle instanceof GameHorse mounted && mounted.isHorse()) {
             return handleMounted(mounted, target);
         }
         Vec3 p = bot.pos();
-        if (Math.hypot(p.x() - target.getX(), p.z() - target.getZ()) <= MOUNT_START_DISTANCE) {
+        if (Math.hypot(p.x() - target.position().x(), p.z() - target.position().z()) <= MOUNT_START_DISTANCE) {
             resetTarget();
             return false;
         }
-        Horse horse = findCandidate(target);
+        GameHorse horse = findCandidate(target);
         if (horse == null) {
             resetTarget();
             return false;
@@ -175,11 +176,11 @@ public final class HorseRoutine {
         }
         double dist = bot.distanceTo(horse);
         if (dist > INTERACT_RANGE) {
-            moveToward(Locations.vec(horse.getLocation()), horse);
+            moveToward(horse.position(), horse);
             return true;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Locations.vec(horse.getEyeLocation()));
+        bot.lookAt(horse.eyePosition());
         if (!horse.isTamed()) {
             if (actionCooldown <= 0) {
                 mount(horse);
@@ -195,7 +196,7 @@ public final class HorseRoutine {
         return true;
     }
 
-    private boolean handleMounted(Horse horse, LivingEntity target) {
+    private boolean handleMounted(GameHorse horse, GameLiving target) {
         boolean lanceOn = useLance(horse, target);
         if (!lanceOn && bot.distanceTo(target) <= DISMOUNT_DISTANCE) {
             dismount(horse);
@@ -204,7 +205,7 @@ public final class HorseRoutine {
             actionCooldown = Math.max(actionCooldown, 10);
             return false;
         }
-        targetHorse = horse.getUniqueId();
+        targetHorse = horse.uuid();
         lockTicks = 120;
         bot.manager().takeHorseControl(bot, horse);
         bot.motor().stopWalk();
@@ -222,7 +223,7 @@ public final class HorseRoutine {
             joust(horse, target);
         } else {
             stowLance();
-            steer(horse, Locations.vec(target.getLocation()), true);
+            steer(horse, target.position(), true);
         }
         if (noMoveTicks >= 60) {
             bot.manager().markHorseInaccessible(horse, 600);
@@ -235,18 +236,18 @@ public final class HorseRoutine {
     }
 
     /** Skittish horse: rears and bucks as it does with a player; tamed by force after 3 s (mod). */
-    private void tameTick(Horse horse) {
-        if (!horse.getUniqueId().equals(untamedHorse)) {
-            untamedHorse = horse.getUniqueId();
+    private void tameTick(GameHorse horse) {
+        if (!horse.uuid().equals(untamedHorse)) {
+            untamedHorse = horse.uuid();
             untamedTicks = 0;
         }
         untamedTicks++;
         detail = "domando " + (untamedTicks * 100 / TAME_TICKS) + "%";
         if (untamedTicks >= TAME_TICKS) {
             horse.setRearing(false);
-            horse.setDomestication(horse.getMaxDomestication());
+            horse.setDomestication(horse.maxDomestication());
             horse.setTamed(true);
-            horse.getWorld().spawnParticle(Particle.HEART, horse.getLocation().add(0, 1.5, 0), 7, 0.5, 0.5, 0.5);
+            horse.world().spawnParticle(Particle.HEART, horse.position().add(0, 1.5, 0), 7, 0.5, 0.5, 0.5, 1.0);
             untamedHorse = null;
             untamedTicks = 0;
             actionCooldown = Math.max(actionCooldown, 10);
@@ -255,30 +256,30 @@ public final class HorseRoutine {
         int phase = untamedTicks % 20;
         if (phase == 1) {
             horse.setRearing(true);
-            horse.getWorld().playSound(horse.getLocation(), Sound.ENTITY_HORSE_ANGRY, SoundCategory.NEUTRAL, 1f, 1f);
+            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_ANGRY, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 1f, 1f);
         } else if (phase == 12) {
             horse.setRearing(false);
-            float yaw = horse.getLocation().getYaw() + (float) ThreadLocalRandom.current().nextDouble(-35, 35);
+            float yaw = horse.yaw() + (float) ThreadLocalRandom.current().nextDouble(-35, 35);
             horse.setRotation(yaw, 0);
             horse.setBodyYaw(yaw);
         }
     }
 
-    private static boolean hasSaddle(Horse horse) {
-        ItemStack saddle = horse.getInventory().getSaddle();
+    private static boolean hasSaddle(GameHorse horse) {
+        ItemStack saddle = PaperEntities.bukkit(horse).getInventory().getSaddle();
         return saddle != null && saddle.getType() == Material.SADDLE;
     }
 
-    private void mount(Horse horse) {
+    private void mount(GameHorse horse) {
         if (horse.addPassenger(bot.entity())) {
-            horse.getWorld().playSound(horse.getLocation(), Sound.ENTITY_HORSE_SADDLE, SoundCategory.NEUTRAL, 0.5f, 1f);
+            horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
         }
         noMoveTicks = 0;
         lastSetVelocity = null;
         actionCooldown = 10;
     }
 
-    private void dismount(Horse horse) {
+    private void dismount(GameHorse horse) {
         horse.removePassenger(bot.entity());
         bot.manager().releaseHorse(horse);
         bot.motor().stopWalk();
@@ -288,14 +289,14 @@ public final class HorseRoutine {
         resetJoust();
     }
 
-    private void trySaddle(Horse horse) {
+    private void trySaddle(GameHorse horse) {
         if (actionCooldown > 0) {
             return;
         }
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.SADDLE));
         bot.swing();
-        horse.getInventory().setSaddle(new ItemStack(Material.SADDLE));
-        horse.getWorld().playSound(horse.getLocation(), Sound.ENTITY_HORSE_SADDLE, SoundCategory.NEUTRAL, 0.5f, 1f);
+        PaperEntities.bukkit(horse).getInventory().setSaddle(new ItemStack(Material.SADDLE));
+        horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
         actionCooldown = 8;
         Bukkit.getScheduler().runTaskLater(bot.manager().plugin(), () -> {
             if (bot.isAlive()) {
@@ -308,7 +309,7 @@ public final class HorseRoutine {
      * Rider input applied to the horse, as the game does with a mounted player. Without
      * {@code usePlanner} it goes straight to the point (the run after passing the target in the spear charge).
      */
-    private void steer(Horse horse, Vec3 chaseTarget, boolean usePlanner) {
+    private void steer(GameHorse horse, Vec3 chaseTarget, boolean usePlanner) {
         Navigator nav = bot.brain().navigator();
         Vec3 navTarget = chaseTarget;
         if (usePlanner && bot.settings().pathMode.get().usesPlanner()) {
@@ -319,17 +320,17 @@ public final class HorseRoutine {
         }
         horse.setEatingGrass(false);
         horse.setEating(false);
-        Location hl = horse.getLocation();
-        Vector current = horse.getVelocity();
+        Location hl = PaperEntities.bukkit(horse).getLocation();
+        Vec3 current = horse.velocity();
         // chunk without physics this tick: don't add again (the velocity would build up and launch the horse)
-        boolean stalled = lastSetVelocity != null && current.equals(lastSetVelocity)
-                && lastSetVelocity.getX() * lastSetVelocity.getX() + lastSetVelocity.getZ() * lastSetVelocity.getZ() > 1.0E-8;
+        boolean stalled = lastSetVelocity != null && sameVelocity(current, lastSetVelocity)
+                && lastSetVelocity.x() * lastSetVelocity.x() + lastSetVelocity.z() * lastSetVelocity.z() > 1.0E-8;
         Vec3 to = new Vec3(navTarget.x() - hl.getX(), 0, navTarget.z() - hl.getZ());
         detail = String.format(java.util.Locale.ROOT, "horse at %.1f blocks/s, next point at %.1f (dy %.1f)%s%s%s",
-                Math.hypot(current.getX(), current.getZ()) * 20, to.length(), navTarget.y() - hl.getY(),
+                Math.hypot(current.x(), current.z()) * 20, to.length(), navTarget.y() - hl.getY(),
                 noMoveTicks > 0 ? ", stuck " + noMoveTicks : "", stalled ? ", no physics" : "",
                 bot.mining().isMining() ? ", digging" : "")
-                + (TEST_DETAIL ? " ticks=" + horse.getTicksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ai=" + horse.isAware() : "");
+                + (TEST_DETAIL ? " ticks=" + horse.ticksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ai=" + horse.isAware() : "");
         if (stalled) {
             noMoveTicks++; // counts as stuck: after 3 s the bot gets off and goes on foot
             return;
@@ -339,7 +340,7 @@ public final class HorseRoutine {
             return;
         }
         bot.lookAt(navTarget.add(0, 1.2, 0));
-        if (horse.getNoDamageTicks() > 10) {
+        if (horse.noDamageTicks() > 10) {
             knockbackGrace = 12;
         }
         if (knockbackGrace > 0) {
@@ -355,7 +356,7 @@ public final class HorseRoutine {
         horse.setBodyYaw(yaw);
         double forward = Math.cos(Math.toRadians(delta)) <= -0.35 ? 0.45 : 1.0;
 
-        double horizontalSpeed = Math.hypot(current.getX(), current.getZ());
+        double horizontalSpeed = Math.hypot(current.x(), current.z());
         noMoveTicks = horizontalSpeed < 0.05 ? noMoveTicks + 1 : 0;
 
         boolean onGround = horse.isOnGround();
@@ -374,38 +375,36 @@ public final class HorseRoutine {
         double rad = Math.toRadians(yaw);
         double fx = -Math.sin(rad);
         double fz = Math.cos(rad);
-        Vector v = current.clone().add(new Vector(fx * accel, 0, fz * accel));
+        Vec3 v = current.add(fx * accel, 0, fz * accel);
 
         if (onGround && !inWater && jumpCooldown <= 0 && shouldJump(horse, hl, navTarget, to, fx, fz)) {
             // the player's charged jump: the horse's jump strength and a forward boost of 0.4
-            v.setY(horse.getJumpStrength());
-            v.add(new Vector(fx * 0.4 * forward, 0, fz * 0.4 * forward));
-            horse.getWorld().playSound(hl, Sound.ENTITY_HORSE_JUMP, SoundCategory.NEUTRAL, 0.4f, 1f);
+            v = v.withY(horse.jumpStrength()).add(fx * 0.4 * forward, 0, fz * 0.4 * forward);
+            horse.world().playSound(Locations.vec(hl), Sounds.ENTITY_HORSE_JUMP, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.4f, 1f);
             jumpCooldown = 10;
         }
         if (inWater) {
             // swims like a horse with a rider: stays on the surface
-            v.setY(Math.min(v.getY() + 0.04, 0.3));
+            v = v.withY(Math.min(v.y() + 0.04, 0.3));
         }
-        double h = Math.hypot(v.getX(), v.getZ());
+        double h = Math.hypot(v.x(), v.z());
         if (h > MAX_HORIZONTAL_SPEED) {
-            v.setX(v.getX() / h * MAX_HORIZONTAL_SPEED);
-            v.setZ(v.getZ() / h * MAX_HORIZONTAL_SPEED);
+            v = new Vec3(v.x() / h * MAX_HORIZONTAL_SPEED, v.y(), v.z() / h * MAX_HORIZONTAL_SPEED);
         }
         horse.setVelocity(v);
-        lastSetVelocity = v.clone();
+        lastSetVelocity = v;
     }
 
     // ------------------------------------------------------------------ horseback spear
 
     /** Charge only with the option on, the target at the horse's level and PvP allowed (with {@code general.respect-disabled-pvp}). */
-    private boolean useLance(Horse horse, LivingEntity target) {
+    private boolean useLance(GameHorse horse, GameLiving target) {
         if (!bot.settings().allowSpear.on() || lanceMisses >= LANCE_MAX_MISSES
-                || Math.abs(target.getY() - horse.getY()) > LANCE_MAX_DY) {
+                || Math.abs(target.position().y() - horse.position().y()) > LANCE_MAX_DY) {
             return false;
         }
-        return !(target instanceof Player && bot.settings().respectPvp.on()
-                && Boolean.FALSE.equals(target.getWorld().getGameRuleValue(GameRules.PVP)));
+        return !(target instanceof GamePlayer && bot.settings().respectPvp.on()
+                && Boolean.FALSE.equals(target.world().gameRule(dev.manhuntstar.platform.GameRule.PVP)));
     }
 
     /**
@@ -414,9 +413,9 @@ public final class HorseRoutine {
      * distance, turns around and charges again. Damage, knockback and dismount are those of the game's
      * spear, which uses the horse's speed.
      */
-    private void joust(Horse horse, LivingEntity target) {
+    private void joust(GameHorse horse, GameLiving target) {
         holdLance();
-        Location hl = horse.getLocation();
+        Location hl = PaperEntities.bukkit(horse).getLocation();
         if (runoutTicks > 0) {
             runoutTicks--;
             steer(horse, new Vec3(runoutX, hl.getY(), runoutZ), false);
@@ -426,7 +425,7 @@ public final class HorseRoutine {
             detail += ", passando";
             return;
         }
-        Vec3 tp = Locations.vec(target.getLocation());
+        Vec3 tp = target.position();
         steer(horse, tp, true);
         double yawRad = Math.toRadians(hl.getYaw());
         double fx = -Math.sin(yawRad);
@@ -437,20 +436,20 @@ public final class HorseRoutine {
         double facing = dist < 1.0E-3 ? 1.0 : (dx * fx + dz * fz) / dist;
         if (lanceRaisedTicks > 0) {
             lanceRaisedTicks++;
-            bot.lookAt(tp.add(0, target.getHeight() * 0.5, 0));
+            bot.lookAt(tp.add(0, target.height() * 0.5, 0));
             detail += ", lance raised";
             if (lanceHit || (facing < 0 && dist < 5.0)) {
                 endPass(hl, fx, fz);
             } else if (lanceRaisedTicks > LANCE_MAX_RAISED_TICKS) {
                 lowerLance();
                 lanceMisses++;
-            } else if (!bot.entity().hasActiveItem()) {
+            } else if (!bot.mannequin().hasActiveItem()) {
                 raiseLance(); // the use was interrupted (dug, switched items): raise it again
             }
             return;
         }
-        Vector v = horse.getVelocity();
-        double speed = Math.max(Math.hypot(v.getX(), v.getZ()), 0.05);
+        Vec3 v = horse.velocity();
+        double speed = Math.max(Math.hypot(v.x(), v.z()), 0.05);
         if (facing > 0.8 && dist / speed <= lanceDelay + LANCE_RAISE_MARGIN) {
             raiseLance();
         }
@@ -467,24 +466,24 @@ public final class HorseRoutine {
     }
 
     private void raiseLance() {
-        Mannequin me = bot.entity();
+        BotBody me = bot.entity();
         if (me == null || !GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
             return;
         }
-        if (me.getAttribute(Attribute.ATTACK_DAMAGE) == null) {
+        if (PaperEntities.bukkit(me).getAttribute(Attribute.ATTACK_DAMAGE) == null) {
             // the game's charge reads the attack damage of whoever holds the spear and the Mannequin doesn't have that
             // attribute: without it the game throws an error and the server removes the horse
-            me.registerAttribute(Attribute.ATTACK_DAMAGE);
-            me.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
+            PaperEntities.bukkit(me).registerAttribute(Attribute.ATTACK_DAMAGE);
+            PaperEntities.bukkit(me).getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
         }
-        me.startUsingItem(EquipmentSlot.HAND);
+        PaperEntities.bukkit(me).startUsingItem(EquipmentSlot.HAND);
         lanceRaisedTicks = Math.max(lanceRaisedTicks, 1);
     }
 
     private void lowerLance() {
-        Mannequin me = bot.entity();
-        if (me != null && me.hasActiveItem() && GearScoring.isSpear(me.getActiveItem())) {
-            me.clearActiveItem();
+        BotBody me = bot.entity();
+        if (me != null && PaperEntities.bukkit(me).hasActiveItem() && GearScoring.isSpear(PaperEntities.bukkit(me).getActiveItem())) {
+            PaperEntities.bukkit(me).clearActiveItem();
         }
         lanceRaisedTicks = 0;
     }
@@ -535,7 +534,7 @@ public final class HorseRoutine {
      * Jumps when stuck on an obstacle, when the path's next point is too high for the horse's
      * step (1 block) or when there is a gap right ahead.
      */
-    private boolean shouldJump(Horse horse, Location hl, Vec3 navTarget, Vec3 to, double fx, double fz) {
+    private boolean shouldJump(GameHorse horse, Location hl, Vec3 navTarget, Vec3 to, double fx, double fz) {
         if (to.lengthSqr() <= 1.0) {
             return false;
         }
@@ -553,26 +552,31 @@ public final class HorseRoutine {
         return ahead.isPassable() && ahead2.isPassable() && !ahead.isLiquid() && to.lengthSqr() > 4.0;
     }
 
-    private static double movementSpeed(Horse horse) {
-        AttributeInstance a = horse.getAttribute(Attribute.MOVEMENT_SPEED);
+    /** Bukkit's Vector.equals: the same velocity up to 1e-6 on each axis. */
+    private static boolean sameVelocity(Vec3 a, Vec3 b) {
+        return Math.abs(a.x() - b.x()) < 1.0E-6 && Math.abs(a.y() - b.y()) < 1.0E-6 && Math.abs(a.z() - b.z()) < 1.0E-6;
+    }
+
+    private static double movementSpeed(GameHorse horse) {
+        AttributeInstance a = PaperEntities.bukkit(horse).getAttribute(Attribute.MOVEMENT_SPEED);
         return a == null ? 0.225 : a.getValue();
     }
 
     /** The horse with the smallest detour on the way to the target; none if they all need going back too far. */
-    private Horse findCandidate(LivingEntity target) {
-        if (targetHorse != null && lockTicks > 0 && Bukkit.getEntity(targetHorse) instanceof Horse locked && eligible(locked)) {
+    private GameHorse findCandidate(GameLiving target) {
+        if (targetHorse != null && lockTicks > 0 && Platform.server().entity(targetHorse) instanceof GameHorse locked && locked.isHorse() && eligible(locked)) {
             return locked;
         }
         Vec3 me = bot.pos();
-        Vec3 goal = Locations.vec(target.getLocation());
+        Vec3 goal = target.position();
         double direct = me.distanceTo(goal);
-        Horse best = null;
+        GameHorse best = null;
         double bestDetour = MAX_DETOUR;
-        for (Horse h : bot.bukkitWorld().getNearbyEntitiesByType(Horse.class, bot.location(), SEARCH_RADIUS)) {
-            if (!eligible(h)) {
+        for (GameEntity nearby : bot.world().nearbyEntities(bot.pos(), SEARCH_RADIUS, SEARCH_RADIUS, SEARCH_RADIUS)) {
+            if (!(nearby instanceof GameHorse h) || !h.isHorse() || !eligible(h)) {
                 continue;
             }
-            Vec3 hp = Locations.vec(h.getLocation());
+            Vec3 hp = h.position();
             double detour = me.distanceTo(hp) + hp.distanceTo(goal) - direct;
             if (detour < bestDetour) {
                 bestDetour = detour;
@@ -580,20 +584,20 @@ public final class HorseRoutine {
             }
         }
         if (best != null) {
-            targetHorse = best.getUniqueId();
+            targetHorse = best.uuid();
             lockTicks = 120;
         }
         return best;
     }
 
-    private boolean eligible(Horse h) {
+    private boolean eligible(GameHorse h) {
         if (h == null || h.isDead() || !h.isAdult() || bot.manager().isHorseInaccessible(h)) {
             return false;
         }
-        return h.getPassengers().isEmpty() || h.getPassengers().getFirst() == bot.entity();
+        return h.passengers().isEmpty() || h.passengers().getFirst() == bot.entity();
     }
 
-    private void moveToward(Vec3 target, Horse horse) {
+    private void moveToward(Vec3 target, GameHorse horse) {
         Navigator nav = bot.brain().navigator();
         boolean hasPath = false;
         Vec3 dest = target;

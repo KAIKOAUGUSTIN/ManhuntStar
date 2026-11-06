@@ -5,22 +5,22 @@ import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.PearlDimension;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.EnderPearl;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -53,9 +53,9 @@ public final class PearlAbility {
             return;
         }
         if (diff == BotDifficulty.TERMINATOR && isChasing()) {
-            Player t = bot.target();
-            if (t != null && t.getWorld().equals(bot.bukkitWorld()) && bot.distanceTo(t) > 15.0) {
-                Vec3 dir = Locations.vec(t.getLocation()).subtract(bot.pos()).normalize();
+            GamePlayer t = bot.target();
+            if (t != null && t.world().equals(bot.world()) && bot.distanceTo(t) > 15.0) {
+                Vec3 dir = t.position().subtract(bot.pos()).normalize();
                 double throwDist = Math.max(5.0, bot.distanceTo(t) - 7.0);
                 throwPearl(bot, Vec3.center(bot.pos().add(dir.scale(throwDist)).toPos()));
                 setCooldown(diff, false);
@@ -133,7 +133,7 @@ public final class PearlAbility {
 
     /** Throws a pearl aimed at a point (like the player: looks, holds the pearl, throws with power 1.5). */
     public static void throwPearl(Bot bot, Vec3 target) {
-        Mannequin me = bot.entity();
+        BotBody me = bot.entity();
         if (me == null) {
             return;
         }
@@ -144,10 +144,10 @@ public final class PearlAbility {
         Vector vel = new Vector(dir.x(), dir.y() + 0.2, dir.z()).normalize().multiply(1.5);
         ThreadLocalRandom r = ThreadLocalRandom.current();
         vel.add(new Vector(r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075, r.nextGaussian() * 0.0075).multiply(1.5));
-        EnderPearl pearl = me.launchProjectile(EnderPearl.class, vel);
-        pearl.setShooter(me);
+        EnderPearl pearl = PaperEntities.bukkit(me).launchProjectile(EnderPearl.class, vel);
+        pearl.setShooter(PaperEntities.bukkit(me));
         bot.swing();
-        me.getWorld().playSound(me.getLocation(), Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
+        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
         Bukkit.getScheduler().runTask(bot.manager().plugin(), () -> {
             if (bot.isAlive()) {
                 bot.setItem(EquipmentSlot.HAND, previous);
@@ -158,7 +158,7 @@ public final class PearlAbility {
 
     /** High-arc throw (used by the AI: escaping lava and offensive pearl). */
     public static void throwPearlArc(Bot bot, Vec3 target) {
-        Mannequin me = bot.entity();
+        BotBody me = bot.entity();
         if (me == null) {
             return;
         }
@@ -170,9 +170,9 @@ public final class PearlAbility {
         bot.lookAt(new Vec3(target.x(), p.y() + horiz * 0.45, target.z()));
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.ENDER_PEARL));
         Vector vel = new Vector(dx, dy, dz).normalize().multiply(1.5);
-        EnderPearl pearl = me.launchProjectile(EnderPearl.class, vel);
-        pearl.setShooter(me);
-        me.getWorld().playSound(me.getLocation(), Sound.ENTITY_ENDER_PEARL_THROW, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        EnderPearl pearl = PaperEntities.bukkit(me).launchProjectile(EnderPearl.class, vel);
+        pearl.setShooter(PaperEntities.bukkit(me));
+        me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         bot.swing();
         Bukkit.getScheduler().runTask(bot.manager().plugin(), () -> {
             if (bot.isAlive()) {

@@ -39,7 +39,7 @@ public final class GlowService {
     }
 
     public void apply(Bot bot) {
-        Mannequin e = bot.entity();
+        Mannequin e = bot.mannequin();
         if (e == null) {
             return;
         }
@@ -68,7 +68,7 @@ public final class GlowService {
     }
 
     public void remove(Bot bot) {
-        Mannequin e = bot.entity();
+        Mannequin e = bot.mannequin();
         if (e == null) {
             return;
         }

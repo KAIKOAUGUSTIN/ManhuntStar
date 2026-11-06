@@ -1,5 +1,9 @@
 package dev.manhuntstar.bot;
 
+import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
@@ -10,12 +14,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Item;
-import org.bukkit.entity.Mannequin;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -314,12 +315,12 @@ public final class BotInventory {
     // ------------------------------------------------------------------ pickup
 
     private void pickupNearbyLootAndXp() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null) {
             return;
         }
-        for (Entity near : e.getNearbyEntities(PICKUP_RADIUS, PICKUP_RADIUS, PICKUP_RADIUS)) {
-            if (near instanceof Item item) {
+        for (GameEntity near : e.nearbyEntities(PICKUP_RADIUS, PICKUP_RADIUS, PICKUP_RADIUS)) {
+            if (PaperEntities.bukkit(near) instanceof Item item) {
                 if (!item.isValid() || item.getPickupDelay() > 0 || !item.canMobPickup()) {
                     continue;
                 }
@@ -330,16 +331,17 @@ public final class BotInventory {
                 if (taken <= 0) {
                     continue;
                 }
-                e.playPickupItemAnimation(item, taken);
+                PaperEntities.bukkit(e).playPickupItemAnimation(item, taken);
                 if (left.isEmpty()) {
                     item.remove();
                 } else {
                     item.setItemStack(left);
-                }                e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f,
+                }
+                e.world().playSound(e.position(), Sounds.ENTITY_ITEM_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.2f,
                         (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 1.4f + 2.0f);
-            } else if (near instanceof ExperienceOrb orb && orb.isValid()) {
+            } else if (PaperEntities.bukkit(near) instanceof ExperienceOrb orb && orb.isValid()) {
                 orb.remove();
-                e.getWorld().playSound(e.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.1f,
+                e.world().playSound(e.position(), Sounds.ENTITY_EXPERIENCE_ORB_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.1f,
                         0.5f + ThreadLocalRandom.current().nextFloat() * 0.6f);
             }
         }

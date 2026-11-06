@@ -1,6 +1,10 @@
 package dev.manhuntstar.bot.motor;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -8,13 +12,9 @@ import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Mannequin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.util.Vector;
 
 /**
  * The bot's locomotion. The server already simulates gravity, collision, stepping up, water, lava and ladders
@@ -56,12 +56,12 @@ public final class Motor {
 
     /** Reads the state left by the server's physics on the previous tick. */
     public void beginTick() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null) {
             return;
         }
         Vec3 pos = bot.pos();
-        velocity = Locations.vec(e.getVelocity());
+        velocity = e.velocity();
         // If the entity's physics didn't run (chunk not active yet), the velocity comes back the same as applied;
         // adding the acceleration again would make the bot "shoot off" when the physics came back.
         // (friction always changes the horizontal velocity when the physics runs; standing on the ground it's zero)
@@ -99,7 +99,7 @@ public final class Motor {
 
     /** Applies the velocity decided this tick to the entity. */
     public void endTick() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null) {
             return;
         }
@@ -111,29 +111,29 @@ public final class Motor {
             lastApplied = null;
         } else if (stalled) {
             // physics stopped: don't reapply (avoids building up) and wait for the chunk to tick again
-            lastApplied = Locations.vec(e.getVelocity());
+            lastApplied = e.velocity();
         } else {
-            e.setVelocity(new Vector(velocity.x(), velocity.y(), velocity.z()));
+            e.setVelocity(new Vec3(velocity.x(), velocity.y(), velocity.z()));
             lastApplied = velocity;
             spawnSprintParticles(e);
         }
         lastPos = bot.pos();
     }
 
-    private void spawnSprintParticles(Mannequin e) {
+    private void spawnSprintParticles(BotBody e) {
         if (!sprinting || !onGround || velocity.horizontalLengthSqr() < 0.01 || bot.isInWater()) {
             return;
         }
         if ((bot.aliveTicks() & 1) != 0) {
             return;
         }
-        Block below = e.getLocation().subtract(0, 0.2, 0).getBlock();
-        if (below.getType().isAir() || below.isLiquid()) {
+        GameBlock below = e.world().block(e.position().subtract(new Vec3(0, 0.2, 0)).toPos());
+        if (below.type().is(BlockTrait.AIR) || below.isLiquid()) {
             return;
         }
         Vec3 p = bot.pos();
-        e.getWorld().spawnParticle(Particle.BLOCK, p.x(), p.y() + 0.1, p.z(), 1,
-                -velocity.x() * 4.0, 1.5, -velocity.z() * 4.0, 0, below.getBlockData());
+        e.world().spawnBlockParticle(new Vec3(p.x(), p.y() + 0.1, p.z()), 1,
+                -velocity.x() * 4.0, 1.5, -velocity.z() * 4.0, 0, below);
     }
 
     // ------------------------------------------------------------------ movement commands
@@ -221,16 +221,16 @@ public final class Motor {
     }
 
     private double speedEffectFactor() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null) {
             return 1;
         }
         double f = 1;
-        PotionEffect speed = e.getPotionEffect(PotionEffectType.SPEED);
+        PotionEffect speed = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.SPEED);
         if (speed != null) {
             f += 0.2 * (speed.getAmplifier() + 1);
         }
-        PotionEffect slow = e.getPotionEffect(PotionEffectType.SLOWNESS);
+        PotionEffect slow = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.SLOWNESS);
         if (slow != null) {
             f -= 0.15 * (slow.getAmplifier() + 1);
         }
@@ -238,11 +238,11 @@ public final class Motor {
     }
 
     private float blockFriction() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null) {
             return 0.6f;
         }
-        Material below = e.getLocation().subtract(0, 0.5000001, 0).getBlock().getType();
+        Material below = PaperEntities.bukkit(e).getLocation().subtract(0, 0.5000001, 0).getBlock().getType();
         if (below == Material.ICE || below == Material.PACKED_ICE || below == Material.FROSTED_ICE) {
             return 0.98f;
         }
@@ -268,9 +268,9 @@ public final class Motor {
         if (groundTicks > 0 && jumpTicks == 0) {
             jumpTicks = 4;
             double power = 0.42;
-            Mannequin e = bot.entity();
+            BotBody e = bot.entity();
             if (e != null) {
-                PotionEffect boost = e.getPotionEffect(PotionEffectType.JUMP_BOOST);
+                PotionEffect boost = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.JUMP_BOOST);
                 if (boost != null) {
                     power += 0.1 * (boost.getAmplifier() + 1);
                 }
@@ -311,7 +311,7 @@ public final class Motor {
             return;
         }
         boolean fast = bot.isInWater() && sprinting && shouldBeSwimming;
-        boolean dolphin = bot.entity() != null && bot.entity().hasPotionEffect(PotionEffectType.DOLPHINS_GRACE);
+        boolean dolphin = bot.entity() != null && bot.mannequin().hasPotionEffect(PotionEffectType.DOLPHINS_GRACE);
         double accel = dolphin ? 0.03 : 0.02;
         if (horiz > 0.01) {
             velocity = velocity.add(dx / horiz * accel, 0, dz / horiz * accel);
@@ -363,7 +363,7 @@ public final class Motor {
     }
 
     public void resetFallTracking() {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e != null) {
             e.setFallDistance(0);
         }

@@ -4,7 +4,12 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
 import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameBoat;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -22,11 +27,6 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.AbstractHorse;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 
 /**
  * Path navigation (A*) with the mod's rules: "resolved" target (skybase →
@@ -329,7 +329,7 @@ public final class Navigator {
         mineQueue.clear();
         placeQueue.clear();
         if (bot.settings().debugPaths.on()) {
-            Player p = bot.target();
+            GamePlayer p = bot.target();
             if (p != null && p.hasPermission("manhuntstar.admin")) {
                 var ps = bot.manager().plugin().pathService();
                 String msg = current == null
@@ -399,8 +399,8 @@ public final class Navigator {
         }
         Pos next = current.path().get(pathIndex);
         Vec3 centre = Vec3.bottomCenter(next);
-        Entity vehicle = bot.vehicle();
-        Vec3 p = vehicle instanceof AbstractHorse ? Locations.vec(vehicle.getLocation()) : bot.pos();
+        GameEntity vehicle = bot.vehicle();
+        Vec3 p = vehicle instanceof GameHorse ? vehicle.position() : bot.pos();
         double dx = p.x() - centre.x();
         double dz = p.z() - centre.z();
         double dy = p.y() - centre.y();
@@ -1060,7 +1060,7 @@ public final class Navigator {
     // ------------------------------------------------------------------ water
 
     private Vec3 resolveWaterAwareTarget(Vec3 finalTarget) {
-        if (bot.vehicle() instanceof Boat) {
+        if (bot.vehicle() instanceof GameBoat) {
             waterMode = WaterMode.NONE;
             return boatSurfaceTarget(finalTarget);
         }
@@ -1130,7 +1130,7 @@ public final class Navigator {
     }
 
     private void updateWaterMode() {
-        int air = bot.entity() == null ? 300 : bot.entity().getRemainingAir();
+        int air = bot.entity() == null ? 300 : bot.entity().remainingAir();
         if (waterMode == WaterMode.ASCEND_FOR_AIR) {
             if (air >= WATER_RESUME_AIR) {
                 waterMode = WaterMode.CRUISE;
@@ -1259,19 +1259,19 @@ public final class Navigator {
     }
 
     private Pos anchorPos() {
-        Entity v = bot.vehicle();
-        if (v instanceof Boat boat) {
-            Pos p = Locations.pos(boat.getLocation());
+        GameEntity v = bot.vehicle();
+        if (v instanceof GameBoat boat) {
+            Pos p = boat.blockPos();
             if (WorldUtil.isWater(world(), p)) {
                 return p;
             }
             return WorldUtil.isWater(world(), p.below()) ? p.below() : p;
         }
-        if (v instanceof AbstractHorse horse) {
-            return Locations.pos(horse.getLocation());
+        if (v instanceof GameHorse horse) {
+            return horse.blockPos();
         }
         Pos p = bot.blockPos();
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e == null || bot.onGround() || bot.isInWater() || bot.isInLava() || e.isClimbing() || e.isGliding()) {
             return p;
         }
@@ -1309,7 +1309,7 @@ public final class Navigator {
         if (!bot.settings().debugPaths.on()) {
             return;
         }
-        Player p = bot.target();
+        GamePlayer p = bot.target();
         if (p == null || !p.hasPermission("manhuntstar.admin")) {
             return;
         }

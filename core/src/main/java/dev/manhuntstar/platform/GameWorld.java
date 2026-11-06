@@ -1,7 +1,9 @@
 package dev.manhuntstar.platform;
 
+import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
+import java.util.List;
 import java.util.UUID;
 
 /** A world (dimension) of the server, as the AI sees it. */
@@ -58,4 +60,23 @@ public interface GameWorld {
     RayHit rayTraceBlocks(Vec3 from, Vec3 direction, double maxDistance, boolean fluids, boolean ignorePassable);
 
     void playSound(Vec3 at, GameSound sound, SoundCategory category, float volume, float pitch);
+
+    /** A particle effect seen by everyone nearby; {@code extra} is usually the speed. */
+    void spawnParticle(Particle particle, Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra);
+
+    /** Block crack particles of a block (the game's {@code block} particle). */
+    void spawnBlockParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameBlock block);
+
+    /** The value of a true/false game rule (null if the world doesn't have it). */
+    Boolean gameRule(GameRule rule);
+
+    Difficulty difficulty();
+
+    List<? extends GamePlayer> players();
+
+    /** Entities whose box overlaps the given box. */
+    List<GameEntity> nearbyEntities(Box box);
+
+    /** Entities within the given distances (half sizes of a box) around a point. */
+    List<GameEntity> nearbyEntities(Vec3 center, double x, double y, double z);
 }

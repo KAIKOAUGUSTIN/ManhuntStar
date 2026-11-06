@@ -8,9 +8,10 @@ import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Face;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -26,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 /**
  * Cave ambush: when the player is in a cave (Y &lt; 60, no skylight), a bot chasing them is taken to a
@@ -71,27 +71,27 @@ public final class CaveAmbush {
         }
         long now = Bukkit.getCurrentTick();
         long cooldown = manager.plugin().settings().caveAmbushCooldown.value() * 20L;
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!manager.isEligibleTarget(p) || !isInCave(PaperWorld.of(p.getWorld()), Locations.pos(p.getLocation()))) {
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
+            if (!manager.isEligibleTarget(p) || !isInCave(PaperWorld.of(PaperWorld.bukkit(p.world())), p.blockPos())) {
                 continue;
             }
-            Long last = lastAmbushTick.get(p.getUniqueId());
-            Long retry = nextAttemptTick.get(p.getUniqueId());
+            Long last = lastAmbushTick.get(p.uuid());
+            Long retry = nextAttemptTick.get(p.uuid());
             if ((last != null && now - last < cooldown) || (retry != null && now < retry)) {
                 continue;
             }
             if (tryStartOne(p)) {
-                lastAmbushTick.put(p.getUniqueId(), now);
+                lastAmbushTick.put(p.uuid(), now);
             } else {
-                nextAttemptTick.put(p.getUniqueId(), now + RETRY_TICKS);
+                nextAttemptTick.put(p.uuid(), now + RETRY_TICKS);
             }
         }
     }
 
-    private boolean tryStartOne(Player target) {
+    private boolean tryStartOne(GamePlayer target) {
         List<Bot> candidates = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
-            if (b.bukkitWorld().equals(target.getWorld()) && target.getUniqueId().equals(b.targetPlayerId())
+            if (b.world().equals(target.world()) && target.uuid().equals(b.targetPlayerId())
                     && !beds.containsKey(b.id()) && !botTargets.containsKey(b.id()) && b.idle() == null) {
                 candidates.add(b);
             }
@@ -100,9 +100,9 @@ public final class CaveAmbush {
             return false;
         }
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
-        GameWorld w = PaperWorld.of(target.getWorld());
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
         // the player's cave is scanned only once; hiding spot and bed only look up the result
-        Set<Long> cave = caveRegion(w, Locations.pos(target.getLocation()));
+        Set<Long> cave = caveRegion(w, target.blockPos());
         if (cave == null) {
             return false;
         }
@@ -111,24 +111,24 @@ public final class CaveAmbush {
             return false;
         }
         int restorePhase = chosen.progression().phase();
-        Location dest = new Location(PaperWorld.bukkit(w), ambush.x() + 0.5, ambush.y() + 0.1, ambush.z() + 0.5, target.getLocation().getYaw(), target.getLocation().getPitch());
+        Location dest = new Location(PaperWorld.bukkit(w), ambush.x() + 0.5, ambush.y() + 0.1, ambush.z() + 0.5, target.yaw(), target.pitch());
         manager.teleportBot(chosen, dest);
-        chosen.setTargetPlayer(target.getUniqueId());
+        chosen.setTargetPlayer(target.uuid());
         AmbushBed bed = tryPlaceBed(chosen, w, target, ambush, restorePhase, cave);
         if (bed != null) {
             beds.put(chosen.id(), bed);
-            botTargets.put(chosen.id(), target.getUniqueId());
+            botTargets.put(chosen.id(), target.uuid());
         }
         return true;
     }
 
-    private Pos findHiddenFarPos(GameWorld w, Player target, Set<Long> cave) {
+    private Pos findHiddenFarPos(GameWorld w, GamePlayer target, Set<Long> cave) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 64; attempt++) {
             double angle = r.nextDouble() * Math.PI * 2;
             double distance = 50 + r.nextDouble() * 80;
-            int x = (int) Math.floor(target.getX() + Math.cos(angle) * distance);
-            int z = (int) Math.floor(target.getZ() + Math.sin(angle) * distance);
+            int x = (int) Math.floor(target.position().x() + Math.cos(angle) * distance);
+            int z = (int) Math.floor(target.position().z() + Math.sin(angle) * distance);
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
@@ -139,7 +139,7 @@ public final class CaveAmbush {
                 if (!isSafeRespawnSpot(w, c) || WorldUtil.skyLight(w, c) > 0) {
                     continue;
                 }
-                if (WorldUtil.clearLine(w, Locations.vec(target.getEyeLocation()), Vec3.center(c))) {
+                if (WorldUtil.clearLine(w, target.eyePosition(), Vec3.center(c))) {
                     continue;
                 }
                 if (inRegion(cave, c)) {
@@ -150,7 +150,7 @@ public final class CaveAmbush {
         return null;
     }
 
-    private AmbushBed tryPlaceBed(Bot bot, GameWorld w, Player target, Pos near, int restorePhase, Set<Long> cave) {
+    private AmbushBed tryPlaceBed(Bot bot, GameWorld w, GamePlayer target, Pos near, int restorePhase, Set<Long> cave) {
         if (w.dimension() != Dimension.NORMAL) {
             return null;
         }
@@ -170,7 +170,7 @@ public final class CaveAmbush {
                         manager.plugin().pathService().invalidate(w, head);
                         bot.lookAt(Vec3.center(foot));
                         bot.swing();
-                        return new AmbushBed(bot.id(), target.getUniqueId(), w.id(), foot, head, restorePhase);
+                        return new AmbushBed(bot.id(), target.uuid(), w.id(), foot, head, restorePhase);
                     }
                 }
             }
@@ -209,10 +209,10 @@ public final class CaveAmbush {
         if (bed == null) {
             return null;
         }
-        Player target = Bukkit.getPlayer(bed.targetId());
+        GamePlayer target = Platform.server().player(bed.targetId());
         GameWorld w = manager.plugin().server().world(bed.worldId());
-        if (target == null || target.isDead() || w == null || !target.getWorld().equals(PaperWorld.bukkit(w))
-                || !isInCave(w, Locations.pos(target.getLocation())) || !isBedValid(bed) || !isSameCave(w, Locations.pos(target.getLocation()), bed.foot())) {
+        if (target == null || target.isDead() || w == null || !target.world().equals(w)
+                || !isInCave(w, target.blockPos()) || !isBedValid(bed) || !isSameCave(w, target.blockPos(), bed.foot())) {
             removeBed(bot.id());
             botTargets.remove(bot.id());
             return null;
@@ -238,15 +238,15 @@ public final class CaveAmbush {
     private void cleanupInvalid() {
         List<UUID> toCleanup = new ArrayList<>();
         for (Map.Entry<UUID, UUID> e : botTargets.entrySet()) {
-            Player target = Bukkit.getPlayer(e.getValue());
+            GamePlayer target = Platform.server().player(e.getValue());
             AmbushBed bed = beds.get(e.getKey());
             if (target == null || target.isDead() || bed == null) {
                 toCleanup.add(e.getKey());
                 continue;
             }
-            GameWorld w = PaperWorld.of(target.getWorld());
-            boolean valid = w.id().equals(bed.worldId()) && isInCave(w, Locations.pos(target.getLocation()))
-                    && isBedValid(bed) && isSameCave(w, Locations.pos(target.getLocation()), bed.foot());
+            GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+            boolean valid = w.id().equals(bed.worldId()) && isInCave(w, target.blockPos())
+                    && isBedValid(bed) && isSameCave(w, target.blockPos(), bed.foot());
             if (!valid) {
                 toCleanup.add(e.getKey());
             }

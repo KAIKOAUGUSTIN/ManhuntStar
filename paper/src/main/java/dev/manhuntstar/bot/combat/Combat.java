@@ -4,15 +4,23 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
-import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.DamageKind;
+import dev.manhuntstar.platform.EntityTrait;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Ballistics;
+import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
@@ -23,20 +31,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.Tag;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.entity.Trident;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -44,7 +44,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.tag.DamageTypeTags;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
 /**
@@ -68,12 +67,12 @@ public final class Combat {
     private boolean chargingCrossbow;
 
     private int hitBoostCooldown;
-    private LivingEntity mobAttacker;
+    private GameLiving mobAttacker;
 
     private int tridentCooldown;
     private int tridentChargeTicks;
     private boolean chargingTrident;
-    private Trident thrownTrident;
+    private GameEntity thrownTrident;
     private int tridentFlightTicks;
     private final MotionTracker aimTracker = new MotionTracker();
 
@@ -100,11 +99,11 @@ public final class Combat {
         return lastAttackTime;
     }
 
-    public LivingEntity mobAttacker() {
+    public GameLiving mobAttacker() {
         return mobAttacker;
     }
 
-    public void setMobAttacker(LivingEntity e) {
+    public void setMobAttacker(GameLiving e) {
         mobAttacker = e;
     }
 
@@ -156,13 +155,13 @@ public final class Combat {
             return;
         }
         blocking = true;
-        bot.entity().startUsingItem(EquipmentSlot.OFF_HAND);
+        bot.mannequin().startUsingItem(EquipmentSlot.OFF_HAND);
     }
 
     public void stopBlock() {
         blocking = false;
         if (bot.entity() != null) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
         }
     }
 
@@ -206,7 +205,7 @@ public final class Combat {
         chargingTrident = false;
         tridentChargeTicks = 0;
         if (bot.entity() != null) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
         }
     }
 
@@ -222,13 +221,13 @@ public final class Combat {
 
     // ------------------------------------------------------------------ melee
 
-    public void attack(Entity target) {
-        if (target instanceof LivingEntity living) {
+    public void attack(GameEntity target) {
+        if (target instanceof GameLiving living) {
             performMeleeAttack(living);
         }
     }
 
-    private void performMeleeAttack(LivingEntity target) {
+    private void performMeleeAttack(GameLiving target) {
         if (target == null || target.isDead() || !target.isValid() || bot.entity() == null) {
             return;
         }
@@ -244,7 +243,7 @@ public final class Combat {
             return;
         }
         prepareMainHand();
-        Vec3 targetPos = Locations.vec(target.getLocation()).add(0, target.getHeight() / 2.0, 0);
+        Vec3 targetPos = target.position().add(0, target.height() / 2.0, 0);
         double aimOffset = s.meleeAimOffset.value();
         if (humanize > 0 && aimOffset > 0) {
             double v = aimOffset * humanize;
@@ -268,7 +267,7 @@ public final class Combat {
             playSound(Sounds.ENTITY_PLAYER_ATTACK_NODAMAGE);
             return;
         }
-        if (s.respectPvp.on() && target instanceof Player && Boolean.FALSE.equals(target.getWorld().getGameRuleValue(org.bukkit.GameRules.PVP))) {
+        if (s.respectPvp.on() && target instanceof GamePlayer && Boolean.FALSE.equals(target.world().gameRule(dev.manhuntstar.platform.GameRule.PVP))) {
             return;
         }
         dealPlayerLikeHit(target, weapon, strength);
@@ -279,14 +278,14 @@ public final class Combat {
         return (float) Math.max(0, Math.min(1, (since + 0.5) / Math.max(1, cooldownTicks)));
     }
 
-    private void dealPlayerLikeHit(LivingEntity target, ItemStack weapon, float strength) {
-        Mannequin me = bot.entity();
+    private void dealPlayerLikeHit(GameLiving target, ItemStack weapon, float strength) {
+        BotBody me = bot.entity();
         double base = 1.0 + GearScoring.weaponDamage(weapon);
-        PotionEffect str = me.getPotionEffect(PotionEffectType.STRENGTH);
+        PotionEffect str = PaperEntities.bukkit(me).getPotionEffect(PotionEffectType.STRENGTH);
         if (str != null) {
             base += 3.0 * (str.getAmplifier() + 1);
         }
-        PotionEffect weak = me.getPotionEffect(PotionEffectType.WEAKNESS);
+        PotionEffect weak = PaperEntities.bukkit(me).getPotionEffect(PotionEffectType.WEAKNESS);
         if (weak != null) {
             base -= 4.0 * (weak.getAmplifier() + 1);
         }
@@ -296,7 +295,7 @@ public final class Combat {
         boolean strong = strength > 0.9f;
         boolean sprintHit = strong && bot.motor().sprinting();
         boolean crit = strong && !bot.onGround() && bot.velocity().y() < 0 && !bot.isInWater() && !bot.isRiding()
-                && !bot.motor().isOnClimbable() && !me.hasPotionEffect(PotionEffectType.BLINDNESS) && !sprintHit;
+                && !bot.motor().isOnClimbable() && !PaperEntities.bukkit(me).hasPotionEffect(PotionEffectType.BLINDNESS) && !sprintHit;
         if (crit) {
             damage *= 1.5;
         }
@@ -304,11 +303,10 @@ public final class Combat {
         damage *= bot.difficulty().attackMultiplier();
         boolean sweep = strong && !crit && !sprintHit && bot.onGround() && GearScoring.isSword(weapon) && bot.velocity().horizontalLength() < 0.35;
 
-        double before = target.getHealth();
-        DamageSource src = DamageSource.builder(DamageType.PLAYER_ATTACK).withCausingEntity(me).withDirectEntity(me).build();
-        target.damage(damage, src);
-        boolean hurt = target.getHealth() < before - 1.0E-4 || target.isDead();
-        if (target instanceof Player && hurt) {
+        double before = target.health();
+        target.damage(damage, DamageKind.PLAYER_ATTACK, me, me);
+        boolean hurt = target.health() < before - 1.0E-4 || target.isDead();
+        if (target instanceof GamePlayer && hurt) {
             lastSuccessfulPlayerHitTick = Bukkit.getCurrentTick();
         }
         if (!hurt) {
@@ -324,57 +322,56 @@ public final class Combat {
         }
         int fire = weapon.getEnchantmentLevel(Enchantment.FIRE_ASPECT);
         if (fire > 0) {
-            target.setFireTicks(Math.max(target.getFireTicks(), fire * 80));
+            target.setFireTicks(Math.max(target.fireTicks(), fire * 80));
         }
-        GameWorld w = PaperWorld.of(target.getWorld());
-        Location tl = target.getLocation();
+        GameWorld w = target.world();
+        Vec3 tl = target.position();
         if (sweep) {
             doSweep(target, damage);
         }
         if (crit) {
             playSound(Sounds.ENTITY_PLAYER_ATTACK_CRIT);
-            PaperWorld.bukkit(w).spawnParticle(Particle.CRIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 12, 0.3, 0.4, 0.3, 0.2);
+            w.spawnParticle(Particle.CRIT, new Vec3(tl.x(), tl.y() + target.height() * 0.5, tl.z()), 12, 0.3, 0.4, 0.3, 0.2);
         } else if (sprintHit) {
             playSound(Sounds.ENTITY_PLAYER_ATTACK_KNOCKBACK);
         } else if (!sweep) {
             playSound(strong ? Sounds.ENTITY_PLAYER_ATTACK_STRONG : Sounds.ENTITY_PLAYER_ATTACK_WEAK);
         }
         if (enchant > 0) {
-            PaperWorld.bukkit(w).spawnParticle(Particle.ENCHANTED_HIT, tl.getX(), tl.getY() + target.getHeight() * 0.5, tl.getZ(), 8, 0.3, 0.4, 0.3, 0.2);
+            w.spawnParticle(Particle.ENCHANTED_HIT, new Vec3(tl.x(), tl.y() + target.height() * 0.5, tl.z()), 8, 0.3, 0.4, 0.3, 0.2);
         }
         // Player and bot kills are counted by the death events; here only mobs.
-        if (!(target instanceof Player) && target.isDead() && !bot.manager().isBotEntity(target)) {
+        if (!(target instanceof GamePlayer) && target.isDead() && !bot.manager().isBotEntity(target)) {
             bot.incrementKills();
         }
     }
 
-    private static double enchantmentBonus(ItemStack weapon, LivingEntity target) {
+    private static double enchantmentBonus(ItemStack weapon, GameLiving target) {
         double bonus = 0;
         int sharp = weapon.getEnchantmentLevel(Enchantment.SHARPNESS);
         if (sharp > 0) {
             bonus += 0.5 * sharp + 0.5;
         }
         int smite = weapon.getEnchantmentLevel(Enchantment.SMITE);
-        if (smite > 0 && Tag.ENTITY_TYPES_SENSITIVE_TO_SMITE.isTagged(target.getType())) {
+        if (smite > 0 && target.is(EntityTrait.SENSITIVE_TO_SMITE)) {
             bonus += 2.5 * smite;
         }
         int bane = weapon.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS);
-        if (bane > 0 && Tag.ENTITY_TYPES_SENSITIVE_TO_BANE_OF_ARTHROPODS.isTagged(target.getType())) {
+        if (bane > 0 && target.is(EntityTrait.SENSITIVE_TO_BANE)) {
             bonus += 2.5 * bane;
         }
         return bonus;
     }
 
-    private void doSweep(LivingEntity mainTarget, double damage) {
-        Mannequin me = bot.entity();
+    private void doSweep(GameLiving mainTarget, double damage) {
+        BotBody me = bot.entity();
         ItemStack weapon = bot.getItem(EquipmentSlot.HAND);
         int sweeping = weapon.getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
         double ratio = sweeping > 0 ? 1.0 - 1.0 / (sweeping + 1.0) : 0;
         double sweepDamage = 1.0 + ratio * damage;
-        BoundingBox box = mainTarget.getBoundingBox().expand(1.0, 0.25, 1.0);
-        DamageSource src = DamageSource.builder(DamageType.PLAYER_ATTACK).withCausingEntity(me).withDirectEntity(me).build();
-        for (Entity e : mainTarget.getWorld().getNearbyEntities(box)) {
-            if (e == me || e == mainTarget || !(e instanceof LivingEntity le) || le.isDead() || e instanceof ArmorStand) {
+        Box box = mainTarget.boundingBox().expand(1.0, 0.25, 1.0);
+        for (GameEntity e : mainTarget.world().nearbyEntities(box)) {
+            if (e == me || e == mainTarget || !(e instanceof GameLiving le) || le.isDead() || e.is(EntityTrait.ARMOR_STAND)) {
                 continue;
             }
             if (bot.manager().isAlly(bot, e)) {
@@ -385,12 +382,12 @@ public final class Combat {
             }
             double yawRad = Math.toRadians(bot.yaw());
             le.knockback(0.4, Math.sin(yawRad), -Math.cos(yawRad));
-            le.damage(sweepDamage, src);
+            le.damage(sweepDamage, DamageKind.PLAYER_ATTACK, me, me);
         }
         playSound(Sounds.ENTITY_PLAYER_ATTACK_SWEEP);
         double yawRad = Math.toRadians(bot.yaw());
         Vec3 p = bot.pos();
-        me.getWorld().spawnParticle(Particle.SWEEP_ATTACK, p.x() - Math.sin(yawRad), p.y() + bot.height() * 0.5, p.z() + Math.cos(yawRad), 1, 0, 0, 0, 0);
+        me.world().spawnParticle(Particle.SWEEP_ATTACK, new Vec3(p.x() - Math.sin(yawRad), p.y() + bot.height() * 0.5, p.z() + Math.cos(yawRad)), 1, 0, 0, 0, 0);
     }
 
     private void prepareMainHand() {
@@ -421,7 +418,7 @@ public final class Combat {
 
     // ------------------------------------------------------------------ crossbow
 
-    public boolean handleCrossbowCombat(LivingEntity target, double dist) {
+    public boolean handleCrossbowCombat(GameLiving target, double dist) {
         if (!bot.progression().canUseCrossbow()) {
             return false;
         }
@@ -430,14 +427,14 @@ public final class Combat {
             return false;
         }
         if (!chargingCrossbow) {
-            if (dist >= 12 && dist <= 20 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 12 && dist <= 20 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
                 startCrossbowCharge();
                 return true;
             }
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Locations.vec(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
+        bot.lookAt(target.position().add(0, target.eyeHeight() * 0.8, 0));
         aimTracker.observe(target);
         swimWhileCharging(target);
         crossbowChargeTicks++;
@@ -451,13 +448,13 @@ public final class Combat {
         return true;
     }
 
-    private void swimWhileCharging(LivingEntity target) {
+    private void swimWhileCharging(GameLiving target) {
         if (bot.isInWater()) {
             bot.setSneaking(false);
             bot.setSwimmingPose(true);
             bot.motor().setShouldBeSwimming(true);
             Vec3 p = bot.pos();
-            bot.motor().walk(new Vec3(target.getX() - p.x(), 0, target.getZ() - p.z()).normalize());
+            bot.motor().walk(new Vec3(target.position().x() - p.x(), 0, target.position().z() - p.z()).normalize());
         }
     }
 
@@ -466,7 +463,7 @@ public final class Combat {
         crossbowChargeTicks = 0;
         aimTracker.reset();
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
-        bot.entity().startUsingItem(EquipmentSlot.HAND);
+        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
         bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
@@ -475,10 +472,10 @@ public final class Combat {
      * computed with the game's physics and the target led. The error is the mod's: an offset on the aimed
      * point that grows with distance, plus the game's shot spread.
      */
-    private Vector aimProjectile(LivingEntity target, double speed, double scatterPerBlock) {
-        Mannequin me = bot.entity();
-        Vec3 from = new Vec3(me.getX(), me.getEyeLocation().getY() - 0.1, me.getZ());
-        Vec3 point = new Vec3(target.getX(), target.getY() + target.getHeight() * 0.5, target.getZ());
+    private Vector aimProjectile(GameLiving target, double speed, double scatterPerBlock) {
+        BotBody me = bot.entity();
+        Vec3 from = new Vec3(me.position().x(), PaperEntities.bukkit(me).getEyeLocation().getY() - 0.1, me.position().z());
+        Vec3 point = new Vec3(target.position().x(), target.position().y() + target.height() * 0.5, target.position().z());
         double horiz = point.horizontalDistance(from);
         double inaccuracy = bot.settings().projInaccuracy.value();
         double scatter = (0.05 + horiz * scatterPerBlock) * inaccuracy;
@@ -488,16 +485,16 @@ public final class Combat {
         return TacticsManager.shootVector(Locations.vector(v), (float) speed, (float) inaccuracy);
     }
 
-    private void performCrossbowShot(LivingEntity target) {
-        Mannequin me = bot.entity();
-        me.clearActiveItem();
+    private void performCrossbowShot(GameLiving target) {
+        BotBody me = bot.entity();
+        PaperEntities.bukkit(me).clearActiveItem();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vector dir = aimProjectile(target, 1.6, 0.015);
-        Arrow arrow = me.launchProjectile(Arrow.class, dir);
-        AimDebug.track(arrow, bot.name(), target);
-        arrow.setShooter(me);
+        Arrow arrow = PaperEntities.bukkit(me).launchProjectile(Arrow.class, dir);
+        AimDebug.track(arrow, bot.name(), PaperEntities.bukkit(target));
+        arrow.setShooter(PaperEntities.bukkit(me));
         arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
-        me.getWorld().playSound(me.getLocation(), Sound.ITEM_CROSSBOW_SHOOT, SoundCategory.PLAYERS, 1.0f, 1.0f / (r.nextFloat() * 0.4f + 0.8f));
+        me.world().playSound(me.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f / (r.nextFloat() * 0.4f + 0.8f));
         bot.swing();
     }
 
@@ -506,7 +503,7 @@ public final class Combat {
         crossbowChargeTicks = 0;
         crossbowCooldown = 100;
         if (bot.entity() != null) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
         }
         clearSwimStateIfDry();
         bot.inventory().restorePreferredMainHand();
@@ -515,7 +512,7 @@ public final class Combat {
     // ------------------------------------------------------------------ risky boost
 
     /** Sometimes uses an allied bot as a "springboard" to suddenly lunge toward the player. */
-    public void handleRiskyHitBoost(Player player) {
+    public void handleRiskyHitBoost(GamePlayer player) {
         if (hitBoostCooldown > 0) {
             hitBoostCooldown--;
             return;
@@ -537,7 +534,7 @@ public final class Combat {
             if (db <= 1.2 || db >= 3.0) {
                 continue;
             }
-            Vec3 toPlayer = Locations.vec(player.getLocation()).subtract(me).normalize();
+            Vec3 toPlayer = player.position().subtract(me).normalize();
             Vec3 fromBooster = me.subtract(booster.pos()).normalize();
             if (toPlayer.dot(fromBooster) <= 0.8) {
                 continue;
@@ -554,7 +551,7 @@ public final class Combat {
 
     // ------------------------------------------------------------------ trident
 
-    public boolean handleTridentCombat(LivingEntity target, double dist) {
+    public boolean handleTridentCombat(GameLiving target, double dist) {
         if (!bot.progression().canUseTrident()) {
             return false;
         }
@@ -563,14 +560,14 @@ public final class Combat {
             return false;
         }
         if (!chargingTrident) {
-            if (dist >= 15 && dist <= 25 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
+            if (dist >= 15 && dist <= 25 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < AimDebug.shotChance(0.01)) {
                 startTridentCharge();
                 return true;
             }
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Locations.vec(target.getLocation()).add(0, target.getEyeHeight() * 0.8, 0));
+        bot.lookAt(target.position().add(0, target.eyeHeight() * 0.8, 0));
         aimTracker.observe(target);
         swimWhileCharging(target);
         tridentChargeTicks++;
@@ -595,20 +592,20 @@ public final class Combat {
         tridentChargeTicks = 0;
         aimTracker.reset();
         bot.setItem(EquipmentSlot.HAND, loyaltyTrident());
-        bot.entity().startUsingItem(EquipmentSlot.HAND);
+        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
     }
 
-    private void performTridentThrow(LivingEntity target) {
-        Mannequin me = bot.entity();
-        me.clearActiveItem();
+    private void performTridentThrow(GameLiving target) {
+        BotBody me = bot.entity();
+        PaperEntities.bukkit(me).clearActiveItem();
         Vector dir = aimProjectile(target, 2.5, 0.02);
-        Trident t = me.launchProjectile(Trident.class, dir);
-        AimDebug.track(t, bot.name(), target);
-        t.setShooter(me);
+        Trident t = PaperEntities.bukkit(me).launchProjectile(Trident.class, dir);
+        AimDebug.track(t, bot.name(), PaperEntities.bukkit(target));
+        t.setShooter(PaperEntities.bukkit(me));
         t.setItemStack(loyaltyTrident());
         t.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
-        me.getWorld().playSound(me.getLocation(), Sound.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.0f, 1.0f);
-        thrownTrident = t;
+        me.world().playSound(me.position(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
+        thrownTrident = PaperEntities.of(t);
         tridentFlightTicks = 0;
         bot.swing();
     }
@@ -618,7 +615,7 @@ public final class Combat {
         tridentChargeTicks = 0;
         tridentCooldown = 120;
         if (bot.entity() != null) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
         }
         clearSwimStateIfDry();
         bot.inventory().restorePreferredMainHand();
@@ -641,12 +638,12 @@ public final class Combat {
         if (tridentFlightTicks < 20) {
             return;
         }
-        Vec3 toBot = bot.pos().subtract(Locations.vec(thrownTrident.getLocation()));
-        Vec3 vel = Locations.vec(thrownTrident.getVelocity());
+        Vec3 toBot = bot.pos().subtract(thrownTrident.position());
+        Vec3 vel = thrownTrident.velocity();
         double speed = vel.length();
         boolean stopped = thrownTrident.isOnGround() || speed < 0.1;
         boolean returning = toBot.lengthSqr() > 1.0E-6 && speed > 1.0E-6 && vel.normalize().dot(toBot.normalize()) > 0.35;
-        if (returning && thrownTrident.getBoundingBox().expand(0.35).overlaps(bot.boundingBox().expand(0.9))) {
+        if (returning && thrownTrident.boundingBox().expand(0.35).overlaps(bot.boundingBox().expand(0.9))) {
             clearTrident(true);
             return;
         }
@@ -685,20 +682,20 @@ public final class Combat {
 
     // ------------------------------------------------------------------ lava bucket
 
-    public boolean handleLavaBucketCombat(LivingEntity target, double dist) {
+    public boolean handleLavaBucketCombat(GameLiving target, double dist) {
         if (!bot.progression().canUseLavaBucket() || !hasLavaBucket || lavaUsedThisRun || placedLavaPos != null) {
             return false;
         }
-        if (dist >= 3 && dist <= 6 && bot.canSee(Locations.vec(target.getLocation())) && ThreadLocalRandom.current().nextDouble() < 0.005) {
+        if (dist >= 3 && dist <= 6 && bot.canSee(target.position()) && ThreadLocalRandom.current().nextDouble() < 0.005) {
             return attemptLavaPlace(target);
         }
         return false;
     }
 
-    private boolean attemptLavaPlace(LivingEntity target) {
+    private boolean attemptLavaPlace(GameLiving target) {
         GameWorld w = bot.world();
         Vec3 eye = bot.eyePos();
-        Vec3 dir = Locations.vec(target.getLocation()).subtract(eye).normalize();
+        Vec3 dir = target.position().subtract(eye).normalize();
         RayHit hit = WorldUtil.rayBlocks(w, eye, eye.add(dir.scale(4.0)), true);
         if (hit == null || hit.face() == null) {
             return false;
@@ -733,8 +730,8 @@ public final class Combat {
             return;
         }
         lavaCleanupTicks++;
-        Player target = bot.target();
-        if (!lavaHitPlayer && target != null && (target.isInLava() || target.getFireTicks() > 0)) {
+        GamePlayer target = bot.target();
+        if (!lavaHitPlayer && target != null && (target.isInLava() || target.fireTicks() > 0)) {
             lavaHitPlayer = true;
         }
         int cleanupTime = lavaHitPlayer ? 5 : 60;

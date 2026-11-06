@@ -2,24 +2,23 @@ package dev.manhuntstar.bot.survival;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -113,12 +112,12 @@ public final class Survival {
     }
 
     private boolean isInCombat() {
-        Player t = bot.target();
-        if (t != null && !t.isDead() && t.getWorld().equals(bot.bukkitWorld()) && bot.distanceTo(t) < 16) {
+        GamePlayer t = bot.target();
+        if (t != null && !t.isDead() && t.world().equals(bot.world()) && bot.distanceTo(t) < 16) {
             return true;
         }
-        LivingEntity mob = bot.combat().mobAttacker();
-        return mob != null && !mob.isDead() && mob.getWorld().equals(bot.bukkitWorld()) && bot.distanceTo(mob) < 12;
+        GameLiving mob = bot.combat().mobAttacker();
+        return mob != null && !mob.isDead() && mob.world().equals(bot.world()) && bot.distanceTo(mob) < 12;
     }
 
     private static ItemStack selectPhaseFood(int phase) {
@@ -143,8 +142,8 @@ public final class Survival {
         if (w.dimension() == Dimension.NETHER || bot.isInLava() || bot.isInWater()) {
             return false;
         }
-        Mannequin e = bot.entity();
-        return e == null || !e.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE);
+        BotBody e = bot.entity();
+        return e == null || !PaperEntities.bukkit(e).hasPotionEffect(PotionEffectType.FIRE_RESISTANCE);
     }
 
     private void tickFireEscape() {
@@ -246,7 +245,7 @@ public final class Survival {
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);
         bot.setItem(EquipmentSlot.HAND, currentFood.clone());
-        bot.entity().startUsingItem(EquipmentSlot.HAND);
+        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
         eatingTicks = EAT_TICKS;
     }
 
@@ -256,20 +255,20 @@ public final class Survival {
         }
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (eatingTicks % 4 == 0 && eatingTicks < EAT_TICKS - 6 && e != null) {
-            GameWorld w = PaperWorld.of(e.getWorld());
+            GameWorld w = PaperWorld.of(PaperWorld.bukkit(e.world()));
             Vec3 mouth = bot.eyePos().add(bot.lookVector().scale(0.3)).add(0, -0.1, 0);
             PaperWorld.bukkit(w).spawnParticle(Particle.ITEM, mouth.x(), mouth.y(), mouth.z(), 5, 0.1, 0.1, 0.1, 0.05, currentFood);
-            w.playSound(Locations.vec(e.getLocation()), Sounds.ENTITY_GENERIC_EAT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
+            w.playSound(e.position(), Sounds.ENTITY_GENERIC_EAT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
                     (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 0.2f + 1.0f);
         }
         if (--eatingTicks > 0) {
             return;
         }
         if (e != null) {
-            e.clearActiveItem();
-            e.getWorld().playSound(e.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
+            PaperEntities.bukkit(e).clearActiveItem();
+            e.world().playSound(e.position(), Sounds.ENTITY_PLAYER_BURP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
         }
         applyFood(currentFood, eatingGoldenApple);
         // The offhand isn't touched while eating; putting back the previous one would bring back a totem
@@ -281,12 +280,12 @@ public final class Survival {
     }
 
     private void applyFood(ItemStack food, boolean golden) {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (golden) {
             bot.hunger().eat(4, 1.2f);
             if (e != null) {
-                e.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
-                e.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0));
+                PaperEntities.bukkit(e).addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
+                PaperEntities.bukkit(e).addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0));
             }
             gappleCooldown = GAPPLE_COOLDOWN;
             return;

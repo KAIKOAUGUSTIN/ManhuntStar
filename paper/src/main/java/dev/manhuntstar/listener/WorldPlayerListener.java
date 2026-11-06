@@ -3,6 +3,7 @@ package dev.manhuntstar.listener;
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -100,14 +101,14 @@ public final class WorldPlayerListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null
                 && event.getClickedBlock().getType() == Material.CRAFTING_TABLE) {
-            plugin.botManager().tactics().recordCraftingTableUse(event.getPlayer());
+            plugin.botManager().tactics().recordCraftingTableUse(PaperEntities.of(event.getPlayer()));
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onOpen(InventoryOpenEvent event) {
         if (event.getInventory().getType() == InventoryType.WORKBENCH && event.getPlayer() instanceof Player p) {
-            plugin.botManager().tactics().recordCraftingTableUse(p);
+            plugin.botManager().tactics().recordCraftingTableUse(PaperEntities.of(p));
         }
     }
 
@@ -117,7 +118,7 @@ public final class WorldPlayerListener implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
         // hunt in progress: hunted right away, protected or left out, depending on the option
-        plugin.botManager().policy().admit(p);
+        plugin.botManager().policy().admit(PaperEntities.of(p));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
                 plugin.tabList().sendAll(p);

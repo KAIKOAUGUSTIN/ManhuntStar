@@ -2,9 +2,13 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
 import dev.manhuntstar.util.Locations;
@@ -25,14 +29,11 @@ import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Firework;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -157,8 +158,8 @@ public final class TacticsManager {
     }
 
     /** A player opened a crafting table (vulnerable for 3 s to the automatic ambush). */
-    public void recordCraftingTableUse(Player p) {
-        trackers.computeIfAbsent(p.getUniqueId(), k -> new Tracker()).lastCraftingTick = Bukkit.getCurrentTick();
+    public void recordCraftingTableUse(GamePlayer p) {
+        trackers.computeIfAbsent(p.uuid(), k -> new Tracker()).lastCraftingTick = Bukkit.getCurrentTick();
     }
 
     /** Runs this bot's active ability (called by the brain, inside the bot's tick). */
@@ -218,11 +219,11 @@ public final class TacticsManager {
 
     private void refreshTrackers(long now) {
         List<UUID> online = new ArrayList<>();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            online.add(p.getUniqueId());
-            Tracker t = trackers.computeIfAbsent(p.getUniqueId(), k -> new Tracker());
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
+            online.add(p.uuid());
+            Tracker t = trackers.computeIfAbsent(p.uuid(), k -> new Tracker());
             if (now % 10 == 0) {
-                Vec3 cur = Locations.vec(p.getLocation());
+                Vec3 cur = p.position();
                 if (t.lastPos == null || cur.distanceToSqr(t.lastPos) > 0.04) {
                     t.lastMovedTick = now;
                     t.lastPos = cur;
@@ -236,14 +237,14 @@ public final class TacticsManager {
 
     private void autoTrigger(long now) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!manager.isEligibleTarget(p) || activeBotByPlayer.containsKey(p.getUniqueId())) {
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
+            if (!manager.isEligibleTarget(p) || activeBotByPlayer.containsKey(p.uuid())) {
                 continue;
             }
-            if (playerCooldown.getOrDefault(p.getUniqueId(), Long.MIN_VALUE) > now) {
+            if (playerCooldown.getOrDefault(p.uuid(), Long.MIN_VALUE) > now) {
                 continue;
             }
-            if (CaveAmbush.isInCave(PaperWorld.of(p.getWorld()), Locations.pos(p.getLocation())) && isVulnerable(p, now)) {
+            if (CaveAmbush.isInCave(PaperWorld.of(PaperWorld.bukkit(p.world())), p.blockPos()) && isVulnerable(p, now)) {
                 Bot bot = selectBot(p, now, false, 1);
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
@@ -262,23 +263,23 @@ public final class TacticsManager {
         }
     }
 
-    private boolean isVulnerable(Player p, long now) {
-        Tracker t = trackers.get(p.getUniqueId());
+    private boolean isVulnerable(GamePlayer p, long now) {
+        Tracker t = trackers.get(p.uuid());
         if (t == null) {
             return false;
         }
         return now - t.lastMovedTick >= STILL_TRIGGER_TICKS || now - t.lastCraftingTick <= CRAFTING_WINDOW_TICKS;
     }
 
-    private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase) {
+    private Bot selectBot(GamePlayer p, long now, boolean ignoreCooldown, int minPhase) {
         return selectBot(p, now, ignoreCooldown, minPhase, b -> true);
     }
 
-    private Bot selectBot(Player p, long now, boolean ignoreCooldown, int minPhase, Predicate<Bot> able) {
+    private Bot selectBot(GamePlayer p, long now, boolean ignoreCooldown, int minPhase, Predicate<Bot> able) {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
             // bots waiting in the ring don't leave it to ambush
-            if (!b.bukkitWorld().equals(p.getWorld()) || !p.getUniqueId().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
+            if (!b.world().equals(p.world()) || !p.uuid().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
                     || b.idle() != null) {
                 continue;
             }
@@ -303,17 +304,17 @@ public final class TacticsManager {
     // ------------------------------------------------------------------ test command (/manhunt test)
 
     /** @return an error message or null if it started. */
-    public String debugExecute(Player player, String capacity) {
+    public String debugExecute(GamePlayer player, String capacity) {
         if (player.isDead()) {
             return "must-be-alive";
         }
-        if (activeBotByPlayer.containsKey(player.getUniqueId())) {
+        if (activeBotByPlayer.containsKey(player.uuid())) {
             return "already-active";
         }
         long now = Bukkit.getCurrentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
-                if (!CaveAmbush.isInCave(PaperWorld.of(player.getWorld()), Locations.pos(player.getLocation()))) {
+                if (!CaveAmbush.isInCave(PaperWorld.of(PaperWorld.bukkit(player.world())), player.blockPos())) {
                     return "not-in-cave";
                 }
                 Bot bot = selectBot(player, now, true, 1);
@@ -354,11 +355,11 @@ public final class TacticsManager {
     // ------------------------------------------------------------------ bow burst
 
     /** Called by the AI when the player goes too long without being hit (bow pressure). */
-    public boolean tryStartBowBurst(Bot bot, Player player, long now) {
-        if (!bot.isAlive() || player.isDead() || !bot.bukkitWorld().equals(player.getWorld()) || bot.progression().phase() < 4) {
+    public boolean tryStartBowBurst(Bot bot, GamePlayer player, long now) {
+        if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.world()) || bot.progression().phase() < 4) {
             return false;
         }
-        if (!player.getUniqueId().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.getUniqueId()) || isBusy(bot)) {
+        if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)) {
             return false;
         }
         // not even with the bow fully drawn does the arrow get there (too far for the height difference, or a block in the way)
@@ -369,27 +370,27 @@ public final class TacticsManager {
         return true;
     }
 
-    private void startBowBurst(Bot bot, Player player, long now) {
+    private void startBowBurst(Bot bot, GamePlayer player, long now) {
         prepare(bot);
         int shots = 2 + Math.round((Math.max(1, Math.min(10, Math.max(1, bot.aggression()))) - 1) * 0.44444445f);
-        activeBotByPlayer.put(player.getUniqueId(), bot.id());
-        bows.put(bot.id(), new BowBurst(bot.id(), player.getUniqueId(), bot.getItem(EquipmentSlot.HAND).clone(), shots, now));
+        activeBotByPlayer.put(player.uuid(), bot.id());
+        bows.put(bot.id(), new BowBurst(bot.id(), player.uuid(), bot.getItem(EquipmentSlot.HAND).clone(), shots, now));
     }
 
     /** @return false when the burst is over (and already cleaned up). */
     private boolean stepBow(BowBurst s, Bot bot, long now) {
-        Player p = Bukkit.getPlayer(s.player);
+        GamePlayer p = Platform.server().player(s.player);
         if (!validContext(bot, p)) {
             cleanupBow(s, bot);
             return false;
         }
-        bot.lookAt(Locations.vec(p.getEyeLocation()));
+        bot.lookAt(p.eyePosition());
         bot.motor().stopWalk();
         s.aim.observe(p);
         if (now < s.nextAction) {
             return true;
         }
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         switch (s.step) {
             case 0 -> {
                 int draw = bowDraw(bot, p, s.aim.velocity());
@@ -399,7 +400,7 @@ public final class TacticsManager {
                 }
                 bot.stand();
                 bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.BOW));
-                e.startUsingItem(EquipmentSlot.HAND);
+                PaperEntities.bukkit(e).startUsingItem(EquipmentSlot.HAND);
                 s.drawStart = now;
                 s.step = 1;
                 s.nextAction = now + draw;
@@ -415,7 +416,7 @@ public final class TacticsManager {
                     }
                     return true;
                 }
-                e.clearActiveItem();
+                PaperEntities.bukkit(e).clearActiveItem();
                 shootArrow(bot, p, s.aim.velocity(), speed);
                 bot.swing();
                 if (--s.shots > 0) {
@@ -436,7 +437,7 @@ public final class TacticsManager {
 
     private void cleanupBow(BowBurst s, Bot bot) {
         if (bot != null && bot.isAlive()) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
             bot.setItem(EquipmentSlot.HAND, s.oldMain);
             bot.stand();
         }
@@ -448,8 +449,8 @@ public final class TacticsManager {
      * went 1.5 to 2.5 blocks over the head; here the speed comes from the draw, the angle from the arrow's
      * physics (with the height difference) and the player is led by the flight time.
      */
-    private static void shootArrow(Bot bot, Player player, Vec3 playerVelocity, double speed) {
-        Mannequin e = bot.entity();
+    private static void shootArrow(Bot bot, GamePlayer player, Vec3 playerVelocity, double speed) {
+        BotBody e = bot.entity();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vec3 from = arrowOrigin(bot);
         Vec3 point = arrowTarget(player);
@@ -458,22 +459,22 @@ public final class TacticsManager {
         point = point.add((r.nextDouble() - 0.5) * spread, (r.nextDouble() - 0.5) * spread * 0.35, (r.nextDouble() - 0.5) * spread);
         Vec3 aim = Ballistics.aimArrow(from, point, playerVelocity, speed);
         Vector vel = shootVector(Locations.vector(aim), (float) speed, 0.25f * (float) bot.settings().projInaccuracy.value());
-        Arrow arrow = e.launchProjectile(Arrow.class, vel);
-        dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), player);
-        arrow.setShooter(e);
+        Arrow arrow = PaperEntities.bukkit(e).launchProjectile(Arrow.class, vel);
+        dev.manhuntstar.debug.AimDebug.track(arrow, bot.name(), PaperEntities.bukkit(player));
+        arrow.setShooter(PaperEntities.bukkit(e));
         arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
         // as in the game: an arrow from a fully drawn bow is critical
         arrow.setCritical(speed >= Ballistics.bowSpeed(BOW_MAX_DRAW));
-        e.getWorld().playSound(e.getLocation(), Sound.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+        e.world().playSound(e.position(), Sounds.ENTITY_ARROW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
     private static Vec3 arrowOrigin(Bot bot) {
-        Mannequin e = bot.entity();
-        return new Vec3(e.getX(), e.getEyeLocation().getY() - 0.1, e.getZ());
+        BotBody e = bot.entity();
+        return new Vec3(e.position().x(), PaperEntities.bukkit(e).getEyeLocation().getY() - 0.1, e.position().z());
     }
 
-    private static Vec3 arrowTarget(Player player) {
-        return new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+    private static Vec3 arrowTarget(GamePlayer player) {
+        return new Vec3(player.position().x(), player.position().y() + player.height() * 0.55, player.position().z());
     }
 
     /**
@@ -481,7 +482,7 @@ public final class TacticsManager {
      * the trajectory can't hit a block), the one that hits soonest adding up draw time and flight time. Up close
      * it draws a little and shoots fast; far away it draws all the way. -1 if not even a fully drawn bow reaches.
      */
-    private static int bowDraw(Bot bot, Player player, Vec3 playerVelocity) {
+    private static int bowDraw(Bot bot, GamePlayer player, Vec3 playerVelocity) {
         Vec3 from = arrowOrigin(bot);
         Vec3 to = arrowTarget(player);
         List<double[]> options = new ArrayList<>();
@@ -503,7 +504,7 @@ public final class TacticsManager {
     }
 
     /** An arrow with this speed reaches the player without hitting a block on the way. */
-    private static boolean arrowReaches(Bot bot, Player player, Vec3 playerVelocity, double speed) {
+    private static boolean arrowReaches(Bot bot, GamePlayer player, Vec3 playerVelocity, double speed) {
         Vec3 from = arrowOrigin(bot);
         Ballistics.Shot shot = Ballistics.shotArrow(from, arrowTarget(player), playerVelocity, speed);
         return shot.reachable() && arrowPathClear(bot.world(), from, shot.velocity(), shot.ticks());
@@ -534,33 +535,33 @@ public final class TacticsManager {
 
     // ------------------------------------------------------------------ firework crossbow
 
-    private void startFirework(Player player, Bot bot, long now) {
+    private void startFirework(GamePlayer player, Bot bot, long now) {
         prepare(bot);
-        activeBotByPlayer.put(player.getUniqueId(), bot.id());
-        fireworks.put(bot.id(), new FireworkShot(bot.id(), player.getUniqueId(), bot.getItem(EquipmentSlot.HAND).clone(),
+        activeBotByPlayer.put(player.uuid(), bot.id());
+        fireworks.put(bot.id(), new FireworkShot(bot.id(), player.uuid(), bot.getItem(EquipmentSlot.HAND).clone(),
                 bot.getItem(EquipmentSlot.OFF_HAND).clone(), now));
     }
 
     private boolean stepFirework(FireworkShot s, Bot bot, long now) {
-        Player p = Bukkit.getPlayer(s.player);
+        GamePlayer p = Platform.server().player(s.player);
         if (!validContext(bot, p)) {
             cleanupFirework(s, bot);
             return false;
         }
-        bot.lookAt(Locations.vec(p.getEyeLocation()));
+        bot.lookAt(p.eyePosition());
         bot.motor().stopWalk();
         s.aim.observe(p);
         if (now < s.nextAction) {
             return true;
         }
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         switch (s.step) {
             case 0 -> {
                 bot.stand();
                 bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
                 bot.setItem(EquipmentSlot.OFF_HAND, fireworkRocket());
-                e.startUsingItem(EquipmentSlot.HAND);
-                e.getWorld().playSound(e.getLocation(), Sound.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1f, 1f);
+                PaperEntities.bukkit(e).startUsingItem(EquipmentSlot.HAND);
+                e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
                 s.step = 1;
                 s.nextAction = now + 25;
             }
@@ -574,7 +575,7 @@ public final class TacticsManager {
                     }
                     return true;
                 }
-                e.clearActiveItem();
+                PaperEntities.bukkit(e).clearActiveItem();
                 shootFirework(bot, p, s.aim.velocity());
                 bot.swing();
                 s.step = 2;
@@ -590,7 +591,7 @@ public final class TacticsManager {
 
     private void cleanupFirework(FireworkShot s, Bot bot) {
         if (bot != null && bot.isAlive()) {
-            bot.entity().clearActiveItem();
+            bot.mannequin().clearActiveItem();
             bot.setItem(EquipmentSlot.HAND, s.oldMain);
             bot.setItem(EquipmentSlot.OFF_HAND, s.oldOff);
             bot.stand();
@@ -599,8 +600,8 @@ public final class TacticsManager {
     }
 
     /** A firework fired from a crossbow flies straight (no gravity), so the aim is direct, with lead. */
-    private static void shootFirework(Bot bot, Player player, Vec3 playerVelocity) {
-        Mannequin e = bot.entity();
+    private static void shootFirework(Bot bot, GamePlayer player, Vec3 playerVelocity) {
+        BotBody e = bot.entity();
         Vec3 from = fireworkOrigin(bot);
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vec3 point = chest(player);
@@ -609,15 +610,15 @@ public final class TacticsManager {
         point = point.add((r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc, (r.nextDouble() - 0.5) * inacc);
         Vec3 aim = Ballistics.aim(from, point, playerVelocity, FIREWORK_SPEED, 0, 1);
         Vector vel = shootVector(Locations.vector(aim), (float) FIREWORK_SPEED, 0.65f);
-        Location at = Locations.location(from, e.getWorld());
-        e.getWorld().spawn(at, Firework.class, fw -> {
+        Location at = Locations.location(from, e.world());
+        PaperWorld.bukkit(e.world()).spawn(at, Firework.class, fw -> {
             // Paper rolls the lifetime from the flight duration, like the game
             fw.setFireworkMeta((FireworkMeta) fireworkRocket().getItemMeta());
-            fw.setShooter(e);
+            fw.setShooter(PaperEntities.bukkit(e));
             fw.setShotAtAngle(true);
             fw.setVelocity(vel);
         });
-        e.getWorld().playSound(e.getLocation(), Sound.ITEM_CROSSBOW_SHOOT, SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
+        e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
     private static ItemStack fireworkRocket() {
@@ -633,15 +634,15 @@ public final class TacticsManager {
         return bot.eyePos().add(0, -0.1, 0);
     }
 
-    private static Vec3 chest(Player player) {
-        return new Vec3(player.getX(), player.getY() + player.getHeight() * 0.55, player.getZ());
+    private static Vec3 chest(GamePlayer player) {
+        return new Vec3(player.position().x(), player.position().y() + player.height() * 0.55, player.position().z());
     }
 
     /**
      * The rocket reaches the player before exploding: the straight shot gets to the led point within the
      * rocket's shortest lifetime, with no block in the way.
      */
-    private static boolean fireworkReaches(Bot bot, Player player, Vec3 playerVelocity) {
+    private static boolean fireworkReaches(Bot bot, GamePlayer player, Vec3 playerVelocity) {
         Vec3 from = fireworkOrigin(bot);
         Vec3 target = chest(player);
         double ticks = Ballistics.straightTicks(from, target, playerVelocity, FIREWORK_SPEED);
@@ -650,39 +651,39 @@ public final class TacticsManager {
 
     // ------------------------------------------------------------------ TNT ambush
 
-    private boolean startTntAmbush(Player player, Bot bot, long now, boolean ignoreCooldown) {
-        GameWorld w = PaperWorld.of(player.getWorld());
+    private boolean startTntAmbush(GamePlayer player, Bot bot, long now, boolean ignoreCooldown) {
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
         Pos stand = findAmbushStart(w, player);
         if (stand == null) {
             return false;
         }
         if (!ignoreCooldown) {
             long until = now + 2400;
-            playerCooldown.put(player.getUniqueId(), until);
+            playerCooldown.put(player.uuid(), until);
             botCooldown.put(bot.id(), until);
         }
         prepare(bot);
-        activeBotByPlayer.put(player.getUniqueId(), bot.id());
+        activeBotByPlayer.put(player.uuid(), bot.id());
         manager.teleportBot(bot, new Location(PaperWorld.bukkit(w), stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
-        bot.lookAt(Locations.vec(player.getEyeLocation()));
+        bot.lookAt(player.eyePosition());
         bot.setSneaking(true);
         bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.TNT));
-        tnt.put(bot.id(), new TntAmbush(bot.id(), player.getUniqueId(), stand, now));
+        tnt.put(bot.id(), new TntAmbush(bot.id(), player.uuid(), stand, now));
         return true;
     }
 
     /** @return false when the ambush is over (and already cleaned up). */
     private boolean stepTnt(TntAmbush a, Bot bot, long now) {
-        Player p = Bukkit.getPlayer(a.player);
+        GamePlayer p = Platform.server().player(a.player);
         if (!tntStillValid(a, bot, p) || now - a.started > 600) {
             cancelTnt(a, bot);
             return false;
         }
-        GameWorld w = PaperWorld.of(p.getWorld());
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(p.world()));
         if (!a.placed) {
-            bot.lookAt(Locations.vec(p.getEyeLocation()));
+            bot.lookAt(p.eyePosition());
             bot.setSneaking(true);
-            Vec3 dir = Locations.vec(p.getLocation()).subtract(bot.pos()).horizontal();
+            Vec3 dir = p.position().subtract(bot.pos()).horizontal();
             if (dir.lengthSqr() > 1.0E-6) {
                 bot.motor().walk(dir.normalize());
                 if (bot.horizontalCollision() && bot.onGround()) {
@@ -720,7 +721,7 @@ public final class TacticsManager {
             Location at = new Location(PaperWorld.bukkit(w), a.tntPos.x() + 0.5, a.tntPos.y(), a.tntPos.z() + 0.5);
             PaperWorld.bukkit(w).spawn(at, TNTPrimed.class, t -> {
                 t.setFuseTicks(40);
-                t.setSource(bot.entity());
+                t.setSource(bot.mannequin());
             });
             w.playSound(Locations.vec(at), Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
             bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.FLINT_AND_STEEL));
@@ -729,7 +730,7 @@ public final class TacticsManager {
             a.ignitedAt = now;
             return true;
         }
-        Vec3 away = bot.pos().subtract(Locations.vec(p.getLocation())).horizontal();
+        Vec3 away = bot.pos().subtract(p.position()).horizontal();
         away = away.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : away.normalize();
         bot.setSneaking(false);
         bot.motor().setSprinting(true);
@@ -748,15 +749,15 @@ public final class TacticsManager {
         return true;
     }
 
-    private boolean tntStillValid(TntAmbush a, Bot bot, Player p) {
-        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.bukkitWorld().equals(p.getWorld())) {
+    private boolean tntStillValid(TntAmbush a, Bot bot, GamePlayer p) {
+        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.world().equals(p.world())) {
             return false;
         }
-        Pos pp = Locations.pos(p.getLocation());
-        if (!CaveAmbush.isInCave(PaperWorld.of(p.getWorld()), pp) || !CaveAmbush.isSameCave(PaperWorld.of(p.getWorld()), pp, a.stand)) {
+        Pos pp = p.blockPos();
+        if (!CaveAmbush.isInCave(p.world(), pp) || !CaveAmbush.isSameCave(p.world(), pp, a.stand)) {
             return false;
         }
-        return a.tntPos == null || CaveAmbush.isSameCave(PaperWorld.of(p.getWorld()), pp, a.tntPos);
+        return a.tntPos == null || CaveAmbush.isSameCave(PaperWorld.of(PaperWorld.bukkit(p.world())), pp, a.tntPos);
     }
 
     private void cancelTnt(TntAmbush a, Bot bot) {
@@ -768,12 +769,12 @@ public final class TacticsManager {
         activeBotByPlayer.remove(a.player);
     }
 
-    private static Pos findAmbushStart(GameWorld w, Player player) {
-        Vec3 look = Locations.vec(player.getLocation().getDirection()).horizontal();
+    private static Pos findAmbushStart(GameWorld w, GamePlayer player) {
+        Vec3 look = player.direction().horizontal();
         look = look.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : look.normalize();
         Vec3 side = new Vec3(-look.z(), 0, look.x());
-        Vec3 pp = Locations.vec(player.getLocation());
-        Pos playerPos = Locations.pos(player.getLocation());
+        Vec3 pp = player.position();
+        Pos playerPos = player.blockPos();
         for (double dist : new double[]{8.0, 7.5, 8.5, 9.0}) {
             for (double s : new double[]{0, 1, -1, 2, -2}) {
                 for (int yOff : new int[]{0, 1, -1}) {
@@ -805,10 +806,10 @@ public final class TacticsManager {
         return CaveAmbush.isSameCave(w, playerPos, pos);
     }
 
-    private static Pos findTntPos(GameWorld w, Player player, Pos botPos) {
-        Vec3 flat = Locations.vec(player.getLocation()).subtract(Vec3.center(botPos)).horizontal();
+    private static Pos findTntPos(GameWorld w, GamePlayer player, Pos botPos) {
+        Vec3 flat = player.position().subtract(Vec3.center(botPos)).horizontal();
         BlockFace forward = Locations.faceFromYaw(flat.yaw());
-        Pos center = Locations.pos(player.getLocation());
+        Pos center = player.blockPos();
         Pos[] candidates = {center, Locations.relative(center, forward), Locations.relative(center, forward.getOppositeFace()),
                 center.offset(0, 0, -1), center.offset(0, 0, 1), center.offset(1, 0, 0), center.offset(-1, 0, 0)};
         for (Pos c : candidates) {
@@ -820,8 +821,8 @@ public final class TacticsManager {
         return null;
     }
 
-    private static boolean validContext(Bot bot, Player p) {
-        return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.bukkitWorld().equals(p.getWorld());
+    private static boolean validContext(Bot bot, GamePlayer p) {
+        return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.world().equals(p.world());
     }
 
     public void clear() {

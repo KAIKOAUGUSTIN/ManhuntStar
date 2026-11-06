@@ -5,6 +5,13 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.GameMode;
+import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameSound;
+import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.time.Duration;
@@ -19,13 +26,10 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
 
 /**
  * Bot rings before the hunt. A ring has no owner: the first player who was inside it and
@@ -76,8 +80,8 @@ public final class RingService {
     }
 
     /** Can set off the ring: online, not a spectator and allowed by the player list. */
-    private boolean canTrigger(Player p) {
-        return p.isOnline() && p.getGameMode() != GameMode.SPECTATOR && manager().policy().listAllows(p);
+    private boolean canTrigger(GamePlayer p) {
+        return p.isOnline() && p.gameMode() != GameMode.SPECTATOR && manager().policy().listAllows(p);
     }
 
     /**
@@ -99,9 +103,9 @@ public final class RingService {
         Messages m = plugin.messages();
         if (onLeave) {
             // players already inside count as inside (leaving starts the countdown)
-            for (Player p : center.getWorld().getPlayers()) {
+            for (GamePlayer p : PaperWorld.of(center.getWorld()).players()) {
                 if (canTrigger(p) && !p.isDead()) {
-                    r.exit.observe(p.getUniqueId(), distance(p, r));
+                    r.exit.observe(p.uuid(), distance(p, r));
                 }
             }
             Bukkit.broadcast(seconds > 0
@@ -165,14 +169,14 @@ public final class RingService {
     }
 
     private void tickWaiting(Ring r, boolean second) {
-        World w = Bukkit.getWorld(r.worldId);
+        GameWorld w = Platform.server().world(r.worldId);
         // whoever was inside and went to another world left the ring; whoever left the server, became a
         // spectator or was blocked by the list stops counting
         for (UUID id : r.exit.inside()) {
-            Player p = Bukkit.getPlayer(id);
+            GamePlayer p = Platform.server().player(id);
             if (p == null || !canTrigger(p)) {
                 r.exit.forget(id);
-            } else if (w == null || !p.getWorld().equals(w)) {
+            } else if (w == null || !p.world().equals(w)) {
                 trigger(r, p);
                 return;
             }
@@ -180,12 +184,12 @@ public final class RingService {
         if (w == null) {
             return;
         }
-        for (Player p : w.getPlayers()) {
+        for (GamePlayer p : w.players()) {
             // dead doesn't count; if they respawn far from the ring, it counts as leaving
             if (p.isDead() || !canTrigger(p)) {
                 continue;
             }
-            if (r.exit.observe(p.getUniqueId(), distance(p, r))) {
+            if (r.exit.observe(p.uuid(), distance(p, r))) {
                 trigger(r, p);
                 return;
             }
@@ -196,17 +200,17 @@ public final class RingService {
         }
     }
 
-    private void trigger(Ring r, Player who) {
+    private void trigger(Ring r, GamePlayer who) {
         Messages m = plugin.messages();
         if (r.seconds <= 0) {
-            Bukkit.broadcast(m.prefixed("countdown.left", Messages.p("player", who.getName())));
+            Bukkit.broadcast(m.prefixed("countdown.left", Messages.p("player", who.name())));
             release(r);
             return;
         }
         r.phase = Ring.Phase.COUNTING;
         r.ticksLeft = r.seconds * 20;
         updateBar(r);
-        Bukkit.broadcast(m.prefixed("countdown.left-and-counting", Messages.p("player", who.getName()), Messages.p("seconds", r.seconds)));
+        Bukkit.broadcast(m.prefixed("countdown.left-and-counting", Messages.p("player", who.name()), Messages.p("seconds", r.seconds)));
         manager().markDirty();
     }
 
@@ -218,10 +222,10 @@ public final class RingService {
             if (s > 0) {
                 updateBar(r);
                 if (s <= 3) {
-                    showTitle(r, m.get("countdown.title-number", Messages.p("seconds", s)), m.get("countdown.subtitle"), Sound.BLOCK_NOTE_BLOCK_PLING);
+                    showTitle(r, m.get("countdown.title-number", Messages.p("seconds", s)), m.get("countdown.subtitle"), Sounds.BLOCK_NOTE_BLOCK_PLING);
                 } else if (s == 10) {
-                    for (Player p : audience(r)) {
-                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.MASTER, 1f, 1f);
+                    for (GamePlayer p : audience(r)) {
+                        p.playSound(p.position(), Sounds.BLOCK_NOTE_BLOCK_HAT, dev.manhuntstar.platform.SoundCategory.MASTER, 1f, 1f);
                     }
                 }
             }
@@ -236,7 +240,7 @@ public final class RingService {
         rings.remove(r.id);
         hideBar(r);
         Messages m = plugin.messages();
-        showTitle(r, m.get("countdown.begun-title"), m.get("countdown.begun-subtitle"), Sound.ENTITY_ENDER_DRAGON_GROWL);
+        showTitle(r, m.get("countdown.begun-title"), m.get("countdown.begun-subtitle"), Sounds.ENTITY_ENDER_DRAGON_GROWL);
         Bukkit.broadcast(m.prefixed("countdown.begun"));
         for (UUID id : r.bots) {
             Bot b = manager().bot(id);
@@ -248,22 +252,22 @@ public final class RingService {
         manager().markDirty();
     }
 
-    private static double distance(Player p, Ring r) {
-        return Locations.vec(p.getLocation()).distanceTo(r.center);
+    private static double distance(GamePlayer p, Ring r) {
+        return p.position().distanceTo(r.center);
     }
 
     // ------------------------------------------------------------------ bar and titles
 
-    private Iterable<Player> audience(Ring r) {
-        World w = Bukkit.getWorld(r.worldId);
-        return w == null ? List.copyOf(Bukkit.getOnlinePlayers()) : w.getPlayers();
+    private Iterable<? extends GamePlayer> audience(Ring r) {
+        GameWorld w = Platform.server().world(r.worldId);
+        return w == null ? List.copyOf(Platform.server().onlinePlayers()) : w.players();
     }
 
-    private void showTitle(Ring r, Component title, Component subtitle, Sound sound) {
+    private void showTitle(Ring r, Component title, Component subtitle, GameSound sound) {
         Title t = Title.title(title, subtitle, Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(900), Duration.ofMillis(300)));
-        for (Player p : audience(r)) {
+        for (GamePlayer p : audience(r)) {
             p.showTitle(t);
-            p.playSound(p.getLocation(), sound, SoundCategory.MASTER, 1f, 1f);
+            p.playSound(p.position(), sound, dev.manhuntstar.platform.SoundCategory.MASTER, 1f, 1f);
         }
     }
 
@@ -279,9 +283,9 @@ public final class RingService {
             r.bar.progress(Math.max(0f, Math.min(1f, r.ticksLeft / (float) Math.max(1, r.seconds * 20))));
         }
         Set<UUID> now = new HashSet<>();
-        for (Player p : audience(r)) {
-            now.add(p.getUniqueId());
-            if (r.viewers.add(p.getUniqueId())) {
+        for (GamePlayer p : audience(r)) {
+            now.add(p.uuid());
+            if (r.viewers.add(p.uuid())) {
                 p.showBossBar(r.bar);
             }
         }
@@ -289,7 +293,7 @@ public final class RingService {
             if (now.contains(id)) {
                 return false;
             }
-            Player p = Bukkit.getPlayer(id);
+            GamePlayer p = Platform.server().player(id);
             if (p != null) {
                 p.hideBossBar(r.bar);
             }
@@ -299,7 +303,7 @@ public final class RingService {
 
     private void hideBar(Ring r) {
         for (UUID id : r.viewers) {
-            Player p = Bukkit.getPlayer(id);
+            GamePlayer p = Platform.server().player(id);
             if (p != null) {
                 p.hideBossBar(r.bar);
             }

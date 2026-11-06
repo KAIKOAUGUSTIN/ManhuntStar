@@ -13,9 +13,16 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameMode;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Locations;
@@ -38,17 +45,11 @@ import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.AbstractHorse;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Horse;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -201,25 +202,25 @@ public final class BotManager {
     }
 
     /** The bot that owns this entity (Mannequin), or null. */
-    public Bot byEntity(Entity e) {
-        if (!(e instanceof Mannequin)) {
+    public Bot byEntity(GameEntity e) {
+        if (!(e instanceof BotBody)) {
             return null;
         }
-        Bot b = byEntity.get(e.getUniqueId());
-        if (b != null && b.entity() != null && b.entity().getUniqueId().equals(e.getUniqueId())) {
+        Bot b = byEntity.get(e.uuid());
+        if (b != null && b.entity() != null && b.entity().uuid().equals(e.uuid())) {
             return b;
         }
         return null;
     }
 
-    public boolean isBotEntity(Entity e) {
-        return e instanceof Mannequin && e.getPersistentDataContainer().has(botKey, PersistentDataType.STRING);
+    public boolean isBotEntity(GameEntity e) {
+        return e instanceof BotBody && PaperEntities.bukkit(e).getPersistentDataContainer().has(botKey, PersistentDataType.STRING);
     }
 
-    void registerEntity(Bot bot, Mannequin m) {
+    void registerEntity(Bot bot, BotBody m) {
         byEntity.values().remove(bot);
         if (m != null) {
-            byEntity.put(m.getUniqueId(), bot);
+            byEntity.put(m.uuid(), bot);
         }
     }
 
@@ -243,7 +244,7 @@ public final class BotManager {
     }
 
     /** Another bot that isn't from an enemy group (the sweep attack doesn't hit allies). */
-    public boolean isAlly(Bot bot, Entity other) {
+    public boolean isAlly(Bot bot, GameEntity other) {
         Bot o = byEntity(other);
         if (o == null || o == bot) {
             return o != null;
@@ -280,13 +281,13 @@ public final class BotManager {
      * A player the bots can hunt now: alive, not a spectator and allowed by the player list and by the
      * late-joiner rule. The forced target (/manhunt target) always passes.
      */
-    public boolean isEligibleTarget(Player p) {
-        return isActivePlayer(p) && (p.getUniqueId().equals(forcedTarget) || policy.canBeHunted(p));
+    public boolean isEligibleTarget(GamePlayer p) {
+        return isActivePlayer(p) && (p.uuid().equals(forcedTarget) || policy.canBeHunted(p));
     }
 
     /** Online, alive and not in spectator mode. */
-    public static boolean isActivePlayer(Player p) {
-        return p != null && p.isOnline() && !p.isDead() && p.getGameMode() != GameMode.SPECTATOR;
+    public static boolean isActivePlayer(GamePlayer p) {
+        return p != null && p.isOnline() && !p.isDead() && p.gameMode() != GameMode.SPECTATOR;
     }
 
     public UUID forcedTarget() {
@@ -298,18 +299,18 @@ public final class BotManager {
     }
 
     /** The bot's target player: forced → the mode's rule (closest, split evenly, farthest). */
-    public Player resolvePlayerTarget(Bot bot) {
+    public GamePlayer resolvePlayerTarget(Bot bot) {
         if (!isTrackingPlayers(bot)) {
             return null;
         }
         if (forcedTarget != null) {
-            Player forced = Bukkit.getPlayer(forcedTarget);
+            GamePlayer forced = Platform.server().player(forcedTarget);
             if (isEligibleTarget(forced)) {
                 return forced;
             }
         }
-        List<Player> candidates = new ArrayList<>();
-        for (Player p : Bukkit.getOnlinePlayers()) {
+        List<GamePlayer> candidates = new ArrayList<>();
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
             if (isEligibleTarget(p)) {
                 candidates.add(p);
             }
@@ -317,13 +318,13 @@ public final class BotManager {
         if (candidates.isEmpty()) {
             return null;
         }
-        List<Player> same = new ArrayList<>();
-        for (Player p : candidates) {
-            if (p.getWorld().equals(bot.bukkitWorld())) {
+        List<GamePlayer> same = new ArrayList<>();
+        for (GamePlayer p : candidates) {
+            if (p.world().equals(bot.world())) {
                 same.add(p);
             }
         }
-        List<Player> pool = same.isEmpty() ? candidates : same;
+        List<GamePlayer> pool = same.isEmpty() ? candidates : same;
         TargetMode mode = settings().targetMode.get();
         return switch (mode) {
             case CLOSEST_PLAYER -> byDistance(bot, pool, true);
@@ -332,14 +333,14 @@ public final class BotManager {
         };
     }
 
-    private static double dist(Bot bot, Player p) {
-        return p.getWorld().equals(bot.bukkitWorld()) ? bot.distanceTo(p) : 1.0E7;
+    private static double dist(Bot bot, GamePlayer p) {
+        return p.world().equals(bot.world()) ? bot.distanceTo(p) : 1.0E7;
     }
 
-    private static Player byDistance(Bot bot, List<Player> pool, boolean closest) {
-        Player chosen = null;
+    private static GamePlayer byDistance(Bot bot, List<GamePlayer> pool, boolean closest) {
+        GamePlayer chosen = null;
         double best = closest ? Double.MAX_VALUE : -1;
-        for (Player p : pool) {
+        for (GamePlayer p : pool) {
             double d = dist(bot, p);
             if (closest ? d < best : d > best) {
                 best = d;
@@ -350,12 +351,12 @@ public final class BotManager {
     }
 
     /** Splits the bots evenly among the players, switching to a closer one only if it gains ≥ 2.5 blocks (≤ 10). */
-    private Player balanced(Bot bot, List<Player> pool) {
+    private GamePlayer balanced(Bot bot, List<GamePlayer> pool) {
         Map<UUID, Integer> counts = new HashMap<>();
-        Map<UUID, Player> byId = new HashMap<>();
-        for (Player p : pool) {
-            counts.put(p.getUniqueId(), 0);
-            byId.put(p.getUniqueId(), p);
+        Map<UUID, GamePlayer> byId = new HashMap<>();
+        for (GamePlayer p : pool) {
+            counts.put(p.uuid(), 0);
+            byId.put(p.uuid(), p);
         }
         for (Bot o : bots.values()) {
             if (o == bot || !o.isAlive() || o.targetPlayerId() == null) {
@@ -367,12 +368,12 @@ public final class BotManager {
         for (int c : counts.values()) {
             min = Math.min(min, c);
         }
-        Player closest = byDistance(bot, pool, true);
+        GamePlayer closest = byDistance(bot, pool, true);
         double closestDist = closest == null ? Double.MAX_VALUE : dist(bot, closest);
         UUID currentId = bot.targetPlayerId();
         if (currentId != null && counts.containsKey(currentId) && counts.get(currentId) <= min + 1) {
-            Player current = byId.get(currentId);
-            if (closest != null && !closest.getUniqueId().equals(currentId)) {
+            GamePlayer current = byId.get(currentId);
+            if (closest != null && !closest.uuid().equals(currentId)) {
                 double gain = dist(bot, current) - closestDist;
                 if (closestDist <= 10.0 && gain >= 2.5) {
                     return closest;
@@ -380,11 +381,11 @@ public final class BotManager {
             }
             return current;
         }
-        Player best = null;
+        GamePlayer best = null;
         int bestCount = Integer.MAX_VALUE;
         double bestDist = Double.MAX_VALUE;
-        for (Player p : pool) {
-            int c = counts.getOrDefault(p.getUniqueId(), 0);
+        for (GamePlayer p : pool) {
+            int c = counts.getOrDefault(p.uuid(), 0);
             double d = dist(bot, p);
             if (c < bestCount || (c == bestCount && d < bestDist)) {
                 best = p;
@@ -415,12 +416,12 @@ public final class BotManager {
 
     // ------------------------------------------------------------------ horses
 
-    public void markHorseInaccessible(Horse horse, int ticks) {
-        inaccessibleHorses.put(horse.getUniqueId(), (long) Bukkit.getCurrentTick() + ticks);
+    public void markHorseInaccessible(GameHorse horse, int ticks) {
+        inaccessibleHorses.put(horse.uuid(), (long) Bukkit.getCurrentTick() + ticks);
     }
 
-    public boolean isHorseInaccessible(Horse horse) {
-        Long until = inaccessibleHorses.get(horse.getUniqueId());
+    public boolean isHorseInaccessible(GameHorse horse) {
+        Long until = inaccessibleHorses.get(horse.uuid());
         return until != null && until > Bukkit.getCurrentTick();
     }
 
@@ -429,22 +430,22 @@ public final class BotManager {
      * another rider it keeps wandering, grazing and turning on its own and fights the bot.
      * The mark on the horse makes sure the AI comes back even if the server goes down with the bot mounted.
      */
-    public void takeHorseControl(Bot bot, AbstractHorse horse) {
+    public void takeHorseControl(Bot bot, GameHorse horse) {
         Bot.keepActive(horse);
-        if (controlledHorses.containsKey(horse.getUniqueId()) && !horse.isAware()) {
+        if (controlledHorses.containsKey(horse.uuid()) && !horse.isAware()) {
             return;
         }
-        horse.getPathfinder().stopPathfinding();
+        PaperEntities.bukkit(horse).getPathfinder().stopPathfinding();
         horse.setAware(false);
-        horse.getPersistentDataContainer().set(horseKey, PersistentDataType.STRING, bot.id().toString());
-        controlledHorses.put(horse.getUniqueId(), bot.id());
+        PaperEntities.bukkit(horse).getPersistentDataContainer().set(horseKey, PersistentDataType.STRING, bot.id().toString());
+        controlledHorses.put(horse.uuid(), bot.id());
     }
 
     /** Gives the horse back its own AI. */
-    public void releaseHorse(AbstractHorse horse) {
-        controlledHorses.remove(horse.getUniqueId());
-        if (horse.getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
-            horse.getPersistentDataContainer().remove(horseKey);
+    public void releaseHorse(GameHorse horse) {
+        controlledHorses.remove(horse.uuid());
+        if (PaperEntities.bukkit(horse).getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
+            PaperEntities.bukkit(horse).getPersistentDataContainer().remove(horseKey);
             horse.setAware(true);
             horse.setPortalCooldown(0);
         }
@@ -456,14 +457,14 @@ public final class BotManager {
             return;
         }
         for (Map.Entry<UUID, UUID> e : new ArrayList<>(controlledHorses.entrySet())) {
-            Entity horse = Bukkit.getEntity(e.getKey());
-            if (!(horse instanceof AbstractHorse h)) {
+            GameEntity horse = Platform.server().entity(e.getKey());
+            if (!(horse instanceof GameHorse h)) {
                 // unloaded: the mark is handled when the chunk comes back (removeOrphan)
                 controlledHorses.remove(e.getKey());
                 continue;
             }
             Bot b = bots.get(e.getValue());
-            boolean ridden = b != null && b.isAlive() && b.entity() != null && h.getPassengers().contains(b.entity());
+            boolean ridden = b != null && b.isAlive() && b.entity() != null && h.passengers().contains(b.entity());
             if (!ridden || !h.isValid()) {
                 releaseHorse(h);
             }
@@ -472,7 +473,7 @@ public final class BotManager {
 
     private void releaseAllHorses() {
         for (UUID id : new ArrayList<>(controlledHorses.keySet())) {
-            if (Bukkit.getEntity(id) instanceof AbstractHorse h) {
+            if (Platform.server().entity(id) instanceof GameHorse h) {
                 releaseHorse(h);
             }
         }
@@ -647,7 +648,7 @@ public final class BotManager {
     }
 
     /** Brings the living bots with this name to the player (like remove and skin, applies to all). @return how many went */
-    public int teleportBotsToPlayer(String name, Player target) {
+    public int teleportBotsToPlayer(String name, GamePlayer target) {
         List<Bot> alive = new ArrayList<>();
         for (Bot b : botsNamed(name)) {
             if (b.isAlive()) {
@@ -655,12 +656,12 @@ public final class BotManager {
             }
         }
         for (Bot b : alive) {
-            teleportBot(b, alive.size() == 1 ? target.getLocation() : nearPlayer(target));
+            teleportBot(b, alive.size() == 1 ? PaperEntities.bukkit(target).getLocation() : nearPlayer(target));
         }
         return alive.size();
     }
 
-    public int teleportAllTo(Player target) {
+    public int teleportAllTo(GamePlayer target) {
         int n = 0;
         for (Bot b : aliveBots()) {
             teleportBot(b, nearPlayer(target));
@@ -670,22 +671,22 @@ public final class BotManager {
     }
 
     /** Near the player, spread out a little so the bots don't end up inside each other. */
-    private static Location nearPlayer(Player target) {
+    private static Location nearPlayer(GamePlayer target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        return target.getLocation().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
+        return PaperEntities.bukkit(target).getLocation().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
     }
 
     /** The target went to another dimension: opens a portal entrance for the bots following them. */
-    public void requestDimensionChange(Player target, World from) {
+    public void requestDimensionChange(GamePlayer target, World from) {
         for (PortalEntrance e : entrances) {
-            if (e.playerId().equals(target.getUniqueId()) && e.worldId().equals(target.getWorld().getUID())) {
+            if (e.playerId().equals(target.uuid()) && e.worldId().equals(target.world().id())) {
                 return;
             }
         }
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
             // bots waiting in a ring stay there until the start
-            if (b.bukkitWorld().equals(from) && target.getUniqueId().equals(b.targetPlayerId()) && b.idle() == null) {
+            if (b.bukkitWorld().equals(from) && target.uuid().equals(b.targetPlayerId()) && b.idle() == null) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
             }
@@ -699,28 +700,28 @@ public final class BotManager {
 
     /** Bot death (the entity's death event): drops, message, API and respawn. */
     public void handleDeath(Bot bot, EntityDeathEvent event) {
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         event.getDrops().clear();
         event.setDroppedExp(0);
         List<ItemStack> drops = bot.inventory().collectDeathDrops(settings().dropInventory.on(), settings().gearPersistence.get());
         event.getDrops().addAll(drops);
         if (settings().deathMessages.on() && e != null) {
-            Boolean show = e.getWorld().getGameRuleValue(org.bukkit.GameRules.SHOW_DEATH_MESSAGES);
+            Boolean show = e.world().gameRule(dev.manhuntstar.platform.GameRule.SHOW_DEATH_MESSAGES);
             if (!Boolean.FALSE.equals(show)) {
                 Bukkit.broadcast(plugin.deathMessages().build(bot, event.getDamageSource()));
             }
         }
-        Entity killer = event.getDamageSource().getCausingEntity();
+        GameEntity killer = PaperEntities.of(event.getDamageSource().getCausingEntity());
         Bukkit.getPluginManager().callEvent(new BotEvents.BotDeathEvent(bot, event.getDamageSource()));
-        if (killer instanceof Player p) {
-            Bukkit.getPluginManager().callEvent(new BotEvents.BotKilledByPlayerEvent(bot, p));
+        if (killer instanceof GamePlayer p) {
+            Bukkit.getPluginManager().callEvent(new BotEvents.BotKilledByPlayerEvent(bot, PaperEntities.bukkit(p)));
         } else {
             Bot killerBot = byEntity(killer);
             if (killerBot != null) {
                 killerBot.incrementKills();
             }
         }
-        Location deathLoc = e == null ? bot.location() : e.getLocation();
+        Location deathLoc = e == null ? bot.location() : PaperEntities.bukkit(e).getLocation();
         if (deathLoc != null && deathLoc.getWorld() != null) {
             deathLoc.getWorld().spawnParticle(Particle.CLOUD, deathLoc.clone().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
         }
@@ -846,7 +847,7 @@ public final class BotManager {
                 return resolveSurface(Locations.location(g.spawnpoint(), gw));
             }
         }
-        Player target = bot.target();
+        GamePlayer target = bot.target();
         if (target != null && isEligibleTarget(target)) {
             Location hidden = findHiddenLocation(target);
             if (hidden != null) {
@@ -857,20 +858,20 @@ public final class BotManager {
     }
 
     /** A spot 100–200 blocks from the target, out of their line of sight (only in loaded chunks). */
-    private static Location findHiddenLocation(Player target) {
-        GameWorld w = PaperWorld.of(target.getWorld());
+    private static Location findHiddenLocation(GamePlayer target) {
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 40; i++) {
             double angle = r.nextDouble() * Math.PI * 2;
             double distance = i < 20 ? 100 + r.nextInt(100) : 40 + r.nextInt(60);
-            int x = (int) (target.getX() + Math.cos(angle) * distance);
-            int z = (int) (target.getZ() + Math.sin(angle) * distance);
+            int x = (int) (target.position().x() + Math.cos(angle) * distance);
+            int z = (int) (target.position().z() + Math.sin(angle) * distance);
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
-            int y = w.dimension() == Dimension.NETHER ? (int) target.getY() : WorldUtil.surfaceY(w, x, z);
+            int y = w.dimension() == Dimension.NETHER ? (int) target.position().y() : WorldUtil.surfaceY(w, x, z);
             Vec3 candidate = new Vec3(x + 0.5, y + 1, z + 0.5);
-            if (!WorldUtil.clearLine(w, Locations.vec(target.getEyeLocation()), candidate)) {
+            if (!WorldUtil.clearLine(w, target.eyePosition(), candidate)) {
                 return Locations.location(candidate, w);
             }
         }
@@ -1068,8 +1069,8 @@ public final class BotManager {
 
     private void checkStrandedBots() {
         for (Bot b : aliveBots()) {
-            Player t = b.target();
-            if (t != null && isEligibleTarget(t) && !t.getWorld().equals(b.bukkitWorld()) && b.idle() == null) {
+            GamePlayer t = b.target();
+            if (t != null && isEligibleTarget(t) && !t.world().equals(b.world()) && b.idle() == null) {
                 requestDimensionChange(t, b.bukkitWorld());
             }
         }
@@ -1098,14 +1099,14 @@ public final class BotManager {
         if (Bukkit.getCurrentTick() % 20 != 0 || !settings().silentDeaths.on()) {
             return;
         }
-        for (Player p : Bukkit.getOnlinePlayers()) {
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
             if (!isEligibleTarget(p)) {
                 continue;
             }
             Bot farthest = null;
             double max = 0;
             for (Bot b : bots.values()) {
-                if (!b.isAlive() || !b.bukkitWorld().equals(p.getWorld()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
+                if (!b.isAlive() || !b.world().equals(p.world()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
                     continue;
                 }
                 double d = b.distanceTo(p);
@@ -1149,11 +1150,11 @@ public final class BotManager {
     }
 
     /** Removes Mannequins marked as bots that don't belong to any registered bot (orphans). */
-    public void removeOrphan(Entity e) {
+    public void removeOrphan(GameEntity e) {
         if (isBotEntity(e) && byEntity(e) == null) {
             e.remove();
-        } else if (e instanceof AbstractHorse h && !controlledHorses.containsKey(h.getUniqueId())
-                && h.getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
+        } else if (e instanceof GameHorse h && !controlledHorses.containsKey(h.uuid())
+                && PaperEntities.bukkit(h).getPersistentDataContainer().has(horseKey, PersistentDataType.STRING)) {
             // a horse left without AI (the server went down with the bot mounted)
             releaseHorse(h);
         }

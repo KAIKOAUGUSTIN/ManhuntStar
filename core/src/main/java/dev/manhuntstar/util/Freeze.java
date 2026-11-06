@@ -1,8 +1,7 @@
 package dev.manhuntstar.util;
 
-import org.bukkit.Location;
-import org.bukkit.entity.Entity;
-import org.bukkit.util.Vector;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameWorld;
 
 /**
  * Entidade parada onde estava (até no ar) enquanto a caçada está pausada: sem gravidade, sem
@@ -13,21 +12,27 @@ public final class Freeze {
 
     private static final double DRIFT_SQ = 1.0E-4;
 
-    private final Entity entity;
-    private final Location at;
-    private final Vector velocity;
+    private final GameEntity entity;
+    private final GameWorld atWorld;
+    private final Vec3 at;
+    private final float atYaw;
+    private final float atPitch;
+    private final Vec3 velocity;
     private final boolean gravity;
     private final float fallDistance;
     private final boolean wasInvulnerable;
     private final boolean protect;
 
-    private Freeze(Entity entity, boolean protect) {
+    private Freeze(GameEntity entity, boolean protect) {
         this.entity = entity;
-        this.at = entity.getLocation();
-        this.velocity = entity.getVelocity();
+        this.atWorld = entity.world();
+        this.at = entity.position();
+        this.atYaw = entity.yaw();
+        this.atPitch = entity.pitch();
+        this.velocity = entity.velocity();
         this.gravity = entity.hasGravity();
-        this.fallDistance = entity.getFallDistance();
-        this.wasInvulnerable = PaperCompat.isMarkedInvulnerable(entity);
+        this.fallDistance = entity.fallDistance();
+        this.wasInvulnerable = entity.isInvulnerable();
         this.protect = protect;
     }
 
@@ -36,17 +41,17 @@ public final class Freeze {
      *
      * @param protect deixa a entidade invulnerável enquanto congelada (o cavalo ou o barco do bot)
      */
-    public static Freeze capture(Entity e, boolean protect) {
+    public static Freeze capture(GameEntity e, boolean protect) {
         Freeze f = new Freeze(e, protect);
         e.setGravity(false);
-        e.setVelocity(new Vector());
+        e.setVelocity(Vec3.ZERO);
         if (protect) {
             e.setInvulnerable(true);
         }
         return f;
     }
 
-    public Entity entity() {
+    public GameEntity entity() {
         return entity;
     }
 
@@ -59,15 +64,15 @@ public final class Freeze {
             return;
         }
         entity.setGravity(false);
-        Location now = entity.getLocation();
-        boolean drifted = !entity.isInsideVehicle() && now.getWorld().equals(at.getWorld()) && now.distanceSquared(at) > DRIFT_SQ;
-        if (drifted && entity.getPassengers().isEmpty()) {
-            entity.setVelocity(new Vector());
-            entity.teleport(at);
+        Vec3 now = entity.position();
+        boolean drifted = !entity.isInsideVehicle() && entity.world().equals(atWorld) && now.distanceToSqr(at) > DRIFT_SQ;
+        if (drifted && entity.passengers().isEmpty()) {
+            entity.setVelocity(Vec3.ZERO);
+            entity.teleport(atWorld, at, atYaw, atPitch);
         } else if (drifted) {
-            entity.setVelocity(at.toVector().subtract(now.toVector()));
+            entity.setVelocity(at.subtract(now));
         } else {
-            entity.setVelocity(new Vector());
+            entity.setVelocity(Vec3.ZERO);
         }
     }
 

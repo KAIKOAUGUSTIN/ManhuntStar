@@ -15,6 +15,7 @@ public final class EntityKind {
 
     private final String name;
     private volatile boolean known;
+    private volatile long traits;
 
     private EntityKind(String name) {
         this.name = name;
@@ -32,10 +33,19 @@ public final class EntityKind {
     }
 
     /** Marks a type as existing in the game (called by the platform). */
-    public static EntityKind register(String name) {
+    public static EntityKind register(String name, EntityTrait... traits) {
         EntityKind kind = of(name);
+        long bits = 0;
+        for (EntityTrait t : traits) {
+            bits |= t.bit();
+        }
+        kind.traits = bits;
         kind.known = true;
         return kind;
+    }
+
+    public boolean is(EntityTrait trait) {
+        return (traits & trait.bit()) != 0;
     }
 
     public String name() {

@@ -3,11 +3,10 @@ package dev.manhuntstar.bot.ai;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.manhunt.Ring;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.util.Vec3;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.entity.Player;
 
 /**
  * Bots waiting in the ring (MANHUNT mode): they jump, crouch, spin, look at the closest player and
@@ -63,22 +62,22 @@ public final class IdleBehavior {
             release();
             return false;
         }
-        Player watched = nearestPlayer();
-        Vec3 focus = watched != null ? Locations.vec(watched.getLocation()) : ring.center();
-        double eyeHeight = watched != null ? watched.getEyeHeight() : 1.6;
+        GamePlayer watched = nearestPlayer();
+        Vec3 focus = watched != null ? watched.position() : ring.center();
+        double eyeHeight = watched != null ? watched.eyeHeight() : 1.6;
         executeBehavior(focus, eyeHeight);
         return true;
     }
 
-    private Player nearestPlayer() {
-        Player best = null;
+    private GamePlayer nearestPlayer() {
+        GamePlayer best = null;
         double bestDist = WATCH_RANGE * WATCH_RANGE;
         Vec3 p = bot.pos();
-        for (Player pl : bot.bukkitWorld().getPlayers()) {
+        for (GamePlayer pl : bot.world().players()) {
             if (!BotManager.isActivePlayer(pl)) {
                 continue;
             }
-            double d = p.distanceToSqr(Locations.vec(pl.getLocation()));
+            double d = p.distanceToSqr(pl.position());
             if (d < bestDist) {
                 bestDist = d;
                 best = pl;

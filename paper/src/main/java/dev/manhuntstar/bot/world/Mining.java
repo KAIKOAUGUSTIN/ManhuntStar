@@ -2,20 +2,18 @@ package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.paper.PaperBlock;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -81,11 +79,11 @@ public final class Mining {
     }
 
     private void sendCrack(GameWorld w, Pos pos, float progress) {
-        Location loc = new Location(PaperWorld.bukkit(w), pos.x(), pos.y(), pos.z());
-        int id = bot.entity() == null ? bot.id().hashCode() : bot.entity().getEntityId();
-        for (Player p : PaperWorld.bukkit(w).getPlayers()) {
-            if (p.getLocation().distanceSquared(loc) < 64 * 64) {
-                p.sendBlockDamage(loc, progress, id);
+        Vec3 loc = Vec3.of(pos);
+        int id = bot.entity() == null ? bot.id().hashCode() : bot.entity().entityId();
+        for (GamePlayer p : w.players()) {
+            if (p.position().distanceToSqr(loc) < 64 * 64) {
+                p.sendBlockDamage(pos, progress, id);
             }
         }
     }
@@ -175,13 +173,13 @@ public final class Mining {
     }
 
     /** "Stuck" mode: digs toward the target (staircase down, up or zigzag). */
-    public void executeHardcodedMining(Player target) {
+    public void executeHardcodedMining(GamePlayer target) {
         // The breaking itself advances in tick(), called once per tick by Bot.
         if (miningPos != null) {
             return;
         }
         Pos botPos = bot.blockPos();
-        Pos targetPos = Locations.pos(target.getLocation());
+        Pos targetPos = target.blockPos();
         double yDiff = targetPos.y() - botPos.y();
         int dx = targetPos.x() - botPos.x();
         int dz = targetPos.z() - botPos.z();
@@ -189,7 +187,7 @@ public final class Mining {
         int sz = Integer.signum(dz);
         double horizontalDist = Math.hypot(dx, dz);
         bot.inventory().restorePreferredPickaxe();
-        bot.lookAt(Locations.vec(target.getLocation()));
+        bot.lookAt(target.position());
         if (yDiff < -1.5) {
             Pos toward = offsetToward(botPos, sx, sz);
             Pos downPrimary = Math.abs(dx) >= Math.abs(dz) ? botPos.offset(sx, -1, 0) : botPos.offset(0, -1, sz);
@@ -221,7 +219,7 @@ public final class Mining {
             if (horizontalDist > 5.0) {
                 Vec3 towardVec = new Vec3(dx, 0, dz);
                 if (towardVec.lengthSqr() > 1.0E-4) {
-                    bot.lookAt(Locations.vec(target.getLocation()));
+                    bot.lookAt(target.position());
                     bot.motor().walk(towardVec.normalize());
                     bot.motor().setSprinting(true);
                     if (bot.horizontalCollision() && bot.onGround()) {
@@ -272,12 +270,12 @@ public final class Mining {
     }
 
     /** Digs to the player when they're above/below/ahead (used when the A* has no path). */
-    public void handleMiningTowards(Player target) {
+    public void handleMiningTowards(GamePlayer target) {
         if (bot.isInWater() || miningPos != null) {
             return;
         }
         Pos botPos = bot.blockPos();
-        Pos player = Locations.pos(target.getLocation());
+        Pos player = target.blockPos();
         bot.inventory().restorePreferredPickaxe();
         Pos front = Locations.relative(botPos, bot.facing());
         if (player.y() > botPos.y() + 1) {

@@ -2,7 +2,11 @@ package dev.manhuntstar.manhunt;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Freeze;
+import dev.manhuntstar.util.Vec3;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -12,9 +16,6 @@ import java.util.UUID;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
 
 /**
  * Pausa da caçada (/manhunt pause): cada bot fica parado onde está, até no ar, montado ou de barco,
@@ -88,13 +89,13 @@ public final class PauseService {
 
     /** A cada tick pausado: prende o bot (e o que ele monta) onde ele estava quando a pausa o pegou. */
     public void hold(Bot bot) {
-        Entity body = bot.entity();
-        Entity root = body;
-        while (root.getVehicle() != null) {
-            root = root.getVehicle();
+        GameEntity body = bot.entity();
+        GameEntity root = body;
+        while (root.vehicle() != null) {
+            root = root.vehicle();
         }
         Frozen f = frozen.get(bot.id());
-        Entity mount = root == body ? null : root;
+        GameEntity mount = root == body ? null : root;
         if (f == null || f.body().entity() != body || (f.mount() == null ? mount != null : f.mount().entity() != mount)) {
             if (f != null) {
                 f.release();
@@ -116,7 +117,7 @@ public final class PauseService {
         }
         if (paused && bot.isAlive()) {
             // chega parado, como depois de qualquer teleporte
-            bot.entity().setVelocity(new Vector());
+            bot.entity().setVelocity(Vec3.ZERO);
             bot.entity().setFallDistance(0);
             hold(bot);
         }
@@ -167,9 +168,9 @@ public final class PauseService {
     private void updateBar() {
         bar.name(plugin.messages().get("pause.bar"));
         Set<UUID> now = new HashSet<>();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            now.add(p.getUniqueId());
-            if (viewers.add(p.getUniqueId())) {
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
+            now.add(p.uuid());
+            if (viewers.add(p.uuid())) {
                 p.showBossBar(bar);
             }
         }
@@ -178,7 +179,7 @@ public final class PauseService {
 
     private void hideBar() {
         for (UUID id : viewers) {
-            Player p = Bukkit.getPlayer(id);
+            GamePlayer p = Platform.server().player(id);
             if (p != null) {
                 p.hideBossBar(bar);
             }

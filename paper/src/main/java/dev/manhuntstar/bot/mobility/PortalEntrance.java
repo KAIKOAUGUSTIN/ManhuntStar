@@ -8,7 +8,9 @@ import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -18,11 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
-import org.bukkit.entity.Player;
 
 /**
  * Bots following the target to another dimension: after 30–60 s (a tenth of that in the End), a Nether
@@ -44,14 +43,14 @@ public final class PortalEntrance {
     private int index;
     private boolean finished;
 
-    public PortalEntrance(BotManager manager, Player player, List<Bot> bots) {
+    public PortalEntrance(BotManager manager, GamePlayer player, List<Bot> bots) {
         this.manager = manager;
-        this.playerId = player.getUniqueId();
-        this.worldId = player.getWorld().getUID();
+        this.playerId = player.uuid();
+        this.worldId = player.world().id();
         this.bots = new ArrayList<>(bots);
         int min = manager.plugin().settings().minNetherDelay.value() * 20;
         int max = manager.plugin().settings().maxNetherDelay.value() * 20;
-        if (player.getWorld().getEnvironment() == World.Environment.THE_END) {
+        if (player.world().dimension() == Dimension.THE_END) {
             min /= 10;
             max /= 10;
         }
@@ -71,8 +70,8 @@ public final class PortalEntrance {
     }
 
     public void tick() {
-        Player player = Bukkit.getPlayer(playerId);
-        if (player == null || !player.getWorld().getUID().equals(worldId)) {
+        GamePlayer player = Platform.server().player(playerId);
+        if (player == null || !player.world().id().equals(worldId)) {
             abort();
             return;
         }
@@ -110,27 +109,27 @@ public final class PortalEntrance {
         finished = true;
     }
 
-    private void arrive(Bot bot, Player player) {
+    private void arrive(Bot bot, GamePlayer player) {
         if (!bot.isAlive()) {
             return;
         }
-        GameWorld w = PaperWorld.of(player.getWorld());
-        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, Locations.pos(player.getLocation()));
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, player.blockPos());
         Location dest = new Location(PaperWorld.bukkit(w), spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
-        bot.lookAt(Locations.vec(player.getLocation()));
+        bot.lookAt(player.position());
         w.playSound(Locations.vec(dest), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
     // ------------------------------------------------------------------ portal
 
-    private void spawnPortal(Player player) {
-        GameWorld w = PaperWorld.of(player.getWorld());
+    private void spawnPortal(GamePlayer player) {
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
         portalPos = findPortalLocation(player);
         boolean end = w.dimension() == Dimension.THE_END;
         if (portalPos == null) {
-            portalPos = Locations.relative(Locations.pos(player.getLocation()), Locations.faceFromYaw(player.getLocation().getYaw()), 15);
+            portalPos = Locations.relative(player.blockPos(), Locations.faceFromYaw(player.yaw()), 15);
         }
         if (end) {
             if (!WorldUtil.blocksMotion(w, portalPos.below())) {
@@ -174,9 +173,9 @@ public final class PortalEntrance {
         }
     }
 
-    private Pos findPortalLocation(Player player) {
-        GameWorld w = PaperWorld.of(player.getWorld());
-        Vec3 pp = Locations.vec(player.getLocation());
+    private Pos findPortalLocation(GamePlayer player) {
+        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        Vec3 pp = player.position();
         boolean nether = w.dimension() == Dimension.NETHER;
         boolean end = w.dimension() == Dimension.THE_END;
         for (int dist = 100; dist >= 10; dist -= 5) {
@@ -218,14 +217,14 @@ public final class PortalEntrance {
         return end ? new Pos((int) pp.x() + 5, (int) pp.y(), (int) pp.z() + 5) : null;
     }
 
-    private static boolean visibleTo(Player player, Pos pos) {
-        Vec3 eye = Locations.vec(player.getEyeLocation());
+    private static boolean visibleTo(GamePlayer player, Pos pos) {
+        Vec3 eye = player.eyePosition();
         Vec3 center = Vec3.center(pos);
-        Vec3 look = Locations.vec(player.getLocation().getDirection());
+        Vec3 look = player.direction();
         if (look.dot(center.subtract(eye).normalize()) < 0.5) {
             return false;
         }
-        return WorldUtil.clearLine(PaperWorld.of(player.getWorld()), eye, center.add(0, 1, 0));
+        return WorldUtil.clearLine(PaperWorld.of(PaperWorld.bukkit(player.world())), eye, center.add(0, 1, 0));
     }
 
     private static Pos exitSpot(GameWorld w, Pos base) {

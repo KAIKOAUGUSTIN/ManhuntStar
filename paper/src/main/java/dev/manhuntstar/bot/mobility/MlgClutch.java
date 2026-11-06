@@ -2,10 +2,14 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GameBoat;
+import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
@@ -16,13 +20,9 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -49,12 +49,12 @@ public final class MlgClutch {
         this.bot = bot;
     }
 
-    public void trackSpawnedBoat(Boat boat) {
-        spawnedBoats.add(boat.getUniqueId());
+    public void trackSpawnedBoat(GameBoat boat) {
+        spawnedBoats.add(boat.uuid());
     }
 
-    public boolean isOwnBoat(Entity e) {
-        return e != null && spawnedBoats.contains(e.getUniqueId());
+    public boolean isOwnBoat(GameEntity e) {
+        return e != null && spawnedBoats.contains(e.uuid());
     }
 
     public void tick(Navigator nav) {
@@ -85,10 +85,10 @@ public final class MlgClutch {
         if (!boatClutching) {
             return;
         }
-        Entity vehicle = bot.vehicle();
+        GameEntity vehicle = bot.vehicle();
         boatTicks++;
-        if (boatTicks > 40 || vehicle == null || !vehicle.isValid() || !(vehicle instanceof Boat)) {
-            if (vehicle instanceof Boat b && b.isValid() && boatTicks > 40) {
+        if (boatTicks > 40 || vehicle == null || !vehicle.isValid() || !(vehicle instanceof GameBoat)) {
+            if (vehicle instanceof GameBoat b && b.isValid() && boatTicks > 40) {
                 breakBoat(b);
                 cooldown = 20;
             }
@@ -97,8 +97,8 @@ public final class MlgClutch {
             bot.inventory().restorePreferredMainHand();
             return;
         }
-        if ((bot.onGround() || Math.abs(vehicle.getVelocity().getY()) < 0.05) && boatTicks > 5) {
-            breakBoat((Boat) vehicle);
+        if ((bot.onGround() || Math.abs(vehicle.velocity().y()) < 0.05) && boatTicks > 5) {
+            breakBoat((GameBoat) vehicle);
             boatClutching = false;
             boatTicks = 0;
             bot.inventory().restorePreferredMainHand();
@@ -112,16 +112,16 @@ public final class MlgClutch {
         }
         Iterator<UUID> it = spawnedBoats.iterator();
         while (it.hasNext()) {
-            Entity e = Bukkit.getEntity(it.next());
-            if (!(e instanceof Boat b) || !b.isValid()) {
+            GameEntity e = Platform.server().entity(it.next());
+            if (!(e instanceof GameBoat b) || !b.isValid()) {
                 it.remove();
                 continue;
             }
-            boolean riddenByMe = b.getPassengers().contains(bot.entity());
+            boolean riddenByMe = b.passengers().contains(bot.entity());
             if (riddenByMe && bot.brain().boat().isRiderBoat(b)) {
                 continue;
             }
-            if (b.getPassengers().isEmpty() || (b.isOnGround() && !riddenByMe) || b.getTicksLived() > 60 && !riddenByMe) {
+            if (b.passengers().isEmpty() || (b.isOnGround() && !riddenByMe) || b.ticksLived() > 60 && !riddenByMe) {
                 b.remove();
                 it.remove();
             }
@@ -134,7 +134,7 @@ public final class MlgClutch {
      */
     public void discardBoats() {
         for (UUID id : spawnedBoats) {
-            if (Bukkit.getEntity(id) instanceof Boat b && b.isValid()) {
+            if (Platform.server().entity(id) instanceof GameBoat b && b.isValid()) {
                 b.remove();
             }
         }
@@ -142,12 +142,12 @@ public final class MlgClutch {
     }
 
     /** Dismounts and breaks the boat like a player punching it (no drop). */
-    public void breakBoat(Boat b) {
-        if (b.getPassengers().contains(bot.entity())) {
+    public void breakBoat(GameBoat b) {
+        if (b.passengers().contains(bot.entity())) {
             b.removePassenger(bot.entity());
         }
-        b.getWorld().playSound(b.getLocation(), Sound.ENTITY_PLAYER_ATTACK_WEAK, SoundCategory.PLAYERS, 0.8f, 1f);
-        spawnedBoats.remove(b.getUniqueId());
+        b.world().playSound(b.position(), Sounds.ENTITY_PLAYER_ATTACK_WEAK, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.8f, 1f);
+        spawnedBoats.remove(b.uuid());
         b.remove();
     }
 
@@ -159,7 +159,7 @@ public final class MlgClutch {
         // planned fall means the bot slipped (edge of a ravine): while it falls the path doesn't advance and
         // kept saying "planned fall", and it died without a bucket.
         int plannedFall = nav.plannedFallHeight();
-        boolean planned = plannedFall > 0 && bot.entity() != null && bot.entity().getFallDistance() <= plannedFall + PLANNED_FALL_SLACK;
+        boolean planned = plannedFall > 0 && bot.entity() != null && bot.entity().fallDistance() <= plannedFall + PLANNED_FALL_SLACK;
         if (planned || bot.isInWater() || bot.isInLava()) {
             return;
         }
@@ -189,8 +189,7 @@ public final class MlgClutch {
             bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.OAK_BOAT));
             bot.setPitchNow(90f);
             Location loc = new Location(PaperWorld.bukkit(w), bot.pos().x(), ground.y() + 1.0, bot.pos().z(), bot.yaw(), 0);
-            Entity spawned = PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT);
-            if (spawned instanceof Boat boat) {
+            if (PaperEntities.of(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT)) instanceof GameBoat boat) {
                 trackSpawnedBoat(boat);
                 bot.swing();
                 boat.addPassenger(bot.entity());

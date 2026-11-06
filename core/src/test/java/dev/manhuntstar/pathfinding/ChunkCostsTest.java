@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import dev.manhuntstar.platform.BlockSnapshot;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.FakeServer;
 import dev.manhuntstar.platform.FakeWorld;
-import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Pos;
 import java.util.HashMap;
@@ -114,14 +114,9 @@ class ChunkCostsTest {
         }
     }
 
-    private static final class Server implements GameServer {
-        int tick;
+    /** The fake server with one world (or none, when it was unloaded). */
+    private static final class Server extends FakeServer {
         GameWorld world;
-
-        @Override
-        public int currentTick() {
-            return tick;
-        }
 
         @Override
         public GameWorld world(UUID id) {

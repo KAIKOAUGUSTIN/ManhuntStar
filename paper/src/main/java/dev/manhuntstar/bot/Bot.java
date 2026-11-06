@@ -10,15 +10,24 @@ import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.paper.PaperBlocks;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.Pose;
 import dev.manhuntstar.platform.SoundGroup;
 import dev.manhuntstar.platform.Sounds;
+import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.ChunkTickets;
 import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Locations;
@@ -41,15 +50,10 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
-import org.bukkit.entity.Pose;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.BoundingBox;
 
 /**
  * A hunter bot. Holds the identity and the persistent state; the {@link Mannequin} entity
@@ -76,7 +80,7 @@ public final class Bot {
     private boolean terminatorTotemIssued;
     private int kills;
 
-    private Mannequin entity;
+    private BotBody entity;
     private final Progression progression;
     private final BotInventory inventory;
     private final Hunger hunger = new Hunger();
@@ -142,7 +146,7 @@ public final class Bot {
     public void setVisualName(String visualName) {
         this.visualName = visualName;
         if (entity != null) {
-            entity.customName(Component.text(visualName));
+            PaperEntities.bukkit(entity).customName(Component.text(visualName));
         }
     }
 
@@ -153,7 +157,7 @@ public final class Bot {
     public void setSkin(SkinData skin) {
         this.skin = skin;
         if (entity != null) {
-            entity.setProfile(buildProfile());
+            PaperEntities.bukkit(entity).setProfile(buildProfile());
         }
     }
 
@@ -320,7 +324,12 @@ public final class Bot {
 
     // ------------------------------------------------------------------ entity
 
-    public Mannequin entity() {
+    /** The Bukkit entity of the body, while the code still uses it. */
+    public Mannequin mannequin() {
+        return PaperEntities.bukkit(entity);
+    }
+
+    public BotBody entity() {
         return entity;
     }
 
@@ -329,20 +338,20 @@ public final class Bot {
     }
 
     public GameWorld world() {
-        return PaperWorld.of(bukkitWorld());
+        return entity != null ? entity.world() : (lastKnownWorld == null ? null : Platform.server().world(lastKnownWorld));
     }
 
     /** The Bukkit world of {@link #world()}, while the code still uses it. */
     public World bukkitWorld() {
-        return entity != null ? entity.getWorld() : (lastKnownWorld == null ? null : Bukkit.getWorld(lastKnownWorld));
+        return PaperWorld.bukkit(world());
     }
 
     public Vec3 pos() {
-        return entity != null ? Locations.vec(entity.getLocation()) : (lastKnownPos == null ? Vec3.ZERO : lastKnownPos);
+        return entity != null ? entity.position() : (lastKnownPos == null ? Vec3.ZERO : lastKnownPos);
     }
 
     public Location location() {
-        return entity != null ? entity.getLocation() : (lastKnownPos == null || world() == null ? null : Locations.location(lastKnownPos, world()));
+        return entity != null ? PaperEntities.bukkit(entity).getLocation() : (lastKnownPos == null || world() == null ? null : Locations.location(lastKnownPos, world()));
     }
 
     public Pos blockPos() {
@@ -357,19 +366,19 @@ public final class Bot {
         if (entity == null) {
             return EYE_HEIGHT;
         }
-        return entity.getEyeHeight();
+        return entity.eyeHeight();
     }
 
     public double height() {
-        return entity == null ? 1.8 : entity.getHeight();
+        return entity == null ? 1.8 : entity.height();
     }
 
     public float yaw() {
-        return entity == null ? 0 : entity.getLocation().getYaw();
+        return entity == null ? 0 : entity.yaw();
     }
 
     public float pitch() {
-        return entity == null ? 0 : entity.getLocation().getPitch();
+        return entity == null ? 0 : entity.pitch();
     }
 
     public BlockFace facing() {
@@ -384,19 +393,19 @@ public final class Bot {
         return Vec3.fromRotation(yaw(), 0).normalize();
     }
 
-    public BoundingBox boundingBox() {
-        return entity == null ? new BoundingBox() : entity.getBoundingBox();
+    public Box boundingBox() {
+        return entity == null ? Box.EMPTY : entity.boundingBox();
     }
 
     public float health() {
-        return entity == null ? 0 : (float) entity.getHealth();
+        return entity == null ? 0 : (float) entity.health();
     }
 
     public float maxHealth() {
         if (entity == null) {
             return (float) settings().botHealth.value();
         }
-        AttributeInstance a = entity.getAttribute(Attribute.MAX_HEALTH);
+        AttributeInstance a = PaperEntities.bukkit(entity).getAttribute(Attribute.MAX_HEALTH);
         return a == null ? 20f : (float) a.getValue();
     }
 
@@ -431,15 +440,15 @@ public final class Bot {
     }
 
     public boolean isOnFire() {
-        return entity != null && entity.getFireTicks() > 0;
+        return entity != null && entity.fireTicks() > 0;
     }
 
     public boolean isRiding() {
         return entity != null && entity.isInsideVehicle();
     }
 
-    public Entity vehicle() {
-        return entity == null ? null : entity.getVehicle();
+    public GameEntity vehicle() {
+        return entity == null ? null : entity.vehicle();
     }
 
     public int aliveTicks() {
@@ -455,8 +464,8 @@ public final class Bot {
         return pos().distanceTo(p);
     }
 
-    public double distanceTo(Entity e) {
-        return pos().distanceTo(Locations.vec(e.getLocation()));
+    public double distanceTo(GameEntity e) {
+        return pos().distanceTo(e.position());
     }
 
     /** Line of sight from the eyes to the point, ignoring blocks without collision. */
@@ -490,25 +499,25 @@ public final class Bot {
     }
 
     /** The target player, if the list and the late-joiner protection still allow hunting them. */
-    public Player target() {
-        Player p = targetPlayer == null ? null : Bukkit.getPlayer(targetPlayer);
-        if (p == null || p.getUniqueId().equals(manager.forcedTarget()) || manager.policy().canBeHunted(p)) {
+    public GamePlayer target() {
+        GamePlayer p = targetPlayer == null ? null : Platform.server().player(targetPlayer);
+        if (p == null || p.uuid().equals(manager.forcedTarget()) || manager.policy().canBeHunted(p)) {
             return p;
         }
         return null;
     }
 
     /** Closest living player in any world (fallback when the target is gone). */
-    public Player fallbackTarget() {
-        Player best = null;
+    public GamePlayer fallbackTarget() {
+        GamePlayer best = null;
         double bestDist = Double.MAX_VALUE;
-        World w = bukkitWorld();
+        GameWorld w = world();
         Vec3 p = pos();
-        for (Player pl : Bukkit.getOnlinePlayers()) {
+        for (GamePlayer pl : Platform.server().onlinePlayers()) {
             if (!manager.isEligibleTarget(pl)) {
                 continue;
             }
-            double d = pl.getWorld().equals(w) ? p.distanceTo(Locations.vec(pl.getLocation())) : 1.0E7;
+            double d = pl.world().equals(w) ? p.distanceTo(pl.position()) : 1.0E7;
             if (d < bestDist) {
                 bestDist = d;
                 best = pl;
@@ -517,12 +526,12 @@ public final class Bot {
         return best;
     }
 
-    public boolean isWithinToweringRange(Player target, double maxAxisDistance) {
-        if (target == null || target.isDead() || !target.getWorld().equals(bukkitWorld())) {
+    public boolean isWithinToweringRange(GamePlayer target, double maxAxisDistance) {
+        if (target == null || target.isDead() || !target.world().equals(world())) {
             return false;
         }
         Vec3 p = pos();
-        return Math.hypot(target.getX() - p.x(), target.getZ() - p.z()) <= maxAxisDistance;
+        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z()) <= maxAxisDistance;
     }
 
     // ------------------------------------------------------------------ aim and pose
@@ -667,7 +676,7 @@ public final class Bot {
         if (entity == null) {
             return ItemStack.empty();
         }
-        EntityEquipment eq = entity.getEquipment();
+        EntityEquipment eq = PaperEntities.bukkit(entity).getEquipment();
         ItemStack s = eq.getItem(slot);
         return s == null ? ItemStack.empty() : s;
     }
@@ -677,7 +686,7 @@ public final class Bot {
             return;
         }
         ItemStack s = stack == null ? ItemStack.empty() : stack;
-        entity.getEquipment().setItem(slot, s, true);
+        PaperEntities.bukkit(entity).getEquipment().setItem(slot, s, true);
         inventory.onEquipmentChanged(slot, s);
     }
 
@@ -757,12 +766,12 @@ public final class Bot {
     }
 
     private boolean wouldTrapLivingEntity(Pos pos, boolean allowSelfOverlap) {
-        BoundingBox box = new BoundingBox(pos.x(), pos.y(), pos.z(), pos.x() + 1, pos.y() + 1, pos.z() + 1);
+        Box box = new Box(pos.x(), pos.y(), pos.z(), pos.x() + 1, pos.y() + 1, pos.z() + 1);
         if (!allowSelfOverlap && boundingBox().overlaps(box)) {
             return true;
         }
-        for (Entity e : bukkitWorld().getNearbyEntities(box)) {
-            if (e != entity && e instanceof LivingEntity le && !le.isDead()) {
+        for (GameEntity e : world().nearbyEntities(box)) {
+            if (e != entity && e instanceof GameLiving le && !le.isDead()) {
                 return true;
             }
         }
@@ -845,10 +854,10 @@ public final class Bot {
     }
 
     /** Creates the entity at the given location (first spawn, respawn or restore). */
-    Mannequin spawnEntity(Location loc) {
+    BotBody spawnEntity(Location loc) {
         Location safe = adjustOutOfLava(loc);
         Settings s = settings();
-        entity = safe.getWorld().spawn(safe, Mannequin.class, m -> {
+        Mannequin spawned = safe.getWorld().spawn(safe, Mannequin.class, m -> {
             m.setPersistent(false);
             m.setDescription(null);
             m.setProfile(buildProfile());
@@ -864,13 +873,14 @@ public final class Bot {
             m.setHealth(s.botHealth.value());
             m.getPersistentDataContainer().set(manager.botKey(), org.bukkit.persistence.PersistentDataType.STRING, id.toString());
         });
+        entity = PaperEntities.of(spawned);
         aliveTicks = 0;
         targetYaw = null;
         targetPitch = null;
         sneaking = false;
         swimmingPose = false;
-        lastKnownWorld = entity.getWorld().getName();
-        lastKnownPos = Locations.vec(entity.getLocation());
+        lastKnownWorld = entity.world().name();
+        lastKnownPos = entity.position();
         motor.onRespawn();
         updateChunkTickets(true);
         manager.onEntitySpawned(this);
@@ -904,8 +914,8 @@ public final class Bot {
     /** Removes the entity without a death effect. */
     void despawnEntity() {
         if (entity != null) {
-            lastKnownPos = Locations.vec(entity.getLocation());
-            lastKnownWorld = entity.getWorld().getName();
+            lastKnownPos = entity.position();
+            lastKnownWorld = entity.world().name();
             mining.cancel();
             if (entity.isValid()) {
                 entity.remove();
@@ -919,8 +929,8 @@ public final class Bot {
 
     void markDead() {
         if (entity != null) {
-            lastKnownPos = Locations.vec(entity.getLocation());
-            lastKnownWorld = entity.getWorld().getName();
+            lastKnownPos = entity.position();
+            lastKnownWorld = entity.world().name();
         }
         mining.cancel();
         entity = null;
@@ -931,8 +941,8 @@ public final class Bot {
 
     public void onEntityTeleported() {
         if (entity != null) {
-            lastKnownWorld = entity.getWorld().getName();
-            lastKnownPos = Locations.vec(entity.getLocation());
+            lastKnownWorld = entity.world().name();
+            lastKnownPos = entity.position();
         }
         updateChunkTickets(true);
         brain.navigator().reset();
@@ -947,15 +957,15 @@ public final class Bot {
             spawnEntity(dest);
             return;
         }
-        if (entity.getWorld().equals(dest.getWorld())) {
-            entity.teleport(dest);
+        if (PaperWorld.bukkit(entity.world()).equals(dest.getWorld())) {
+            PaperEntities.bukkit(entity).teleport(dest);
             onEntityTeleported();
             return;
         }
-        double hp = entity.getHealth();
-        int fire = entity.getFireTicks();
-        int air = entity.getRemainingAir();
-        var effects = new java.util.ArrayList<>(entity.getActivePotionEffects());
+        double hp = entity.health();
+        int fire = entity.fireTicks();
+        int air = entity.remainingAir();
+        var effects = new java.util.ArrayList<>(PaperEntities.bukkit(entity).getActivePotionEffects());
         Map<EquipmentSlot, ItemStack> equipment = new java.util.EnumMap<>(EquipmentSlot.class);
         for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             equipment.put(slot, getItem(slot).clone());
@@ -966,12 +976,12 @@ public final class Bot {
         releaseChunkTickets();
         spawnEntity(dest);
         for (Map.Entry<EquipmentSlot, ItemStack> e : equipment.entrySet()) {
-            entity.getEquipment().setItem(e.getKey(), e.getValue(), true);
+            PaperEntities.bukkit(entity).getEquipment().setItem(e.getKey(), e.getValue(), true);
         }
         entity.setHealth(Math.max(0.5, Math.min(maxHealth(), hp)));
         entity.setFireTicks(fire);
         entity.setRemainingAir(air);
-        entity.addPotionEffects(effects);
+        PaperEntities.bukkit(entity).addPotionEffects(effects);
         brain.navigator().reset();
     }
 
@@ -1047,9 +1057,9 @@ public final class Bot {
         if (!force && !tickDelay(20)) {
             return;
         }
-        World w = entity.getWorld();
-        int cx = entity.getLocation().getBlockX() >> 4;
-        int cz = entity.getLocation().getBlockZ() >> 4;
+        World w = PaperWorld.bukkit(entity.world());
+        int cx = PaperEntities.bukkit(entity).getLocation().getBlockX() >> 4;
+        int cz = PaperEntities.bukkit(entity).getLocation().getBlockZ() >> 4;
         Set<Long> wanted = new HashSet<>();
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
@@ -1094,14 +1104,14 @@ public final class Bot {
             return;
         }
         aliveTicks++;
-        lastKnownPos = Locations.vec(entity.getLocation());
-        lastKnownWorld = entity.getWorld().getName();
+        lastKnownPos = entity.position();
+        lastKnownWorld = entity.world().name();
         keepActive(entity);
         updateChunkTickets(false);
         progression.tick();
         motor.beginTick();
         tickPendingPillar();
-        if (isRiding() && vehicle() instanceof org.bukkit.entity.AbstractHorse) {
+        if (isRiding() && vehicle() instanceof GameHorse) {
             motor.stopWalk();
         }
         inventory.tick();
@@ -1135,8 +1145,8 @@ public final class Bot {
      * inactive, and Paper keeps every entity with a portal cooldown active, so the bot keeps
      * a permanent cooldown (it doesn't use portals on its own; dimension changes are done by the plugin).
      */
-    public static void keepActive(Entity e) {
-        if (e.getPortalCooldown() < 40) {
+    public static void keepActive(GameEntity e) {
+        if (e.portalCooldown() < 40) {
             e.setPortalCooldown(100);
         }
     }
@@ -1145,18 +1155,18 @@ public final class Bot {
         if (entity == null || entity.isDead()) {
             return;
         }
-        double hp = entity.getHealth();
+        double hp = entity.health();
         double max = maxHealth();
         // The mod's extra passive regeneration (0.5 health per second out of fire/lava and with full air).
-        if (hp < max && !isInLava() && !isOnFire() && entity.getRemainingAir() >= entity.getMaximumAir()) {
+        if (hp < max && !isInLava() && !isOnFire() && entity.remainingAir() >= entity.maximumAir()) {
             entity.setHealth(Math.min(max, hp + 0.025));
         }
-        boolean naturalRegen = !Boolean.FALSE.equals(entity.getWorld().getGameRuleValue(org.bukkit.GameRules.NATURAL_HEALTH_REGENERATION));
-        float delta = hunger.tick((float) entity.getHealth(), (float) max, naturalRegen, entity.getWorld().getDifficulty().ordinal());
+        boolean naturalRegen = !Boolean.FALSE.equals(entity.world().gameRule(dev.manhuntstar.platform.GameRule.NATURAL_HEALTH_REGENERATION));
+        float delta = hunger.tick((float) entity.health(), (float) max, naturalRegen, entity.world().difficulty().ordinal());
         if (delta > 0) {
-            entity.setHealth(Math.min(max, entity.getHealth() + delta));
+            entity.setHealth(Math.min(max, entity.health() + delta));
         } else if (delta < 0) {
-            entity.damage(-delta, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.STARVE).build());
+            PaperEntities.bukkit(entity).damage(-delta, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.STARVE).build());
         }
     }
 

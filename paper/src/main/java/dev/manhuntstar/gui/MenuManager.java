@@ -13,6 +13,7 @@ import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Setting.Category;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.paper.PaperEntities;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -386,7 +387,7 @@ public final class MenuManager implements Listener {
                 lines("menu.bots-section.groups-lore", NamedTextColor.GRAY)), c -> openGroups(p));
         set(m, 20, item(Material.ENDER_PEARL, t("menu.bots-section.bring", NamedTextColor.LIGHT_PURPLE),
                 List.of(plain("/manhunt tp all", NamedTextColor.DARK_GRAY))), c -> {
-                    int n = bm.teleportAllTo(p);
+                    int n = bm.teleportAllTo(PaperEntities.of(p));
                     msg().send(p, "command.tp-all", Messages.p("amount", n), Messages.p("player", p.getName()));
                 });
         set(m, 24, item(Material.LAVA_BUCKET, t("menu.bots-section.delete", NamedTextColor.RED),
@@ -476,7 +477,7 @@ public final class MenuManager implements Listener {
         int start = page * per;
         for (int i = 0; i < per && start + i < bots.size(); i++) {
             Bot b = bots.get(start + i);
-            Player target = b.target();
+            Player target = PaperEntities.bukkit(b.target());
             ItemStack head = item(Material.PLAYER_HEAD, plain(b.visualName() + " (" + b.name() + ")", b.isAlive() ? NamedTextColor.GREEN : NamedTextColor.RED), List.of(
                     t("menu.bots.phase", NamedTextColor.GRAY, Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty()))),
                     t("menu.bots.health", NamedTextColor.GRAY, Messages.p("health", String.format(Locale.ROOT, "%.0f", b.health())), Messages.p("kills", b.kills())),

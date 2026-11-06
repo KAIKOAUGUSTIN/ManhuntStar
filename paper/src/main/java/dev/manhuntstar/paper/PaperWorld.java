@@ -10,14 +10,26 @@ import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.util.Vec3;
+import dev.manhuntstar.platform.Difficulty;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameRule;
+import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.util.Box;
+import dev.manhuntstar.util.Locations;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.FluidCollisionMode;
+import org.bukkit.GameRules;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -162,6 +174,58 @@ public final class PaperWorld implements GameWorld {
     @Override
     public void playSound(Vec3 at, GameSound sound, SoundCategory category, float volume, float pitch) {
         world.playSound(new Location(world, at.x(), at.y(), at.z()), PaperSounds.sound(sound), PaperSounds.category(category), volume, pitch);
+    }
+
+    @Override
+    public void spawnParticle(Particle particle, Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra) {
+        world.spawnParticle(PaperParticles.of(particle), at.x(), at.y(), at.z(), count, offsetX, offsetY, offsetZ, extra);
+    }
+
+    @Override
+    public void spawnBlockParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameBlock block) {
+        world.spawnParticle(org.bukkit.Particle.BLOCK, at.x(), at.y(), at.z(), count, offsetX, offsetY, offsetZ, extra,
+                ((PaperBlock) block).bukkit().getBlockData());
+    }
+
+    @Override
+    public Boolean gameRule(GameRule rule) {
+        return world.getGameRuleValue(switch (rule) {
+            case PVP -> GameRules.PVP;
+            case NATURAL_HEALTH_REGENERATION -> GameRules.NATURAL_HEALTH_REGENERATION;
+            case SHOW_DEATH_MESSAGES -> GameRules.SHOW_DEATH_MESSAGES;
+        });
+    }
+
+    @Override
+    public Difficulty difficulty() {
+        return Difficulty.values()[world.getDifficulty().ordinal()];
+    }
+
+    @Override
+    public List<? extends GamePlayer> players() {
+        List<GamePlayer> out = new ArrayList<>();
+        for (Player p : world.getPlayers()) {
+            out.add(PaperEntities.of(p));
+        }
+        return out;
+    }
+
+    @Override
+    public List<GameEntity> nearbyEntities(Box box) {
+        List<GameEntity> out = new ArrayList<>();
+        for (Entity e : world.getNearbyEntities(Locations.boundingBox(box))) {
+            out.add(PaperEntities.of(e));
+        }
+        return out;
+    }
+
+    @Override
+    public List<GameEntity> nearbyEntities(Vec3 center, double x, double y, double z) {
+        List<GameEntity> out = new ArrayList<>();
+        for (Entity e : world.getNearbyEntities(new Location(world, center.x(), center.y(), center.z()), x, y, z)) {
+            out.add(PaperEntities.of(e));
+        }
+        return out;
     }
 
     @Override

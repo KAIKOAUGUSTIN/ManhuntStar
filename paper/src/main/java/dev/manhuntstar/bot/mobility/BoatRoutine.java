@@ -2,11 +2,17 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameBoat;
+import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
@@ -23,11 +29,7 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.entity.Boat;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
@@ -66,7 +68,7 @@ public final class BoatRoutine {
     private Pos surfaceGoal;
     /** Crossing requested by the path: where to get off, who is being followed and the deadline. */
     private Pos crossingGoal;
-    private LivingEntity crossingFollow;
+    private GameLiving crossingFollow;
     private int crossingRequestTick;
     private int crossingTicks;
     private int crossingBudget;
@@ -79,7 +81,7 @@ public final class BoatRoutine {
      * The path has ahead a stretch of water that the A* decided to cross by boat, ending at
      * {@code goal}. The request holds while it's repeated; the bot boards when it reaches the edge.
      */
-    public void requestCrossing(Pos goal, LivingEntity follow) {
+    public void requestCrossing(Pos goal, GameLiving follow) {
         if (!bot.settings().allowBoat.on()) {
             return;
         }
@@ -108,33 +110,33 @@ public final class BoatRoutine {
         if (reboardCooldown > 0) {
             reboardCooldown--;
         }
-        if (riderBoat != null && bot.tickDelay(20) && !(Bukkit.getEntity(riderBoat) instanceof Boat b && b.isValid())) {
+        if (riderBoat != null && bot.tickDelay(20) && !(Platform.server().entity(riderBoat) instanceof GameBoat b && b.isValid())) {
             riderBoat = null;
             noMoveTicks = 0;
             clearAssault();
         }
     }
 
-    public boolean isRiderBoat(Boat b) {
-        return riderBoat != null && riderBoat.equals(b.getUniqueId());
+    public boolean isRiderBoat(GameBoat b) {
+        return riderBoat != null && riderBoat.equals(b.uuid());
     }
 
-    private Boat riderBoatEntity() {
-        return riderBoat != null && Bukkit.getEntity(riderBoat) instanceof Boat b && b.isValid() ? b : null;
+    private GameBoat riderBoatEntity() {
+        return riderBoat != null && Platform.server().entity(riderBoat) instanceof GameBoat b && b.isValid() ? b : null;
     }
 
     /** @return true if the boat controlled the bot this tick. */
     public boolean handle() {
-        Entity vehicle = bot.vehicle();
+        GameEntity vehicle = bot.vehicle();
         if (!bot.settings().allowBoat.on()) {
-            if (vehicle instanceof Boat b && isRiderBoat(b)) {
+            if (vehicle instanceof GameBoat b && isRiderBoat(b)) {
                 cleanup(true);
             }
             clearAssault();
             clearCrossing();
             return false;
         }
-        Player boating = findNearbyBoatingPlayer();
+        GamePlayer boating = findNearbyBoatingPlayer();
         if (crossingGoal != null) {
             if (boating == null) {
                 return handleCrossing(vehicle);
@@ -142,14 +144,14 @@ public final class BoatRoutine {
             // someone in a boat nearby: the usual boat chase applies
             clearCrossing();
         }
-        Player chase = primaryChaseTarget();
+        GamePlayer chase = primaryChaseTarget();
         boolean phase6WaterChase = bot.progression().phase() >= 6 && chase != null && !isOutOfWater(chase);
         boolean deferToVertical = boating == null && chase != null && shouldDeferToVerticalChase(chase);
-        Player opsTarget = boating != null ? boating : (phase6WaterChase && !deferToVertical ? chase : null);
-        if (assaultActive && (boating == null || assaultTarget == null || !assaultTarget.equals(boating.getUniqueId()))) {
+        GamePlayer opsTarget = boating != null ? boating : (phase6WaterChase && !deferToVertical ? chase : null);
+        if (assaultActive && (boating == null || assaultTarget == null || !assaultTarget.equals(boating.uuid()))) {
             clearAssault();
         }
-        if (vehicle instanceof Boat mounted) {
+        if (vehicle instanceof GameBoat mounted) {
             if (!isRiderBoat(mounted)) {
                 return handleForeignBoat(mounted, chase);
             }
@@ -160,13 +162,13 @@ public final class BoatRoutine {
             clearAssault();
             return false;
         }
-        if (assaultActive && boating != null && assaultTarget != null && assaultTarget.equals(boating.getUniqueId())) {
+        if (assaultActive && boating != null && assaultTarget != null && assaultTarget.equals(boating.uuid())) {
             return bot.distanceTo(boating) > 7.0 && tryReenterParkedBoat(boating);
         }
         if (reboardCooldown > 0) {
             return false;
         }
-        if (boating != null && boating.getVehicle() instanceof Boat targetBoat && tryBoardAsPassenger(boating, targetBoat)) {
+        if (boating != null && boating.vehicle() instanceof GameBoat targetBoat && tryBoardAsPassenger(boating, targetBoat)) {
             return true;
         }
         if (tryReenterParkedBoat(opsTarget)) {
@@ -187,11 +189,11 @@ public final class BoatRoutine {
         bot.lookAt(Vec3.center(water));
         GameWorld w = bot.world();
         Location loc = new Location(PaperWorld.bukkit(w), water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
-        if (!(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT) instanceof Boat boat)) {
+        if (!(PaperEntities.of(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT)) instanceof GameBoat boat)) {
             return false;
         }
         bot.brain().mlg().trackSpawnedBoat(boat);
-        riderBoat = boat.getUniqueId();
+        riderBoat = boat.uuid();
         clearAssault();
         noMoveTicks = 0;
         actionCooldown = 8;
@@ -203,25 +205,25 @@ public final class BoatRoutine {
 
     // ------------------------------------------------------------------ crossing requested by the path
 
-    private boolean handleCrossing(Entity vehicle) {
-        LivingEntity follow = crossingFollow;
-        boolean followGone = follow == null || follow.isDead() || !follow.getWorld().equals(bot.bukkitWorld());
-        if (vehicle instanceof Boat mounted && isRiderBoat(mounted)) {
+    private boolean handleCrossing(GameEntity vehicle) {
+        GameLiving follow = crossingFollow;
+        boolean followGone = follow == null || follow.isDead() || !follow.world().equals(bot.world());
+        if (vehicle instanceof GameBoat mounted && isRiderBoat(mounted)) {
             crossingTicks++;
             if (!followGone && bot.tickDelay(10)) {
                 // the path is recomputed from the boat; the end of the water stretch may have changed
                 Navigator nav = bot.brain().navigator();
-                nav.waypoint(Locations.vec(follow.getLocation()));
+                nav.waypoint(follow.position());
                 Pos next = nav.boatCrossingGoal(true);
                 if (next != null && !next.equals(crossingGoal)) {
                     crossingGoal = next;
-                    crossingBudget = budgetFor(Locations.vec(mounted.getLocation()), next);
+                    crossingBudget = budgetFor(mounted.position(), next);
                 }
             }
-            Location bl = mounted.getLocation();
+            Location bl = PaperEntities.bukkit(mounted).getLocation();
             Vec3 goal = Vec3.bottomCenter(crossingGoal);
             boolean arrived = Math.hypot(goal.x() - bl.getX(), goal.z() - bl.getZ()) < 2.5;
-            boolean close = !followGone && bl.distance(follow.getLocation()) < 4.0;
+            boolean close = !followGone && bl.distance(PaperEntities.bukkit(follow).getLocation()) < 4.0;
             boolean stuck = noMoveTicks >= 40;
             boolean late = crossingTicks > crossingBudget;
             if (followGone || close || stuck || late || shouldDismountNearShore(mounted) || (arrived && isBoatCloseToLand(mounted))) {
@@ -267,31 +269,31 @@ public final class BoatRoutine {
         crossingFollow = null;
     }
 
-    private boolean handleForeignBoat(Boat mounted, Player chase) {
-        if (mounted.getPassengers().indexOf(bot.entity()) == 0) {
+    private boolean handleForeignBoat(GameBoat mounted, GamePlayer chase) {
+        if (mounted.passengers().indexOf(bot.entity()) == 0) {
             forceDismount(mounted);
             return false;
         }
-        if (passengerHost == null && chase != null && chase.getVehicle() == mounted) {
-            passengerHost = chase.getUniqueId();
+        if (passengerHost == null && chase != null && chase.vehicle() == mounted) {
+            passengerHost = chase.uuid();
         }
-        boolean hostInBoat = passengerHost != null && mounted.getPassengers().stream().anyMatch(e -> e.getUniqueId().equals(passengerHost));
-        if (!hostInBoat || chase == null || chase.isDead() || chase.getVehicle() != mounted || isOutOfWater(chase)) {
+        boolean hostInBoat = passengerHost != null && mounted.passengers().stream().anyMatch(e -> e.uuid().equals(passengerHost));
+        if (!hostInBoat || chase == null || chase.isDead() || chase.vehicle() != mounted || isOutOfWater(chase)) {
             forceDismount(mounted);
             return false;
         }
         return true;
     }
 
-    private boolean handleRiding(Boat mounted, Player boating, Player chase, boolean deferToVertical) {
+    private boolean handleRiding(GameBoat mounted, GamePlayer boating, GamePlayer chase, boolean deferToVertical) {
         if (deferToVertical || (boating == null && chase != null && isOutOfWater(chase))
                 || (chase != null && isOutOfWater(chase) && isBoatCloseToLand(mounted))) {
             cleanup(true);
             bot.inventory().restorePreferredMainHand();
             return false;
         }
-        if (chase != null && !chase.isDead() && !(chase.getVehicle() instanceof Boat)
-                && mounted.getLocation().distance(chase.getLocation()) <= 3.0) {
+        if (chase != null && !chase.isDead() && !(chase.vehicle() instanceof GameBoat)
+                && PaperEntities.bukkit(mounted).getLocation().distance(PaperEntities.bukkit(chase).getLocation()) <= 3.0) {
             cleanup(true);
             bot.inventory().restorePreferredMainHand();
             if (bot.distanceTo(chase) <= 3.3) {
@@ -299,14 +301,14 @@ public final class BoatRoutine {
             }
             return false;
         }
-        if (boating != null && boating.getVehicle() instanceof Boat targetBoat
-                && mounted.getLocation().distance(targetBoat.getLocation()) <= 3.2) {
+        if (boating != null && boating.vehicle() instanceof GameBoat targetBoat
+                && PaperEntities.bukkit(mounted).getLocation().distance(PaperEntities.bukkit(targetBoat).getLocation()) <= 3.2) {
             if (tryBoardAsPassenger(boating, targetBoat)) {
                 return true;
             }
             assaultActive = true;
-            assaultTarget = boating.getUniqueId();
-            park(mounted, Locations.vec(boating.getLocation()));
+            assaultTarget = boating.uuid();
+            park(mounted, boating.position());
             if (bot.onGround()) {
                 bot.motor().jump();
             }
@@ -322,10 +324,10 @@ public final class BoatRoutine {
         }
         Vec3 steer = null;
         if (boating != null) {
-            steer = Locations.vec(boating.getVehicle() instanceof Boat tb ? tb.getLocation() : boating.getLocation());
+            steer = Locations.vec(boating.vehicle() instanceof GameBoat tb ? PaperEntities.bukkit(tb).getLocation() : PaperEntities.bukkit(boating).getLocation());
         }
         if (steer == null && chase != null && !chase.isDead()) {
-            steer = Locations.vec(chase.getLocation());
+            steer = chase.position();
         }
         if (steer == null) {
             deltaRotation = 0;
@@ -343,9 +345,9 @@ public final class BoatRoutine {
 
     // ------------------------------------------------------------------ steering
 
-    private void steerTowards(Boat boat, Vec3 chaseTarget) {
+    private void steerTowards(GameBoat boat, Vec3 chaseTarget) {
         Vec3 nav = surfaceWaypoint(boat, chaseTarget);
-        Location bl = boat.getLocation();
+        Location bl = PaperEntities.bukkit(boat).getLocation();
         Vec3 to = new Vec3(nav.x() - bl.getX(), 0, nav.z() - bl.getZ());
         if (to.lengthSqr() < 0.09) {
             deltaRotation = 0;
@@ -376,16 +378,17 @@ public final class BoatRoutine {
             accel += 0.04f;
         }
         double rad = Math.toRadians(yaw);
-        Vector v = boat.getVelocity();
-        boat.setVelocity(v.add(new Vector(-Math.sin(rad) * accel, 0, Math.cos(rad) * accel)));
+        // the speed below is the one after the push, as before (Bukkit's Vector.add changed the vector itself)
+        Vec3 v = boat.velocity().add(-Math.sin(rad) * accel, 0, Math.cos(rad) * accel);
+        boat.setVelocity(v);
         deltaRotation *= 0.9f;
-        double speed = Math.hypot(v.getX(), v.getZ());
+        double speed = Math.hypot(v.x(), v.z());
         noMoveTicks = forward && speed < 0.03 ? noMoveTicks + 1 : 0;
         bot.motor().stopWalk();
     }
 
-    private Vec3 surfaceWaypoint(Boat boat, Vec3 chaseTarget) {
-        Pos start = nearestSurfaceWater(Locations.pos(boat.getLocation()), 2, 3);
+    private Vec3 surfaceWaypoint(GameBoat boat, Vec3 chaseTarget) {
+        Pos start = nearestSurfaceWater(boat.blockPos(), 2, 3);
         Pos goal = nearestSurfaceWater(chaseTarget.toPos(), 3, 8);
         if (start == null || goal == null) {
             clearSurfacePath();
@@ -406,7 +409,7 @@ public final class BoatRoutine {
         if (surfacePath.isEmpty()) {
             return Vec3.bottomCenter(goal);
         }
-        Location bl = boat.getLocation();
+        Location bl = PaperEntities.bukkit(boat).getLocation();
         while (surfaceIndex < surfacePath.size()) {
             Vec3 c = Vec3.bottomCenter(surfacePath.get(surfaceIndex));
             double dx = bl.getX() - c.x();
@@ -553,24 +556,24 @@ public final class BoatRoutine {
 
     // ------------------------------------------------------------------ boarding / getting off
 
-    private boolean tryBoardAsPassenger(Player target, Boat targetBoat) {
-        if (!targetBoat.isValid() || target.getVehicle() != targetBoat || targetBoat.getPassengers().size() >= 2) {
+    private boolean tryBoardAsPassenger(GamePlayer target, GameBoat targetBoat) {
+        if (!targetBoat.isValid() || target.vehicle() != targetBoat || targetBoat.passengers().size() >= 2) {
             return false;
         }
-        if (bot.pos().distanceTo(Locations.vec(targetBoat.getLocation())) > 2.5) {
+        if (bot.pos().distanceTo(targetBoat.position()) > 2.5) {
             return false;
         }
         bot.motor().stopWalk();
-        bot.lookAt(Locations.vec(targetBoat.getLocation()).add(0, 0.5, 0));
+        bot.lookAt(targetBoat.position().add(0, 0.5, 0));
         boolean boarded = targetBoat.addPassenger(bot.entity());
         if (boarded) {
-            passengerHost = target.getUniqueId();
+            passengerHost = target.uuid();
         }
         return boarded;
     }
 
-    private void park(Boat boat, Vec3 attackTarget) {
-        boat.setVelocity(new Vector(0, boat.getVelocity().getY(), 0));
+    private void park(GameBoat boat, Vec3 attackTarget) {
+        boat.setVelocity(new Vec3(0, boat.velocity().y(), 0));
         bot.lookAt(attackTarget.add(0, 1, 0));
         boat.removePassenger(bot.entity());
         deltaRotation = 0;
@@ -579,18 +582,18 @@ public final class BoatRoutine {
         bot.motor().stopWalk();
     }
 
-    private boolean tryReenterParkedBoat(Player target) {
+    private boolean tryReenterParkedBoat(GamePlayer target) {
         if (target == null || riderBoat == null) {
             return false;
         }
-        Boat parked = riderBoatEntity();
+        GameBoat parked = riderBoatEntity();
         if (parked == null) {
             riderBoat = null;
             clearSurfacePath();
             clearAssault();
             return false;
         }
-        if (!parked.getPassengers().isEmpty() && !parked.getPassengers().contains(bot.entity())) {
+        if (!parked.passengers().isEmpty() && !parked.passengers().contains(bot.entity())) {
             riderBoat = null;
             clearSurfacePath();
             clearAssault();
@@ -599,15 +602,15 @@ public final class BoatRoutine {
         if (bot.distanceTo(target) < 7.0) {
             return false;
         }
-        if (bot.pos().distanceTo(Locations.vec(parked.getLocation())) <= 2.8) {
-            bot.lookAt(Locations.vec(parked.getLocation()).add(0, 0.5, 0));
+        if (bot.pos().distanceTo(parked.position()) <= 2.8) {
+            bot.lookAt(parked.position().add(0, 0.5, 0));
             if (parked.addPassenger(bot.entity())) {
                 clearAssault();
                 actionCooldown = Math.max(actionCooldown, 6);
                 return true;
             }
         }
-        moveToward(Locations.vec(parked.getLocation()));
+        moveToward(parked.position());
         return true;
     }
 
@@ -629,7 +632,7 @@ public final class BoatRoutine {
         bot.brain().dumbStarMove(dest, hasPath, primaryChaseTarget());
     }
 
-    private void forceDismount(Boat foreign) {
+    private void forceDismount(GameBoat foreign) {
         foreign.removePassenger(bot.entity());
         passengerHost = null;
         reboardCooldown = Math.max(reboardCooldown, 12);
@@ -639,14 +642,14 @@ public final class BoatRoutine {
     }
 
     private void cleanup(boolean breakBoat) {
-        Boat tracked = riderBoatEntity();
+        GameBoat tracked = riderBoatEntity();
         if (tracked != null) {
-            if (tracked.getPassengers().contains(bot.entity())) {
+            if (tracked.passengers().contains(bot.entity())) {
                 tracked.removePassenger(bot.entity());
             }
             if (breakBoat) {
                 bot.motor().stopWalk();
-                bot.lookAt(Locations.vec(tracked.getLocation()));
+                bot.lookAt(tracked.position());
                 bot.swing();
                 bot.swing();
                 bot.brain().mlg().breakBoat(tracked);
@@ -669,14 +672,14 @@ public final class BoatRoutine {
 
     // ------------------------------------------------------------------ queries
 
-    private Player findNearbyBoatingPlayer() {
-        Player best = null;
+    private GamePlayer findNearbyBoatingPlayer() {
+        GamePlayer best = null;
         double bestDist = Double.MAX_VALUE;
-        for (Player p : bot.bukkitWorld().getPlayers()) {
-            if (p.isDead() || !(p.getVehicle() instanceof Boat) || !bot.manager().isEligibleTarget(p)) {
+        for (GamePlayer p : bot.world().players()) {
+            if (p.isDead() || !(p.vehicle() instanceof GameBoat) || !bot.manager().isEligibleTarget(p)) {
                 continue;
             }
-            double d = bot.pos().distanceToSqr(Locations.vec(p.getLocation()));
+            double d = bot.pos().distanceToSqr(p.position());
             if (d <= SEARCH_RADIUS_SQ && d < bestDist) {
                 bestDist = d;
                 best = p;
@@ -685,8 +688,8 @@ public final class BoatRoutine {
         return best;
     }
 
-    private Player primaryChaseTarget() {
-        Player t = bot.target();
+    private GamePlayer primaryChaseTarget() {
+        GamePlayer t = bot.target();
         if (t != null && !t.isDead()) {
             return t;
         }
@@ -694,16 +697,16 @@ public final class BoatRoutine {
         return t != null && !t.isDead() ? t : null;
     }
 
-    private boolean shouldDeferToVerticalChase(Player target) {
+    private boolean shouldDeferToVerticalChase(GamePlayer target) {
         if (!bot.settings().allowTowering.on() || !isOutOfWater(target)) {
             return false;
         }
-        double yDiff = target.getY() - bot.pos().y();
+        double yDiff = target.position().y() - bot.pos().y();
         return yDiff >= 3.0 && bot.isWithinToweringRange(target, 3.0);
     }
 
-    static boolean isOutOfWater(Player p) {
-        if (p.getVehicle() instanceof Boat) {
+    static boolean isOutOfWater(GamePlayer p) {
+        if (p.vehicle() instanceof GameBoat) {
             return false;
         }
         return !p.isInWater() && !p.isUnderWater() && !p.isInLava();
@@ -766,17 +769,17 @@ public final class BoatRoutine {
         return count;
     }
 
-    private boolean shouldDismountNearShore(Boat boat) {
+    private boolean shouldDismountNearShore(GameBoat boat) {
         GameWorld w = bot.world();
-        Pos center = Locations.pos(boat.getLocation());
+        Pos center = boat.blockPos();
         if (WorldUtil.isWater(w, center) || WorldUtil.isWater(w, center.below())) {
             return false;
         }
         return hasLandAround(w, center, 1);
     }
 
-    private boolean isBoatCloseToLand(Boat boat) {
-        return hasLandAround(bot.world(), Locations.pos(boat.getLocation()), 0);
+    private boolean isBoatCloseToLand(GameBoat boat) {
+        return hasLandAround(bot.world(), boat.blockPos(), 0);
     }
 
     private static boolean hasLandAround(GameWorld w, Pos center, int maxDy) {

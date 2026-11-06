@@ -2,6 +2,7 @@ package dev.manhuntstar.fidelity;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.paper.PaperEntities;
 import net.kyori.adventure.text.Component;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
@@ -45,7 +46,7 @@ public final class DeathMessages {
     }
 
     private Component nameOf(Entity e) {
-        Bot b = manager.byEntity(e);
+        Bot b = manager.byEntity(PaperEntities.of(e));
         if (b != null) {
             return Component.text(b.visualName());
         }

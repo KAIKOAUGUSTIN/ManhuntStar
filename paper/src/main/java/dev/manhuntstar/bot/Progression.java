@@ -1,15 +1,15 @@
 package dev.manhuntstar.bot;
 
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
-import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -127,9 +127,9 @@ public final class Progression {
     }
 
     /** The player the bot hunts (or the closest one, if the target is gone), if they can still be hunted. */
-    private Player huntedPlayer() {
+    private GamePlayer huntedPlayer() {
         BotManager manager = bot.manager();
-        Player p = bot.target();
+        GamePlayer p = bot.target();
         if (!manager.isEligibleTarget(p)) {
             p = bot.fallbackTarget();
         }
@@ -137,14 +137,14 @@ public final class Progression {
     }
 
     private void applyPlayerTriggeredBoost() {
-        Player p = huntedPlayer();
+        GamePlayer p = huntedPlayer();
         if (p == null) {
             return;
         }
         int ironCount = countIron(p);
         int boostPhase = phase;
         String reasonKey = null;
-        if (p.getWorld().getEnvironment() == World.Environment.NETHER) {
+        if (p.world().dimension() == Dimension.NETHER) {
             boostPhase = 5;
             reasonKey = "phase.reason.nether";
         } else if (countDiamonds(p) >= 5) {
@@ -166,18 +166,18 @@ public final class Progression {
             Messages m = bot.manager().plugin().messages();
             bot.manager().plugin().getServer().broadcast(m.get("phase.jump",
                     Messages.p("bot", bot.visualName()), Messages.p("from", old), Messages.p("to", boostPhase),
-                    Messages.c("reason", m.get(reasonKey)), Messages.p("player", p.getName())));
+                    Messages.c("reason", m.get(reasonKey)), Messages.p("player", p.name())));
         }
     }
 
-    private static boolean holdingWoodenWeapon(Player p) {
-        Material m = p.getInventory().getItemInMainHand().getType();
+    private static boolean holdingWoodenWeapon(GamePlayer p) {
+        Material m = PaperEntities.bukkit(p).getInventory().getItemInMainHand().getType();
         return m == Material.WOODEN_SWORD || m == Material.WOODEN_AXE;
     }
 
-    private static int countDiamonds(Player p) {
+    private static int countDiamonds(GamePlayer p) {
         int total = 0;
-        PlayerInventory inv = p.getInventory();
+        PlayerInventory inv = PaperEntities.bukkit(p).getInventory();
         for (ItemStack s : inv.getContents()) {
             if (s == null || s.isEmpty()) {
                 continue;
@@ -192,9 +192,9 @@ public final class Progression {
         return total;
     }
 
-    private static int countIron(Player p) {
+    private static int countIron(GamePlayer p) {
         int total = 0;
-        for (ItemStack s : p.getInventory().getContents()) {
+        for (ItemStack s : PaperEntities.bukkit(p).getInventory().getContents()) {
             if (s == null || s.isEmpty()) {
                 continue;
             }

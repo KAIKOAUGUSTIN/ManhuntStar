@@ -147,6 +147,56 @@ public class FakeWorld implements GameWorld {
         sounds.add(new PlayedSound(at, sound, category, volume, pitch));
     }
 
+    @Override
+    public void spawnParticle(Particle particle, Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra) {
+        // particles are only for players to see
+    }
+
+    @Override
+    public void spawnBlockParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameBlock block) {
+        // particles are only for players to see
+    }
+
+    @Override
+    public Boolean gameRule(GameRule rule) {
+        return Boolean.TRUE;
+    }
+
+    @Override
+    public Difficulty difficulty() {
+        return Difficulty.NORMAL;
+    }
+
+    /** The entities in this world, for the tests that need them. */
+    public final List<GameEntity> entities = new ArrayList<>();
+
+    @Override
+    public List<? extends GamePlayer> players() {
+        List<GamePlayer> out = new ArrayList<>();
+        for (GameEntity e : entities) {
+            if (e instanceof GamePlayer p) {
+                out.add(p);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public List<GameEntity> nearbyEntities(Box box) {
+        List<GameEntity> out = new ArrayList<>();
+        for (GameEntity e : entities) {
+            if (e.boundingBox().overlaps(box)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
+
+    @Override
+    public List<GameEntity> nearbyEntities(Vec3 center, double x, double y, double z) {
+        return nearbyEntities(new Box(center.x() - x, center.y() - y, center.z() - z, center.x() + x, center.y() + y, center.z() + z));
+    }
+
     /** A block of the fake world: a solid type has a full collision box; there are no states. */
     public final class Block implements GameBlock {
         private final int x;

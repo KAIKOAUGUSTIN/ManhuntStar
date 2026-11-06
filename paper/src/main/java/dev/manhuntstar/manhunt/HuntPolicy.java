@@ -2,6 +2,8 @@ package dev.manhuntstar.manhunt;
 
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.Platform;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +14,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.entity.Player;
 
 /**
  * Quem os bots podem caçar: a lista de jogadores (permitidos ou bloqueados) e quem entrou no meio.
@@ -59,8 +60,8 @@ public final class HuntPolicy {
         participants.clear();
         excluded.clear();
         protectedUntil.clear();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            participants.add(p.getUniqueId());
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
+            participants.add(p.uuid());
         }
         plugin.botManager().markDirty();
     }
@@ -81,19 +82,19 @@ public final class HuntPolicy {
     }
 
     /** A lista de jogadores deixa caçar este jogador (e ele pode disparar a roda)? */
-    public boolean listAllows(Player p) {
-        return plugin.settings().listAllows(p.getName());
+    public boolean listAllows(GamePlayer p) {
+        return plugin.settings().listAllows(p.name());
     }
 
     /** Pode ser alvo pela lista e pela regra de quem entra no meio (vivo e espectador o BotManager confere). */
-    public boolean canBeHunted(Player p) {
+    public boolean canBeHunted(GamePlayer p) {
         if (!listAllows(p)) {
             return false;
         }
         if (!active) {
             return true;
         }
-        UUID id = p.getUniqueId();
+        UUID id = p.uuid();
         // de fora até a próxima caçada, ou ainda não admitido
         if (!participants.contains(id)) {
             return false;
@@ -103,8 +104,8 @@ public final class HuntPolicy {
     }
 
     /** Jogador que entrou (ou passou a valer pela lista) com a caçada em andamento. */
-    public void admit(Player p) {
-        UUID id = p.getUniqueId();
+    public void admit(GamePlayer p) {
+        UUID id = p.uuid();
         if (!active || participants.contains(id) || excluded.contains(id) || !listAllows(p)) {
             return;
         }
@@ -143,14 +144,14 @@ public final class HuntPolicy {
             end();
             return;
         }
-        for (Player p : Bukkit.getOnlinePlayers()) {
+        for (GamePlayer p : Platform.server().onlinePlayers()) {
             admit(p);
         }
         Messages m = plugin.messages();
         Iterator<Map.Entry<UUID, Long>> it = protectedUntil.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, Long> e = it.next();
-            Player p = Bukkit.getPlayer(e.getKey());
+            GamePlayer p = Platform.server().player(e.getKey());
             long left = (e.getValue() - now + 19) / 20;
             if (left <= 0) {
                 it.remove();

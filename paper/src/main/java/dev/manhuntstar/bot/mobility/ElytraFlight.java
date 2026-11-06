@@ -1,16 +1,15 @@
 package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
+import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.Mannequin;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
@@ -39,8 +38,8 @@ public final class ElytraFlight {
         return bot.entity() != null && bot.entity().isGliding();
     }
 
-    public void tick(Player target) {
-        if (target == null || !bot.settings().useElytra.on() || !target.getWorld().equals(bot.bukkitWorld())) {
+    public void tick(GamePlayer target) {
+        if (target == null || !bot.settings().useElytra.on() || !target.world().equals(bot.world())) {
             forceLand();
             return;
         }
@@ -56,7 +55,7 @@ public final class ElytraFlight {
         }
     }
 
-    private void tickGround(Player target, double dist) {
+    private void tickGround(GamePlayer target, double dist) {
         if (bot.getItem(EquipmentSlot.CHEST).getType() == Material.ELYTRA && !pathing) {
             restoreChest();
             return;
@@ -73,12 +72,12 @@ public final class ElytraFlight {
         }
         if (!pathing) {
             ThreadLocalRandom r = ThreadLocalRandom.current();
-            Vec3 dir = Locations.vec(target.getLocation()).subtract(bot.pos()).horizontal().normalize();
+            Vec3 dir = target.position().subtract(bot.pos()).horizontal().normalize();
             Vec3 perp = new Vec3(-dir.z(), 0, dir.x()).normalize();
             double forward = 45 + r.nextDouble() * 35;
             double lateral = (10 + r.nextDouble() * 40) * (r.nextBoolean() ? 1 : -1);
             Vec3 base = bot.pos().add(dir.scale(forward)).add(perp.scale(lateral));
-            flightTarget = new Vec3(base.x(), target.getY() + 10 + r.nextDouble() * 140, base.z());
+            flightTarget = new Vec3(base.x(), target.position().y() + 10 + r.nextDouble() * 140, base.z());
             pathing = true;
             launchDelay = 3;
             ItemStack chest = bot.getItem(EquipmentSlot.CHEST);
@@ -94,7 +93,7 @@ public final class ElytraFlight {
         if (launchDelay == 0) {
             launchDelay = -1;
             bot.motor().setVelocity(bot.velocity().withY(0.5));
-            Mannequin e = bot.entity();
+            BotBody e = bot.entity();
             if (e != null) {
                 e.setGliding(true);
             }
@@ -102,7 +101,7 @@ public final class ElytraFlight {
         }
     }
 
-    private void tickFlight(Player target, double dist) {
+    private void tickFlight(GamePlayer target, double dist) {
         if (!pathing || flightTarget == null) {
             land();
             return;
@@ -159,7 +158,7 @@ public final class ElytraFlight {
         pathing = false;
         launchDelay = -1;
         boostTicks = 0;
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e != null && e.isGliding()) {
             e.setGliding(false);
         }
@@ -171,7 +170,7 @@ public final class ElytraFlight {
         launchDelay = -1;
         flightTarget = null;
         boostTicks = 0;
-        Mannequin e = bot.entity();
+        BotBody e = bot.entity();
         if (e != null && e.isGliding()) {
             e.setGliding(false);
         }
