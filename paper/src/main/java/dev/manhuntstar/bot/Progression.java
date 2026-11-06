@@ -1,19 +1,17 @@
 package dev.manhuntstar.bot;
 
 import dev.manhuntstar.config.Messages;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.Enchant;
+import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.ItemType;
+import dev.manhuntstar.platform.Items;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.Damageable;
 
 /**
  * The bot's progression phases (1 to 10, 12 = the Terminator's own final phase).
@@ -171,22 +169,21 @@ public final class Progression {
     }
 
     private static boolean holdingWoodenWeapon(GamePlayer p) {
-        Material m = PaperEntities.bukkit(p).getInventory().getItemInMainHand().getType();
-        return m == Material.WOODEN_SWORD || m == Material.WOODEN_AXE;
+        ItemType m = p.mainHandItem().type();
+        return m == Items.WOODEN_SWORD || m == Items.WOODEN_AXE;
     }
 
     private static int countDiamonds(GamePlayer p) {
         int total = 0;
-        PlayerInventory inv = PaperEntities.bukkit(p).getInventory();
-        for (ItemStack s : inv.getContents()) {
+        for (GameItem s : p.inventoryContents()) {
             if (s == null || s.isEmpty()) {
                 continue;
             }
-            switch (s.getType()) {
-                case DIAMOND_BLOCK -> total += s.getAmount() * 9;
-                case DIAMOND, DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE -> total += s.getAmount();
-                default -> {
-                }
+            ItemType t = s.type();
+            if (t == Items.DIAMOND_BLOCK) {
+                total += s.amount() * 9;
+            } else if (t == Items.DIAMOND || t == Items.DIAMOND_ORE || t == Items.DEEPSLATE_DIAMOND_ORE) {
+                total += s.amount();
             }
         }
         return total;
@@ -194,15 +191,15 @@ public final class Progression {
 
     private static int countIron(GamePlayer p) {
         int total = 0;
-        for (ItemStack s : PaperEntities.bukkit(p).getInventory().getContents()) {
+        for (GameItem s : p.inventoryContents()) {
             if (s == null || s.isEmpty()) {
                 continue;
             }
-            switch (s.getType()) {
-                case IRON_BLOCK -> total += s.getAmount() * 9;
-                case IRON_INGOT, RAW_IRON, IRON_ORE, DEEPSLATE_IRON_ORE -> total += s.getAmount();
-                default -> {
-                }
+            ItemType t = s.type();
+            if (t == Items.IRON_BLOCK) {
+                total += s.amount() * 9;
+            } else if (t == Items.IRON_INGOT || t == Items.RAW_IRON || t == Items.IRON_ORE || t == Items.DEEPSLATE_IRON_ORE) {
+                total += s.amount();
             }
         }
         return total;
@@ -273,48 +270,48 @@ public final class Progression {
             return;
         }
         switch (phase) {
-            case 2, 3 -> equipMain(new ItemStack(Material.WOODEN_SWORD));
+            case 2, 3 -> equipMain(GameItem.of(Items.WOODEN_SWORD));
             case 4 -> {
-                equipArmor(Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS);
-                equipMain(new ItemStack(Material.STONE_SWORD));
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
+                equipArmor(Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, Items.LEATHER_LEGGINGS, Items.LEATHER_BOOTS);
+                equipMain(GameItem.of(Items.STONE_SWORD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
             }
             case 5 -> {
-                equipArmor(Material.GOLDEN_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS);
-                equipMain(new ItemStack(Material.IRON_SWORD));
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
+                equipArmor(Items.GOLDEN_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS);
+                equipMain(GameItem.of(Items.IRON_SWORD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
             }
             case 6 -> {
-                equipArmor(Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS);
-                enchantArmor(Enchantment.PROTECTION, 1);
-                equipMain(new ItemStack(Material.IRON_SWORD));
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
+                equipArmor(Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS);
+                enchantArmor(Enchant.PROTECTION, 1);
+                equipMain(GameItem.of(Items.IRON_SWORD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
             }
             case 7 -> {
-                equipArmor(Material.GOLDEN_HELMET, Material.DIAMOND_CHESTPLATE, Material.DIAMOND_LEGGINGS, Material.GOLDEN_BOOTS);
-                equipMain(new ItemStack(Material.DIAMOND_SWORD));
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
+                equipArmor(Items.GOLDEN_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.GOLDEN_BOOTS);
+                equipMain(GameItem.of(Items.DIAMOND_SWORD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
             }
             case 8, 9, 10 -> {
                 if (difficulty == BotDifficulty.TERMINATOR) {
-                    equipArmor(Material.NETHERITE_HELMET, Material.NETHERITE_CHESTPLATE, Material.NETHERITE_LEGGINGS, Material.NETHERITE_BOOTS);
+                    equipArmor(Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS);
                 } else {
-                    equipArmor(Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE, Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS);
+                    equipArmor(Items.DIAMOND_HELMET, Items.DIAMOND_CHESTPLATE, Items.DIAMOND_LEGGINGS, Items.DIAMOND_BOOTS);
                 }
-                equipMain(new ItemStack(Material.DIAMOND_SWORD));
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
-                enchantArmor(Enchantment.PROTECTION, 2);
-                ItemStack main = bot.getItem(EquipmentSlot.HAND);
-                if (GearScoring.isSword(main) && main.getEnchantmentLevel(Enchantment.SHARPNESS) < 2) {
-                    main.addUnsafeEnchantment(Enchantment.SHARPNESS, 2);
-                    bot.setItem(EquipmentSlot.HAND, main);
+                equipMain(GameItem.of(Items.DIAMOND_SWORD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
+                enchantArmor(Enchant.PROTECTION, 2);
+                GameItem main = bot.getItem(EquipSlot.HAND);
+                if (GearScoring.isSword(main) && main.enchantLevel(Enchant.SHARPNESS) < 2) {
+                    main.addEnchant(Enchant.SHARPNESS, 2);
+                    bot.setItem(EquipSlot.HAND, main);
                 }
             }
             case FINAL_PHASE -> {
-                equipArmor(Material.NETHERITE_HELMET, Material.NETHERITE_CHESTPLATE, Material.NETHERITE_LEGGINGS, Material.NETHERITE_BOOTS);
-                enchantArmor(Enchantment.PROTECTION, 2);
+                equipArmor(Items.NETHERITE_HELMET, Items.NETHERITE_CHESTPLATE, Items.NETHERITE_LEGGINGS, Items.NETHERITE_BOOTS);
+                enchantArmor(Enchant.PROTECTION, 2);
                 equipMain(mainHandItem());
-                equipOffhandIfEmpty(new ItemStack(Material.SHIELD));
+                equipOffhandIfEmpty(GameItem.of(Items.SHIELD));
             }
             default -> {
             }
@@ -322,77 +319,77 @@ public final class Progression {
     }
 
     /** The phase's base weapon (used when the bot has no better sword). */
-    public ItemStack mainHandItem() {
+    public GameItem mainHandItem() {
         return switch (phase) {
-            case 2, 3 -> new ItemStack(Material.WOODEN_SWORD);
-            case 4 -> new ItemStack(Material.STONE_SWORD);
-            case 5, 6 -> new ItemStack(Material.IRON_SWORD);
+            case 2, 3 -> GameItem.of(Items.WOODEN_SWORD);
+            case 4 -> GameItem.of(Items.STONE_SWORD);
+            case 5, 6 -> GameItem.of(Items.IRON_SWORD);
             case 7, 8, 9, 10 -> {
-                ItemStack s = new ItemStack(Material.DIAMOND_SWORD);
+                GameItem s = GameItem.of(Items.DIAMOND_SWORD);
                 if (phase >= 8) {
-                    s.addUnsafeEnchantment(Enchantment.SHARPNESS, 2);
+                    s.addEnchant(Enchant.SHARPNESS, 2);
                 }
                 yield s;
             }
             case FINAL_PHASE -> {
-                ItemStack s = new ItemStack(Material.NETHERITE_SWORD);
-                s.addUnsafeEnchantment(Enchantment.SHARPNESS, 2);
-                s.addUnsafeEnchantment(Enchantment.KNOCKBACK, 2);
+                GameItem s = GameItem.of(Items.NETHERITE_SWORD);
+                s.addEnchant(Enchant.SHARPNESS, 2);
+                s.addEnchant(Enchant.KNOCKBACK, 2);
                 yield s;
             }
-            default -> ItemStack.empty();
+            default -> GameItem.empty();
         };
     }
 
     /** The phase's base chestplate (to put back after using the elytra). */
-    public ItemStack chestplateForPhase() {
+    public GameItem chestplateForPhase() {
         return switch (phase) {
-            case 4 -> new ItemStack(Material.LEATHER_CHESTPLATE);
-            case 5, 6 -> new ItemStack(Material.IRON_CHESTPLATE);
-            case 7 -> new ItemStack(Material.DIAMOND_CHESTPLATE);
-            case 8, 9, 10 -> new ItemStack(difficulty == BotDifficulty.TERMINATOR ? Material.NETHERITE_CHESTPLATE : Material.DIAMOND_CHESTPLATE);
-            case FINAL_PHASE -> new ItemStack(Material.NETHERITE_CHESTPLATE);
-            default -> ItemStack.empty();
+            case 4 -> GameItem.of(Items.LEATHER_CHESTPLATE);
+            case 5, 6 -> GameItem.of(Items.IRON_CHESTPLATE);
+            case 7 -> GameItem.of(Items.DIAMOND_CHESTPLATE);
+            case 8, 9, 10 -> GameItem.of(difficulty == BotDifficulty.TERMINATOR ? Items.NETHERITE_CHESTPLATE : Items.DIAMOND_CHESTPLATE);
+            case FINAL_PHASE -> GameItem.of(Items.NETHERITE_CHESTPLATE);
+            default -> GameItem.empty();
         };
     }
 
-    private void equipArmor(Material head, Material chest, Material legs, Material feet) {
-        equipArmorBaseline(EquipmentSlot.HEAD, new ItemStack(head));
-        equipArmorBaseline(EquipmentSlot.CHEST, new ItemStack(chest));
-        equipArmorBaseline(EquipmentSlot.LEGS, new ItemStack(legs));
-        equipArmorBaseline(EquipmentSlot.FEET, new ItemStack(feet));
+    private void equipArmor(ItemType head, ItemType chest, ItemType legs, ItemType feet) {
+        equipArmorBaseline(EquipSlot.HEAD, GameItem.of(head));
+        equipArmorBaseline(EquipSlot.CHEST, GameItem.of(chest));
+        equipArmorBaseline(EquipSlot.LEGS, GameItem.of(legs));
+        equipArmorBaseline(EquipSlot.FEET, GameItem.of(feet));
     }
 
-    private void equipArmorBaseline(EquipmentSlot slot, ItemStack baseline) {
-        ItemStack current = bot.getItem(slot);
+    private void equipArmorBaseline(EquipSlot slot, GameItem baseline) {
+        GameItem current = bot.getItem(slot);
         if (current.isEmpty() || GearScoring.isBetterArmor(baseline, current, slot)) {
             bot.setItem(slot, baseline);
         }
     }
 
-    private void equipMain(ItemStack baseline) {
-        ItemStack current = bot.getItem(EquipmentSlot.HAND);
+    private void equipMain(GameItem baseline) {
+        GameItem current = bot.getItem(EquipSlot.HAND);
         if (current.isEmpty() || GearScoring.isBetterSword(baseline, current)) {
-            bot.setItem(EquipmentSlot.HAND, baseline);
+            bot.setItem(EquipSlot.HAND, baseline);
         }
     }
 
-    private void equipOffhandIfEmpty(ItemStack baseline) {
+    private void equipOffhandIfEmpty(GameItem baseline) {
         if (difficulty == BotDifficulty.TERMINATOR && bot.terminatorTotemAvailable()) {
-            bot.setItem(EquipmentSlot.OFF_HAND, new ItemStack(Material.TOTEM_OF_UNDYING));
+            bot.setItem(EquipSlot.OFF_HAND, GameItem.of(Items.TOTEM_OF_UNDYING));
             bot.markTotemIssued();
             return;
         }
-        if (bot.getItem(EquipmentSlot.OFF_HAND).isEmpty()) {
-            bot.setItem(EquipmentSlot.OFF_HAND, baseline);
+        if (bot.getItem(EquipSlot.OFF_HAND).isEmpty()) {
+            bot.setItem(EquipSlot.OFF_HAND, baseline);
         }
     }
 
-    private void enchantArmor(Enchantment ench, int level) {
-        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-            ItemStack s = bot.getItem(slot);
-            if (!s.isEmpty() && s.getEnchantmentLevel(ench) < level) {
-                s.addUnsafeEnchantment(ench, level);
+    private void enchantArmor(Enchant ench, int level) {
+        for (EquipSlot slot : new EquipSlot[]{EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET}) {
+            GameItem s = bot.getItem(slot);
+            if (!s.isEmpty() && s.enchantLevel(ench) < level) {
+                s.addEnchant(ench, level);
                 bot.setItem(slot, s);
             }
         }
@@ -401,8 +398,8 @@ public final class Progression {
     // ------------------------------------------------------------------ drops
 
     /** The phase's "synthetic" drops (food, apples, worn weapons), rolled with the difficulty's chance. */
-    List<ItemStack> deathDrops(boolean inventoryAlreadyDropped) {
-        List<ItemStack> out = new ArrayList<>();
+    List<GameItem> deathDrops(boolean inventoryAlreadyDropped) {
+        List<GameItem> out = new ArrayList<>();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         if (r.nextFloat() > difficulty.dropChance()) {
             return out;
@@ -411,55 +408,55 @@ public final class Progression {
         switch (phase) {
             case 2 -> {
                 if (gear) {
-                    out.add(new ItemStack(Material.WOODEN_SWORD));
+                    out.add(GameItem.of(Items.WOODEN_SWORD));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 2));
+                out.add(GameItem.of(Items.COOKED_BEEF, 2));
             }
             case 3 -> {
                 if (gear) {
-                    out.add(new ItemStack(Material.WOODEN_SWORD));
+                    out.add(GameItem.of(Items.WOODEN_SWORD));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 4));
+                out.add(GameItem.of(Items.COOKED_BEEF, 4));
             }
             case 4 -> {
                 if (gear) {
-                    out.add(new ItemStack(Material.STONE_SWORD));
-                    out.add(worn(Material.SHIELD, 10));
+                    out.add(GameItem.of(Items.STONE_SWORD));
+                    out.add(worn(Items.SHIELD, 10));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 6));
+                out.add(GameItem.of(Items.COOKED_BEEF, 6));
             }
             case 5 -> {
                 if (r.nextFloat() < 0.1f) {
                     addArmorPiece(out);
                 }
                 if (gear) {
-                    out.add(new ItemStack(Material.IRON_SWORD));
-                    out.add(new ItemStack(Material.SHIELD));
+                    out.add(GameItem.of(Items.IRON_SWORD));
+                    out.add(GameItem.of(Items.SHIELD));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 6 + r.nextInt(5)));
-                out.add(new ItemStack(Material.GOLDEN_APPLE, 1));
+                out.add(GameItem.of(Items.COOKED_BEEF, 6 + r.nextInt(5)));
+                out.add(GameItem.of(Items.GOLDEN_APPLE, 1));
             }
             case 6 -> {
                 if (r.nextFloat() < 0.05f) {
                     addArmorPiece(out);
                 }
                 if (gear) {
-                    out.add(new ItemStack(Material.IRON_SWORD));
-                    out.add(new ItemStack(Material.SHIELD));
+                    out.add(GameItem.of(Items.IRON_SWORD));
+                    out.add(GameItem.of(Items.SHIELD));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 10 + r.nextInt(5)));
-                out.add(new ItemStack(Material.GOLDEN_APPLE, 1 + r.nextInt(2)));
+                out.add(GameItem.of(Items.COOKED_BEEF, 10 + r.nextInt(5)));
+                out.add(GameItem.of(Items.GOLDEN_APPLE, 1 + r.nextInt(2)));
             }
             case 7, 8, 9, 10 -> {
                 if (r.nextFloat() < (phase == 7 ? 0.05f : 0.025f)) {
                     addArmorPiece(out);
                 }
                 if (gear) {
-                    out.add(worn(Material.DIAMOND_SWORD, 20));
-                    out.add(new ItemStack(Material.SHIELD));
+                    out.add(worn(Items.DIAMOND_SWORD, 20));
+                    out.add(GameItem.of(Items.SHIELD));
                 }
-                out.add(new ItemStack(Material.COOKED_BEEF, 12 + r.nextInt(5)));
-                out.add(new ItemStack(Material.GOLDEN_APPLE, 2 + r.nextInt(3)));
+                out.add(GameItem.of(Items.COOKED_BEEF, 12 + r.nextInt(5)));
+                out.add(GameItem.of(Items.GOLDEN_APPLE, 2 + r.nextInt(3)));
             }
             default -> {
             }
@@ -467,20 +464,17 @@ public final class Progression {
         return out;
     }
 
-    private static ItemStack worn(Material m, int durabilityLeft) {
-        ItemStack s = new ItemStack(m);
-        if (s.getItemMeta() instanceof Damageable d) {
-            d.setDamage(Math.max(0, m.getMaxDurability() - durabilityLeft));
-            s.setItemMeta(d);
-        }
+    private static GameItem worn(ItemType m, int durabilityLeft) {
+        GameItem s = GameItem.of(m);
+        s.setDamage(Math.max(0, m.maxDurability() - durabilityLeft));
         return s;
     }
 
-    private void addArmorPiece(List<ItemStack> out) {
-        EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-        ItemStack s = bot.getItem(slots[ThreadLocalRandom.current().nextInt(slots.length)]);
+    private void addArmorPiece(List<GameItem> out) {
+        EquipSlot[] slots = {EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET};
+        GameItem s = bot.getItem(slots[ThreadLocalRandom.current().nextInt(slots.length)]);
         if (!s.isEmpty()) {
-            out.add(s.clone());
+            out.add(s.copy());
         }
     }
 }

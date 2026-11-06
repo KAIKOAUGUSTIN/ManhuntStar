@@ -15,6 +15,7 @@ public enum EntityTrait {
     FIREWORK,
     TNT,
     ITEM,
+    EXPERIENCE_ORB,
     VEHICLE,
     BOAT,
     /** Horse, donkey, mule, camel... (the game's AbstractHorse). */

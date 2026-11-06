@@ -1,8 +1,8 @@
 package dev.manhuntstar.bot;
 
+import dev.manhuntstar.platform.GameItem;
 import java.util.List;
 import java.util.UUID;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * Estado salvo de um bot (para reiniciar o servidor ou renascer): identidade, posição, vida, fome,
@@ -25,13 +25,13 @@ public record BotSnapshot(
         BotDifficulty difficulty,
         int phase,
         boolean progressionEnabled,
-        List<ItemStack> inventory,
-        ItemStack mainHand,
-        ItemStack offHand,
-        ItemStack head,
-        ItemStack chest,
-        ItemStack legs,
-        ItemStack feet,
+        List<GameItem> inventory,
+        GameItem mainHand,
+        GameItem offHand,
+        GameItem head,
+        GameItem chest,
+        GameItem legs,
+        GameItem feet,
         PersistentGear gear,
         String group,
         UUID target,

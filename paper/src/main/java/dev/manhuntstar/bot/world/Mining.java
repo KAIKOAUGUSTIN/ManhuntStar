@@ -1,11 +1,12 @@
 package dev.manhuntstar.bot.world;
 
 import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.paper.PaperBlock;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
@@ -14,8 +15,6 @@ import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 /** Block breaking by the bot, with time, crack animation, sound and drops like a player. */
 public final class Mining {
@@ -69,8 +68,8 @@ public final class Mining {
             bot.swing();
         }
         if (ticksRemaining <= 0) {
-            ItemStack tool = bot.getItem(EquipmentSlot.HAND);
-            ((PaperBlock) b).bukkit().breakNaturally(tool, true);
+            GameItem tool = bot.getItem(EquipSlot.HAND);
+            b.breakNaturally(tool, true);
             sendCrack(w, miningPos, 0f);
             bot.manager().plugin().pathService().invalidate(w, miningPos);
             miningPos = null;
@@ -144,9 +143,9 @@ public final class Mining {
     private void equipBestTool(GameBlock b) {
         BlockType m = b.type();
         boolean toolBlock = m.is(BlockTrait.MINEABLE_PICKAXE) || m.is(BlockTrait.MINEABLE_SHOVEL) || m.is(BlockTrait.MINEABLE_AXE) || m.is(BlockTrait.MINEABLE_HOE);
-        ItemStack tool = toolBlock ? bot.inventory().preferredPickaxe() : bot.inventory().preferredMainHand();
-        if (!tool.isEmpty() && !tool.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
-            bot.setItem(EquipmentSlot.HAND, tool);
+        GameItem tool = toolBlock ? bot.inventory().preferredPickaxe() : bot.inventory().preferredMainHand();
+        if (!tool.isEmpty() && !tool.isSimilar(bot.getItem(EquipSlot.HAND))) {
+            bot.setItem(EquipSlot.HAND, tool);
         }
     }
 

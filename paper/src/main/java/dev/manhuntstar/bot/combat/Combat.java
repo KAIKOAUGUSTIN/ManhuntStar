@@ -5,16 +5,22 @@ import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.debug.AimDebug;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.DamageKind;
+import dev.manhuntstar.platform.Effect;
+import dev.manhuntstar.platform.Enchant;
 import dev.manhuntstar.platform.EntityTrait;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
@@ -30,19 +36,13 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Trident;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.tag.DamageTypeTags;
 import org.bukkit.util.Vector;
 
@@ -131,7 +131,7 @@ public final class Combat {
             if (blocking) {
                 stopBlock();
             }
-            bot.setItem(EquipmentSlot.OFF_HAND, new ItemStack(Material.TOTEM_OF_UNDYING));
+            bot.setItem(EquipSlot.OFF_HAND, GameItem.of(Items.TOTEM_OF_UNDYING));
             return;
         }
         if (!bot.progression().canUseShield()) {
@@ -139,15 +139,15 @@ public final class Combat {
             if (blocking) {
                 stopBlock();
             }
-            bot.setItem(EquipmentSlot.OFF_HAND, ItemStack.empty());
+            bot.setItem(EquipSlot.OFF_HAND, GameItem.empty());
             return;
         }
         hasShield = enable;
-        bot.setItem(EquipmentSlot.OFF_HAND, enable ? new ItemStack(Material.SHIELD) : ItemStack.empty());
+        bot.setItem(EquipSlot.OFF_HAND, enable ? GameItem.of(Items.SHIELD) : GameItem.empty());
     }
 
     public boolean hasUsableShield() {
-        return hasShield && bot.getItem(EquipmentSlot.OFF_HAND).getType() == Material.SHIELD && !bot.shouldHoldTotemInOffhand();
+        return hasShield && bot.getItem(EquipSlot.OFF_HAND).type() == Items.SHIELD && !bot.shouldHoldTotemInOffhand();
     }
 
     public void startBlock() {
@@ -155,13 +155,13 @@ public final class Combat {
             return;
         }
         blocking = true;
-        bot.mannequin().startUsingItem(EquipmentSlot.OFF_HAND);
+        bot.entity().startUsingItem(EquipSlot.OFF_HAND);
     }
 
     public void stopBlock() {
         blocking = false;
         if (bot.entity() != null) {
-            bot.mannequin().clearActiveItem();
+            bot.entity().clearActiveItem();
         }
     }
 
@@ -205,7 +205,7 @@ public final class Combat {
         chargingTrident = false;
         tridentChargeTicks = 0;
         if (bot.entity() != null) {
-            bot.mannequin().clearActiveItem();
+            bot.entity().clearActiveItem();
         }
     }
 
@@ -256,7 +256,7 @@ public final class Combat {
             nextMeleeAttackTick = now + 1 + meleeRandom.nextInt(4);
             return;
         }
-        ItemStack weapon = bot.getItem(EquipmentSlot.HAND);
+        GameItem weapon = bot.getItem(EquipSlot.HAND);
         int weaponCooldown = (int) Math.ceil(20.0 / GearScoring.attackSpeed(weapon));
         float strength = attackStrength(now, weaponCooldown);
         nextMeleeAttackTick = now + Math.max(computeDynamicCooldown(humanize, s.meleeDelayJitter.value(), s.meleeSpamVariance.value()), weaponCooldown);
@@ -278,16 +278,16 @@ public final class Combat {
         return (float) Math.max(0, Math.min(1, (since + 0.5) / Math.max(1, cooldownTicks)));
     }
 
-    private void dealPlayerLikeHit(GameLiving target, ItemStack weapon, float strength) {
+    private void dealPlayerLikeHit(GameLiving target, GameItem weapon, float strength) {
         BotBody me = bot.entity();
         double base = 1.0 + GearScoring.weaponDamage(weapon);
-        PotionEffect str = PaperEntities.bukkit(me).getPotionEffect(PotionEffectType.STRENGTH);
-        if (str != null) {
-            base += 3.0 * (str.getAmplifier() + 1);
+        int str = me.effectAmplifier(Effect.STRENGTH);
+        if (str >= 0) {
+            base += 3.0 * (str + 1);
         }
-        PotionEffect weak = PaperEntities.bukkit(me).getPotionEffect(PotionEffectType.WEAKNESS);
-        if (weak != null) {
-            base -= 4.0 * (weak.getAmplifier() + 1);
+        int weak = me.effectAmplifier(Effect.WEAKNESS);
+        if (weak >= 0) {
+            base -= 4.0 * (weak + 1);
         }
         double enchant = enchantmentBonus(weapon, target);
         double damage = Math.max(0, base) * (0.2 + strength * strength * 0.8);
@@ -295,7 +295,7 @@ public final class Combat {
         boolean strong = strength > 0.9f;
         boolean sprintHit = strong && bot.motor().sprinting();
         boolean crit = strong && !bot.onGround() && bot.velocity().y() < 0 && !bot.isInWater() && !bot.isRiding()
-                && !bot.motor().isOnClimbable() && !PaperEntities.bukkit(me).hasPotionEffect(PotionEffectType.BLINDNESS) && !sprintHit;
+                && !bot.motor().isOnClimbable() && !me.hasEffect(Effect.BLINDNESS) && !sprintHit;
         if (crit) {
             damage *= 1.5;
         }
@@ -313,14 +313,14 @@ public final class Combat {
             playSound(Sounds.ENTITY_PLAYER_ATTACK_NODAMAGE);
             return;
         }
-        double kb = weapon.getEnchantmentLevel(Enchantment.KNOCKBACK) + (sprintHit ? 1.0 : 0.0);
+        double kb = weapon.enchantLevel(Enchant.KNOCKBACK) + (sprintHit ? 1.0 : 0.0);
         if (kb > 0) {
             double yawRad = Math.toRadians(bot.yaw());
             target.knockback(kb * 0.5, Math.sin(yawRad), -Math.cos(yawRad));
             bot.motor().addFriction(0.6);
             bot.motor().setSprinting(false);
         }
-        int fire = weapon.getEnchantmentLevel(Enchantment.FIRE_ASPECT);
+        int fire = weapon.enchantLevel(Enchant.FIRE_ASPECT);
         if (fire > 0) {
             target.setFireTicks(Math.max(target.fireTicks(), fire * 80));
         }
@@ -346,17 +346,17 @@ public final class Combat {
         }
     }
 
-    private static double enchantmentBonus(ItemStack weapon, GameLiving target) {
+    private static double enchantmentBonus(GameItem weapon, GameLiving target) {
         double bonus = 0;
-        int sharp = weapon.getEnchantmentLevel(Enchantment.SHARPNESS);
+        int sharp = weapon.enchantLevel(Enchant.SHARPNESS);
         if (sharp > 0) {
             bonus += 0.5 * sharp + 0.5;
         }
-        int smite = weapon.getEnchantmentLevel(Enchantment.SMITE);
+        int smite = weapon.enchantLevel(Enchant.SMITE);
         if (smite > 0 && target.is(EntityTrait.SENSITIVE_TO_SMITE)) {
             bonus += 2.5 * smite;
         }
-        int bane = weapon.getEnchantmentLevel(Enchantment.BANE_OF_ARTHROPODS);
+        int bane = weapon.enchantLevel(Enchant.BANE_OF_ARTHROPODS);
         if (bane > 0 && target.is(EntityTrait.SENSITIVE_TO_BANE)) {
             bonus += 2.5 * bane;
         }
@@ -365,8 +365,8 @@ public final class Combat {
 
     private void doSweep(GameLiving mainTarget, double damage) {
         BotBody me = bot.entity();
-        ItemStack weapon = bot.getItem(EquipmentSlot.HAND);
-        int sweeping = weapon.getEnchantmentLevel(Enchantment.SWEEPING_EDGE);
+        GameItem weapon = bot.getItem(EquipSlot.HAND);
+        int sweeping = weapon.enchantLevel(Enchant.SWEEPING_EDGE);
         double ratio = sweeping > 0 ? 1.0 - 1.0 / (sweeping + 1.0) : 0;
         double sweepDamage = 1.0 + ratio * damage;
         Box box = mainTarget.boundingBox().expand(1.0, 0.25, 1.0);
@@ -391,14 +391,14 @@ public final class Combat {
     }
 
     private void prepareMainHand() {
-        ItemStack preferred = bot.inventory().preferredMainHand();
-        ItemStack current = bot.getItem(EquipmentSlot.HAND);
+        GameItem preferred = bot.inventory().preferredMainHand();
+        GameItem current = bot.getItem(EquipSlot.HAND);
         if (!preferred.isEmpty()) {
             if (!preferred.isSimilar(current)) {
-                bot.setItem(EquipmentSlot.HAND, preferred);
+                bot.setItem(EquipSlot.HAND, preferred);
             }
         } else if (GearScoring.isTool(current)) {
-            bot.setItem(EquipmentSlot.HAND, ItemStack.empty());
+            bot.setItem(EquipSlot.HAND, GameItem.empty());
         }
     }
 
@@ -462,8 +462,8 @@ public final class Combat {
         chargingCrossbow = true;
         crossbowChargeTicks = 0;
         aimTracker.reset();
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
-        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.CROSSBOW));
+        bot.entity().startUsingItem(EquipSlot.HAND);
         bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
     }
 
@@ -487,7 +487,7 @@ public final class Combat {
 
     private void performCrossbowShot(GameLiving target) {
         BotBody me = bot.entity();
-        PaperEntities.bukkit(me).clearActiveItem();
+        me.clearActiveItem();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Vector dir = aimProjectile(target, 1.6, 0.015);
         Arrow arrow = PaperEntities.bukkit(me).launchProjectile(Arrow.class, dir);
@@ -503,7 +503,7 @@ public final class Combat {
         crossbowChargeTicks = 0;
         crossbowCooldown = 100;
         if (bot.entity() != null) {
-            bot.mannequin().clearActiveItem();
+            bot.entity().clearActiveItem();
         }
         clearSwimStateIfDry();
         bot.inventory().restorePreferredMainHand();
@@ -581,9 +581,9 @@ public final class Combat {
         return true;
     }
 
-    private static ItemStack loyaltyTrident() {
-        ItemStack s = new ItemStack(Material.TRIDENT);
-        s.addUnsafeEnchantment(Enchantment.LOYALTY, 3);
+    private static GameItem loyaltyTrident() {
+        GameItem s = GameItem.of(Items.TRIDENT);
+        s.addEnchant(Enchant.LOYALTY, 3);
         return s;
     }
 
@@ -591,18 +591,18 @@ public final class Combat {
         chargingTrident = true;
         tridentChargeTicks = 0;
         aimTracker.reset();
-        bot.setItem(EquipmentSlot.HAND, loyaltyTrident());
-        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
+        bot.setItem(EquipSlot.HAND, loyaltyTrident());
+        bot.entity().startUsingItem(EquipSlot.HAND);
     }
 
     private void performTridentThrow(GameLiving target) {
         BotBody me = bot.entity();
-        PaperEntities.bukkit(me).clearActiveItem();
+        me.clearActiveItem();
         Vector dir = aimProjectile(target, 2.5, 0.02);
         Trident t = PaperEntities.bukkit(me).launchProjectile(Trident.class, dir);
         AimDebug.track(t, bot.name(), PaperEntities.bukkit(target));
         t.setShooter(PaperEntities.bukkit(me));
-        t.setItemStack(loyaltyTrident());
+        t.setItemStack(PaperItems.stack(loyaltyTrident()));
         t.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
         me.world().playSound(me.position(), Sounds.ITEM_TRIDENT_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         thrownTrident = PaperEntities.of(t);
@@ -615,7 +615,7 @@ public final class Combat {
         tridentChargeTicks = 0;
         tridentCooldown = 120;
         if (bot.entity() != null) {
-            bot.mannequin().clearActiveItem();
+            bot.entity().clearActiveItem();
         }
         clearSwimStateIfDry();
         bot.inventory().restorePreferredMainHand();
@@ -705,7 +705,7 @@ public final class Combat {
         if (!placeAt.isReplaceable()) {
             return false;
         }
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.LAVA_BUCKET));
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.LAVA_BUCKET));
         placeAt.setType(Blocks.LAVA);
         bot.swing();
         w.playSound(Vec3.of(p), Sounds.ITEM_BUCKET_EMPTY_LAVA, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);

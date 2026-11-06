@@ -9,20 +9,23 @@ import dev.manhuntstar.bot.motor.Motor;
 import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.PaperBlocks;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.ItemType;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Pose;
 import dev.manhuntstar.platform.SoundGroup;
@@ -44,16 +47,12 @@ import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Mannequin;
-import org.bukkit.inventory.EntityEquipment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * A hunter bot. Holds the identity and the persistent state; the {@link Mannequin} entity
@@ -233,7 +232,7 @@ public final class Bot {
     }
 
     public boolean shouldHoldTotemInOffhand() {
-        return difficulty == BotDifficulty.TERMINATOR && terminatorTotemAvailable && getItem(EquipmentSlot.OFF_HAND).getType() == Material.TOTEM_OF_UNDYING;
+        return difficulty == BotDifficulty.TERMINATOR && terminatorTotemAvailable && getItem(EquipSlot.OFF_HAND).type() == Items.TOTEM_OF_UNDYING;
     }
 
     /** Called when the totem was used up: gives back the normal shield/offhand. */
@@ -252,13 +251,13 @@ public final class Bot {
         }
         if ((difficulty == BotDifficulty.TERMINATOR && terminatorTotemAvailable && !terminatorTotemIssued) || shouldHoldTotemInOffhand()) {
             terminatorTotemIssued = true;
-            setItem(EquipmentSlot.OFF_HAND, new ItemStack(Material.TOTEM_OF_UNDYING));
+            setItem(EquipSlot.OFF_HAND, GameItem.of(Items.TOTEM_OF_UNDYING));
             combat.setHasShield(false);
         } else if (progression.canUseShield()) {
-            setItem(EquipmentSlot.OFF_HAND, new ItemStack(Material.SHIELD));
+            setItem(EquipSlot.OFF_HAND, GameItem.of(Items.SHIELD));
             combat.setHasShield(true);
         } else {
-            setItem(EquipmentSlot.OFF_HAND, ItemStack.empty());
+            setItem(EquipSlot.OFF_HAND, GameItem.empty());
             combat.setHasShield(false);
         }
     }
@@ -405,8 +404,7 @@ public final class Bot {
         if (entity == null) {
             return (float) settings().botHealth.value();
         }
-        AttributeInstance a = PaperEntities.bukkit(entity).getAttribute(Attribute.MAX_HEALTH);
-        return a == null ? 20f : (float) a.getValue();
+        return (float) entity.maxHealth();
     }
 
     public void setHealth(double v) {
@@ -672,26 +670,24 @@ public final class Bot {
 
     // ------------------------------------------------------------------ equipment
 
-    public ItemStack getItem(EquipmentSlot slot) {
+    public GameItem getItem(EquipSlot slot) {
         if (entity == null) {
-            return ItemStack.empty();
+            return GameItem.empty();
         }
-        EntityEquipment eq = PaperEntities.bukkit(entity).getEquipment();
-        ItemStack s = eq.getItem(slot);
-        return s == null ? ItemStack.empty() : s;
+        return entity.item(slot);
     }
 
-    public void setItem(EquipmentSlot slot, ItemStack stack) {
+    public void setItem(EquipSlot slot, GameItem stack) {
         if (entity == null) {
             return;
         }
-        ItemStack s = stack == null ? ItemStack.empty() : stack;
-        PaperEntities.bukkit(entity).getEquipment().setItem(slot, s, true);
+        GameItem s = stack == null ? GameItem.empty() : stack;
+        entity.setItem(slot, s, true);
         inventory.onEquipmentChanged(slot, s);
     }
 
-    public ItemStack mainHand() {
-        return getItem(EquipmentSlot.HAND);
+    public GameItem mainHand() {
+        return getItem(EquipSlot.HAND);
     }
 
     // ------------------------------------------------------------------ blocks
@@ -700,7 +696,7 @@ public final class Bot {
      * Places a block like a player: holds the block, looks at it, plays the sound and respects the limit
      * of 10 blocks every 10 seconds. Oak leaves are temporary and disappear after 100 s.
      */
-    public boolean placeBlock(Pos pos, Material material, boolean allowSelfOverlap) {
+    public boolean placeBlock(Pos pos, BlockType material, boolean allowSelfOverlap) {
         GameWorld w = world();
         if (w == null || entity == null) {
             return false;
@@ -716,7 +712,7 @@ public final class Bot {
         if (!WorldUtil.isLoaded(w, pos)) {
             return false;
         }
-        if (material == Material.OAK_LEAVES) {
+        if (material == Blocks.OAK_LEAVES) {
             if (!canPlaceLeafAt(pos)) {
                 return false;
             }
@@ -726,25 +722,25 @@ public final class Bot {
         if (wouldTrapLivingEntity(pos, allowSelfOverlap)) {
             return false;
         }
-        if (getItem(EquipmentSlot.HAND).getType() != material) {
-            setItem(EquipmentSlot.HAND, new ItemStack(material));
+        if (getItem(EquipSlot.HAND).type() != ItemType.of(material)) {
+            setItem(EquipSlot.HAND, GameItem.of(ItemType.of(material)));
         }
         lookAt(Vec3.center(pos));
         GameBlock b = w.block(pos);
-        b.place(PaperBlocks.of(material));
+        b.place(material);
         swing();
         SoundGroup sounds = b.soundGroup();
         w.playSound(Vec3.center(pos), sounds.placeSound(), dev.manhuntstar.platform.SoundCategory.BLOCKS,
                 (sounds.volume() + 1.0f) / 2.0f, sounds.pitch() * 0.8f);
         blocksPlacedInWindow++;
-        if (material == Material.OAK_LEAVES) {
+        if (material == Blocks.OAK_LEAVES) {
             manager.temporaryBlocks().add(w, pos, Blocks.OAK_LEAVES, LEAF_LIFETIME_TICKS);
         }
         manager.plugin().pathService().invalidate(w, pos);
         return true;
     }
 
-    public boolean placeBlock(Pos pos, Material material) {
+    public boolean placeBlock(Pos pos, BlockType material) {
         return placeBlock(pos, material, false);
     }
 
@@ -801,7 +797,7 @@ public final class Bot {
         Pos target = pendingPillar;
         boolean placed = false;
         if (pos().y() >= target.y() + 1.0 && WorldUtil.canBeReplaced(world(), target)) {
-            placed = placeBlock(target, Material.COBBLESTONE, false);
+            placed = placeBlock(target, Blocks.COBBLESTONE, false);
         }
         if (placed || pendingPillarTicks > 12 || (pendingPillarTicks > 2 && onGround() && pos().y() < target.y() + 0.5)) {
             Runnable done = pendingPillarDone;
@@ -966,17 +962,17 @@ public final class Bot {
         int fire = entity.fireTicks();
         int air = entity.remainingAir();
         var effects = new java.util.ArrayList<>(PaperEntities.bukkit(entity).getActivePotionEffects());
-        Map<EquipmentSlot, ItemStack> equipment = new java.util.EnumMap<>(EquipmentSlot.class);
-        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-            equipment.put(slot, getItem(slot).clone());
+        Map<EquipSlot, GameItem> equipment = new java.util.EnumMap<>(EquipSlot.class);
+        for (EquipSlot slot : new EquipSlot[]{EquipSlot.HAND, EquipSlot.OFF_HAND, EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET}) {
+            equipment.put(slot, getItem(slot).copy());
         }
         mining.cancel();
         entity.remove();
         entity = null;
         releaseChunkTickets();
         spawnEntity(dest);
-        for (Map.Entry<EquipmentSlot, ItemStack> e : equipment.entrySet()) {
-            PaperEntities.bukkit(entity).getEquipment().setItem(e.getKey(), e.getValue(), true);
+        for (Map.Entry<EquipSlot, GameItem> e : equipment.entrySet()) {
+            entity.setItem(e.getKey(), e.getValue(), true);
         }
         entity.setHealth(Math.max(0.5, Math.min(maxHealth(), hp)));
         entity.setFireTicks(fire);
@@ -989,16 +985,16 @@ public final class Bot {
     BotSnapshot snapshot() {
         boolean alive = isAlive();
         Vec3 p = pos();
-        java.util.List<ItemStack> inv = new java.util.ArrayList<>(BotInventory.SIZE);
+        java.util.List<GameItem> inv = new java.util.ArrayList<>(BotInventory.SIZE);
         for (int i = 0; i < BotInventory.SIZE; i++) {
-            inv.add(inventory.get(i).clone());
+            inv.add(inventory.get(i).copy());
         }
         long horseLeft = Math.max(0, horseRideBlockedUntil - Bukkit.getCurrentTick());
         return new BotSnapshot(id, name, visualName, skin, lastKnownWorld == null && world() != null ? world().name() : lastKnownWorld,
                 p.x(), p.y(), p.z(), yaw(), pitch(), alive ? health() : maxHealth(), hunger.foodLevel(), hunger.saturation(),
                 difficulty, progression.phase(), progression.progressionEnabled(), inv,
-                getItem(EquipmentSlot.HAND).clone(), getItem(EquipmentSlot.OFF_HAND).clone(), getItem(EquipmentSlot.HEAD).clone(),
-                getItem(EquipmentSlot.CHEST).clone(), getItem(EquipmentSlot.LEGS).clone(), getItem(EquipmentSlot.FEET).clone(),
+                getItem(EquipSlot.HAND).copy(), getItem(EquipSlot.OFF_HAND).copy(), getItem(EquipSlot.HEAD).copy(),
+                getItem(EquipSlot.CHEST).copy(), getItem(EquipSlot.LEGS).copy(), getItem(EquipSlot.FEET).copy(),
                 inventory.snapshotPersistentGear(), groupName, targetPlayer, shouldRespawn, horseLeft, terminatorTotemAvailable,
                 aggression, kills, alive);
     }
@@ -1028,15 +1024,15 @@ public final class Bot {
         if (entity == null) {
             return;
         }
-        setItem(EquipmentSlot.HAND, s.mainHand());
-        setItem(EquipmentSlot.OFF_HAND, s.offHand());
-        setItem(EquipmentSlot.HEAD, s.head());
-        setItem(EquipmentSlot.CHEST, s.chest());
-        setItem(EquipmentSlot.LEGS, s.legs());
-        setItem(EquipmentSlot.FEET, s.feet());
+        setItem(EquipSlot.HAND, s.mainHand());
+        setItem(EquipSlot.OFF_HAND, s.offHand());
+        setItem(EquipSlot.HEAD, s.head());
+        setItem(EquipSlot.CHEST, s.chest());
+        setItem(EquipSlot.LEGS, s.legs());
+        setItem(EquipSlot.FEET, s.feet());
         setHealth(s.health() <= 0 ? maxHealth() : s.health());
         entity.setRotation(s.yaw(), s.pitch());
-        if (s.offHand().getType() == Material.SHIELD) {
+        if (s.offHand().type() == Items.SHIELD) {
             combat.setHasShield(true);
         }
     }

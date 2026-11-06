@@ -1,15 +1,19 @@
 package dev.manhuntstar.paper;
 
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameMode;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.SoundCategory;
-import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
+import java.util.ArrayList;
+import java.util.List;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 /** A Bukkit {@link Player} as a core {@link GamePlayer}: every call is the Bukkit one. */
 public final class PaperPlayer extends PaperLiving implements GamePlayer {
@@ -61,5 +65,19 @@ public final class PaperPlayer extends PaperLiving implements GamePlayer {
     @Override
     public void sendBlockDamage(Pos block, float progress, int sourceEntityId) {
         bukkit().sendBlockDamage(new Location(bukkit().getWorld(), block.x(), block.y(), block.z()), progress, sourceEntityId);
+    }
+
+    @Override
+    public GameItem mainHandItem() {
+        return PaperItems.of(bukkit().getInventory().getItemInMainHand());
+    }
+
+    @Override
+    public List<GameItem> inventoryContents() {
+        List<GameItem> out = new ArrayList<>();
+        for (ItemStack s : bukkit().getInventory().getContents()) {
+            out.add(PaperItems.of(s));
+        }
+        return out;
     }
 }

@@ -15,6 +15,7 @@ import org.bukkit.entity.Enderman;
 import org.bukkit.entity.Enemy;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
@@ -69,6 +70,7 @@ public final class Kinds {
         add(out, c, Firework.class, EntityTrait.FIREWORK);
         add(out, c, TNTPrimed.class, EntityTrait.TNT);
         add(out, c, Item.class, EntityTrait.ITEM);
+        add(out, c, ExperienceOrb.class, EntityTrait.EXPERIENCE_ORB);
         add(out, c, Vehicle.class, EntityTrait.VEHICLE);
         add(out, c, Boat.class, EntityTrait.BOAT);
         add(out, c, AbstractHorse.class, EntityTrait.HORSE);

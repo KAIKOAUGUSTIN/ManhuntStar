@@ -6,9 +6,12 @@ import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBoat;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
@@ -21,11 +24,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.EntityType;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * MLG: falling fast (≥ 0.6 blocks/tick) within 4.5 blocks of the ground, the bot places water (or a boat,
@@ -186,7 +186,7 @@ public final class MlgClutch {
         boolean smallPatch = isSmallWaterPatch(w, ground);
         boolean useBoat = nether || (!smallPatch && ThreadLocalRandom.current().nextDouble() < 0.5);
         if (useBoat) {
-            bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.OAK_BOAT));
+            bot.setItem(EquipSlot.HAND, GameItem.of(Items.OAK_BOAT));
             bot.setPitchNow(90f);
             Location loc = new Location(PaperWorld.bukkit(w), bot.pos().x(), ground.y() + 1.0, bot.pos().z(), bot.yaw(), 0);
             if (PaperEntities.of(PaperWorld.bukkit(w).spawnEntity(loc, EntityType.OAK_BOAT)) instanceof GameBoat boat) {
@@ -199,7 +199,7 @@ public final class MlgClutch {
             }
             return;
         }
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.WATER_BUCKET));
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.WATER_BUCKET));
         bot.setPitchNow(90f);
         Pos water = ground.above();
         if (WorldUtil.isWater(w, water)) {

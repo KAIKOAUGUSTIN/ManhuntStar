@@ -3,8 +3,9 @@ package dev.manhuntstar.paper;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
-import dev.manhuntstar.platform.GameMob;
+import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.GameLiving;
+import dev.manhuntstar.platform.GameMob;
 import dev.manhuntstar.platform.GamePlayer;
 import java.lang.ref.WeakReference;
 import java.util.Map;
@@ -12,6 +13,7 @@ import java.util.WeakHashMap;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
@@ -50,6 +52,8 @@ public final class PaperEntities {
             fresh = new PaperLiving(l);
         } else if (entity instanceof Boat b) {
             fresh = new PaperBoat(b);
+        } else if (entity instanceof Item i) {
+            fresh = new PaperItemEntity(i);
         } else {
             fresh = new PaperEntity(entity);
         }
@@ -77,6 +81,10 @@ public final class PaperEntities {
         return (GameHorse) of((Entity) horse);
     }
 
+    public static GameItemEntity of(Item item) {
+        return (GameItemEntity) of((Entity) item);
+    }
+
     /** The Bukkit entity behind a core entity. */
     public static Entity bukkit(GameEntity entity) {
         return entity == null ? null : ((PaperEntity) entity).bukkit();
@@ -100,5 +108,9 @@ public final class PaperEntities {
 
     public static AbstractHorse bukkit(GameHorse horse) {
         return horse == null ? null : ((PaperHorse) horse).bukkit();
+    }
+
+    public static Item bukkit(GameItemEntity item) {
+        return item == null ? null : ((PaperItemEntity) item).bukkit();
     }
 }

@@ -158,6 +158,11 @@ public class FakeWorld implements GameWorld {
     }
 
     @Override
+    public void spawnItemParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameItem item) {
+        // particles are only for players to see
+    }
+
+    @Override
     public Boolean gameRule(GameRule rule) {
         return Boolean.TRUE;
     }
@@ -195,6 +200,11 @@ public class FakeWorld implements GameWorld {
     @Override
     public List<GameEntity> nearbyEntities(Vec3 center, double x, double y, double z) {
         return nearbyEntities(new Box(center.x() - x, center.y() - y, center.z() - z, center.x() + x, center.y() + y, center.z() + z));
+    }
+
+    @Override
+    public GameItemEntity dropItemNaturally(Vec3 at, GameItem item) {
+        throw new UnsupportedOperationException("the fake world has no item entities");
     }
 
     /** A block of the fake world: a solid type has a full collision box; there are no states. */
@@ -243,6 +253,15 @@ public class FakeWorld implements GameWorld {
         @Override
         public void place(BlockType type) {
             set(new Pos(x, y, z), type);
+        }
+
+        @Override
+        public boolean breakNaturally(GameItem tool, boolean effects) {
+            if (type().is(BlockTrait.AIR)) {
+                return false;
+            }
+            set(new Pos(x, y, z), Blocks.AIR);
+            return true;
         }
 
         @Override

@@ -67,6 +67,9 @@ public interface GameWorld {
     /** Block crack particles of a block (the game's {@code block} particle). */
     void spawnBlockParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameBlock block);
 
+    /** Crumbs of an item (the game's {@code item} particle), as when eating. */
+    void spawnItemParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameItem item);
+
     /** The value of a true/false game rule (null if the world doesn't have it). */
     Boolean gameRule(GameRule rule);
 
@@ -79,4 +82,7 @@ public interface GameWorld {
 
     /** Entities within the given distances (half sizes of a box) around a point. */
     List<GameEntity> nearbyEntities(Vec3 center, double x, double y, double z);
+
+    /** Drops an item at a point with a small random offset and push, like a broken block's drop. */
+    GameItemEntity dropItemNaturally(Vec3 at, GameItem item);
 }

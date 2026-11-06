@@ -4,6 +4,7 @@ import dev.manhuntstar.platform.BedPart;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Fluid;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.SoundGroup;
 import dev.manhuntstar.util.Box;
@@ -68,6 +69,11 @@ public final class PaperBlock implements GameBlock {
     @Override
     public void setType(BlockType type, boolean physics) {
         block.setType(PaperBlocks.material(type), physics);
+    }
+
+    @Override
+    public boolean breakNaturally(GameItem tool, boolean effects) {
+        return block.breakNaturally(PaperItems.stack(tool), effects);
     }
 
     @Override

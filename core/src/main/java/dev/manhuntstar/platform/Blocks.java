@@ -19,6 +19,13 @@ public final class Blocks {
     public static final BlockType BEDROCK = BlockType.of("BEDROCK");
     public static final BlockType POWDER_SNOW = BlockType.of("POWDER_SNOW");
     public static final BlockType SWEET_BERRY_BUSH = BlockType.of("SWEET_BERRY_BUSH");
+    public static final BlockType STONE = BlockType.of("STONE");
+    public static final BlockType COBBLESTONE = BlockType.of("COBBLESTONE");
+    public static final BlockType ICE = BlockType.of("ICE");
+    public static final BlockType PACKED_ICE = BlockType.of("PACKED_ICE");
+    public static final BlockType FROSTED_ICE = BlockType.of("FROSTED_ICE");
+    public static final BlockType BLUE_ICE = BlockType.of("BLUE_ICE");
+    public static final BlockType SLIME_BLOCK = BlockType.of("SLIME_BLOCK");
 
     private Blocks() {
     }

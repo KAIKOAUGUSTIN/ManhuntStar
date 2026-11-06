@@ -1,10 +1,13 @@
 package dev.manhuntstar.bot;
 
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.EntityTrait;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.GameItemEntity;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -13,12 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
-import org.bukkit.entity.ExperienceOrb;
-import org.bukkit.entity.Item;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * The bot's virtual inventory (36 slots, like a player's) and handling of the best equipment:
@@ -28,63 +26,63 @@ public final class BotInventory {
 
     public static final int SIZE = 36;
     private static final double PICKUP_RADIUS = 1.8;
-    private static final EquipmentSlot[] ARMOR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
-    private static final EquipmentSlot[] EQUIPMENT = {EquipmentSlot.HAND, EquipmentSlot.OFF_HAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+    private static final EquipSlot[] ARMOR = {EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET};
+    private static final EquipSlot[] EQUIPMENT = {EquipSlot.HAND, EquipSlot.OFF_HAND, EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET};
 
     private final Bot bot;
-    private final ItemStack[] main = new ItemStack[SIZE];
-    private ItemStack persistedSword = ItemStack.empty();
-    private ItemStack persistedPickaxe = ItemStack.empty();
-    private final EnumMap<EquipmentSlot, ItemStack> persistedArmor = new EnumMap<>(EquipmentSlot.class);
+    private final GameItem[] main = new GameItem[SIZE];
+    private GameItem persistedSword = GameItem.empty();
+    private GameItem persistedPickaxe = GameItem.empty();
+    private final EnumMap<EquipSlot, GameItem> persistedArmor = new EnumMap<>(EquipSlot.class);
 
     BotInventory(Bot bot) {
         this.bot = bot;
         for (int i = 0; i < SIZE; i++) {
-            main[i] = ItemStack.empty();
+            main[i] = GameItem.empty();
         }
-        for (EquipmentSlot s : ARMOR) {
-            persistedArmor.put(s, ItemStack.empty());
+        for (EquipSlot s : ARMOR) {
+            persistedArmor.put(s, GameItem.empty());
         }
     }
 
-    public ItemStack get(int slot) {
+    public GameItem get(int slot) {
         return main[slot];
     }
 
-    public void set(int slot, ItemStack stack) {
-        main[slot] = stack == null ? ItemStack.empty() : stack;
+    public void set(int slot, GameItem stack) {
+        main[slot] = stack == null ? GameItem.empty() : stack;
     }
 
     public void clear() {
         for (int i = 0; i < SIZE; i++) {
-            main[i] = ItemStack.empty();
+            main[i] = GameItem.empty();
         }
     }
 
     /** Adds to the inventory; returns what's left over. */
-    public ItemStack add(ItemStack stack) {
+    public GameItem add(GameItem stack) {
         if (GearScoring.isEmpty(stack)) {
-            return ItemStack.empty();
+            return GameItem.empty();
         }
-        ItemStack remaining = stack.clone();
-        for (int i = 0; i < SIZE && remaining.getAmount() > 0; i++) {
-            ItemStack cur = main[i];
+        GameItem remaining = stack.copy();
+        for (int i = 0; i < SIZE && remaining.amount() > 0; i++) {
+            GameItem cur = main[i];
             if (!cur.isEmpty() && cur.isSimilar(remaining)) {
-                int space = cur.getMaxStackSize() - cur.getAmount();
+                int space = cur.maxStackSize() - cur.amount();
                 if (space > 0) {
-                    int move = Math.min(space, remaining.getAmount());
-                    cur.setAmount(cur.getAmount() + move);
-                    remaining.setAmount(remaining.getAmount() - move);
+                    int move = Math.min(space, remaining.amount());
+                    cur.setAmount(cur.amount() + move);
+                    remaining.setAmount(remaining.amount() - move);
                 }
             }
         }
-        for (int i = 0; i < SIZE && remaining.getAmount() > 0; i++) {
+        for (int i = 0; i < SIZE && remaining.amount() > 0; i++) {
             if (main[i].isEmpty()) {
-                main[i] = remaining.clone();
+                main[i] = remaining.copy();
                 remaining.setAmount(0);
             }
         }
-        return remaining.getAmount() > 0 ? remaining : ItemStack.empty();
+        return remaining.amount() > 0 ? remaining : GameItem.empty();
     }
 
     public void tick() {
@@ -99,79 +97,79 @@ public final class BotInventory {
 
     // ------------------------------------------------------------------ preferred equipment
 
-    public ItemStack preferredMainHand() {
-        ItemStack current = bot.getItem(EquipmentSlot.HAND);
+    public GameItem preferredMainHand() {
+        GameItem current = bot.getItem(EquipSlot.HAND);
         if (GearScoring.isSword(current)) {
-            return current.clone();
+            return current.copy();
         }
         if (GearScoring.isSword(persistedSword)) {
-            return persistedSword.clone();
+            return persistedSword.copy();
         }
-        ItemStack best = findBestSword();
+        GameItem best = findBestSword();
         if (!best.isEmpty()) {
-            return best.clone();
+            return best.copy();
         }
         return bot.progression().mainHandItem();
     }
 
-    public ItemStack preferredPickaxe() {
-        ItemStack current = bot.getItem(EquipmentSlot.HAND);
+    public GameItem preferredPickaxe() {
+        GameItem current = bot.getItem(EquipSlot.HAND);
         if (GearScoring.isPickaxe(current)) {
-            return current.clone();
+            return current.copy();
         }
         if (GearScoring.isPickaxe(persistedPickaxe)) {
-            return persistedPickaxe.clone();
+            return persistedPickaxe.copy();
         }
-        ItemStack best = findBestPickaxe();
+        GameItem best = findBestPickaxe();
         if (!best.isEmpty()) {
-            return best.clone();
+            return best.copy();
         }
-        return new ItemStack(Material.DIAMOND_PICKAXE);
+        return GameItem.of(Items.DIAMOND_PICKAXE);
     }
 
     public void restorePreferredMainHand() {
         if (bot.capacityLocked()) {
             return;
         }
-        ItemStack preferred = preferredMainHand();
-        if (!preferred.isEmpty() && !preferred.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
-            bot.setItem(EquipmentSlot.HAND, preferred);
+        GameItem preferred = preferredMainHand();
+        if (!preferred.isEmpty() && !preferred.isSimilar(bot.getItem(EquipSlot.HAND))) {
+            bot.setItem(EquipSlot.HAND, preferred);
         }
     }
 
     public void restorePreferredPickaxe() {
-        ItemStack preferred = preferredPickaxe();
-        if (!preferred.isEmpty() && !preferred.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
-            bot.setItem(EquipmentSlot.HAND, preferred);
+        GameItem preferred = preferredPickaxe();
+        if (!preferred.isEmpty() && !preferred.isSimilar(bot.getItem(EquipSlot.HAND))) {
+            bot.setItem(EquipSlot.HAND, preferred);
         }
     }
 
     /** Called whenever an equipment slot changes: updates the persistent equipment if it's better. */
-    void onEquipmentChanged(EquipmentSlot slot, ItemStack stack) {
-        if (slot == EquipmentSlot.HAND) {
+    void onEquipmentChanged(EquipSlot slot, GameItem stack) {
+        if (slot == EquipSlot.HAND) {
             if (GearScoring.isSword(stack) && GearScoring.attackScore(stack) >= GearScoring.attackScore(persistedSword) - 0.01f) {
-                persistedSword = stack.clone();
+                persistedSword = stack.copy();
             }
             if (GearScoring.isPickaxe(stack) && GearScoring.pickaxeScore(stack) >= GearScoring.pickaxeScore(persistedPickaxe) - 0.01f) {
-                persistedPickaxe = stack.clone();
+                persistedPickaxe = stack.copy();
             }
             return;
         }
         if (isArmorSlot(slot) && GearScoring.isArmorForSlot(stack, slot)) {
-            ItemStack cur = persistedArmor.get(slot);
+            GameItem cur = persistedArmor.get(slot);
             if (cur.isEmpty() || GearScoring.armorScore(stack, slot) >= GearScoring.armorScore(cur, slot) - 0.01f) {
-                persistedArmor.put(slot, stack.clone());
+                persistedArmor.put(slot, stack.copy());
             }
         }
     }
 
-    private static boolean isArmorSlot(EquipmentSlot s) {
-        return s == EquipmentSlot.HEAD || s == EquipmentSlot.CHEST || s == EquipmentSlot.LEGS || s == EquipmentSlot.FEET;
+    private static boolean isArmorSlot(EquipSlot s) {
+        return s == EquipSlot.HEAD || s == EquipSlot.CHEST || s == EquipSlot.LEGS || s == EquipSlot.FEET;
     }
 
     public PersistentGear snapshotPersistentGear() {
-        return new PersistentGear(persistedSword.clone(), persistedPickaxe.clone(), persistedArmor.get(EquipmentSlot.HEAD).clone(),
-                persistedArmor.get(EquipmentSlot.CHEST).clone(), persistedArmor.get(EquipmentSlot.LEGS).clone(), persistedArmor.get(EquipmentSlot.FEET).clone());
+        return new PersistentGear(persistedSword.copy(), persistedPickaxe.copy(), persistedArmor.get(EquipSlot.HEAD).copy(),
+                persistedArmor.get(EquipSlot.CHEST).copy(), persistedArmor.get(EquipSlot.LEGS).copy(), persistedArmor.get(EquipSlot.FEET).copy());
     }
 
     /** Restores the persistent equipment and equips whatever is better than the current one. */
@@ -180,44 +178,44 @@ public final class BotInventory {
             return;
         }
         if (!GearScoring.isEmpty(gear.sword())) {
-            persistedSword = gear.sword().clone();
+            persistedSword = gear.sword().copy();
         }
         if (!GearScoring.isEmpty(gear.pickaxe())) {
-            persistedPickaxe = gear.pickaxe().clone();
+            persistedPickaxe = gear.pickaxe().copy();
         }
-        for (EquipmentSlot s : ARMOR) {
-            ItemStack a = gear.armor(s);
+        for (EquipSlot s : ARMOR) {
+            GameItem a = gear.armor(s);
             if (!GearScoring.isEmpty(a)) {
-                persistedArmor.put(s, a.clone());
+                persistedArmor.put(s, a.copy());
             }
         }
         if (!bot.isAlive()) {
             return;
         }
-        if (!persistedSword.isEmpty() && GearScoring.isBetterSword(persistedSword, bot.getItem(EquipmentSlot.HAND))) {
-            bot.setItem(EquipmentSlot.HAND, persistedSword.clone());
+        if (!persistedSword.isEmpty() && GearScoring.isBetterSword(persistedSword, bot.getItem(EquipSlot.HAND))) {
+            bot.setItem(EquipSlot.HAND, persistedSword.copy());
         }
-        for (EquipmentSlot s : ARMOR) {
+        for (EquipSlot s : ARMOR) {
             applyPersistedArmorIfBetter(s);
         }
     }
 
     public void clearPersistentGear() {
-        persistedSword = ItemStack.empty();
-        persistedPickaxe = ItemStack.empty();
-        for (EquipmentSlot s : ARMOR) {
-            persistedArmor.put(s, ItemStack.empty());
+        persistedSword = GameItem.empty();
+        persistedPickaxe = GameItem.empty();
+        for (EquipSlot s : ARMOR) {
+            persistedArmor.put(s, GameItem.empty());
         }
     }
 
-    private void applyPersistedArmorIfBetter(EquipmentSlot slot) {
-        ItemStack persisted = persistedArmor.get(slot);
+    private void applyPersistedArmorIfBetter(EquipSlot slot) {
+        GameItem persisted = persistedArmor.get(slot);
         if (persisted == null || persisted.isEmpty()) {
             return;
         }
-        ItemStack current = bot.getItem(slot);
+        GameItem current = bot.getItem(slot);
         if (current.isEmpty() || GearScoring.isBetterArmor(persisted, current, slot)) {
-            bot.setItem(slot, persisted.clone());
+            bot.setItem(slot, persisted.copy());
         }
     }
 
@@ -228,45 +226,45 @@ public final class BotInventory {
         if (bot.mining().isMining() || bot.survival().isEating()) {
             return;
         }
-        ItemStack bestSword = findBestSword();
+        GameItem bestSword = findBestSword();
         if (!bestSword.isEmpty() && GearScoring.isBetterSword(bestSword, persistedSword)) {
-            persistedSword = bestSword.clone();
+            persistedSword = bestSword.copy();
         }
-        ItemStack bestPick = findBestPickaxe();
+        GameItem bestPick = findBestPickaxe();
         if (!bestPick.isEmpty() && GearScoring.isBetterPickaxe(bestPick, persistedPickaxe)) {
-            persistedPickaxe = bestPick.clone();
+            persistedPickaxe = bestPick.copy();
         }
-        ItemStack currentMain = bot.getItem(EquipmentSlot.HAND);
+        GameItem currentMain = bot.getItem(EquipSlot.HAND);
         // on horseback the bot holds the charge spear (HorseRoutine); the sword comes back when it dismounts
         boolean ridingWithSpear = bot.isRiding() && GearScoring.isSpear(currentMain);
         if (!bestSword.isEmpty() && !ridingWithSpear
                 && (currentMain.isEmpty() || !GearScoring.isSword(currentMain) || GearScoring.isBetterSword(bestSword, currentMain))) {
-            bot.setItem(EquipmentSlot.HAND, bestSword.clone());
+            bot.setItem(EquipSlot.HAND, bestSword.copy());
         }
-        for (EquipmentSlot s : ARMOR) {
+        for (EquipSlot s : ARMOR) {
             equipBestArmor(s);
         }
     }
 
-    private void equipBestArmor(EquipmentSlot slot) {
-        ItemStack best = findBestArmor(slot);
+    private void equipBestArmor(EquipSlot slot) {
+        GameItem best = findBestArmor(slot);
         if (best.isEmpty()) {
             return;
         }
-        ItemStack current = bot.getItem(slot);
+        GameItem current = bot.getItem(slot);
         if (current.isEmpty() || GearScoring.isBetterArmor(best, current, slot)) {
-            bot.setItem(slot, best.clone());
+            bot.setItem(slot, best.copy());
         }
-        ItemStack persisted = persistedArmor.get(slot);
+        GameItem persisted = persistedArmor.get(slot);
         if (persisted.isEmpty() || GearScoring.isBetterArmor(best, persisted, slot)) {
-            persistedArmor.put(slot, best.clone());
+            persistedArmor.put(slot, best.copy());
         }
     }
 
-    private ItemStack findBestSword() {
-        ItemStack best = ItemStack.empty();
+    private GameItem findBestSword() {
+        GameItem best = GameItem.empty();
         float bestScore = -1f;
-        for (ItemStack s : main) {
+        for (GameItem s : main) {
             float score = GearScoring.attackScore(s);
             if (score > bestScore) {
                 bestScore = score;
@@ -276,13 +274,13 @@ public final class BotInventory {
         if (GearScoring.attackScore(persistedSword) > bestScore) {
             best = persistedSword;
         }
-        return best.isEmpty() ? ItemStack.empty() : best.clone();
+        return best.isEmpty() ? GameItem.empty() : best.copy();
     }
 
-    private ItemStack findBestPickaxe() {
-        ItemStack best = ItemStack.empty();
+    private GameItem findBestPickaxe() {
+        GameItem best = GameItem.empty();
         float bestScore = -1f;
-        for (ItemStack s : main) {
+        for (GameItem s : main) {
             float score = GearScoring.pickaxeScore(s);
             if (score > bestScore) {
                 bestScore = score;
@@ -292,24 +290,24 @@ public final class BotInventory {
         if (GearScoring.pickaxeScore(persistedPickaxe) > bestScore) {
             best = persistedPickaxe;
         }
-        return best.isEmpty() ? ItemStack.empty() : best.clone();
+        return best.isEmpty() ? GameItem.empty() : best.copy();
     }
 
-    private ItemStack findBestArmor(EquipmentSlot slot) {
-        ItemStack best = ItemStack.empty();
+    private GameItem findBestArmor(EquipSlot slot) {
+        GameItem best = GameItem.empty();
         float bestScore = -1f;
-        for (ItemStack s : main) {
+        for (GameItem s : main) {
             float score = GearScoring.armorScore(s, slot);
             if (score > bestScore) {
                 bestScore = score;
                 best = s;
             }
         }
-        ItemStack persisted = persistedArmor.get(slot);
+        GameItem persisted = persistedArmor.get(slot);
         if (GearScoring.armorScore(persisted, slot) > bestScore) {
             best = persisted;
         }
-        return best.isEmpty() ? ItemStack.empty() : best.clone();
+        return best.isEmpty() ? GameItem.empty() : best.copy();
     }
 
     // ------------------------------------------------------------------ pickup
@@ -320,27 +318,27 @@ public final class BotInventory {
             return;
         }
         for (GameEntity near : e.nearbyEntities(PICKUP_RADIUS, PICKUP_RADIUS, PICKUP_RADIUS)) {
-            if (PaperEntities.bukkit(near) instanceof Item item) {
-                if (!item.isValid() || item.getPickupDelay() > 0 || !item.canMobPickup()) {
+            if (near instanceof GameItemEntity item) {
+                if (!item.isValid() || item.pickupDelay() > 0 || !item.canMobPickup()) {
                     continue;
                 }
-                ItemStack stack = item.getItemStack();
-                int before = stack.getAmount();
-                ItemStack left = add(stack);
-                int taken = before - left.getAmount();
+                GameItem stack = item.item();
+                int before = stack.amount();
+                GameItem left = add(stack);
+                int taken = before - left.amount();
                 if (taken <= 0) {
                     continue;
                 }
-                PaperEntities.bukkit(e).playPickupItemAnimation(item, taken);
+                e.playPickupAnimation(item, taken);
                 if (left.isEmpty()) {
                     item.remove();
                 } else {
-                    item.setItemStack(left);
+                    item.setItem(left);
                 }
                 e.world().playSound(e.position(), Sounds.ENTITY_ITEM_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.2f,
                         (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 1.4f + 2.0f);
-            } else if (PaperEntities.bukkit(near) instanceof ExperienceOrb orb && orb.isValid()) {
-                orb.remove();
+            } else if (near.is(EntityTrait.EXPERIENCE_ORB) && near.isValid()) {
+                near.remove();
                 e.world().playSound(e.position(), Sounds.ENTITY_EXPERIENCE_ORB_PICKUP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.1f,
                         0.5f + ThreadLocalRandom.current().nextFloat() * 0.6f);
             }
@@ -350,8 +348,8 @@ public final class BotInventory {
     // ------------------------------------------------------------------ death
 
     /** Items to drop when the bot dies, according to the drop and persistence options. */
-    public List<ItemStack> collectDeathDrops(boolean dropInventory, Modes.GearPersistence mode) {
-        List<ItemStack> drops = new ArrayList<>();
+    public List<GameItem> collectDeathDrops(boolean dropInventory, Modes.GearPersistence mode) {
+        List<GameItem> drops = new ArrayList<>();
         reevaluateAndEquipBestGearSafe();
         if (dropInventory) {
             boolean keep = mode == Modes.GearPersistence.KEEP_ON_RESPAWN_NO_DROP;
@@ -359,15 +357,15 @@ public final class BotInventory {
             int keepPick = keep ? findBestPickaxeSlot() : -1;
             // What the bot wears or holds and came from the inventory is a copy of the item there: it's one item.
             // It used to drop twice (or drop and stay with the bot in the mode that keeps it).
-            Map<EquipmentSlot, Integer> source = equippedSourceSlots();
+            Map<EquipSlot, Integer> source = equippedSourceSlots();
             Set<Integer> keptSources = new HashSet<>();
-            for (EquipmentSlot slot : EQUIPMENT) {
-                ItemStack s = bot.getItem(slot);
+            for (EquipSlot slot : EQUIPMENT) {
+                GameItem s = bot.getItem(slot);
                 if (s.isEmpty()) {
                     continue;
                 }
                 Integer from = source.get(slot);
-                if (keep && (isArmorSlot(slot) || (slot == EquipmentSlot.HAND && (GearScoring.isSword(s) || GearScoring.isPickaxe(s))) || keepNamedCombatItem(s))) {
+                if (keep && (isArmorSlot(slot) || (slot == EquipSlot.HAND && (GearScoring.isSword(s) || GearScoring.isPickaxe(s))) || keepNamedCombatItem(s))) {
                     if (from != null) {
                         keptSources.add(from);
                     }
@@ -375,21 +373,21 @@ public final class BotInventory {
                 }
                 // the worn elytra is lent for flying (the {@code mobility.elytra} option) and the spear is outside the inventory,
                 // for the horseback charge: they don't belong to the bot
-                if (from == null && !(slot == EquipmentSlot.CHEST && s.getType() == Material.ELYTRA)
-                        && !(slot == EquipmentSlot.HAND && GearScoring.isSpear(s))) {
-                    drops.add(s.clone());
+                if (from == null && !(slot == EquipSlot.CHEST && s.type() == Items.ELYTRA)
+                        && !(slot == EquipSlot.HAND && GearScoring.isSpear(s))) {
+                    drops.add(s.copy());
                 }
             }
             for (int i = 0; i < SIZE; i++) {
-                ItemStack s = main[i];
+                GameItem s = main[i];
                 if (s.isEmpty()) {
                     continue;
                 }
                 if (keep && (i == keepSword || i == keepPick || keptSources.contains(i) || keepNamedCombatItem(s))) {
                     continue;
                 }
-                drops.add(s.clone());
-                main[i] = ItemStack.empty();
+                drops.add(s.copy());
+                main[i] = GameItem.empty();
             }
         }
         drops.addAll(bot.progression().deathDrops(dropInventory));
@@ -400,11 +398,11 @@ public final class BotInventory {
     }
 
     /** For each worn/held piece, the inventory slot it was copied from (if any). */
-    private Map<EquipmentSlot, Integer> equippedSourceSlots() {
-        Map<EquipmentSlot, Integer> out = new EnumMap<>(EquipmentSlot.class);
+    private Map<EquipSlot, Integer> equippedSourceSlots() {
+        Map<EquipSlot, Integer> out = new EnumMap<>(EquipSlot.class);
         Set<Integer> used = new HashSet<>();
-        for (EquipmentSlot slot : EQUIPMENT) {
-            ItemStack s = bot.getItem(slot);
+        for (EquipSlot slot : EQUIPMENT) {
+            GameItem s = bot.getItem(slot);
             if (s.isEmpty()) {
                 continue;
             }
@@ -421,15 +419,15 @@ public final class BotInventory {
 
     private void reevaluateAndEquipBestGearSafe() {
         if (bot.isAlive()) {
-            ItemStack bestSword = findBestSword();
+            GameItem bestSword = findBestSword();
             if (!bestSword.isEmpty() && GearScoring.isBetterSword(bestSword, persistedSword)) {
-                persistedSword = bestSword.clone();
+                persistedSword = bestSword.copy();
             }
         }
     }
 
-    private boolean keepNamedCombatItem(ItemStack s) {
-        return s.hasItemMeta() && s.getItemMeta().hasCustomName() && (GearScoring.isSword(s) || GearScoring.isPickaxe(s));
+    private boolean keepNamedCombatItem(GameItem s) {
+        return s.hasCustomName() && (GearScoring.isSword(s) || GearScoring.isPickaxe(s));
     }
 
     private int findBestSwordSlot() {
@@ -475,12 +473,12 @@ public final class BotInventory {
     }
 
     /** Drops an item into the world as a player would. */
-    public static void dropAt(Bot bot, ItemStack stack) {
+    public static void dropAt(Bot bot, GameItem stack) {
         if (GearScoring.isEmpty(stack) || bot.world() == null) {
             return;
         }
         Vec3 p = bot.pos();
-        Item item = bot.bukkitWorld().dropItemNaturally(Locations.location(p.add(0, 1.0, 0), bot.world()), stack);
+        GameItemEntity item = bot.world().dropItemNaturally(p.add(0, 1.0, 0), stack);
         item.setPickupDelay(40);
     }
 }

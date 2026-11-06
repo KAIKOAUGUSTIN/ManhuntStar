@@ -3,11 +3,15 @@ package dev.manhuntstar.tactics;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
@@ -35,7 +39,6 @@ import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.TNTPrimed;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.util.Vector;
@@ -110,14 +113,14 @@ public final class TacticsManager {
     private static final class BowBurst {
         final UUID bot;
         final UUID player;
-        final ItemStack oldMain;
+        final GameItem oldMain;
         final MotionTracker aim = new MotionTracker();
         int shots;
         int step;
         long nextAction;
         long drawStart;
 
-        BowBurst(UUID bot, UUID player, ItemStack oldMain, int shots, long now) {
+        BowBurst(UUID bot, UUID player, GameItem oldMain, int shots, long now) {
             this.bot = bot;
             this.player = player;
             this.oldMain = oldMain;
@@ -129,13 +132,13 @@ public final class TacticsManager {
     private static final class FireworkShot {
         final UUID bot;
         final UUID player;
-        final ItemStack oldMain;
-        final ItemStack oldOff;
+        final GameItem oldMain;
+        final GameItem oldOff;
         final MotionTracker aim = new MotionTracker();
         int step;
         long nextAction;
 
-        FireworkShot(UUID bot, UUID player, ItemStack oldMain, ItemStack oldOff, long now) {
+        FireworkShot(UUID bot, UUID player, GameItem oldMain, GameItem oldOff, long now) {
             this.bot = bot;
             this.player = player;
             this.oldMain = oldMain;
@@ -374,7 +377,7 @@ public final class TacticsManager {
         prepare(bot);
         int shots = 2 + Math.round((Math.max(1, Math.min(10, Math.max(1, bot.aggression()))) - 1) * 0.44444445f);
         activeBotByPlayer.put(player.uuid(), bot.id());
-        bows.put(bot.id(), new BowBurst(bot.id(), player.uuid(), bot.getItem(EquipmentSlot.HAND).clone(), shots, now));
+        bows.put(bot.id(), new BowBurst(bot.id(), player.uuid(), bot.getItem(EquipSlot.HAND).copy(), shots, now));
     }
 
     /** @return false when the burst is over (and already cleaned up). */
@@ -399,8 +402,8 @@ public final class TacticsManager {
                     return false;
                 }
                 bot.stand();
-                bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.BOW));
-                PaperEntities.bukkit(e).startUsingItem(EquipmentSlot.HAND);
+                bot.setItem(EquipSlot.HAND, GameItem.of(Items.BOW));
+                e.startUsingItem(EquipSlot.HAND);
                 s.drawStart = now;
                 s.step = 1;
                 s.nextAction = now + draw;
@@ -416,7 +419,7 @@ public final class TacticsManager {
                     }
                     return true;
                 }
-                PaperEntities.bukkit(e).clearActiveItem();
+                e.clearActiveItem();
                 shootArrow(bot, p, s.aim.velocity(), speed);
                 bot.swing();
                 if (--s.shots > 0) {
@@ -437,8 +440,8 @@ public final class TacticsManager {
 
     private void cleanupBow(BowBurst s, Bot bot) {
         if (bot != null && bot.isAlive()) {
-            bot.mannequin().clearActiveItem();
-            bot.setItem(EquipmentSlot.HAND, s.oldMain);
+            bot.entity().clearActiveItem();
+            bot.setItem(EquipSlot.HAND, s.oldMain);
             bot.stand();
         }
         activeBotByPlayer.remove(s.player);
@@ -538,8 +541,8 @@ public final class TacticsManager {
     private void startFirework(GamePlayer player, Bot bot, long now) {
         prepare(bot);
         activeBotByPlayer.put(player.uuid(), bot.id());
-        fireworks.put(bot.id(), new FireworkShot(bot.id(), player.uuid(), bot.getItem(EquipmentSlot.HAND).clone(),
-                bot.getItem(EquipmentSlot.OFF_HAND).clone(), now));
+        fireworks.put(bot.id(), new FireworkShot(bot.id(), player.uuid(), bot.getItem(EquipSlot.HAND).copy(),
+                bot.getItem(EquipSlot.OFF_HAND).copy(), now));
     }
 
     private boolean stepFirework(FireworkShot s, Bot bot, long now) {
@@ -558,9 +561,9 @@ public final class TacticsManager {
         switch (s.step) {
             case 0 -> {
                 bot.stand();
-                bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.CROSSBOW));
-                bot.setItem(EquipmentSlot.OFF_HAND, fireworkRocket());
-                PaperEntities.bukkit(e).startUsingItem(EquipmentSlot.HAND);
+                bot.setItem(EquipSlot.HAND, GameItem.of(Items.CROSSBOW));
+                bot.setItem(EquipSlot.OFF_HAND, fireworkRocket());
+                e.startUsingItem(EquipSlot.HAND);
                 e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_LOADING_START, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
                 s.step = 1;
                 s.nextAction = now + 25;
@@ -575,7 +578,7 @@ public final class TacticsManager {
                     }
                     return true;
                 }
-                PaperEntities.bukkit(e).clearActiveItem();
+                e.clearActiveItem();
                 shootFirework(bot, p, s.aim.velocity());
                 bot.swing();
                 s.step = 2;
@@ -591,9 +594,9 @@ public final class TacticsManager {
 
     private void cleanupFirework(FireworkShot s, Bot bot) {
         if (bot != null && bot.isAlive()) {
-            bot.mannequin().clearActiveItem();
-            bot.setItem(EquipmentSlot.HAND, s.oldMain);
-            bot.setItem(EquipmentSlot.OFF_HAND, s.oldOff);
+            bot.entity().clearActiveItem();
+            bot.setItem(EquipSlot.HAND, s.oldMain);
+            bot.setItem(EquipSlot.OFF_HAND, s.oldOff);
             bot.stand();
         }
         activeBotByPlayer.remove(s.player);
@@ -613,7 +616,7 @@ public final class TacticsManager {
         Location at = Locations.location(from, e.world());
         PaperWorld.bukkit(e.world()).spawn(at, Firework.class, fw -> {
             // Paper rolls the lifetime from the flight duration, like the game
-            fw.setFireworkMeta((FireworkMeta) fireworkRocket().getItemMeta());
+            fw.setFireworkMeta((FireworkMeta) fireworkRocketStack().getItemMeta());
             fw.setShooter(PaperEntities.bukkit(e));
             fw.setShotAtAngle(true);
             fw.setVelocity(vel);
@@ -621,7 +624,11 @@ public final class TacticsManager {
         e.world().playSound(e.position(), Sounds.ITEM_CROSSBOW_SHOOT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f / (r.nextFloat() * 0.4f + 0.8f));
     }
 
-    private static ItemStack fireworkRocket() {
+    private static GameItem fireworkRocket() {
+        return PaperItems.of(fireworkRocketStack());
+    }
+
+    private static ItemStack fireworkRocketStack() {
         ItemStack rocket = new ItemStack(Material.FIREWORK_ROCKET);
         rocket.editMeta(FireworkMeta.class, meta -> {
             meta.addEffect(FireworkEffect.builder().with(FireworkEffect.Type.BALL_LARGE).withColor(Color.RED, Color.ORANGE).build());
@@ -667,7 +674,7 @@ public final class TacticsManager {
         manager.teleportBot(bot, new Location(PaperWorld.bukkit(w), stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
         bot.lookAt(player.eyePosition());
         bot.setSneaking(true);
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.TNT));
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.TNT));
         tnt.put(bot.id(), new TntAmbush(bot.id(), player.uuid(), stand, now));
         return true;
     }
@@ -724,7 +731,7 @@ public final class TacticsManager {
                 t.setSource(bot.mannequin());
             });
             w.playSound(Locations.vec(at), Sounds.ITEM_FLINTANDSTEEL_USE, dev.manhuntstar.platform.SoundCategory.BLOCKS, 1f, 1f);
-            bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.FLINT_AND_STEEL));
+            bot.setItem(EquipSlot.HAND, GameItem.of(Items.FLINT_AND_STEEL));
             bot.swing();
             a.ignited = true;
             a.ignitedAt = now;

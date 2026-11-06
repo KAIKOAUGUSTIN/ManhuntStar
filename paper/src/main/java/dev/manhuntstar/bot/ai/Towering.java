@@ -2,6 +2,7 @@ package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
@@ -12,7 +13,6 @@ import dev.manhuntstar.util.WorldUtil;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 
 /**
  * Tower (pillar under its own feet) and bridge to a player on a skybase/tower, and the quick crouching
@@ -112,7 +112,7 @@ final class Towering {
             bot.setSneaking(true);
             bot.motor().walk(dir.scale(-0.3));
             if (++bridgeTimer > 2) {
-                if (WorldUtil.canBeReplaced(world(), aheadBelow) && bot.placeBlock(aheadBelow, Material.COBBLESTONE)) {
+                if (WorldUtil.canBeReplaced(world(), aheadBelow) && bot.placeBlock(aheadBelow, Blocks.COBBLESTONE)) {
                     lastPlaceTick = now;
                 }
                 bridgeTimer = 0;
@@ -335,7 +335,7 @@ final class Towering {
                 speedStep = 2;
             }
             case 2 -> {
-                if (speedTarget != null && WorldUtil.canBeReplaced(world(), speedTarget) && bot.placeBlock(speedTarget, Material.COBBLESTONE)) {
+                if (speedTarget != null && WorldUtil.canBeReplaced(world(), speedTarget) && bot.placeBlock(speedTarget, Blocks.COBBLESTONE)) {
                     bridgedBlocks++;
                 }
                 speedStep = 3;

@@ -24,6 +24,10 @@ import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.paper.PaperItems;
+import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.util.Locations;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -35,11 +39,9 @@ import java.util.Locale;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -576,8 +578,8 @@ public final class ManhuntCommand {
     private int equipItem(CommandContext<CommandSourceStack> ctx) {
         ItemStack stack = ctx.getArgument("item", ItemStack.class);
         for (Bot b : manager().aliveBots()) {
-            b.setItem(EquipmentSlot.HAND, stack.clone());
-            b.inventory().add(stack.clone());
+            b.setItem(EquipSlot.HAND, PaperItems.of(stack.clone()));
+            b.inventory().add(PaperItems.of(stack.clone()));
         }
         msg().send(sender(ctx), "command.item-given", Messages.p("item", stack.getType().getKey().getKey()));
         return Command.SINGLE_SUCCESS;
@@ -599,10 +601,10 @@ public final class ManhuntCommand {
             return 0;
         }
         for (Bot b : manager().aliveBots()) {
-            b.setItem(EquipmentSlot.HEAD, new ItemStack(Material.valueOf(prefix + "_HELMET")));
-            b.setItem(EquipmentSlot.CHEST, new ItemStack(Material.valueOf(prefix + "_CHESTPLATE")));
-            b.setItem(EquipmentSlot.LEGS, new ItemStack(Material.valueOf(prefix + "_LEGGINGS")));
-            b.setItem(EquipmentSlot.FEET, new ItemStack(Material.valueOf(prefix + "_BOOTS")));
+            b.setItem(EquipSlot.HEAD, GameItem.of(ItemType.of(prefix + "_HELMET")));
+            b.setItem(EquipSlot.CHEST, GameItem.of(ItemType.of(prefix + "_CHESTPLATE")));
+            b.setItem(EquipSlot.LEGS, GameItem.of(ItemType.of(prefix + "_LEGGINGS")));
+            b.setItem(EquipSlot.FEET, GameItem.of(ItemType.of(prefix + "_BOOTS")));
         }
         msg().send(sender(ctx), "command.armor", Messages.p("tier", tier));
         return Command.SINGLE_SUCCESS;

@@ -4,6 +4,7 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.pathfinding.PathResult;
 import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameBoat;
@@ -25,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 
 /**
@@ -525,7 +525,7 @@ public final class Navigator {
                     return true;
                 }
             }
-            bot.placeBlock(floor, Material.COBBLESTONE, true);
+            bot.placeBlock(floor, Blocks.COBBLESTONE, true);
             placeQueue.pollFirst();
             return true;
         }

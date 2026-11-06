@@ -14,11 +14,13 @@ import dev.manhuntstar.manhunt.HuntPolicy;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameMode;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
@@ -51,7 +53,6 @@ import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
@@ -703,8 +704,10 @@ public final class BotManager {
         BotBody e = bot.entity();
         event.getDrops().clear();
         event.setDroppedExp(0);
-        List<ItemStack> drops = bot.inventory().collectDeathDrops(settings().dropInventory.on(), settings().gearPersistence.get());
-        event.getDrops().addAll(drops);
+        List<GameItem> drops = bot.inventory().collectDeathDrops(settings().dropInventory.on(), settings().gearPersistence.get());
+        for (GameItem d : drops) {
+            event.getDrops().add(PaperItems.stack(d));
+        }
         if (settings().deathMessages.on() && e != null) {
             Boolean show = e.world().gameRule(dev.manhuntstar.platform.GameRule.SHOW_DEATH_MESSAGES);
             if (!Boolean.FALSE.equals(show)) {

@@ -22,4 +22,9 @@ public interface GamePlayer extends GameLiving, ForwardingAudience.Single {
 
     /** Shows (only to this player) the breaking cracks of a block; 0 removes them. */
     void sendBlockDamage(Pos block, float progress, int sourceEntityId);
+
+    GameItem mainHandItem();
+
+    /** Every slot of the player's inventory (empty stacks included). */
+    java.util.List<GameItem> inventoryContents();
 }

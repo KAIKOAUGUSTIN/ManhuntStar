@@ -44,6 +44,9 @@ public interface GameBlock {
      */
     void place(BlockType type);
 
+    /** Breaks the block as if mined with {@code tool}, dropping what that tool would get; {@code effects} plays the break particles and sound. */
+    boolean breakNaturally(GameItem tool, boolean effects);
+
     /** An entity can walk through it (air, grass, open doors...). */
     boolean isPassable();
 

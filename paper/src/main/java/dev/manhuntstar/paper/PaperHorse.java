@@ -1,6 +1,7 @@
 package dev.manhuntstar.paper;
 
 import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameItem;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.Horse;
 
@@ -69,5 +70,15 @@ public final class PaperHorse extends PaperMob implements GameHorse {
     @Override
     public void setEatingGrass(boolean eating) {
         bukkit().setEatingGrass(eating);
+    }
+
+    @Override
+    public GameItem saddle() {
+        return PaperItems.of(bukkit().getInventory().getSaddle());
+    }
+
+    @Override
+    public void setSaddle(GameItem saddle) {
+        bukkit().getInventory().setSaddle(PaperItems.stack(saddle));
     }
 }

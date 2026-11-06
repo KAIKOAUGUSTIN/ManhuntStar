@@ -2,27 +2,24 @@ package dev.manhuntstar.bot.survival;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
+import dev.manhuntstar.platform.Effect;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.ItemType;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 /** Survival: eating when hungry, golden apple in combat and escaping fire by placing water. */
 public final class Survival {
@@ -36,8 +33,8 @@ public final class Survival {
     private int eatingTicks;
     private int gappleCooldown;
     private boolean eatingGoldenApple;
-    private ItemStack currentFood = ItemStack.empty();
-    private ItemStack savedMainHand = ItemStack.empty();
+    private GameItem currentFood = GameItem.empty();
+    private GameItem savedMainHand = GameItem.empty();
     private boolean fireEscapeActive;
     private int fireEscapeTicks;
     private Vec3 fireEscapeSource;
@@ -77,11 +74,11 @@ public final class Survival {
             return;
         }
         if (s.autoGapple.on() && shouldUseGoldenApple()) {
-            startEating(new ItemStack(Material.GOLDEN_APPLE), true);
+            startEating(GameItem.of(Items.GOLDEN_APPLE), true);
             return;
         }
         if (s.autoEat.on() && bot.hunger().foodLevel() <= 16) {
-            ItemStack food = selectPhaseFood(bot.progression().phase());
+            GameItem food = selectPhaseFood(bot.progression().phase());
             if (!food.isEmpty()) {
                 startEating(food, false);
             }
@@ -120,16 +117,16 @@ public final class Survival {
         return mob != null && !mob.isDead() && mob.world().equals(bot.world()) && bot.distanceTo(mob) < 12;
     }
 
-    private static ItemStack selectPhaseFood(int phase) {
+    private static GameItem selectPhaseFood(int phase) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         if (phase <= 3) {
-            return new ItemStack(r.nextBoolean() ? Material.CARROT : Material.POTATO);
+            return GameItem.of(r.nextBoolean() ? Items.CARROT : Items.POTATO);
         }
         if (phase <= 5) {
             int roll = r.nextInt(3);
-            return new ItemStack(roll == 0 ? Material.COOKED_BEEF : roll == 1 ? Material.CARROT : Material.POTATO);
+            return GameItem.of(roll == 0 ? Items.COOKED_BEEF : roll == 1 ? Items.CARROT : Items.POTATO);
         }
-        return new ItemStack(r.nextInt(4) < 3 ? Material.COOKED_BEEF : Material.CARROT);
+        return GameItem.of(r.nextInt(4) < 3 ? Items.COOKED_BEEF : Items.CARROT);
     }
 
     // ------------------------------------------------------------------ fire
@@ -143,7 +140,7 @@ public final class Survival {
             return false;
         }
         BotBody e = bot.entity();
-        return e == null || !PaperEntities.bukkit(e).hasPotionEffect(PotionEffectType.FIRE_RESISTANCE);
+        return e == null || !e.hasEffect(Effect.FIRE_RESISTANCE);
     }
 
     private void tickFireEscape() {
@@ -182,8 +179,8 @@ public final class Survival {
             }
             waterPos = waterPos.above();
         }
-        ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.WATER_BUCKET));
+        GameItem oldMain = bot.getItem(EquipSlot.HAND).copy();
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.WATER_BUCKET));
         bot.setPitchNow(90f);
         w.block(waterPos).setType(Blocks.WATER);
         bot.swing();
@@ -193,7 +190,7 @@ public final class Survival {
         fireEscapeWaterPos = waterPos;
         fireEscapeWaterWorld = w;
         fireEscapeWaterCleanupTicks = 0;
-        bot.setItem(EquipmentSlot.HAND, oldMain);
+        bot.setItem(EquipSlot.HAND, oldMain);
         resetFireEscape();
     }
 
@@ -209,16 +206,16 @@ public final class Survival {
         // in another world the bot can't reach it: the temporary block registry picks it up
         if (w.equals(bot.world()) && b.type() == Blocks.WATER) {
             bot.manager().temporaryBlocks().remove(w, fireEscapeWaterPos);
-            ItemStack oldMain = bot.getItem(EquipmentSlot.HAND).clone();
+            GameItem oldMain = bot.getItem(EquipSlot.HAND).copy();
             bot.motor().stopWalk();
             bot.motor().setSprinting(false);
             bot.lookAt(Vec3.center(fireEscapeWaterPos));
             bot.setPitchNow(90f);
-            bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.BUCKET));
+            bot.setItem(EquipSlot.HAND, GameItem.of(Items.BUCKET));
             b.setType(Blocks.AIR);
             bot.swing();
             w.playSound(Vec3.of(fireEscapeWaterPos), Sounds.ITEM_BUCKET_FILL, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
-            bot.setItem(EquipmentSlot.HAND, oldMain);
+            bot.setItem(EquipSlot.HAND, oldMain);
         }
         fireEscapeWaterPos = null;
         fireEscapeWaterCleanupTicks = 0;
@@ -232,20 +229,20 @@ public final class Survival {
 
     // ------------------------------------------------------------------ eating
 
-    private void startEating(ItemStack food, boolean golden) {
+    private void startEating(GameItem food, boolean golden) {
         if (food.isEmpty() || eatingTicks > 0 || bot.entity() == null) {
             return;
         }
         eatingGoldenApple = golden;
-        currentFood = food.clone();
-        savedMainHand = bot.getItem(EquipmentSlot.HAND).clone();
+        currentFood = food.copy();
+        savedMainHand = bot.getItem(EquipSlot.HAND).copy();
         if (bot.combat().isBlocking()) {
             bot.combat().stopBlock();
         }
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);
-        bot.setItem(EquipmentSlot.HAND, currentFood.clone());
-        bot.mannequin().startUsingItem(EquipmentSlot.HAND);
+        bot.setItem(EquipSlot.HAND, currentFood.copy());
+        bot.entity().startUsingItem(EquipSlot.HAND);
         eatingTicks = EAT_TICKS;
     }
 
@@ -257,9 +254,9 @@ public final class Survival {
         bot.motor().setSprinting(false);
         BotBody e = bot.entity();
         if (eatingTicks % 4 == 0 && eatingTicks < EAT_TICKS - 6 && e != null) {
-            GameWorld w = PaperWorld.of(PaperWorld.bukkit(e.world()));
+            GameWorld w = e.world();
             Vec3 mouth = bot.eyePos().add(bot.lookVector().scale(0.3)).add(0, -0.1, 0);
-            PaperWorld.bukkit(w).spawnParticle(Particle.ITEM, mouth.x(), mouth.y(), mouth.z(), 5, 0.1, 0.1, 0.1, 0.05, currentFood);
+            w.spawnItemParticle(mouth, 5, 0.1, 0.1, 0.1, 0.05, currentFood);
             w.playSound(e.position(), Sounds.ENTITY_GENERIC_EAT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f + 0.5f * ThreadLocalRandom.current().nextInt(2),
                     (ThreadLocalRandom.current().nextFloat() - ThreadLocalRandom.current().nextFloat()) * 0.2f + 1.0f);
         }
@@ -267,34 +264,38 @@ public final class Survival {
             return;
         }
         if (e != null) {
-            PaperEntities.bukkit(e).clearActiveItem();
+            e.clearActiveItem();
             e.world().playSound(e.position(), Sounds.ENTITY_PLAYER_BURP, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.5f, ThreadLocalRandom.current().nextFloat() * 0.1f + 0.9f);
         }
         applyFood(currentFood, eatingGoldenApple);
         // The offhand isn't touched while eating; putting back the previous one would bring back a totem
         // used up during the meal.
-        bot.setItem(EquipmentSlot.HAND, savedMainHand.clone());
-        currentFood = ItemStack.empty();
-        savedMainHand = ItemStack.empty();
+        bot.setItem(EquipSlot.HAND, savedMainHand.copy());
+        currentFood = GameItem.empty();
+        savedMainHand = GameItem.empty();
         eatingGoldenApple = false;
     }
 
-    private void applyFood(ItemStack food, boolean golden) {
+    private void applyFood(GameItem food, boolean golden) {
         BotBody e = bot.entity();
         if (golden) {
             bot.hunger().eat(4, 1.2f);
             if (e != null) {
-                PaperEntities.bukkit(e).addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 1));
-                PaperEntities.bukkit(e).addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0));
+                e.addEffect(Effect.REGENERATION, 100, 1);
+                e.addEffect(Effect.ABSORPTION, 2400, 0);
             }
             gappleCooldown = GAPPLE_COOLDOWN;
             return;
         }
-        switch (food.getType()) {
-            case COOKED_BEEF -> bot.hunger().eat(8, 0.8f);
-            case CARROT -> bot.hunger().eat(3, 0.6f);
-            case POTATO -> bot.hunger().eat(1, 0.6f);
-            default -> bot.hunger().eat(2, 0.5f);
+        ItemType type = food.type();
+        if (type == Items.COOKED_BEEF) {
+            bot.hunger().eat(8, 0.8f);
+        } else if (type == Items.CARROT) {
+            bot.hunger().eat(3, 0.6f);
+        } else if (type == Items.POTATO) {
+            bot.hunger().eat(1, 0.6f);
+        } else {
+            bot.hunger().eat(2, 0.5f);
         }
     }
 }

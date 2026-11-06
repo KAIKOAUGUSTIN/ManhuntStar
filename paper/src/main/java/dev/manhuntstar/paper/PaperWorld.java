@@ -2,21 +2,23 @@ package dev.manhuntstar.paper;
 
 import dev.manhuntstar.platform.BlockSnapshot;
 import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Difficulty;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.Fluid;
 import dev.manhuntstar.platform.GameBlock;
-import dev.manhuntstar.platform.GameSound;
-import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.platform.RayHit;
-import dev.manhuntstar.platform.SoundCategory;
-import dev.manhuntstar.util.Vec3;
-import dev.manhuntstar.platform.Difficulty;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameRule;
+import dev.manhuntstar.platform.GameSound;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.RayHit;
+import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -188,6 +190,11 @@ public final class PaperWorld implements GameWorld {
     }
 
     @Override
+    public void spawnItemParticle(Vec3 at, int count, double offsetX, double offsetY, double offsetZ, double extra, GameItem item) {
+        world.spawnParticle(org.bukkit.Particle.ITEM, at.x(), at.y(), at.z(), count, offsetX, offsetY, offsetZ, extra, PaperItems.stack(item));
+    }
+
+    @Override
     public Boolean gameRule(GameRule rule) {
         return world.getGameRuleValue(switch (rule) {
             case PVP -> GameRules.PVP;
@@ -226,6 +233,11 @@ public final class PaperWorld implements GameWorld {
             out.add(PaperEntities.of(e));
         }
         return out;
+    }
+
+    @Override
+    public GameItemEntity dropItemNaturally(Vec3 at, GameItem item) {
+        return PaperEntities.of(world.dropItemNaturally(new Location(world, at.x(), at.y(), at.z()), PaperItems.stack(item)));
     }
 
     @Override

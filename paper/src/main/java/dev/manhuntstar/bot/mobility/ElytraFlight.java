@@ -2,16 +2,16 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.SoundCategory;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * Elytra ({@code mobility.elytra} option, off by default): with the target more than 80 blocks away and open sky, the bot
@@ -26,7 +26,7 @@ public final class ElytraFlight {
     private boolean pathing;
     private int launchDelay = -1;
     private Vec3 flightTarget;
-    private ItemStack savedChest = ItemStack.empty();
+    private GameItem savedChest = GameItem.empty();
     private int fireworkCooldown;
     private int boostTicks;
 
@@ -56,7 +56,7 @@ public final class ElytraFlight {
     }
 
     private void tickGround(GamePlayer target, double dist) {
-        if (bot.getItem(EquipmentSlot.CHEST).getType() == Material.ELYTRA && !pathing) {
+        if (bot.getItem(EquipSlot.CHEST).type() == Items.ELYTRA && !pathing) {
             restoreChest();
             return;
         }
@@ -80,9 +80,9 @@ public final class ElytraFlight {
             flightTarget = new Vec3(base.x(), target.position().y() + 10 + r.nextDouble() * 140, base.z());
             pathing = true;
             launchDelay = 3;
-            ItemStack chest = bot.getItem(EquipmentSlot.CHEST);
-            savedChest = chest.getType() == Material.ELYTRA ? ItemStack.empty() : chest.clone();
-            bot.setItem(EquipmentSlot.CHEST, new ItemStack(Material.ELYTRA));
+            GameItem chest = bot.getItem(EquipSlot.CHEST);
+            savedChest = chest.type() == Items.ELYTRA ? GameItem.empty() : chest.copy();
+            bot.setItem(EquipSlot.CHEST, GameItem.of(Items.ELYTRA));
             bot.motor().jump();
             return;
         }
@@ -145,13 +145,13 @@ public final class ElytraFlight {
     }
 
     private void fireFirework() {
-        ItemStack previous = bot.getItem(EquipmentSlot.HAND).clone();
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.FIREWORK_ROCKET));
+        GameItem previous = bot.getItem(EquipSlot.HAND).copy();
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.FIREWORK_ROCKET));
         bot.swing();
         bot.world().playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, dev.manhuntstar.platform.SoundCategory.AMBIENT, 3f, 1f);
         boostTicks = BOOST_TICKS;
         fireworkCooldown = 60;
-        bot.setItem(EquipmentSlot.HAND, previous);
+        bot.setItem(EquipSlot.HAND, previous);
     }
 
     private void land() {
@@ -174,17 +174,17 @@ public final class ElytraFlight {
         if (e != null && e.isGliding()) {
             e.setGliding(false);
         }
-        if (bot.getItem(EquipmentSlot.CHEST).getType() == Material.ELYTRA || !savedChest.isEmpty()) {
+        if (bot.getItem(EquipSlot.CHEST).type() == Items.ELYTRA || !savedChest.isEmpty()) {
             restoreChest();
         }
     }
 
     private void restoreChest() {
-        if (bot.getItem(EquipmentSlot.CHEST).getType() != Material.ELYTRA && savedChest.isEmpty()) {
+        if (bot.getItem(EquipSlot.CHEST).type() != Items.ELYTRA && savedChest.isEmpty()) {
             return;
         }
-        ItemStack restore = savedChest.isEmpty() ? bot.progression().chestplateForPhase() : savedChest;
-        bot.setItem(EquipmentSlot.CHEST, restore);
-        savedChest = ItemStack.empty();
+        GameItem restore = savedChest.isEmpty() ? bot.progression().chestplateForPhase() : savedChest;
+        bot.setItem(EquipSlot.CHEST, restore);
+        savedChest = GameItem.empty();
     }
 }

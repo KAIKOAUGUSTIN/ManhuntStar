@@ -33,7 +33,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -873,7 +872,7 @@ public final class Brain {
         }
         bot.lookAt(Vec3.center(current));
         bot.motor().setVelocity(new Vec3(0, 0.3, 0));
-        bot.placeBlock(current, Material.OAK_LEAVES);
+        bot.placeBlock(current, Blocks.OAK_LEAVES);
         bot.motor().setShouldBeSwimming(true);
         bot.setSwimmingPose(true);
         return true;

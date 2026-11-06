@@ -19,6 +19,7 @@ import dev.manhuntstar.paper.BukkitYamlFiles;
 import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.paper.PaperBlocks;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperServer;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
@@ -91,6 +92,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
         Platform.set(server);
         Kinds.init();
         PaperBlocks.init();
+        PaperItems.init();
         migrateLegacyFiles();
         saveDefaultConfig();
         Messages.install(yaml, langFolder(), this::getResource, getLogger());

@@ -1,9 +1,11 @@
 package dev.manhuntstar.bot.motor;
 
 import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.BlockTrait;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.Effect;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Locations;
@@ -11,10 +13,7 @@ import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 /**
  * The bot's locomotion. The server already simulates gravity, collision, stepping up, water, lava and ladders
@@ -226,13 +225,13 @@ public final class Motor {
             return 1;
         }
         double f = 1;
-        PotionEffect speed = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.SPEED);
-        if (speed != null) {
-            f += 0.2 * (speed.getAmplifier() + 1);
+        int speed = e.effectAmplifier(Effect.SPEED);
+        if (speed >= 0) {
+            f += 0.2 * (speed + 1);
         }
-        PotionEffect slow = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.SLOWNESS);
-        if (slow != null) {
-            f -= 0.15 * (slow.getAmplifier() + 1);
+        int slow = e.effectAmplifier(Effect.SLOWNESS);
+        if (slow >= 0) {
+            f -= 0.15 * (slow + 1);
         }
         return Math.max(0, f);
     }
@@ -242,14 +241,15 @@ public final class Motor {
         if (e == null) {
             return 0.6f;
         }
-        Material below = PaperEntities.bukkit(e).getLocation().subtract(0, 0.5000001, 0).getBlock().getType();
-        if (below == Material.ICE || below == Material.PACKED_ICE || below == Material.FROSTED_ICE) {
+        Vec3 p = e.position();
+        BlockType below = e.world().type((int) Math.floor(p.x()), (int) Math.floor(p.y() - 0.5000001), (int) Math.floor(p.z()));
+        if (below == Blocks.ICE || below == Blocks.PACKED_ICE || below == Blocks.FROSTED_ICE) {
             return 0.98f;
         }
-        if (below == Material.BLUE_ICE) {
+        if (below == Blocks.BLUE_ICE) {
             return 0.989f;
         }
-        if (below == Material.SLIME_BLOCK) {
+        if (below == Blocks.SLIME_BLOCK) {
             return 0.8f;
         }
         return 0.6f;
@@ -270,9 +270,9 @@ public final class Motor {
             double power = 0.42;
             BotBody e = bot.entity();
             if (e != null) {
-                PotionEffect boost = PaperEntities.bukkit(e).getPotionEffect(PotionEffectType.JUMP_BOOST);
-                if (boost != null) {
-                    power += 0.1 * (boost.getAmplifier() + 1);
+                int boost = e.effectAmplifier(Effect.JUMP_BOOST);
+                if (boost >= 0) {
+                    power += 0.1 * (boost + 1);
                 }
             }
             velocity = velocity.withY(power);
@@ -311,7 +311,7 @@ public final class Motor {
             return;
         }
         boolean fast = bot.isInWater() && sprinting && shouldBeSwimming;
-        boolean dolphin = bot.entity() != null && bot.mannequin().hasPotionEffect(PotionEffectType.DOLPHINS_GRACE);
+        boolean dolphin = bot.entity() != null && bot.entity().hasEffect(Effect.DOLPHINS_GRACE);
         double accel = dolphin ? 0.03 : 0.02;
         if (horiz > 0.01) {
             velocity = velocity.add(dx / horiz * accel, 0, dz / horiz * accel);
@@ -462,7 +462,7 @@ public final class Motor {
         lastGapPlaceTick = now;
         repeatedGapFailures = 0;
         bot.setPitchNow(90f);
-        bot.placeBlock(placePos, Material.COBBLESTONE, false);
+        bot.placeBlock(placePos, Blocks.COBBLESTONE, false);
         velocity = velocity.scale(0.5);
     }
 

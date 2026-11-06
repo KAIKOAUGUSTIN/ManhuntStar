@@ -5,30 +5,28 @@ import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.bot.Progression;
 import dev.manhuntstar.bot.ai.Navigator;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.Attr;
 import dev.manhuntstar.platform.BotBody;
+import dev.manhuntstar.platform.Enchant;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.ItemType;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.KineticWeapon;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 /**
@@ -94,7 +92,7 @@ public final class HorseRoutine {
     private int runoutTicks;
     private double runoutX;
     private double runoutZ;
-    private ItemStack lance = ItemStack.empty();
+    private GameItem lance = GameItem.empty();
     private int lancePhase = -1;
     private int lanceDelay = DEFAULT_LANCE_DELAY;
 
@@ -127,7 +125,7 @@ public final class HorseRoutine {
         if (!bot.isAlive() || (bot.vehicle() instanceof GameHorse ridden && ridden.isHorse())) {
             return;
         }
-        if (lanceRaisedTicks > 0 || runoutTicks > 0 || GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+        if (lanceRaisedTicks > 0 || runoutTicks > 0 || GearScoring.isSpear(bot.getItem(EquipSlot.HAND))) {
             stowLance();
             resetJoust();
         }
@@ -215,7 +213,7 @@ public final class HorseRoutine {
         }
         if (!hasSaddle(horse)) {
             dismount(horse);
-            bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.SADDLE));
+            bot.setItem(EquipSlot.HAND, GameItem.of(Items.SADDLE));
             actionCooldown = Math.max(actionCooldown, 10);
             return true;
         }
@@ -266,8 +264,8 @@ public final class HorseRoutine {
     }
 
     private static boolean hasSaddle(GameHorse horse) {
-        ItemStack saddle = PaperEntities.bukkit(horse).getInventory().getSaddle();
-        return saddle != null && saddle.getType() == Material.SADDLE;
+        GameItem saddle = horse.saddle();
+        return saddle != null && saddle.type() == Items.SADDLE;
     }
 
     private void mount(GameHorse horse) {
@@ -293,9 +291,9 @@ public final class HorseRoutine {
         if (actionCooldown > 0) {
             return;
         }
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.SADDLE));
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.SADDLE));
         bot.swing();
-        PaperEntities.bukkit(horse).getInventory().setSaddle(new ItemStack(Material.SADDLE));
+        horse.setSaddle(GameItem.of(Items.SADDLE));
         horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
         actionCooldown = 8;
         Bukkit.getScheduler().runTaskLater(bot.manager().plugin(), () -> {
@@ -443,7 +441,7 @@ public final class HorseRoutine {
             } else if (lanceRaisedTicks > LANCE_MAX_RAISED_TICKS) {
                 lowerLance();
                 lanceMisses++;
-            } else if (!bot.mannequin().hasActiveItem()) {
+            } else if (!bot.entity().hasActiveItem()) {
                 raiseLance(); // the use was interrupted (dug, switched items): raise it again
             }
             return;
@@ -467,23 +465,20 @@ public final class HorseRoutine {
 
     private void raiseLance() {
         BotBody me = bot.entity();
-        if (me == null || !GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+        if (me == null || !GearScoring.isSpear(bot.getItem(EquipSlot.HAND))) {
             return;
         }
-        if (PaperEntities.bukkit(me).getAttribute(Attribute.ATTACK_DAMAGE) == null) {
-            // the game's charge reads the attack damage of whoever holds the spear and the Mannequin doesn't have that
-            // attribute: without it the game throws an error and the server removes the horse
-            PaperEntities.bukkit(me).registerAttribute(Attribute.ATTACK_DAMAGE);
-            PaperEntities.bukkit(me).getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
-        }
-        PaperEntities.bukkit(me).startUsingItem(EquipmentSlot.HAND);
+        // the game's charge reads the attack damage of whoever holds the spear and the Mannequin doesn't have that
+        // attribute: without it the game throws an error and the server removes the horse
+        me.ensureAttribute(Attr.ATTACK_DAMAGE, 1.0);
+        me.startUsingItem(EquipSlot.HAND);
         lanceRaisedTicks = Math.max(lanceRaisedTicks, 1);
     }
 
     private void lowerLance() {
         BotBody me = bot.entity();
-        if (me != null && PaperEntities.bukkit(me).hasActiveItem() && GearScoring.isSpear(PaperEntities.bukkit(me).getActiveItem())) {
-            PaperEntities.bukkit(me).clearActiveItem();
+        if (me != null && me.hasActiveItem() && GearScoring.isSpear(me.activeItem())) {
+            me.clearActiveItem();
         }
         lanceRaisedTicks = 0;
     }
@@ -491,7 +486,7 @@ public final class HorseRoutine {
     /** Lowers the spear and goes back to the sword. */
     private void stowLance() {
         lowerLance();
-        if (GearScoring.isSpear(bot.getItem(EquipmentSlot.HAND))) {
+        if (GearScoring.isSpear(bot.getItem(EquipSlot.HAND))) {
             bot.inventory().restorePreferredMainHand();
         }
     }
@@ -507,24 +502,24 @@ public final class HorseRoutine {
         if (bot.mining().isMining() || bot.survival().isEating()) {
             return;
         }
-        ItemStack l = lanceForPhase();
-        if (!l.isSimilar(bot.getItem(EquipmentSlot.HAND))) {
-            bot.setItem(EquipmentSlot.HAND, l.clone());
+        GameItem l = lanceForPhase();
+        if (!l.isSimilar(bot.getItem(EquipSlot.HAND))) {
+            bot.setItem(EquipSlot.HAND, l.copy());
         }
     }
 
     /** Spear matching the phase's sword level: stone (4), iron (5-6), diamond (7-10, Sharpness II from 8), netherite (final). */
-    private ItemStack lanceForPhase() {
+    private GameItem lanceForPhase() {
         int phase = bot.progression().phase();
         if (phase != lancePhase) {
-            Material m = phase >= Progression.FINAL_PHASE ? Material.NETHERITE_SPEAR
-                    : phase >= 7 ? Material.DIAMOND_SPEAR : phase >= 5 ? Material.IRON_SPEAR : Material.STONE_SPEAR;
-            lance = new ItemStack(m);
+            ItemType m = phase >= Progression.FINAL_PHASE ? Items.NETHERITE_SPEAR
+                    : phase >= 7 ? Items.DIAMOND_SPEAR : phase >= 5 ? Items.IRON_SPEAR : Items.STONE_SPEAR;
+            lance = GameItem.of(m);
             if (phase >= 8) {
-                lance.addUnsafeEnchantment(Enchantment.SHARPNESS, 2);
+                lance.addEnchant(Enchant.SHARPNESS, 2);
             }
-            KineticWeapon kw = lance.getData(DataComponentTypes.KINETIC_WEAPON);
-            lanceDelay = kw == null ? DEFAULT_LANCE_DELAY : kw.delayTicks();
+            int delay = lance.chargeDelayTicks();
+            lanceDelay = delay < 0 ? DEFAULT_LANCE_DELAY : delay;
             lancePhase = phase;
         }
         return lance;
@@ -558,8 +553,7 @@ public final class HorseRoutine {
     }
 
     private static double movementSpeed(GameHorse horse) {
-        AttributeInstance a = PaperEntities.bukkit(horse).getAttribute(Attribute.MOVEMENT_SPEED);
-        return a == null ? 0.225 : a.getValue();
+        return horse.attribute(Attr.MOVEMENT_SPEED, 0.225);
     }
 
     /** The horse with the smallest detour on the way to the target; none if they all need going back too far. */

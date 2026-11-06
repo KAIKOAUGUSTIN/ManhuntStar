@@ -83,4 +83,19 @@ public class FakeServer implements GameServer {
         }
         return null;
     }
+
+    @Override
+    public GameItem newItem(ItemType type, int amount) {
+        return new FakeItem(type, amount);
+    }
+
+    @Override
+    public GameItem emptyItem() {
+        return new FakeItem(ItemType.of("AIR"), 0);
+    }
+
+    @Override
+    public GameItem deserializeItem(byte[] data) {
+        throw new UnsupportedOperationException("the fake server doesn't store items");
+    }
 }

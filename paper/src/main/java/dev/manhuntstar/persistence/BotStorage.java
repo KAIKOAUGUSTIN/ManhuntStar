@@ -7,6 +7,8 @@ import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.PersistentGear;
 import dev.manhuntstar.bot.SkinData;
 import dev.manhuntstar.platform.EntityKind;
+import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Vec3;
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +31,6 @@ import java.util.function.Consumer;
 import java.util.logging.Logger;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * Saves and reads the bots, groups, rings and the hunt in progress in {@code bots.yml}. The text is built on the main thread and
@@ -106,7 +107,7 @@ public final class BotStorage {
             s.set("fase", b.phase());
             s.set("progressao", b.progressionEnabled());
             List<String> inv = new ArrayList<>();
-            for (ItemStack it : b.inventory()) {
+            for (GameItem it : b.inventory()) {
                 inv.add(encode(it));
             }
             s.set("inventario", inv);
@@ -227,7 +228,7 @@ public final class BotStorage {
 
     private static BotSnapshot readBot(UUID id, ConfigurationSection s) {
         SkinData skin = s.isString("skin.valor") ? new SkinData(s.getString("skin.valor"), s.getString("skin.assinatura")) : null;
-        List<ItemStack> inv = new ArrayList<>();
+        List<GameItem> inv = new ArrayList<>();
         for (String e : s.getStringList("inventario")) {
             inv.add(decode(e));
         }
@@ -250,21 +251,21 @@ public final class BotStorage {
         return name.toLowerCase(Locale.ROOT).replace('.', '_');
     }
 
-    private static String encode(ItemStack s) {
+    private static String encode(GameItem s) {
         if (s == null || s.isEmpty()) {
             return "";
         }
-        return Base64.getEncoder().encodeToString(s.serializeAsBytes());
+        return Base64.getEncoder().encodeToString(s.serialize());
     }
 
-    private static ItemStack decode(String b64) {
+    private static GameItem decode(String b64) {
         if (b64 == null || b64.isEmpty()) {
-            return ItemStack.empty();
+            return GameItem.empty();
         }
         try {
-            return ItemStack.deserializeBytes(Base64.getDecoder().decode(b64));
+            return Platform.server().deserializeItem(Base64.getDecoder().decode(b64));
         } catch (RuntimeException e) {
-            return ItemStack.empty();
+            return GameItem.empty();
         }
     }
 

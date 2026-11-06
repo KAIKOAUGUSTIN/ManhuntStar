@@ -53,4 +53,32 @@ public interface GameLiving extends GameEntity {
      * be null.
      */
     void damage(double amount, DamageKind kind, GameEntity causing, GameEntity direct);
+
+    /** A copy of what the entity holds or wears in a slot (empty when there's nothing). */
+    GameItem item(EquipSlot slot);
+
+    /** Puts an item in a slot; {@code silent} skips the equip sound. */
+    void setItem(EquipSlot slot, GameItem item, boolean silent);
+
+    /** Starts using the item in a hand (eating, drawing a bow, raising a shield...). */
+    void startUsingItem(EquipSlot hand);
+
+    boolean hasActiveItem();
+
+    /** The item being used (empty when none). */
+    GameItem activeItem();
+
+    void clearActiveItem();
+
+    /** The current value of an attribute, or {@code fallback} when the entity doesn't have it. */
+    double attribute(Attr attribute, double fallback);
+
+    /** Gives the entity an attribute it doesn't have yet, with this base value. */
+    void ensureAttribute(Attr attribute, double base);
+
+    /** Sets the base value of an attribute the entity has. */
+    void setAttributeBase(Attr attribute, double base);
+
+    /** Shows the entity picking up an item lying on the ground. */
+    void playPickupAnimation(GameItemEntity item, int amount);
 }

@@ -25,4 +25,9 @@ public interface GameHorse extends GameMob {
     void setEating(boolean eating);
 
     void setEatingGrass(boolean eating);
+
+    /** What's in the saddle slot (empty when nothing). */
+    GameItem saddle();
+
+    void setSaddle(GameItem saddle);
 }

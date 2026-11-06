@@ -1,9 +1,11 @@
 package dev.manhuntstar.paper;
 
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.ItemType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +13,7 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 /** The Bukkit server as a core {@link GameServer}: every call is the Bukkit one. */
 public final class PaperServer implements GameServer {
@@ -61,5 +64,20 @@ public final class PaperServer implements GameServer {
     @Override
     public GameEntity entity(UUID id) {
         return PaperEntities.of(Bukkit.getEntity(id));
+    }
+
+    @Override
+    public GameItem newItem(ItemType type, int amount) {
+        return PaperItems.of(new ItemStack(PaperItems.material(type), amount));
+    }
+
+    @Override
+    public GameItem emptyItem() {
+        return PaperItems.of(ItemStack.empty());
+    }
+
+    @Override
+    public GameItem deserializeItem(byte[] data) {
+        return PaperItems.of(ItemStack.deserializeBytes(data));
     }
 }

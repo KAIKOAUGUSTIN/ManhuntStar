@@ -1,13 +1,18 @@
 package dev.manhuntstar.paper;
 
+import dev.manhuntstar.platform.Attr;
 import dev.manhuntstar.platform.DamageKind;
 import dev.manhuntstar.platform.Effect;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.GameItemEntity;
 import dev.manhuntstar.platform.GameLiving;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.potion.PotionEffect;
 
 /** A Bukkit {@link LivingEntity} as a core {@link GameLiving}: every call is the Bukkit one. */
@@ -133,5 +138,64 @@ public class PaperLiving extends PaperEntity implements GameLiving {
             b.withDirectEntity(PaperEntities.bukkit(direct));
         }
         living().damage(amount, b.build());
+    }
+
+    @Override
+    public GameItem item(EquipSlot slot) {
+        EntityEquipment eq = living().getEquipment();
+        return PaperItems.of(eq == null ? null : eq.getItem(PaperItems.slot(slot)));
+    }
+
+    @Override
+    public void setItem(EquipSlot slot, GameItem item, boolean silent) {
+        living().getEquipment().setItem(PaperItems.slot(slot), PaperItems.stack(item), silent);
+    }
+
+    @Override
+    public void startUsingItem(EquipSlot hand) {
+        living().startUsingItem(PaperItems.slot(hand));
+    }
+
+    @Override
+    public boolean hasActiveItem() {
+        return living().hasActiveItem();
+    }
+
+    @Override
+    public GameItem activeItem() {
+        return PaperItems.of(living().getActiveItem());
+    }
+
+    @Override
+    public void clearActiveItem() {
+        living().clearActiveItem();
+    }
+
+    @Override
+    public double attribute(Attr attribute, double fallback) {
+        AttributeInstance a = living().getAttribute(PaperItems.attribute(attribute));
+        return a == null ? fallback : a.getValue();
+    }
+
+    @Override
+    public void ensureAttribute(Attr attribute, double base) {
+        Attribute a = PaperItems.attribute(attribute);
+        if (living().getAttribute(a) == null) {
+            living().registerAttribute(a);
+            living().getAttribute(a).setBaseValue(base);
+        }
+    }
+
+    @Override
+    public void setAttributeBase(Attr attribute, double base) {
+        AttributeInstance a = living().getAttribute(PaperItems.attribute(attribute));
+        if (a != null) {
+            a.setBaseValue(base);
+        }
+    }
+
+    @Override
+    public void playPickupAnimation(GameItemEntity item, int amount) {
+        living().playPickupItemAnimation(((PaperItemEntity) item).bukkit(), amount);
     }
 }

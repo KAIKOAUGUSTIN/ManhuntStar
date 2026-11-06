@@ -6,12 +6,15 @@ import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameBoat;
 import dev.manhuntstar.platform.GameEntity;
+import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
@@ -28,10 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 /**
@@ -185,7 +185,7 @@ public final class BoatRoutine {
         if (bot.combat().isBlocking()) {
             bot.combat().stopBlock();
         }
-        bot.setItem(EquipmentSlot.HAND, new ItemStack(Material.OAK_BOAT));
+        bot.setItem(EquipSlot.HAND, GameItem.of(Items.OAK_BOAT));
         bot.lookAt(Vec3.center(water));
         GameWorld w = bot.world();
         Location loc = new Location(PaperWorld.bukkit(w), water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);

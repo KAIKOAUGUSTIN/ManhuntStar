@@ -28,4 +28,13 @@ public interface GameServer {
 
     /** A loaded entity in any world, or null. */
     GameEntity entity(UUID id);
+
+    /** A new stack of items (see {@link GameItem#of}). */
+    GameItem newItem(ItemType type, int amount);
+
+    /** A new empty stack (see {@link GameItem#empty}). */
+    GameItem emptyItem();
+
+    /** A stack written by {@link GameItem#serialize()}. */
+    GameItem deserializeItem(byte[] data);
 }
