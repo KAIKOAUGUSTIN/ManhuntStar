@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.UUID;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
 
 /**
  * Hunt pause (/manhunt pause): each bot stays still where it is, even mid-air, mounted or in a boat,
@@ -59,7 +58,7 @@ public final class PauseService {
 
     /** Hunt clock: the server ticks without the paused time. */
     public long clock() {
-        return (paused ? pausedAt : Bukkit.getCurrentTick()) - pausedTicks;
+        return (paused ? pausedAt : Platform.server().currentTick()) - pausedTicks;
     }
 
     /** @return false if it was already paused */
@@ -68,7 +67,7 @@ public final class PauseService {
             return false;
         }
         paused = true;
-        pausedAt = Bukkit.getCurrentTick();
+        pausedAt = Platform.server().currentTick();
         updateBar();
         plugin.botManager().markDirty();
         return true;
@@ -79,7 +78,7 @@ public final class PauseService {
         if (!paused) {
             return false;
         }
-        pausedTicks += Bukkit.getCurrentTick() - pausedAt;
+        pausedTicks += Platform.server().currentTick() - pausedAt;
         paused = false;
         releaseAll();
         hideBar();
@@ -134,7 +133,7 @@ public final class PauseService {
                 it.remove();
             }
         }
-        if (Bukkit.getCurrentTick() % 20 == 0) {
+        if (Platform.server().currentTick() % 20 == 0) {
             updateBar();
         }
     }
@@ -156,7 +155,7 @@ public final class PauseService {
     /** Delete all: the pause ends together with the hunt, without a message. */
     public void reset() {
         if (paused) {
-            pausedTicks += Bukkit.getCurrentTick() - pausedAt;
+            pausedTicks += Platform.server().currentTick() - pausedAt;
             paused = false;
         }
         releaseAll();

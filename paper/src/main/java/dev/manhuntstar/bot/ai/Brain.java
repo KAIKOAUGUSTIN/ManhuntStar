@@ -23,19 +23,17 @@ import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GameMob;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
 
 /**
  * The bot's brain (the mod's {@code runAI}): picks the target (player, hostile mob or bot from an enemy
@@ -499,11 +497,11 @@ public final class Brain {
         if (priority < 5.0 && (m == null || m.isDead() || !m.isValid()) && bot.tickDelay(10)) {
             GameLiving closest = null;
             double closestDist = Double.MAX_VALUE;
-            Location loc = bot.location();
+            Place loc = bot.location();
             boolean end = bot.world().dimension() == Dimension.THE_END;
             BotGroup group = bot.group();
             Set<EntityKind> allowed = group == null ? null : group.allowedMobTargets();
-            for (GameEntity nearby : bot.world().nearbyEntities(Locations.vec(loc), 30.0, 30.0, 30.0)) {
+            for (GameEntity nearby : bot.world().nearbyEntities(loc.pos(), 30.0, 30.0, 30.0)) {
                 if (!(nearby instanceof GameMob mob)) {
                     continue;
                 }
@@ -640,7 +638,7 @@ public final class Brain {
     }
 
     private void updateStuckCheck(double dist, boolean los) {
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         if (now - lastStuckCheckTick > 40) {
             if (lastStuckCheckPos.distanceTo(bot.pos()) < 2.0 && dist > 5.0 && !los) {
                 stuckMiningMode = true;
@@ -655,7 +653,7 @@ public final class Brain {
         bot.lookAt(target.position().add(0, target.eyeHeight() * 0.7, 0));
         boolean aggressive = bot.health() > 14f;
         bot.inventory().restorePreferredMainHand();
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         Vec3 forward = target.position().subtract(bot.pos()).horizontal().normalize();
         Vec3 left = new Vec3(-forward.z(), 0, forward.x()).normalize();
         Vec3 strafe = left.scale(strafeDirection * 0.25);
@@ -791,7 +789,7 @@ public final class Brain {
         if (!settings().bowPressure.on() || target.isDead()) {
             return false;
         }
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         if (now - bot.combat().lastSuccessfulPlayerHitTick() < 600) {
             return false;
         }
@@ -886,7 +884,7 @@ public final class Brain {
     }
 
     private boolean isTargetOutOfWater(GameLiving target) {
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+        GameWorld w = target.world();
         Pos feet = target.blockPos();
         return !WorldUtil.isWater(w, feet) && !WorldUtil.isWater(w, feet.below()) && !target.isInWater();
     }
@@ -906,7 +904,7 @@ public final class Brain {
 
     private boolean hasShorelineExitAhead() {
         GameWorld w = bot.world();
-        Pos ahead = Locations.relative(bot.blockPos(), bot.facing());
+        Pos ahead = bot.blockPos().relative(bot.facing());
         Pos below = ahead.below();
         boolean clearFeet = !WorldUtil.hasCollision(w, ahead) && !WorldUtil.hasFluid(w, ahead);
         boolean clearHead = !WorldUtil.hasCollision(w, ahead.above()) && !WorldUtil.hasFluid(w, ahead.above());
@@ -932,7 +930,7 @@ public final class Brain {
         GameWorld w = bot.world();
         double distToFinal = bot.pos().distanceTo(finalTarget);
         if (bot.horizontalCollision()) {
-            Pos front = Locations.relative(bot.blockPos(), bot.facing());
+            Pos front = bot.blockPos().relative(bot.facing());
             if (bot.tryOpen(front) || bot.tryOpen(bot.blockPos())) {
                 return;
             }
@@ -965,7 +963,7 @@ public final class Brain {
         boolean cliff = !WorldUtil.blocksMotion(w, lookAheadBlock.below());
         if (w.dimension() == Dimension.NETHER && cliff
                 && (isLavaBelow(bot.pos().add(lookAhead)) || isLavaBelow(bot.eyePos().add(lookAhead)))) {
-            lastSafetySneakTick = Bukkit.getCurrentTick();
+            lastSafetySneakTick = Platform.server().currentTick();
             bot.setSneaking(true);
             bot.motor().stopWalk();
             bot.motor().walk(moveDir.scale(-0.2));
@@ -988,7 +986,7 @@ public final class Brain {
             return;
         }
         Pos pos = bot.blockPos();
-        Pos ahead = Locations.relative(pos, bot.facing());
+        Pos ahead = pos.relative(bot.facing());
         double horizontalToFinal = Math.hypot(finalTarget.x() - bot.pos().x(), finalTarget.z() - bot.pos().z());
         boolean targetAbove = finalTarget.y() > bot.pos().y() + 0.5;
         boolean farVertical = targetAbove && horizontalToFinal > 6.0;
@@ -1003,7 +1001,7 @@ public final class Brain {
             }
         } else if (plannerActive && navigator.shouldSprintJump()) {
             bot.motor().jump();
-        } else if (!plannerActive && Bukkit.getCurrentTick() - lastSafetySneakTick > 5 && !ceiling && !farVertical) {
+        } else if (!plannerActive && Platform.server().currentTick() - lastSafetySneakTick > 5 && !ceiling && !farVertical) {
             bot.motor().jump();
         }
     }
@@ -1167,15 +1165,14 @@ public final class Brain {
             redistributionCooldown--;
             return;
         }
-        World w = PaperWorld.bukkit(target.world());
-        GameWorld gw = PaperWorld.of(w);
+        GameWorld gw = target.world();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 15; i++) {
             double distance = 50 + r.nextDouble() * 50;
             double angle = r.nextDouble() * Math.PI * 2;
             int x = (int) (target.position().x() + Math.cos(angle) * distance);
             int z = (int) (target.position().z() + Math.sin(angle) * distance);
-            if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+            if (!gw.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
             Pos spawn = null;
@@ -1206,12 +1203,12 @@ public final class Brain {
                 continue;
             }
             redistributionCooldown = 1200;
-            Location dest = new Location(w, spawn.x() + 0.5, spawn.y() + 0.1, spawn.z() + 0.5, bot.yaw(), bot.pitch());
+            Place dest = new Place(gw, spawn.x() + 0.5, spawn.y() + 0.1, spawn.z() + 0.5, bot.yaw(), bot.pitch());
             bot.manager().teleportBot(bot, dest);
             bot.mining().cancel();
             stuckMiningMode = false;
             bot.lookAt(target.position());
-            w.playSound(dest, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
+            gw.playSound(dest.pos(), Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1f, 1f);
             return;
         }
     }

@@ -1,18 +1,16 @@
 package dev.manhuntstar.bot.ai;
 
 import dev.manhuntstar.bot.Bot;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 
 /**
  * Tower (pillar under its own feet) and bridge to a player on a skybase/tower, and the quick crouching
@@ -80,7 +78,7 @@ final class Towering {
             return false;
         }
         bridgePhase = needsBridge ? 1 : 0;
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         double prev = lastProgressDist == Double.MAX_VALUE ? horizontal : lastProgressDist;
         boolean movingAway = horizontal > prev + 0.4;
         if (now - lastPlaceTick <= 30 && movingAway) {
@@ -94,7 +92,7 @@ final class Towering {
             if (!bot.hasPendingPillar() && bot.isLookingAtTarget(15f) && bot.onGround()) {
                 bot.motor().jump();
                 bot.queuePillarBlock(placePos, () -> {
-                    lastPlaceTick = Bukkit.getCurrentTick();
+                    lastPlaceTick = Platform.server().currentTick();
                     bot.setSneaking(false);
                     if (sky.isValid()) {
                         bot.lookAt(sky.position());
@@ -177,7 +175,7 @@ final class Towering {
         if (hasStairLikeRouteAhead(target) || hasAStarAscendingRoute(target, nav)) {
             return false;
         }
-        Pos front = Locations.relative(bot.blockPos(), bot.facing());
+        Pos front = bot.blockPos().relative(bot.facing());
         if (solid(front) && !solid(front.above())) {
             return false;
         }
@@ -251,7 +249,7 @@ final class Towering {
             return false;
         }
         int botY = bot.blockPos().y();
-        int required = Math.max(1, Math.min(6, PaperEntities.bukkit(target).getLocation().getBlockY() - botY));
+        int required = Math.max(1, Math.min(6, target.blockPos().y() - botY));
         int max = Math.min(path.size() - 1, idx + 14);
         int highest = 0;
         for (int i = idx; i <= max; i++) {

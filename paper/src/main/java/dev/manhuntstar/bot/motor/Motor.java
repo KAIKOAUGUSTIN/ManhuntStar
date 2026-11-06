@@ -8,12 +8,11 @@ import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Effect;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
-import org.bukkit.Bukkit;
-import org.bukkit.block.BlockFace;
 
 /**
  * The bot's locomotion. The server already simulates gravity, collision, stepping up, water, lava and ladders
@@ -339,7 +338,7 @@ public final class Motor {
         Vec3 p = bot.pos();
         boolean nearSurface = headInWater || WorldUtil.hasFluid(w, new Vec3(p.x(), p.y() + 0.15, p.z()).toPos());
         if (nearSurface) {
-            boolean holdUp = (Bukkit.getCurrentTick() % 12) < 6;
+            boolean holdUp = (Platform.server().currentTick() % 12) < 6;
             if (holdUp && velocity.y() < 0.05) {
                 velocity = velocity.add(0, 0.028, 0);
             } else if (!holdUp && velocity.y() > 0) {
@@ -384,7 +383,7 @@ public final class Motor {
     /** 1-block step ahead with room above: jumps. */
     public void handleObstacles() {
         GameWorld w = bot.world();
-        Pos front = Locations.relative(bot.blockPos(), bot.facing());
+        Pos front = bot.blockPos().relative(bot.facing());
         if (WorldUtil.isTrulySolid(w, front) && !WorldUtil.isTrulySolid(w, front.above()) && onGround) {
             sprinting = true;
             jump();
@@ -393,7 +392,7 @@ public final class Motor {
 
     public boolean shouldHandleGapAhead() {
         GameWorld w = bot.world();
-        Pos ahead = Locations.relative(bot.blockPos(), bot.facing());
+        Pos ahead = bot.blockPos().relative(bot.facing());
         if (WorldUtil.isTrulySolid(w, ahead) && !WorldUtil.isTrulySolid(w, ahead.above())) {
             return false;
         }
@@ -403,10 +402,10 @@ public final class Motor {
     /** Hole ahead: jumps if there is ground within 5 blocks, otherwise places a block (only near the target). */
     public void handleGaps() {
         GameWorld w = bot.world();
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         Pos current = bot.blockPos();
-        BlockFace facing = bot.facing();
-        Pos ahead = Locations.relative(current, facing);
+        Face facing = bot.facing();
+        Pos ahead = current.relative(facing);
         Pos placePos = ahead.below();
         if (handleGapLoopEscape(now, current)) {
             return;
@@ -425,7 +424,7 @@ public final class Motor {
         }
         boolean canJump = false;
         for (int i = 2; i <= 5; i++) {
-            Pos landing = Locations.relative(current, facing, i);
+            Pos landing = current.relative(facing, i);
             boolean hasLanding = WorldUtil.isTrulySolid(w, landing.below()) || WorldUtil.isTrulySolid(w, landing.below(2));
             if (hasLanding && WorldUtil.hasBodySpace(w, landing)) {
                 canJump = true;

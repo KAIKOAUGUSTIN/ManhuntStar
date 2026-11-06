@@ -30,6 +30,12 @@ public interface GameWorld {
 
     boolean isChunkLoaded(int chunkX, int chunkZ);
 
+    /** The world's spawn point. */
+    Vec3 spawnPosition();
+
+    /** How far a chunk is loaded (for debug text): the platform's name for it. */
+    String chunkLoadLevel(int chunkX, int chunkZ);
+
     /** A copy of a loaded chunk (server thread only). */
     BlockSnapshot chunkSnapshot(int chunkX, int chunkZ);
 
@@ -41,6 +47,10 @@ public interface GameWorld {
 
     /** The type of the block at a position (faster than {@code block(...).type()}). */
     BlockType type(int x, int y, int z);
+
+    default BlockType type(Pos p) {
+        return type(p.x(), p.y(), p.z());
+    }
 
     /** The fluid at a position. */
     Fluid fluid(int x, int y, int z);

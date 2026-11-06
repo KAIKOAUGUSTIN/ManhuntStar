@@ -26,6 +26,7 @@ import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Pose;
 import dev.manhuntstar.platform.SoundGroup;
@@ -46,12 +47,10 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Mannequin;
 
 /**
@@ -209,11 +208,11 @@ public final class Bot {
     }
 
     public boolean isHorseRidingBlocked() {
-        return Bukkit.getCurrentTick() < horseRideBlockedUntil;
+        return Platform.server().currentTick() < horseRideBlockedUntil;
     }
 
     public void blockHorseRidingForSeconds(int seconds) {
-        long until = Bukkit.getCurrentTick() + Math.max(1, seconds) * 20L;
+        long until = Platform.server().currentTick() + Math.max(1, seconds) * 20L;
         if (until > horseRideBlockedUntil) {
             horseRideBlockedUntil = until;
         }
@@ -349,8 +348,8 @@ public final class Bot {
         return entity != null ? entity.position() : (lastKnownPos == null ? Vec3.ZERO : lastKnownPos);
     }
 
-    public Location location() {
-        return entity != null ? PaperEntities.bukkit(entity).getLocation() : (lastKnownPos == null || world() == null ? null : Locations.location(lastKnownPos, world()));
+    public Place location() {
+        return entity != null ? entity.place() : (lastKnownPos == null || world() == null ? null : new Place(world(), lastKnownPos));
     }
 
     public Pos blockPos() {
@@ -380,8 +379,8 @@ public final class Bot {
         return entity == null ? 0 : entity.pitch();
     }
 
-    public BlockFace facing() {
-        return Locations.faceFromYaw(yaw());
+    public Face facing() {
+        return Face.fromYaw(yaw());
     }
 
     public Vec3 lookVector() {
@@ -850,10 +849,10 @@ public final class Bot {
     }
 
     /** Creates the entity at the given location (first spawn, respawn or restore). */
-    BotBody spawnEntity(Location loc) {
-        Location safe = adjustOutOfLava(loc);
+    BotBody spawnEntity(Place loc) {
+        Place safe = adjustOutOfLava(loc);
         Settings s = settings();
-        Mannequin spawned = safe.getWorld().spawn(safe, Mannequin.class, m -> {
+        Mannequin spawned = PaperWorld.bukkit(safe.world()).spawn(Locations.location(safe), Mannequin.class, m -> {
             m.setPersistent(false);
             m.setDescription(null);
             m.setProfile(buildProfile());
@@ -883,19 +882,18 @@ public final class Bot {
         return entity;
     }
 
-    private static Location adjustOutOfLava(Location loc) {
-        World w = loc.getWorld();
-        GameWorld gw = PaperWorld.of(w);
-        Pos p = Locations.pos(loc);
+    private static Place adjustOutOfLava(Place loc) {
+        GameWorld gw = loc.world();
+        Pos p = loc.blockPos();
         if (WorldUtil.isLava(gw, p) || WorldUtil.isLava(gw, p.below())) {
             for (int i = 0; i < 20; i++) {
                 Pos check = p.above(i);
                 if (WorldUtil.isAir(gw, check) && WorldUtil.isAir(gw, check.above())) {
-                    return new Location(w, loc.getX(), check.y(), loc.getZ(), loc.getYaw(), loc.getPitch());
+                    return loc.withY(check.y());
                 }
             }
             int surface = WorldUtil.highestY(gw, p.x(), p.z()) + 1;
-            return new Location(w, loc.getX(), surface, loc.getZ(), loc.getYaw(), loc.getPitch());
+            return loc.withY(surface);
         }
         return loc;
     }
@@ -948,13 +946,13 @@ public final class Bot {
      * Takes the bot to another world by recreating the entity at the destination (as the mod recreated the
      * fake player), keeping health, fire, air, effects and equipment.
      */
-    void relocate(Location dest) {
+    void relocate(Place dest) {
         if (entity == null || !entity.isValid()) {
             spawnEntity(dest);
             return;
         }
-        if (PaperWorld.bukkit(entity.world()).equals(dest.getWorld())) {
-            PaperEntities.bukkit(entity).teleport(dest);
+        if (entity.world() == dest.world()) {
+            entity.teleport(dest);
             onEntityTeleported();
             return;
         }
@@ -989,7 +987,7 @@ public final class Bot {
         for (int i = 0; i < BotInventory.SIZE; i++) {
             inv.add(inventory.get(i).copy());
         }
-        long horseLeft = Math.max(0, horseRideBlockedUntil - Bukkit.getCurrentTick());
+        long horseLeft = Math.max(0, horseRideBlockedUntil - Platform.server().currentTick());
         return new BotSnapshot(id, name, visualName, skin, lastKnownWorld == null && world() != null ? world().name() : lastKnownWorld,
                 p.x(), p.y(), p.z(), yaw(), pitch(), alive ? health() : maxHealth(), hunger.foodLevel(), hunger.saturation(),
                 difficulty, progression.phase(), progression.progressionEnabled(), inv,
@@ -1004,7 +1002,7 @@ public final class Bot {
         groupName = s.group();
         targetPlayer = s.target();
         shouldRespawn = s.shouldRespawn();
-        horseRideBlockedUntil = Bukkit.getCurrentTick() + s.horseBlockedTicksLeft();
+        horseRideBlockedUntil = Platform.server().currentTick() + s.horseBlockedTicksLeft();
         terminatorTotemAvailable = s.totemAvailable();
         aggression = s.aggression();
         kills = s.kills();
@@ -1054,8 +1052,9 @@ public final class Bot {
             return;
         }
         World w = PaperWorld.bukkit(entity.world());
-        int cx = PaperEntities.bukkit(entity).getLocation().getBlockX() >> 4;
-        int cz = PaperEntities.bukkit(entity).getLocation().getBlockZ() >> 4;
+        Pos block = entity.blockPos();
+        int cx = block.x() >> 4;
+        int cz = block.z() >> 4;
         Set<Long> wanted = new HashSet<>();
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {

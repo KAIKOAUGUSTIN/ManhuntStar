@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import net.kyori.adventure.text.Component;
 
 /** A server for tests, without Minecraft: the worlds and the tick are set by the test. */
 public class FakeServer implements GameServer {
@@ -82,6 +83,31 @@ public class FakeServer implements GameServer {
             }
         }
         return null;
+    }
+
+    /** Tasks given to {@link #runNextTick} and {@link #runLater}, run by the test when it wants. */
+    public final List<Runnable> tasks = new ArrayList<>();
+    /** Messages given to {@link #broadcast}. */
+    public final List<Component> broadcasts = new ArrayList<>();
+
+    @Override
+    public GameWorld defaultWorld() {
+        return worlds.isEmpty() ? null : worlds.getFirst();
+    }
+
+    @Override
+    public void broadcast(Component message) {
+        broadcasts.add(message);
+    }
+
+    @Override
+    public void runNextTick(Runnable task) {
+        tasks.add(task);
+    }
+
+    @Override
+    public void runLater(Runnable task, long delayTicks) {
+        tasks.add(task);
     }
 
     @Override

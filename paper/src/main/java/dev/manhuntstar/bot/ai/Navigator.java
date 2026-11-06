@@ -12,7 +12,8 @@ import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -25,8 +26,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.block.BlockFace;
 
 /**
  * Path navigation (A*) with the mod's rules: "resolved" target (skybase →
@@ -243,12 +242,12 @@ public final class Navigator {
     // ------------------------------------------------------------------ boat
 
     private boolean boatsAllowed() {
-        return bot.settings().allowBoat.on() && Bukkit.getCurrentTick() >= boatBlockedUntil;
+        return bot.settings().allowBoat.on() && Platform.server().currentTick() >= boatBlockedUntil;
     }
 
     /** After a crossing that didn't work the bot swims or goes around for a while. */
     public void blockBoats(int ticks) {
-        boatBlockedUntil = Bukkit.getCurrentTick() + ticks;
+        boatBlockedUntil = Platform.server().currentTick() + ticks;
     }
 
     /**
@@ -669,7 +668,7 @@ public final class Navigator {
     // ------------------------------------------------------------------ target resolution
 
     private Pos resolveTarget(Pos botPos, Pos real) {
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         // the failure is stored too: redoing the whole search every tick would be expensive
         if (lastResolvedReal != null && now - lastResolvedTick <= RESOLVE_CACHE_TICKS && lastResolvedReal.manhattan(real) <= 2) {
             if (lastResolved != null) {
@@ -1163,8 +1162,8 @@ public final class Navigator {
                     if (!WorldUtil.isWater(w, water) || WorldUtil.hasFluid(w, water.above())) {
                         continue;
                     }
-                    for (BlockFace face : Locations.HORIZONTALS) {
-                        Pos landFeet = Locations.relative(water, face);
+                    for (Face face : Face.HORIZONTALS) {
+                        Pos landFeet = water.relative(face);
                         Pos landBelow = landFeet.below();
                         GameBlock lb = w.block(landBelow);
                         if (lb.type().is(BlockTrait.AIR) || WorldUtil.hasFluid(w, landBelow)) {
@@ -1177,7 +1176,7 @@ public final class Navigator {
                                 || WorldUtil.hasFluid(w, landFeet) || WorldUtil.hasFluid(w, landFeet.above())) {
                             continue;
                         }
-                        Vec3 edge = new Vec3(face.getModX(), 0, face.getModZ());
+                        Vec3 edge = new Vec3(face.modX(), 0, face.modZ());
                         double align = 1.0 - Math.max(0.0, edge.normalize().dot(toward));
                         double score = Math.sqrt(water.distSqr(botPos)) * SWIM_EXIT_WEIGHT + Math.sqrt(landFeet.distSqr(targetPos))
                                 + Math.abs(water.y() - botPos.y()) * 2.0 + align * 4.0;
@@ -1313,7 +1312,7 @@ public final class Navigator {
         if (p == null || !p.hasPermission("manhuntstar.admin")) {
             return;
         }
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         if (now - lastResolveDebugTick < 6) {
             return;
         }

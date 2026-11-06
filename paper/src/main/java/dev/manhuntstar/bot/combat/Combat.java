@@ -22,6 +22,7 @@ import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.RayHit;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.TacticsManager;
@@ -34,7 +35,6 @@ import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 import org.bukkit.damage.DamageSource;
@@ -88,7 +88,7 @@ public final class Combat {
         long seed = bot.id().getLeastSignificantBits() ^ bot.id().getMostSignificantBits();
         this.meleeRandom = new Random(seed);
         this.meleeRhythmBiasTicks = meleeRandom.nextInt(4);
-        this.lastSuccessfulPlayerHitTick = Bukkit.getCurrentTick();
+        this.lastSuccessfulPlayerHitTick = Platform.server().currentTick();
     }
 
     public long lastSuccessfulPlayerHitTick() {
@@ -171,7 +171,7 @@ public final class Combat {
             return;
         }
         startBlock();
-        Bukkit.getScheduler().runTaskLater(bot.manager().plugin(), this::stopBlock, Math.max(1, time));
+        Platform.server().runLater(this::stopBlock, Math.max(1, time));
     }
 
     /**
@@ -231,7 +231,7 @@ public final class Combat {
         if (target == null || target.isDead() || !target.isValid() || bot.entity() == null) {
             return;
         }
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         if (now < nextMeleeAttackTick) {
             return;
         }
@@ -307,7 +307,7 @@ public final class Combat {
         target.damage(damage, DamageKind.PLAYER_ATTACK, me, me);
         boolean hurt = target.health() < before - 1.0E-4 || target.isDead();
         if (target instanceof GamePlayer && hurt) {
-            lastSuccessfulPlayerHitTick = Bukkit.getCurrentTick();
+            lastSuccessfulPlayerHitTick = Platform.server().currentTick();
         }
         if (!hurt) {
             playSound(Sounds.ENTITY_PLAYER_ATTACK_NODAMAGE);
@@ -474,7 +474,7 @@ public final class Combat {
      */
     private Vector aimProjectile(GameLiving target, double speed, double scatterPerBlock) {
         BotBody me = bot.entity();
-        Vec3 from = new Vec3(me.position().x(), PaperEntities.bukkit(me).getEyeLocation().getY() - 0.1, me.position().z());
+        Vec3 from = new Vec3(me.position().x(), me.eyePosition().y() - 0.1, me.position().z());
         Vec3 point = new Vec3(target.position().x(), target.position().y() + target.height() * 0.5, target.position().z());
         double horiz = point.horizontalDistance(from);
         double inaccuracy = bot.settings().projInaccuracy.value();

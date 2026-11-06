@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
@@ -136,7 +135,7 @@ public final class HuntPolicy {
 
     /** Every second: ends the hunt with no bots, admits whoever became eligible and shows the protection. */
     public void tick() {
-        if (Bukkit.getCurrentTick() % 20 != 0 || !active) {
+        if (Platform.server().currentTick() % 20 != 0 || !active) {
             return;
         }
         long now = clock();

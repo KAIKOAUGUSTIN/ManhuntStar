@@ -86,6 +86,13 @@ public interface GameEntity {
 
     boolean teleport(GameWorld world, Vec3 position, float yaw, float pitch);
 
+    default boolean teleport(Place place) {
+        return teleport(place.world(), place.pos(), place.yaw(), place.pitch());
+    }
+
+    /** Where the entity is, with its facing (Bukkit's getLocation). */
+    Place place();
+
     void remove();
 
     void setRotation(float yaw, float pitch);

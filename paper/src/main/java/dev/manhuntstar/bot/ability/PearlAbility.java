@@ -16,11 +16,11 @@ import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.util.Vector;
@@ -148,7 +148,7 @@ public final class PearlAbility {
         pearl.setShooter(PaperEntities.bukkit(me));
         bot.swing();
         me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 0.4f / (r.nextFloat() * 0.4f + 0.8f));
-        Bukkit.getScheduler().runTask(bot.manager().plugin(), () -> {
+        Platform.server().runNextTick(() -> {
             if (bot.isAlive()) {
                 bot.setItem(EquipSlot.HAND, previous);
                 bot.inventory().restorePreferredMainHand();
@@ -174,7 +174,7 @@ public final class PearlAbility {
         pearl.setShooter(PaperEntities.bukkit(me));
         me.world().playSound(me.position(), Sounds.ENTITY_ENDER_PEARL_THROW, dev.manhuntstar.platform.SoundCategory.PLAYERS, 1.0f, 1.0f);
         bot.swing();
-        Bukkit.getScheduler().runTask(bot.manager().plugin(), () -> {
+        Platform.server().runNextTick(() -> {
             if (bot.isAlive()) {
                 bot.inventory().restorePreferredMainHand();
             }

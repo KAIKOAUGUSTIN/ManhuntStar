@@ -14,6 +14,7 @@ import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Setting.Category;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.util.Locations;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -456,7 +457,7 @@ public final class MenuManager implements Listener {
                     }
                     msg().send(p, "command.creating", Messages.p("amount", d.amount), Messages.p("difficulty", msg().difficulty(d.difficulty)),
                             Messages.p("name", d.name));
-                    manager().createBots(manager().ringCenterFor(p.getLocation()), d.name, d.skin.isEmpty() ? null : d.skin, d.amount, d.difficulty, d.phase, d.aggression)
+                    manager().createBots(manager().ringCenterFor(Locations.place(p.getLocation())), d.name, d.skin.isEmpty() ? null : d.skin, d.amount, d.difficulty, d.phase, d.aggression)
                             .whenComplete((bots, err) -> {
                                 if (err != null) {
                                     plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create bots", err);
@@ -489,10 +490,10 @@ public final class MenuManager implements Listener {
                     openBots(p, page);
                 } else if (c.isRightClick()) {
                     if (b.isAlive()) {
-                        manager().teleportBot(b, p.getLocation());
+                        manager().teleportBot(b, Locations.place(p.getLocation()));
                     }
                 } else if (b.isAlive()) {
-                    p.teleport(b.location());
+                    p.teleport(Locations.location(b.location()));
                     p.closeInventory();
                 }
             });

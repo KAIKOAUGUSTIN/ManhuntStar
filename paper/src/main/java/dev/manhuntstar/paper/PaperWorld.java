@@ -236,6 +236,17 @@ public final class PaperWorld implements GameWorld {
     }
 
     @Override
+    public String chunkLoadLevel(int chunkX, int chunkZ) {
+        return String.valueOf(world.getChunkAt(chunkX, chunkZ).getLoadLevel());
+    }
+
+    @Override
+    public Vec3 spawnPosition() {
+        Location l = world.getSpawnLocation();
+        return new Vec3(l.getX(), l.getY(), l.getZ());
+    }
+
+    @Override
     public GameItemEntity dropItemNaturally(Vec3 at, GameItem item) {
         return PaperEntities.of(world.dropItemNaturally(new Location(world, at.x(), at.y(), at.z()), PaperItems.stack(item)));
     }

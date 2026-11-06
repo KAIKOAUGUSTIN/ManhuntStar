@@ -15,7 +15,6 @@ import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperItems;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameEntity;
@@ -24,10 +23,11 @@ import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameMode;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -47,9 +47,7 @@ import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -73,7 +71,7 @@ public final class BotManager {
     private final Map<String, BotGroup> groups = new LinkedHashMap<>();
     private final Map<UUID, PendingRespawn> pendingRespawns = new LinkedHashMap<>();
     private final Map<UUID, Long> pendingSilentDeaths = new HashMap<>();
-    private final Map<UUID, Location> customSpawnpoints = new HashMap<>();
+    private final Map<UUID, Place> customSpawnpoints = new HashMap<>();
     private final Map<UUID, Long> inaccessibleHorses = new HashMap<>();
     private final NamespacedKey horseKey;
     private final Map<UUID, UUID> controlledHorses = new HashMap<>();
@@ -418,12 +416,12 @@ public final class BotManager {
     // ------------------------------------------------------------------ horses
 
     public void markHorseInaccessible(GameHorse horse, int ticks) {
-        inaccessibleHorses.put(horse.uuid(), (long) Bukkit.getCurrentTick() + ticks);
+        inaccessibleHorses.put(horse.uuid(), (long) Platform.server().currentTick() + ticks);
     }
 
     public boolean isHorseInaccessible(GameHorse horse) {
         Long until = inaccessibleHorses.get(horse.uuid());
-        return until != null && until > Bukkit.getCurrentTick();
+        return until != null && until > Platform.server().currentTick();
     }
 
     /**
@@ -436,7 +434,7 @@ public final class BotManager {
         if (controlledHorses.containsKey(horse.uuid()) && !horse.isAware()) {
             return;
         }
-        PaperEntities.bukkit(horse).getPathfinder().stopPathfinding();
+        horse.stopPathfinding();
         horse.setAware(false);
         PaperEntities.bukkit(horse).getPersistentDataContainer().set(horseKey, PersistentDataType.STRING, bot.id().toString());
         controlledHorses.put(horse.uuid(), bot.id());
@@ -488,23 +486,23 @@ public final class BotManager {
      * the visible name is the name without "%". In MANHUNT mode they spawn in a ring around the location
      * (which is the ring's center) and wait until someone leaves it.
      */
-    public CompletableFuture<List<Bot>> createBots(Location loc, String name, String skinName, int count,
+    public CompletableFuture<List<Bot>> createBots(Place loc, String name, String skinName, int count,
                                                    BotDifficulty difficulty, int startPhase, int aggression) {
         String skinTarget = skinName == null || skinName.isBlank() ? visualNameOf(name) : skinName;
         return plugin.skins().resolve(skinTarget).thenApplyAsync(skin -> spawnBots(loc, name, skin, count, difficulty, startPhase, aggression),
-                r -> Bukkit.getScheduler().runTask(plugin, r));
+                r -> Platform.server().runNextTick(r));
     }
 
     /**
      * Ring center for bots created at {@code given} (the creator's position): in manual mode, the
      * point set with /manhunt ring point; with no point (or with its world unloaded), the location itself.
      */
-    public Location ringCenterFor(Location given) {
+    public Place ringCenterFor(Place given) {
         if (!manualRingPointInUse()) {
             return given;
         }
         Settings.RingPoint p = settings().ringPoint();
-        return new Location(Bukkit.getWorld(p.world()), p.x(), p.y(), p.z());
+        return new Place(Platform.server().world(p.world()), p.x(), p.y(), p.z());
     }
 
     /** Manual mode is on but there is no usable ring point. */
@@ -517,7 +515,7 @@ public final class BotManager {
             return false;
         }
         Settings.RingPoint p = settings().ringPoint();
-        return p != null && Bukkit.getWorld(p.world()) != null;
+        return p != null && Platform.server().world(p.world()) != null;
     }
 
     /** Ring radius: the option's value, or 5 blocks + 1 for every 5 bots with the option at 0. */
@@ -526,9 +524,9 @@ public final class BotManager {
         return fixed <= 0 ? 5.0 + count / 5.0 : Math.max(2.0, fixed);
     }
 
-    private List<Bot> spawnBots(Location pos, String name, SkinData skin, int count, BotDifficulty difficulty, int startPhase, int aggression) {
+    private List<Bot> spawnBots(Place pos, String name, SkinData skin, int count, BotDifficulty difficulty, int startPhase, int aggression) {
         List<Bot> created = new ArrayList<>();
-        GameWorld world = PaperWorld.of(pos.getWorld());
+        GameWorld world = pos.world();
         String visual = visualNameOf(name);
         SpawnMode mode = settings().spawnMode.get();
         double radius = ringRadius(count);
@@ -536,15 +534,15 @@ public final class BotManager {
         BotGroup group = getOrCreateGroup(name);
         for (int i = 1; i <= count; i++) {
             double angle = i * 2 * Math.PI / count;
-            Location spawn;
+            Place spawn;
             if (mode == SpawnMode.NORMAL) {
-                spawn = count == 1 ? pos.clone() : pos.clone().add(r.nextDouble() - 0.5, 0, r.nextDouble() - 0.5);
-                spawn.setY(freeSpaceAbove(world, spawn));
+                spawn = count == 1 ? pos : pos.add(r.nextDouble() - 0.5, 0, r.nextDouble() - 0.5);
+                spawn = spawn.withY(freeSpaceAbove(world, spawn));
             } else {
-                spawn = pos.clone().add(Math.cos(angle) * radius + (r.nextDouble() - 0.5), 0, Math.sin(angle) * radius + (r.nextDouble() - 0.5));
-                spawn.setY(surfaceNear(world, spawn, pos.getY()));
+                spawn = pos.add(Math.cos(angle) * radius + (r.nextDouble() - 0.5), 0, Math.sin(angle) * radius + (r.nextDouble() - 0.5));
+                spawn = spawn.withY(surfaceNear(world, spawn, pos.y()));
                 // facing the ring's center
-                spawn.setYaw(Locations.vec(pos).subtract(Locations.vec(spawn)).yaw());
+                spawn = spawn.withYaw(pos.pos().subtract(spawn.pos()).yaw());
             }
             String botName = name.contains("%") ? name.replace("%", String.valueOf(i)) : name + i;
             Bot bot = new Bot(this, UUID.randomUUID(), botName, visual, skin, difficulty);
@@ -570,8 +568,8 @@ public final class BotManager {
     }
 
     /** Ground height near a ring point (so it doesn't spawn inside blocks or in the air). */
-    private static double surfaceNear(GameWorld w, Location spawn, double refY) {
-        Pos p = Locations.pos(spawn);
+    private static double surfaceNear(GameWorld w, Place spawn, double refY) {
+        Pos p = spawn.blockPos();
         for (int dy = 0; dy <= 4; dy++) {
             for (int sign : new int[]{1, -1}) {
                 Pos c = new Pos(p.x(), (int) Math.floor(refY) + dy * sign, p.z());
@@ -584,15 +582,15 @@ public final class BotManager {
     }
 
     /** If the point falls inside blocks, moves up to the first free space (up to 16 blocks). */
-    private static double freeSpaceAbove(GameWorld w, Location spawn) {
-        Pos p = Locations.pos(spawn);
+    private static double freeSpaceAbove(GameWorld w, Place spawn) {
+        Pos p = spawn.blockPos();
         for (int dy = 0; dy <= 16; dy++) {
             Pos c = p.above(dy);
             if (!WorldUtil.hasCollision(w, c) && !WorldUtil.hasCollision(w, c.above())) {
-                return dy == 0 ? spawn.getY() : c.y();
+                return dy == 0 ? spawn.y() : c.y();
             }
         }
-        return spawn.getY();
+        return spawn.y();
     }
 
     private static String visualNameOf(String raw) {
@@ -619,24 +617,24 @@ public final class BotManager {
 
     private void announceJoin(Bot bot) {
         if (settings().joinLeaveMessages.on()) {
-            Bukkit.broadcast(Component.translatable("multiplayer.player.joined", NamedTextColor.YELLOW, Component.text(bot.visualName())));
+            Platform.server().broadcast(Component.translatable("multiplayer.player.joined", NamedTextColor.YELLOW, Component.text(bot.visualName())));
         }
     }
 
     private void announceLeave(Bot bot) {
         if (settings().joinLeaveMessages.on()) {
-            Bukkit.broadcast(Component.translatable("multiplayer.player.left", NamedTextColor.YELLOW, Component.text(bot.visualName())));
+            Platform.server().broadcast(Component.translatable("multiplayer.player.left", NamedTextColor.YELLOW, Component.text(bot.visualName())));
         }
     }
 
     // ------------------------------------------------------------------ teleport
 
     /** Teleports the bot (in the same world or to another, recreating the entity) and settles the AI. */
-    public void teleportBot(Bot bot, Location dest) {
+    public void teleportBot(Bot bot, Place dest) {
         if (!bot.isAlive()) {
             return;
         }
-        if (!bot.bukkitWorld().equals(dest.getWorld())) {
+        if (bot.world() != dest.world()) {
             plugin.glow().remove(bot);
         }
         bot.relocate(dest);
@@ -657,7 +655,7 @@ public final class BotManager {
             }
         }
         for (Bot b : alive) {
-            teleportBot(b, alive.size() == 1 ? PaperEntities.bukkit(target).getLocation() : nearPlayer(target));
+            teleportBot(b, alive.size() == 1 ? target.place() : nearPlayer(target));
         }
         return alive.size();
     }
@@ -672,9 +670,9 @@ public final class BotManager {
     }
 
     /** Near the player, spread out a little so the bots don't end up inside each other. */
-    private static Location nearPlayer(GamePlayer target) {
+    private static Place nearPlayer(GamePlayer target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        return PaperEntities.bukkit(target).getLocation().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
+        return target.place().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
     }
 
     /** The target went to another dimension: opens a portal entrance for the bots following them. */
@@ -711,7 +709,7 @@ public final class BotManager {
         if (settings().deathMessages.on() && e != null) {
             Boolean show = e.world().gameRule(dev.manhuntstar.platform.GameRule.SHOW_DEATH_MESSAGES);
             if (!Boolean.FALSE.equals(show)) {
-                Bukkit.broadcast(plugin.deathMessages().build(bot, event.getDamageSource()));
+                Platform.server().broadcast(plugin.deathMessages().build(bot, event.getDamageSource()));
             }
         }
         GameEntity killer = PaperEntities.of(event.getDamageSource().getCausingEntity());
@@ -724,9 +722,9 @@ public final class BotManager {
                 killerBot.incrementKills();
             }
         }
-        Location deathLoc = e == null ? bot.location() : PaperEntities.bukkit(e).getLocation();
-        if (deathLoc != null && deathLoc.getWorld() != null) {
-            deathLoc.getWorld().spawnParticle(Particle.CLOUD, deathLoc.clone().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
+        Place deathLoc = e == null ? bot.location() : e.place();
+        if (deathLoc != null && deathLoc.world() != null) {
+            deathLoc.world().spawnParticle(Particle.CLOUD, deathLoc.pos().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.1);
         }
         tactics.forget(bot);
         byEntity.values().remove(bot);
@@ -741,7 +739,7 @@ public final class BotManager {
         if (!bot.isAlive()) {
             return;
         }
-        Location loc = bot.location();
+        Place loc = bot.location();
         tactics.forget(bot);
         byEntity.values().remove(bot);
         plugin.glow().remove(bot);
@@ -750,13 +748,13 @@ public final class BotManager {
         dirty = true;
     }
 
-    private void queueRespawn(Bot bot, Location deathLoc) {
+    private void queueRespawn(Bot bot, Place deathLoc) {
         pendingSilentDeaths.remove(bot.id());
         if (!settings().respawn.on() || !bot.shouldRespawn()) {
             return;
         }
-        Vec3 pos = deathLoc == null ? bot.lastKnownPos() : Locations.vec(deathLoc);
-        String world = deathLoc == null || deathLoc.getWorld() == null ? bot.lastKnownWorld() : deathLoc.getWorld().getName();
+        Vec3 pos = deathLoc == null ? bot.lastKnownPos() : deathLoc.pos();
+        String world = deathLoc == null || deathLoc.world() == null ? bot.lastKnownWorld() : deathLoc.world().name();
         pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + RESPAWN_DELAY_TICKS, world, pos));
     }
 
@@ -789,8 +787,8 @@ public final class BotManager {
     private void respawn(Bot bot, PendingRespawn p) {
         // a ring bot that died before the start goes back to the ring, not straight to hunting
         UUID ringId = waitingRing(bot);
-        Location caveLoc = caveAmbush.respawnLocation(bot);
-        Location spawn;
+        Place caveLoc = caveAmbush.respawnLocation(bot);
+        Place spawn;
         boolean caveBed = caveLoc != null;
         if (caveBed) {
             spawn = caveLoc;
@@ -799,7 +797,7 @@ public final class BotManager {
         } else {
             spawn = normalRespawnLocation(bot, p);
         }
-        if (spawn == null || spawn.getWorld() == null) {
+        if (spawn == null || spawn.world() == null) {
             return;
         }
         int phase = caveBed ? caveAmbush.restorePhase(bot) : bot.progression().phase();
@@ -825,34 +823,34 @@ public final class BotManager {
         return idle != null && idle.isActive() && rings.ring(idle.ringId()) != null ? idle.ringId() : null;
     }
 
-    private static World deathWorld(PendingRespawn p) {
-        World w = p.world() == null ? null : Bukkit.getWorld(p.world());
-        return w == null ? Bukkit.getWorlds().getFirst() : w;
+    private static GameWorld deathWorld(PendingRespawn p) {
+        GameWorld w = p.world() == null ? null : Platform.server().world(p.world());
+        return w == null ? Platform.server().defaultWorld() : w;
     }
 
     /** On the ground, where the bot died (for a ring bot, the ring itself). */
-    private static Location deathSpot(PendingRespawn p) {
-        World w = deathWorld(p);
-        Vec3 pos = p.deathPos() == null ? Locations.vec(w.getSpawnLocation()) : p.deathPos();
-        return resolveSurface(Locations.location(pos, w));
+    private static Place deathSpot(PendingRespawn p) {
+        GameWorld w = deathWorld(p);
+        Vec3 pos = p.deathPos() == null ? w.spawnPosition() : p.deathPos();
+        return resolveSurface(new Place(w, pos));
     }
 
-    private Location normalRespawnLocation(Bot bot, PendingRespawn p) {
-        World deathWorld = deathWorld(p);
-        Location custom = customSpawnpoints.get(bot.id());
-        if (custom != null && custom.getWorld() != null) {
+    private Place normalRespawnLocation(Bot bot, PendingRespawn p) {
+        GameWorld deathWorld = deathWorld(p);
+        Place custom = customSpawnpoints.get(bot.id());
+        if (custom != null && custom.world() != null) {
             return resolveSurface(custom);
         }
         BotGroup g = bot.group();
         if (g != null && g.spawnpoint() != null) {
-            World gw = g.spawnWorld() == null ? deathWorld : Bukkit.getWorld(g.spawnWorld());
+            GameWorld gw = g.spawnWorld() == null ? deathWorld : Platform.server().world(g.spawnWorld());
             if (gw != null) {
-                return resolveSurface(Locations.location(g.spawnpoint(), gw));
+                return resolveSurface(new Place(gw, g.spawnpoint()));
             }
         }
         GamePlayer target = bot.target();
         if (target != null && isEligibleTarget(target)) {
-            Location hidden = findHiddenLocation(target);
+            Place hidden = findHiddenLocation(target);
             if (hidden != null) {
                 return resolveSurface(hidden);
             }
@@ -861,8 +859,8 @@ public final class BotManager {
     }
 
     /** A spot 100–200 blocks from the target, out of their line of sight (only in loaded chunks). */
-    private static Location findHiddenLocation(GamePlayer target) {
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(target.world()));
+    private static Place findHiddenLocation(GamePlayer target) {
+        GameWorld w = target.world();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 40; i++) {
             double angle = r.nextDouble() * Math.PI * 2;
@@ -875,17 +873,17 @@ public final class BotManager {
             int y = w.dimension() == Dimension.NETHER ? (int) target.position().y() : WorldUtil.surfaceY(w, x, z);
             Vec3 candidate = new Vec3(x + 0.5, y + 1, z + 0.5);
             if (!WorldUtil.clearLine(w, target.eyePosition(), candidate)) {
-                return Locations.location(candidate, w);
+                return new Place(w, candidate);
             }
         }
         return null;
     }
 
     /** Safe ground near the point (rings of up to 24 blocks); in the Nether it also searches vertically. */
-    public static Location resolveSurface(Location anchor) {
-        GameWorld w = PaperWorld.of(anchor.getWorld());
-        int bx = anchor.getBlockX();
-        int bz = anchor.getBlockZ();
+    public static Place resolveSurface(Place anchor) {
+        GameWorld w = anchor.world();
+        int bx = anchor.blockX();
+        int bz = anchor.blockZ();
         boolean nether = w.dimension() == Dimension.NETHER;
         for (int radius = 0; radius <= 24; radius++) {
             for (int dx = -radius; dx <= radius; dx++) {
@@ -899,18 +897,18 @@ public final class BotManager {
                         continue;
                     }
                     if (nether) {
-                        int baseY = anchor.getBlockY();
+                        int baseY = anchor.blockY();
                         for (int y = Math.min(w.maxHeight() - 4, Math.min(118, baseY + 20)); y >= Math.max(w.minHeight() + 3, baseY - 20); y--) {
                             Pos feet = new Pos(x, y, z);
                             if (WorldUtil.isSafeStand(w, feet) && WorldUtil.countOpenSides(w, feet) >= 2) {
-                                return new Location(PaperWorld.bukkit(w), x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
+                                return new Place(w, x + 0.5, y + 0.1, z + 0.5, anchor.yaw(), 0);
                             }
                         }
                     } else {
                         int y = w.dimension() == Dimension.NORMAL ? WorldUtil.surfaceYNoLeaves(w, x, z) : WorldUtil.surfaceY(w, x, z);
                         Pos feet = new Pos(x, y, z);
                         if (WorldUtil.isSafeStand(w, feet) && WorldUtil.countOpenSides(w, feet) >= 1) {
-                            return new Location(PaperWorld.bukkit(w), x + 0.5, y + 0.1, z + 0.5, anchor.getYaw(), 0);
+                            return new Place(w, x + 0.5, y + 0.1, z + 0.5, anchor.yaw(), 0);
                         }
                     }
                 }
@@ -919,11 +917,11 @@ public final class BotManager {
         return anchor;
     }
 
-    public void setCustomSpawnpoint(Bot bot, Location loc) {
+    public void setCustomSpawnpoint(Bot bot, Place loc) {
         if (loc == null) {
             customSpawnpoints.remove(bot.id());
         } else {
-            customSpawnpoints.put(bot.id(), loc.clone());
+            customSpawnpoints.put(bot.id(), loc);
         }
     }
 
@@ -1021,7 +1019,7 @@ public final class BotManager {
         tickEntrances();
         tickRespawns();
         tickDistanceManagement();
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         if (now % 10 == 0) {
             tickControlledHorses();
         }
@@ -1051,7 +1049,7 @@ public final class BotManager {
         }
         pause.tick();
         temporaryBlocks.tick();
-        int now = Bukkit.getCurrentTick();
+        int now = Platform.server().currentTick();
         if (now % 10 == 0) {
             tickControlledHorses();
         }
@@ -1099,7 +1097,7 @@ public final class BotManager {
             toKill.forEach(this::killSilently);
         }
         // ring bots are left out (b.idle() != null); the others go on with silent deaths
-        if (Bukkit.getCurrentTick() % 20 != 0 || !settings().silentDeaths.on()) {
+        if (Platform.server().currentTick() % 20 != 0 || !settings().silentDeaths.on()) {
             return;
         }
         for (GamePlayer p : Platform.server().onlinePlayers()) {
@@ -1133,11 +1131,11 @@ public final class BotManager {
         if (bot.entity() == null || bot.entity().isValid() || bot.entity().isDead()) {
             return;
         }
-        Location last = bot.location();
+        Place last = bot.location();
         byEntity.values().remove(bot);
         bot.markDead();
-        if (last != null && last.getWorld() != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
+        if (last != null && last.world() != null) {
+            Platform.server().runNextTick(() -> {
                 if (bots.containsKey(bot.id()) && !bot.isAlive() && !pendingRespawns.containsKey(bot.id())) {
                     UUID ringId = waitingRing(bot);
                     bot.resetRuntime();
@@ -1235,18 +1233,18 @@ public final class BotManager {
                     getOrCreateGroup(s.group());
                 }
                 register(bot);
-                World w = s.world() == null ? null : Bukkit.getWorld(s.world());
+                GameWorld w = s.world() == null ? null : Platform.server().world(s.world());
                 if (w == null) {
-                    w = Bukkit.getWorlds().getFirst();
+                    w = Platform.server().defaultWorld();
                 }
-                Location loc = new Location(w, s.x(), s.y(), s.z(), s.yaw(), s.pitch());
+                Place loc = new Place(w, s.x(), s.y(), s.z(), s.yaw(), s.pitch());
                 if (s.alive()) {
                     bot.spawnEntity(loc);
                     bot.applySnapshotEquipment(s);
                     bot.progression().updateGear();
                 } else if (s.shouldRespawn() && settings().respawn.on()) {
                     // dead at shutdown: only comes back if respawn is on, as in a normal death
-                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.getName(), Locations.vec(loc)));
+                    pendingRespawns.put(bot.id(), new PendingRespawn(bot.id(), pause.clock() + 40, w.name(), loc.pos()));
                 }
                 notePhaseReached(bot.progression().phase());
                 n++;

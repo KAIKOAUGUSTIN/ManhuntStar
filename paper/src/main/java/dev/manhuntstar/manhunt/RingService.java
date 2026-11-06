@@ -5,14 +5,13 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.config.Messages;
-import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.GameMode;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameSound;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -25,10 +24,7 @@ import java.util.UUID;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
@@ -89,12 +85,12 @@ public final class RingService {
      *
      * @return false if there is no ring (countdown 0 with {@code manhunt.countdown-on-ring-leave} off: they hunt right away)
      */
-    public boolean create(Location center, double radius, List<Bot> bots, int seconds) {
+    public boolean create(Place center, double radius, List<Bot> bots, int seconds) {
         boolean onLeave = plugin.settings().countdownOnLeave.on();
         if (bots.isEmpty() || (!onLeave && seconds <= 0)) {
             return false;
         }
-        Ring r = new Ring(UUID.randomUUID(), center.getWorld().getUID(), Locations.vec(center), radius, seconds, radius + LEAVE_MARGIN);
+        Ring r = new Ring(UUID.randomUUID(), center.world().id(), center.pos(), radius, seconds, radius + LEAVE_MARGIN);
         for (Bot b : bots) {
             b.setIdle(new IdleBehavior(b, r.id));
             r.bots.add(b.id());
@@ -103,17 +99,17 @@ public final class RingService {
         Messages m = plugin.messages();
         if (onLeave) {
             // players already inside count as inside (leaving starts the countdown)
-            for (GamePlayer p : PaperWorld.of(center.getWorld()).players()) {
+            for (GamePlayer p : center.world().players()) {
                 if (canTrigger(p) && !p.isDead()) {
                     r.exit.observe(p.uuid(), distance(p, r));
                 }
             }
-            Bukkit.broadcast(seconds > 0
+            Platform.server().broadcast(seconds > 0
                     ? m.prefixed("countdown.ring-created", Messages.p("seconds", seconds))
                     : m.prefixed("countdown.ring-created-no-countdown"));
         } else {
             r.phase = Ring.Phase.COUNTING;
-            Bukkit.broadcast(m.prefixed("countdown.started", Messages.p("seconds", seconds)));
+            Platform.server().broadcast(m.prefixed("countdown.started", Messages.p("seconds", seconds)));
         }
         updateBar(r);
         manager().markDirty();
@@ -142,7 +138,7 @@ public final class RingService {
         if (rings.isEmpty()) {
             return;
         }
-        boolean second = Bukkit.getCurrentTick() % 20 == 0;
+        boolean second = Platform.server().currentTick() % 20 == 0;
         for (Ring r : new ArrayList<>(rings.values())) {
             if (second && prune(r)) {
                 // the ring's bots were removed (or respawned): there's nothing to release
@@ -203,14 +199,14 @@ public final class RingService {
     private void trigger(Ring r, GamePlayer who) {
         Messages m = plugin.messages();
         if (r.seconds <= 0) {
-            Bukkit.broadcast(m.prefixed("countdown.left", Messages.p("player", who.name())));
+            Platform.server().broadcast(m.prefixed("countdown.left", Messages.p("player", who.name())));
             release(r);
             return;
         }
         r.phase = Ring.Phase.COUNTING;
         r.ticksLeft = r.seconds * 20;
         updateBar(r);
-        Bukkit.broadcast(m.prefixed("countdown.left-and-counting", Messages.p("player", who.name()), Messages.p("seconds", r.seconds)));
+        Platform.server().broadcast(m.prefixed("countdown.left-and-counting", Messages.p("player", who.name()), Messages.p("seconds", r.seconds)));
         manager().markDirty();
     }
 
@@ -241,7 +237,7 @@ public final class RingService {
         hideBar(r);
         Messages m = plugin.messages();
         showTitle(r, m.get("countdown.begun-title"), m.get("countdown.begun-subtitle"), Sounds.ENTITY_ENDER_DRAGON_GROWL);
-        Bukkit.broadcast(m.prefixed("countdown.begun"));
+        Platform.server().broadcast(m.prefixed("countdown.begun"));
         for (UUID id : r.bots) {
             Bot b = manager().bot(id);
             if (b != null && b.idle() != null) {
@@ -315,12 +311,12 @@ public final class RingService {
 
     public void save(ConfigurationSection s) {
         for (Ring r : rings.values()) {
-            World w = Bukkit.getWorld(r.worldId);
+            GameWorld w = Platform.server().world(r.worldId);
             if (w == null) {
                 continue;
             }
             ConfigurationSection c = s.createSection(r.id.toString());
-            c.set("mundo", w.getName());
+            c.set("mundo", w.name());
             c.set("x", r.center.x());
             c.set("y", r.center.y());
             c.set("z", r.center.z());
@@ -340,7 +336,7 @@ public final class RingService {
         }
         for (String key : s.getKeys(false)) {
             ConfigurationSection c = s.getConfigurationSection(key);
-            World w = c == null ? null : Bukkit.getWorld(c.getString("mundo", ""));
+            GameWorld w = c == null ? null : Platform.server().world(c.getString("mundo", ""));
             if (w == null) {
                 continue;
             }
@@ -351,7 +347,7 @@ public final class RingService {
                 continue;
             }
             double radius = c.getDouble("raio", 5.0);
-            Ring r = new Ring(id, w.getUID(), new Vec3(c.getDouble("x"), c.getDouble("y"), c.getDouble("z")), radius,
+            Ring r = new Ring(id, w.id(), new Vec3(c.getDouble("x"), c.getDouble("y"), c.getDouble("z")), radius,
                     c.getInt("segundos"), radius + LEAVE_MARGIN);
             for (UUID botId : readIds(c.getStringList("bots"))) {
                 Bot b = manager().bot(botId);

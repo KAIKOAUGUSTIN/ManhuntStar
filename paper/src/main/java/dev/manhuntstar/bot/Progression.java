@@ -9,6 +9,7 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Platform;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -162,7 +163,7 @@ public final class Progression {
             int old = phase;
             setPhaseSilently(boostPhase);
             Messages m = bot.manager().plugin().messages();
-            bot.manager().plugin().getServer().broadcast(m.get("phase.jump",
+            Platform.server().broadcast(m.get("phase.jump",
                     Messages.p("bot", bot.visualName()), Messages.p("from", old), Messages.p("to", boostPhase),
                     Messages.c("reason", m.get(reasonKey)), Messages.p("player", p.name())));
         }
@@ -215,8 +216,8 @@ public final class Progression {
         updateGear();
         if (bot.manager().notePhaseReached(newPhase)) {
             Messages m = bot.manager().plugin().messages();
-            bot.manager().plugin().getServer().broadcast(m.get("phase.upgrade", Messages.p("phase", newPhase)));
-            bot.manager().plugin().getServer().broadcast(m.get("phase.description." + newPhase));
+            Platform.server().broadcast(m.get("phase.upgrade", Messages.p("phase", newPhase)));
+            Platform.server().broadcast(m.get("phase.description." + newPhase));
         }
     }
 

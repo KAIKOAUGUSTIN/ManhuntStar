@@ -207,7 +207,7 @@ public final class BotEntityListener implements Listener {
             if (!e.getWorld().equals(hit.getWorld()) || e.getLocation().distanceSquared(hit) > 4.0) {
                 hit.setYaw(e.getLocation().getYaw());
                 hit.setPitch(e.getLocation().getPitch());
-                manager().teleportBot(bot, hit);
+                manager().teleportBot(bot, Locations.place(hit));
             } else {
                 bot.onEntityTeleported();
             }

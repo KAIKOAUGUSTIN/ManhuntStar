@@ -2,6 +2,7 @@ package dev.manhuntstar.util;
 
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -40,6 +41,16 @@ public final class Locations {
     public static Vec3 vec(Entity e) {
         Location l = e.getLocation();
         return new Vec3(l.getX(), l.getY(), l.getZ());
+    }
+
+    /** A Bukkit location as a core place (null stays null). */
+    public static Place place(Location l) {
+        return l == null ? null : new Place(PaperWorld.of(l.getWorld()), l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch());
+    }
+
+    /** A core place as a Bukkit location (null stays null). */
+    public static Location location(Place p) {
+        return p == null ? null : new Location(PaperWorld.bukkit(p.world()), p.x(), p.y(), p.z(), p.yaw(), p.pitch());
     }
 
     public static Location location(Pos p, GameWorld world) {

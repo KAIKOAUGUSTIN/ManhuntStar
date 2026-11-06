@@ -413,7 +413,7 @@ public final class ManhuntCommand {
             if (manager().manualRingPointMissing()) {
                 msg().send(s, "ring.no-point");
             }
-            loc = manager().ringCenterFor(ctx.getSource().getLocation());
+            loc = Locations.location(manager().ringCenterFor(Locations.place(ctx.getSource().getLocation())));
         }
         if (loc == null || loc.getWorld() == null) {
             return noLocation(ctx);
@@ -421,7 +421,7 @@ public final class ManhuntCommand {
         String name = StringArgumentType.getString(ctx, "name");
         int count = amount == null ? 1 : amount;
         msg().send(s, "command.creating", Messages.p("amount", count), Messages.p("difficulty", msg().difficulty(difficulty)), Messages.p("name", name));
-        manager().createBots(loc, name, skin, count, difficulty, phase == null ? 0 : phase, aggression == null ? 0 : aggression).whenComplete((bots, err) -> {
+        manager().createBots(Locations.place(loc), name, skin, count, difficulty, phase == null ? 0 : phase, aggression == null ? 0 : aggression).whenComplete((bots, err) -> {
             if (err != null) {
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create bots", err);
                 msg().send(s, "command.create-error");
@@ -564,7 +564,7 @@ public final class ManhuntCommand {
             return noLocation(ctx);
         }
         for (Bot b : list) {
-            manager().setCustomSpawnpoint(b, clear ? null : loc);
+            manager().setCustomSpawnpoint(b, clear ? null : Locations.place(loc));
         }
         if (clear) {
             msg().send(sender(ctx), "command.spawnpoint-bot-cleared", Messages.p("bot", name));

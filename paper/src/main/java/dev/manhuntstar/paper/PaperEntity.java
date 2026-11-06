@@ -3,6 +3,7 @@ package dev.manhuntstar.paper;
 import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.util.Box;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.PaperCompat;
@@ -51,6 +52,11 @@ public class PaperEntity implements GameEntity {
     public Vec3 position() {
         Location l = entity.getLocation();
         return new Vec3(l.getX(), l.getY(), l.getZ());
+    }
+
+    @Override
+    public Place place() {
+        return Locations.place(entity.getLocation());
     }
 
     @Override

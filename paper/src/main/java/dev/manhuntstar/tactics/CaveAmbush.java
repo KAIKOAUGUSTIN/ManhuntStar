@@ -10,6 +10,7 @@ import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Pos;
@@ -25,8 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
 
 /**
  * Cave ambush: when the player is in a cave (Y &lt; 60, no skylight), a bot chasing them is taken to a
@@ -61,7 +60,7 @@ public final class CaveAmbush {
     }
 
     public void tick() {
-        if (Bukkit.getCurrentTick() % 20 != 0) {
+        if (Platform.server().currentTick() % 20 != 0) {
             return;
         }
         cleanupInvalid();
@@ -69,7 +68,7 @@ public final class CaveAmbush {
         if (!manager.plugin().settings().caveAmbush.on()) {
             return;
         }
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         long cooldown = manager.plugin().settings().caveAmbushCooldown.value() * 20L;
         for (GamePlayer p : Platform.server().onlinePlayers()) {
             if (!manager.isEligibleTarget(p) || !isInCave(PaperWorld.of(PaperWorld.bukkit(p.world())), p.blockPos())) {
@@ -111,7 +110,7 @@ public final class CaveAmbush {
             return false;
         }
         int restorePhase = chosen.progression().phase();
-        Location dest = new Location(PaperWorld.bukkit(w), ambush.x() + 0.5, ambush.y() + 0.1, ambush.z() + 0.5, target.yaw(), target.pitch());
+        Place dest = new Place(w, ambush.x() + 0.5, ambush.y() + 0.1, ambush.z() + 0.5, target.yaw(), target.pitch());
         manager.teleportBot(chosen, dest);
         chosen.setTargetPlayer(target.uuid());
         AmbushBed bed = tryPlaceBed(chosen, w, target, ambush, restorePhase, cave);
@@ -204,7 +203,7 @@ public final class CaveAmbush {
     }
 
     /** Where the bot should respawn (near the bed) or null if the ambush no longer applies. */
-    public Location respawnLocation(Bot bot) {
+    public Place respawnLocation(Bot bot) {
         AmbushBed bed = beds.get(bot.id());
         if (bed == null) {
             return null;
@@ -222,12 +221,12 @@ public final class CaveAmbush {
                 for (int dz = -r; dz <= r; dz++) {
                     Pos p = bed.foot().offset(dx, 0, dz);
                     if (isSafeRespawnSpot(w, p)) {
-                        return new Location(PaperWorld.bukkit(w), p.x() + 0.5, p.y() + 0.1, p.z() + 0.5);
+                        return new Place(w, p.x() + 0.5, p.y() + 0.1, p.z() + 0.5);
                     }
                 }
             }
         }
-        return new Location(PaperWorld.bukkit(w), bed.foot().x() + 0.5, bed.foot().y() + 0.6, bed.foot().z() + 0.5);
+        return new Place(w, bed.foot().x() + 0.5, bed.foot().y() + 0.6, bed.foot().z() + 0.5);
     }
 
     public int restorePhase(Bot bot) {
@@ -306,7 +305,7 @@ public final class CaveAmbush {
     }
 
     private static void removeBedBlocks(AmbushBed bed) {
-        GameWorld w = PaperWorld.of(Bukkit.getWorld(bed.worldId()));
+        GameWorld w = Platform.server().world(bed.worldId());
         if (w == null) {
             return;
         }

@@ -12,9 +12,11 @@ import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.util.Ballistics;
+import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.MotionTracker;
 import dev.manhuntstar.util.Pos;
@@ -28,13 +30,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.SoundCategory;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Firework;
@@ -162,12 +162,12 @@ public final class TacticsManager {
 
     /** A player opened a crafting table (vulnerable for 3 s to the automatic ambush). */
     public void recordCraftingTableUse(GamePlayer p) {
-        trackers.computeIfAbsent(p.uuid(), k -> new Tracker()).lastCraftingTick = Bukkit.getCurrentTick();
+        trackers.computeIfAbsent(p.uuid(), k -> new Tracker()).lastCraftingTick = Platform.server().currentTick();
     }
 
     /** Runs this bot's active ability (called by the brain, inside the bot's tick). */
     public void tickControlled(Bot bot) {
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         TntAmbush a = tnt.get(bot.id());
         if (a != null && !stepTnt(a, bot, now)) {
             tnt.remove(bot.id());
@@ -184,7 +184,7 @@ public final class TacticsManager {
 
     /** Global ticks: automatic activation and cleanup of abilities of bots that are gone. */
     public void tick() {
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         tnt.values().removeIf(a -> {
             Bot bot = manager.bot(a.bot);
             if (bot == null || !bot.isAlive()) {
@@ -314,7 +314,7 @@ public final class TacticsManager {
         if (activeBotByPlayer.containsKey(player.uuid())) {
             return "already-active";
         }
-        long now = Bukkit.getCurrentTick();
+        long now = Platform.server().currentTick();
         switch (capacity.toLowerCase(java.util.Locale.ROOT)) {
             case "tnt-craft" -> {
                 if (!CaveAmbush.isInCave(PaperWorld.of(PaperWorld.bukkit(player.world())), player.blockPos())) {
@@ -473,7 +473,7 @@ public final class TacticsManager {
 
     private static Vec3 arrowOrigin(Bot bot) {
         BotBody e = bot.entity();
-        return new Vec3(e.position().x(), PaperEntities.bukkit(e).getEyeLocation().getY() - 0.1, e.position().z());
+        return new Vec3(e.position().x(), e.eyePosition().y() - 0.1, e.position().z());
     }
 
     private static Vec3 arrowTarget(GamePlayer player) {
@@ -671,7 +671,7 @@ public final class TacticsManager {
         }
         prepare(bot);
         activeBotByPlayer.put(player.uuid(), bot.id());
-        manager.teleportBot(bot, new Location(PaperWorld.bukkit(w), stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
+        manager.teleportBot(bot, new Place(w, stand.x() + 0.5, stand.y() + 0.1, stand.z() + 0.5));
         bot.lookAt(player.eyePosition());
         bot.setSneaking(true);
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.TNT));
@@ -815,9 +815,9 @@ public final class TacticsManager {
 
     private static Pos findTntPos(GameWorld w, GamePlayer player, Pos botPos) {
         Vec3 flat = player.position().subtract(Vec3.center(botPos)).horizontal();
-        BlockFace forward = Locations.faceFromYaw(flat.yaw());
+        Face forward = Face.fromYaw(flat.yaw());
         Pos center = player.blockPos();
-        Pos[] candidates = {center, Locations.relative(center, forward), Locations.relative(center, forward.getOppositeFace()),
+        Pos[] candidates = {center, center.relative(forward), center.relative(forward.opposite()),
                 center.offset(0, 0, -1), center.offset(0, 0, 1), center.offset(1, 0, 0), center.offset(-1, 0, 0)};
         for (Pos c : candidates) {
             if (WorldUtil.canBeReplaced(w, c) && WorldUtil.blocksMotion(w, c.below()) && !WorldUtil.isLava(w, c) && !WorldUtil.isLava(w, c.below())

@@ -10,13 +10,22 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 
 /** The Bukkit server as a core {@link GameServer}: every call is the Bukkit one. */
 public final class PaperServer implements GameServer {
+
+    private final Plugin plugin;
+
+    /** The scheduled tasks belong to {@code plugin}. */
+    public PaperServer(Plugin plugin) {
+        this.plugin = plugin;
+    }
 
     @Override
     public int currentTick() {
@@ -31,6 +40,11 @@ public final class PaperServer implements GameServer {
     @Override
     public GameWorld world(String name) {
         return PaperWorld.of(Bukkit.getWorld(name));
+    }
+
+    @Override
+    public GameWorld defaultWorld() {
+        return PaperWorld.of(Bukkit.getWorlds().getFirst());
     }
 
     @Override
@@ -79,5 +93,20 @@ public final class PaperServer implements GameServer {
     @Override
     public GameItem deserializeItem(byte[] data) {
         return PaperItems.of(ItemStack.deserializeBytes(data));
+    }
+
+    @Override
+    public void broadcast(Component message) {
+        Bukkit.broadcast(message);
+    }
+
+    @Override
+    public void runNextTick(Runnable task) {
+        Bukkit.getScheduler().runTask(plugin, task);
+    }
+
+    @Override
+    public void runLater(Runnable task, long delayTicks) {
+        Bukkit.getScheduler().runTaskLater(plugin, task, delayTicks);
     }
 }

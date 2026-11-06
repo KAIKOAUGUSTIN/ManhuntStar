@@ -202,6 +202,19 @@ public class FakeWorld implements GameWorld {
         return nearbyEntities(new Box(center.x() - x, center.y() - y, center.z() - z, center.x() + x, center.y() + y, center.z() + z));
     }
 
+    /** The spawn point, set by the test. */
+    public Vec3 spawn = Vec3.ZERO;
+
+    @Override
+    public String chunkLoadLevel(int chunkX, int chunkZ) {
+        return isChunkLoaded(chunkX, chunkZ) ? "LOADED" : "UNLOADED";
+    }
+
+    @Override
+    public Vec3 spawnPosition() {
+        return spawn;
+    }
+
     @Override
     public GameItemEntity dropItemNaturally(Vec3 at, GameItem item) {
         throw new UnsupportedOperationException("the fake world has no item entities");

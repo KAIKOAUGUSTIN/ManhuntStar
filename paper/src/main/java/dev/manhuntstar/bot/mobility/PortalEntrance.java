@@ -10,9 +10,10 @@ import dev.manhuntstar.platform.Dimension;
 import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.util.Face;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -20,7 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
 
 /**
@@ -113,23 +113,23 @@ public final class PortalEntrance {
         if (!bot.isAlive()) {
             return;
         }
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        GameWorld w = player.world();
         Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, player.blockPos());
-        Location dest = new Location(PaperWorld.bukkit(w), spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
+        Place dest = new Place(w, spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
         bot.lookAt(player.position());
-        w.playSound(Locations.vec(dest), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.6f, 1f);
+        w.playSound(dest.pos(), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, dev.manhuntstar.platform.SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
     // ------------------------------------------------------------------ portal
 
     private void spawnPortal(GamePlayer player) {
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        GameWorld w = player.world();
         portalPos = findPortalLocation(player);
         boolean end = w.dimension() == Dimension.THE_END;
         if (portalPos == null) {
-            portalPos = Locations.relative(player.blockPos(), Locations.faceFromYaw(player.yaw()), 15);
+            portalPos = player.blockPos().relative(Face.fromYaw(player.yaw()), 15);
         }
         if (end) {
             if (!WorldUtil.blocksMotion(w, portalPos.below())) {
@@ -174,7 +174,7 @@ public final class PortalEntrance {
     }
 
     private Pos findPortalLocation(GamePlayer player) {
-        GameWorld w = PaperWorld.of(PaperWorld.bukkit(player.world()));
+        GameWorld w = player.world();
         Vec3 pp = player.position();
         boolean nether = w.dimension() == Dimension.NETHER;
         boolean end = w.dimension() == Dimension.THE_END;

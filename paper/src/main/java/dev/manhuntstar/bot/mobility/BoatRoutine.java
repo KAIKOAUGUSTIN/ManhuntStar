@@ -15,8 +15,8 @@ import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -91,7 +91,7 @@ public final class BoatRoutine {
         }
         crossingGoal = goal;
         crossingFollow = follow;
-        crossingRequestTick = Bukkit.getCurrentTick();
+        crossingRequestTick = Platform.server().currentTick();
     }
 
     public boolean isCrossing() {
@@ -220,10 +220,10 @@ public final class BoatRoutine {
                     crossingBudget = budgetFor(mounted.position(), next);
                 }
             }
-            Location bl = PaperEntities.bukkit(mounted).getLocation();
+            Place bl = mounted.place();
             Vec3 goal = Vec3.bottomCenter(crossingGoal);
-            boolean arrived = Math.hypot(goal.x() - bl.getX(), goal.z() - bl.getZ()) < 2.5;
-            boolean close = !followGone && bl.distance(PaperEntities.bukkit(follow).getLocation()) < 4.0;
+            boolean arrived = Math.hypot(goal.x() - bl.x(), goal.z() - bl.z()) < 2.5;
+            boolean close = !followGone && bl.distance(follow.place()) < 4.0;
             boolean stuck = noMoveTicks >= 40;
             boolean late = crossingTicks > crossingBudget;
             if (followGone || close || stuck || late || shouldDismountNearShore(mounted) || (arrived && isBoatCloseToLand(mounted))) {
@@ -239,7 +239,7 @@ public final class BoatRoutine {
             steerTowards(mounted, goal);
             return true;
         }
-        if (vehicle != null || followGone || Bukkit.getCurrentTick() - crossingRequestTick > CROSSING_REQUEST_TTL) {
+        if (vehicle != null || followGone || Platform.server().currentTick() - crossingRequestTick > CROSSING_REQUEST_TTL) {
             // the path stopped asking for the crossing (took a detour, lost the target) or the bot mounted something else
             clearCrossing();
             return false;
@@ -293,7 +293,7 @@ public final class BoatRoutine {
             return false;
         }
         if (chase != null && !chase.isDead() && !(chase.vehicle() instanceof GameBoat)
-                && PaperEntities.bukkit(mounted).getLocation().distance(PaperEntities.bukkit(chase).getLocation()) <= 3.0) {
+                && mounted.place().distance(chase.place()) <= 3.0) {
             cleanup(true);
             bot.inventory().restorePreferredMainHand();
             if (bot.distanceTo(chase) <= 3.3) {
@@ -302,7 +302,7 @@ public final class BoatRoutine {
             return false;
         }
         if (boating != null && boating.vehicle() instanceof GameBoat targetBoat
-                && PaperEntities.bukkit(mounted).getLocation().distance(PaperEntities.bukkit(targetBoat).getLocation()) <= 3.2) {
+                && mounted.place().distance(targetBoat.place()) <= 3.2) {
             if (tryBoardAsPassenger(boating, targetBoat)) {
                 return true;
             }
@@ -324,7 +324,7 @@ public final class BoatRoutine {
         }
         Vec3 steer = null;
         if (boating != null) {
-            steer = Locations.vec(boating.vehicle() instanceof GameBoat tb ? PaperEntities.bukkit(tb).getLocation() : PaperEntities.bukkit(boating).getLocation());
+            steer = boating.vehicle() instanceof GameBoat tb ? tb.position() : boating.position();
         }
         if (steer == null && chase != null && !chase.isDead()) {
             steer = chase.position();
@@ -347,8 +347,8 @@ public final class BoatRoutine {
 
     private void steerTowards(GameBoat boat, Vec3 chaseTarget) {
         Vec3 nav = surfaceWaypoint(boat, chaseTarget);
-        Location bl = PaperEntities.bukkit(boat).getLocation();
-        Vec3 to = new Vec3(nav.x() - bl.getX(), 0, nav.z() - bl.getZ());
+        Place bl = boat.place();
+        Vec3 to = new Vec3(nav.x() - bl.x(), 0, nav.z() - bl.z());
         if (to.lengthSqr() < 0.09) {
             deltaRotation = 0;
             bot.motor().stopWalk();
@@ -357,7 +357,7 @@ public final class BoatRoutine {
         bot.lookAt(nav.add(0, 1, 0));
         Vec3 desired = to.normalize();
         float desiredYaw = desired.yaw();
-        float yawDelta = Bot.wrapDegrees(desiredYaw - bl.getYaw());
+        float yawDelta = Bot.wrapDegrees(desiredYaw - bl.yaw());
         float abs = Math.abs(yawDelta);
         boolean right = yawDelta > 4f;
         boolean left = yawDelta < -4f;
@@ -372,7 +372,7 @@ public final class BoatRoutine {
         if (right != left && !forward) {
             accel += 0.005f;
         }
-        float yaw = bl.getYaw() + deltaRotation;
+        float yaw = bl.yaw() + deltaRotation;
         boat.setRotation(yaw, 0);
         if (forward) {
             accel += 0.04f;
@@ -409,11 +409,11 @@ public final class BoatRoutine {
         if (surfacePath.isEmpty()) {
             return Vec3.bottomCenter(goal);
         }
-        Location bl = PaperEntities.bukkit(boat).getLocation();
+        Place bl = boat.place();
         while (surfaceIndex < surfacePath.size()) {
             Vec3 c = Vec3.bottomCenter(surfacePath.get(surfaceIndex));
-            double dx = bl.getX() - c.x();
-            double dz = bl.getZ() - c.z();
+            double dx = bl.x() - c.x();
+            double dz = bl.z() - c.z();
             if (dx * dx + dz * dz > 1.8) {
                 return c;
             }

@@ -9,7 +9,6 @@ import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Pos;
 import dev.manhuntstar.util.Vec3;
 import dev.manhuntstar.util.WorldUtil;
@@ -155,7 +154,7 @@ public final class Mining {
 
     private Pos offsetToward(Pos origin, int sx, int sz) {
         if (sx == 0 && sz == 0) {
-            return Locations.relative(origin, bot.facing());
+            return origin.relative(bot.facing());
         }
         return origin.offset(sx, 0, sz);
     }
@@ -249,7 +248,7 @@ public final class Mining {
             bot.motor().walk(new Vec3(sx, 0, sz).normalize());
             bot.motor().setSprinting(true);
         } else {
-            Pos front = Locations.relative(botPos, bot.facing());
+            Pos front = botPos.relative(bot.facing());
             if (solid(front.above())) {
                 start(front.above());
                 return;
@@ -276,7 +275,7 @@ public final class Mining {
         Pos botPos = bot.blockPos();
         Pos player = target.blockPos();
         bot.inventory().restorePreferredPickaxe();
-        Pos front = Locations.relative(botPos, bot.facing());
+        Pos front = botPos.relative(bot.facing());
         if (player.y() > botPos.y() + 1) {
             int sx = Integer.signum(player.x() - botPos.x());
             int sz = Integer.signum(player.z() - botPos.z());

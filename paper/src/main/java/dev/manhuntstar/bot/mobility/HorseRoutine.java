@@ -4,11 +4,11 @@ import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.GearScoring;
 import dev.manhuntstar.bot.Progression;
 import dev.manhuntstar.bot.ai.Navigator;
-import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.Attr;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.Enchant;
 import dev.manhuntstar.platform.EquipSlot;
+import dev.manhuntstar.platform.GameBlock;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameHorse;
 import dev.manhuntstar.platform.GameItem;
@@ -17,16 +17,14 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
+import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.Sounds;
-import dev.manhuntstar.util.Locations;
 import dev.manhuntstar.util.Vec3;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.SoundCategory;
-import org.bukkit.block.Block;
 import org.bukkit.util.Vector;
 
 /**
@@ -296,7 +294,7 @@ public final class HorseRoutine {
         horse.setSaddle(GameItem.of(Items.SADDLE));
         horse.world().playSound(horse.position(), Sounds.ENTITY_HORSE_SADDLE, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.5f, 1f);
         actionCooldown = 8;
-        Bukkit.getScheduler().runTaskLater(bot.manager().plugin(), () -> {
+        Platform.server().runLater(() -> {
             if (bot.isAlive()) {
                 bot.inventory().restorePreferredMainHand();
             }
@@ -318,17 +316,17 @@ public final class HorseRoutine {
         }
         horse.setEatingGrass(false);
         horse.setEating(false);
-        Location hl = PaperEntities.bukkit(horse).getLocation();
+        Place hl = horse.place();
         Vec3 current = horse.velocity();
         // chunk without physics this tick: don't add again (the velocity would build up and launch the horse)
         boolean stalled = lastSetVelocity != null && sameVelocity(current, lastSetVelocity)
                 && lastSetVelocity.x() * lastSetVelocity.x() + lastSetVelocity.z() * lastSetVelocity.z() > 1.0E-8;
-        Vec3 to = new Vec3(navTarget.x() - hl.getX(), 0, navTarget.z() - hl.getZ());
+        Vec3 to = new Vec3(navTarget.x() - hl.x(), 0, navTarget.z() - hl.z());
         detail = String.format(java.util.Locale.ROOT, "horse at %.1f blocks/s, next point at %.1f (dy %.1f)%s%s%s",
-                Math.hypot(current.x(), current.z()) * 20, to.length(), navTarget.y() - hl.getY(),
+                Math.hypot(current.x(), current.z()) * 20, to.length(), navTarget.y() - hl.y(),
                 noMoveTicks > 0 ? ", stuck " + noMoveTicks : "", stalled ? ", no physics" : "",
                 bot.mining().isMining() ? ", digging" : "")
-                + (TEST_DETAIL ? " ticks=" + horse.ticksLived() + " chunk=" + hl.getChunk().getLoadLevel() + " ai=" + horse.isAware() : "");
+                + (TEST_DETAIL ? " ticks=" + horse.ticksLived() + " chunk=" + hl.world().chunkLoadLevel(hl.blockX() >> 4, hl.blockZ() >> 4) + " ai=" + horse.isAware() : "");
         if (stalled) {
             noMoveTicks++; // counts as stuck: after 3 s the bot gets off and goes on foot
             return;
@@ -348,8 +346,8 @@ public final class HorseRoutine {
         }
         horse.setRearing(false);
 
-        float delta = Bot.wrapDegrees(to.normalize().yaw() - hl.getYaw());
-        float yaw = hl.getYaw() + Math.max(-MAX_TURN_PER_TICK, Math.min(MAX_TURN_PER_TICK, delta));
+        float delta = Bot.wrapDegrees(to.normalize().yaw() - hl.yaw());
+        float yaw = hl.yaw() + Math.max(-MAX_TURN_PER_TICK, Math.min(MAX_TURN_PER_TICK, delta));
         horse.setRotation(yaw, 0);
         horse.setBodyYaw(yaw);
         double forward = Math.cos(Math.toRadians(delta)) <= -0.35 ? 0.45 : 1.0;
@@ -364,7 +362,7 @@ public final class HorseRoutine {
             accel = 0.02;
         } else if (onGround) {
             // game: attribute speed × 0.98 (forward input) × 0.216 / friction³
-            float friction = hl.clone().subtract(0, 0.5, 0).getBlock().getType().getSlipperiness();
+            float friction = hl.world().type(hl.add(0, -0.5, 0).blockPos()).slipperiness();
             accel = movementSpeed(horse) * 0.98 * (0.216 / (friction * friction * friction));
         } else {
             accel = movementSpeed(horse) * 0.98 * 0.1;
@@ -378,7 +376,7 @@ public final class HorseRoutine {
         if (onGround && !inWater && jumpCooldown <= 0 && shouldJump(horse, hl, navTarget, to, fx, fz)) {
             // the player's charged jump: the horse's jump strength and a forward boost of 0.4
             v = v.withY(horse.jumpStrength()).add(fx * 0.4 * forward, 0, fz * 0.4 * forward);
-            horse.world().playSound(Locations.vec(hl), Sounds.ENTITY_HORSE_JUMP, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.4f, 1f);
+            horse.world().playSound(hl.pos(), Sounds.ENTITY_HORSE_JUMP, dev.manhuntstar.platform.SoundCategory.NEUTRAL, 0.4f, 1f);
             jumpCooldown = 10;
         }
         if (inWater) {
@@ -413,10 +411,10 @@ public final class HorseRoutine {
      */
     private void joust(GameHorse horse, GameLiving target) {
         holdLance();
-        Location hl = PaperEntities.bukkit(horse).getLocation();
+        Place hl = horse.place();
         if (runoutTicks > 0) {
             runoutTicks--;
-            steer(horse, new Vec3(runoutX, hl.getY(), runoutZ), false);
+            steer(horse, new Vec3(runoutX, hl.y(), runoutZ), false);
             if (noMoveTicks > 5) {
                 runoutTicks = 0; // wall ahead: turn back now
             }
@@ -425,11 +423,11 @@ public final class HorseRoutine {
         }
         Vec3 tp = target.position();
         steer(horse, tp, true);
-        double yawRad = Math.toRadians(hl.getYaw());
+        double yawRad = Math.toRadians(hl.yaw());
         double fx = -Math.sin(yawRad);
         double fz = Math.cos(yawRad);
-        double dx = tp.x() - hl.getX();
-        double dz = tp.z() - hl.getZ();
+        double dx = tp.x() - hl.x();
+        double dz = tp.z() - hl.z();
         double dist = Math.hypot(dx, dz);
         double facing = dist < 1.0E-3 ? 1.0 : (dx * fx + dz * fz) / dist;
         if (lanceRaisedTicks > 0) {
@@ -454,12 +452,12 @@ public final class HorseRoutine {
     }
 
     /** End of a pass: lowers the spear and keeps going straight ~12 blocks before turning back. */
-    private void endPass(Location hl, double fx, double fz) {
+    private void endPass(Place hl, double fx, double fz) {
         lanceMisses = lanceHit ? 0 : lanceMisses + 1;
         lanceHit = false;
         lowerLance();
-        runoutX = hl.getX() + fx * 12;
-        runoutZ = hl.getZ() + fz * 12;
+        runoutX = hl.x() + fx * 12;
+        runoutZ = hl.z() + fz * 12;
         runoutTicks = LANCE_RUNOUT_TICKS;
     }
 
@@ -529,21 +527,21 @@ public final class HorseRoutine {
      * Jumps when stuck on an obstacle, when the path's next point is too high for the horse's
      * step (1 block) or when there is a gap right ahead.
      */
-    private boolean shouldJump(GameHorse horse, Location hl, Vec3 navTarget, Vec3 to, double fx, double fz) {
+    private boolean shouldJump(GameHorse horse, Place hl, Vec3 navTarget, Vec3 to, double fx, double fz) {
         if (to.lengthSqr() <= 1.0) {
             return false;
         }
         if (noMoveTicks >= 4) {
             return true;
         }
-        if (navTarget.y() > hl.getY() + 1.15 && to.lengthSqr() < 9.0) {
+        if (navTarget.y() > hl.y() + 1.15 && to.lengthSqr() < 9.0) {
             return true;
         }
-        if (navTarget.y() < hl.getY() - 0.5) {
+        if (navTarget.y() < hl.y() - 0.5) {
             return false;
         }
-        Block ahead = hl.clone().add(fx * 1.2, -0.5, fz * 1.2).getBlock();
-        Block ahead2 = ahead.getRelative(0, -1, 0);
+        GameBlock ahead = hl.world().block(hl.add(fx * 1.2, -0.5, fz * 1.2).blockPos());
+        GameBlock ahead2 = ahead.relative(0, -1, 0);
         return ahead.isPassable() && ahead2.isPassable() && !ahead.isLiquid() && to.lengthSqr() > 4.0;
     }
 

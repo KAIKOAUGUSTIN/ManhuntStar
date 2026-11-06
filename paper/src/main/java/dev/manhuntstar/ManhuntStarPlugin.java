@@ -49,7 +49,7 @@ public final class ManhuntStarPlugin extends JavaPlugin {
 
     private static ManhuntStarPlugin instance;
 
-    private final GameServer server = new PaperServer();
+    private final GameServer server = new PaperServer(this);
     private final YamlFiles yaml = new BukkitYamlFiles();
     private final Settings settings = new Settings();
     private final Messages messages = new Messages();
