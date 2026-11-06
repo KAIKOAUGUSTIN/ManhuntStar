@@ -12,7 +12,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-/** Eventos Bukkit dos bots (equivalentes aos eventos da API do mod), para outros plugins. */
+/** Bukkit events of the bots (matching the mod API's events), for other plugins. */
 public final class BotEvents {
 
     private BotEvents() {
@@ -28,7 +28,7 @@ public final class BotEvents {
         Bukkit.getPluginManager().callEvent(new BotKilledByPlayerEvent(bot, PaperEntities.bukkit(player)));
     }
 
-    /** Base: todo evento tem o bot envolvido. */
+    /** Base: every event has the bot involved. */
     public abstract static class BotEvent extends Event {
         private final Bot bot;
 
@@ -41,7 +41,7 @@ public final class BotEvents {
         }
     }
 
-    /** Um jogador vai causar dano ao bot (cancelável; o dano pode ser alterado). */
+    /** A player is about to damage the bot (cancellable; the damage can be changed). */
     public static final class BotDamageByPlayerEvent extends BotEvent implements Cancellable {
         private static final HandlerList HANDLERS = new HandlerList();
         private final Player player;
@@ -86,7 +86,7 @@ public final class BotEvents {
         }
     }
 
-    /** O bot vai levar dano de queda (cancelável). */
+    /** The bot is about to take fall damage (cancellable). */
     public static final class BotFallDamageEvent extends BotEvent implements Cancellable {
         private static final HandlerList HANDLERS = new HandlerList();
         private final double damage;
@@ -121,7 +121,7 @@ public final class BotEvents {
         }
     }
 
-    /** O bot morreu. */
+    /** The bot died. */
     public static final class BotDeathEvent extends BotEvent {
         private static final HandlerList HANDLERS = new HandlerList();
         private final DamageSource source;
@@ -145,7 +145,7 @@ public final class BotEvents {
         }
     }
 
-    /** O bot foi morto por um jogador. */
+    /** The bot was killed by a player. */
     public static final class BotKilledByPlayerEvent extends BotEvent {
         private static final HandlerList HANDLERS = new HandlerList();
         private final Player player;
