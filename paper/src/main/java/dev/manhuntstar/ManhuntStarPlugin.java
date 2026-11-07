@@ -28,6 +28,7 @@ import dev.manhuntstar.paper.PaperBotEvents;
 import dev.manhuntstar.paper.PaperCommands;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperItems;
+import dev.manhuntstar.paper.PaperMenuScreens;
 import dev.manhuntstar.paper.PaperServer;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
@@ -71,6 +72,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     private BotStorage storage;
     private BotManager botManager;
     private MenuManager menus;
+    private PaperMenuScreens menuScreens;
     private MobTargeting mobTargeting;
     private MobTargetGoals mobGoals;
     private UpdateChecker updates;
@@ -124,7 +126,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         storage = new BotStorage(getDataFolder(), getLogger(), yaml);
         botManager = new BotManager(this);
         deathMessages = new DeathMessages(botManager);
-        menus = new MenuManager(this);
+        menus = new MenuManager(this, menuScreens = new PaperMenuScreens(this));
         mobTargeting = new MobTargeting(this);
         mobGoals = new MobTargetGoals(this, mobTargeting);
         updates = new UpdateChecker(this, getPluginMeta().getVersion());
@@ -133,7 +135,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         pm.registerEvents(new BotEntityListener(this), this);
         pm.registerEvents(new WorldPlayerListener(this), this);
         pm.registerEvents(mobGoals, this);
-        pm.registerEvents(menus, this);
+        pm.registerEvents(menuScreens, this);
         pm.registerEvents(new UpdateNotifyListener(updates), this);
         dev.manhuntstar.debug.AimDebug.install(this);
 
