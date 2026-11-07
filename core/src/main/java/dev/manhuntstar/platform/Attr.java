@@ -6,6 +6,7 @@ public enum Attr {
     ARMOR_TOUGHNESS("armor_toughness"),
     ATTACK_DAMAGE("attack_damage"),
     ATTACK_SPEED("attack_speed"),
+    FOLLOW_RANGE("follow_range"),
     MAX_HEALTH("max_health"),
     MOVEMENT_SPEED("movement_speed");
 

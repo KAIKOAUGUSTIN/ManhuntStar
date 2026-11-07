@@ -106,6 +106,7 @@ public final class PaperItems {
             case ARMOR_TOUGHNESS -> Attribute.ARMOR_TOUGHNESS;
             case ATTACK_DAMAGE -> Attribute.ATTACK_DAMAGE;
             case ATTACK_SPEED -> Attribute.ATTACK_SPEED;
+            case FOLLOW_RANGE -> Attribute.FOLLOW_RANGE;
             case MAX_HEALTH -> Attribute.MAX_HEALTH;
             case MOVEMENT_SPEED -> Attribute.MOVEMENT_SPEED;
         };

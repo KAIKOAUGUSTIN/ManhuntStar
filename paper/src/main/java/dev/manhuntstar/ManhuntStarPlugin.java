@@ -3,6 +3,7 @@ package dev.manhuntstar;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.GameEvents;
+import dev.manhuntstar.bot.MobTargeting;
 import dev.manhuntstar.command.ManhuntCommand;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
@@ -15,7 +16,7 @@ import dev.manhuntstar.gui.MenuManager;
 import dev.manhuntstar.host.AimDiagnostics;
 import dev.manhuntstar.host.BotEventSink;
 import dev.manhuntstar.listener.BotEntityListener;
-import dev.manhuntstar.listener.MobTargeting;
+import dev.manhuntstar.listener.MobTargetGoals;
 import dev.manhuntstar.listener.UpdateNotifyListener;
 import dev.manhuntstar.listener.WorldPlayerListener;
 import dev.manhuntstar.metrics.MetricsService;
@@ -70,6 +71,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     private BotManager botManager;
     private MenuManager menus;
     private MobTargeting mobTargeting;
+    private MobTargetGoals mobGoals;
     private UpdateChecker updates;
     private MetricsService metrics;
     private final ChunkTickets chunkTickets = new ChunkTickets();
@@ -123,12 +125,13 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         deathMessages = new DeathMessages(botManager);
         menus = new MenuManager(this);
         mobTargeting = new MobTargeting(this);
+        mobGoals = new MobTargetGoals(this, mobTargeting);
         updates = new UpdateChecker(this, getPluginMeta().getVersion());
 
         var pm = getServer().getPluginManager();
         pm.registerEvents(new BotEntityListener(this), this);
         pm.registerEvents(new WorldPlayerListener(this), this);
-        pm.registerEvents(mobTargeting, this);
+        pm.registerEvents(mobGoals, this);
         pm.registerEvents(menus, this);
         pm.registerEvents(new UpdateNotifyListener(updates), this);
         dev.manhuntstar.debug.AimDebug.install(this);
@@ -143,7 +146,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         if (restored > 0) {
             getLogger().info(restored + " bot(s) restored from bots.yml.");
         }
-        mobTargeting.installAll();
+        mobGoals.installAll();
         tickTask = getServer().getScheduler().runTaskTimer(this, this::tick, 1L, 1L);
         updates.apply(settings.updateCheck.on());
         metrics = new MetricsService(this);

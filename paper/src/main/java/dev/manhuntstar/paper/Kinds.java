@@ -9,6 +9,8 @@ import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.AbstractHorse;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Boat;
+import org.bukkit.entity.Breeze;
+import org.bukkit.entity.Creaking;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Enderman;
@@ -17,10 +19,15 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.Hoglin;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.MagmaCube;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
+import org.bukkit.entity.PigZombie;
+import org.bukkit.entity.Piglin;
+import org.bukkit.entity.PiglinAbstract;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Slime;
@@ -29,6 +36,7 @@ import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.Trident;
 import org.bukkit.entity.Vehicle;
 import org.bukkit.entity.Warden;
+import org.bukkit.entity.Zoglin;
 
 /**
  * Conversions between Bukkit's {@link EntityType} and core's {@link EntityKind}, whose traits come from
@@ -79,6 +87,14 @@ public final class Kinds {
         add(out, c, Spider.class, EntityTrait.SPIDER);
         add(out, c, Slime.class, EntityTrait.SLIME);
         add(out, c, Warden.class, EntityTrait.WARDEN);
+        add(out, c, PiglinAbstract.class, EntityTrait.PIGLIN_FAMILY);
+        add(out, c, Piglin.class, EntityTrait.PIGLIN);
+        add(out, c, PigZombie.class, EntityTrait.ZOMBIFIED_PIGLIN);
+        add(out, c, Hoglin.class, EntityTrait.HOGLIN);
+        add(out, c, Zoglin.class, EntityTrait.ZOGLIN);
+        add(out, c, Breeze.class, EntityTrait.BREEZE);
+        add(out, c, Creaking.class, EntityTrait.CREAKING);
+        add(out, c, MagmaCube.class, EntityTrait.MAGMA_CUBE);
         add(out, c, Mannequin.class, EntityTrait.MANNEQUIN);
         add(out, c, ArmorStand.class, EntityTrait.ARMOR_STAND);
         return out.toArray(EntityTrait[]::new);

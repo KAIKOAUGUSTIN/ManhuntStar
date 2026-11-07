@@ -25,6 +25,16 @@ public enum EntityTrait {
     SPIDER,
     SLIME,
     WARDEN,
+    /** Piglin or piglin brute (the game's AbstractPiglin). */
+    PIGLIN_FAMILY,
+    /** The piglin itself (not the brute): leaves alone whoever wears gold. */
+    PIGLIN,
+    ZOMBIFIED_PIGLIN,
+    HOGLIN,
+    ZOGLIN,
+    BREEZE,
+    CREAKING,
+    MAGMA_CUBE,
     MANNEQUIN,
     ARMOR_STAND,
     /** Takes extra damage from Smite (undead). */

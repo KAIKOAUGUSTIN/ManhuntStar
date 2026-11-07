@@ -21,6 +21,8 @@ import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Slime;
+import org.bukkit.entity.Warden;
 
 /**
  * Wraps Bukkit entities as core ones. The same Bukkit entity always gives the same wrapper (while
@@ -49,6 +51,10 @@ public final class PaperEntities {
             fresh = new PaperBotBody(m);
         } else if (entity instanceof AbstractHorse h) {
             fresh = new PaperHorse(h);
+        } else if (entity instanceof Slime s) {
+            fresh = new PaperSlime(s);
+        } else if (entity instanceof Warden w) {
+            fresh = new PaperWarden(w);
         } else if (entity instanceof Mob m) {
             fresh = new PaperMob(m);
         } else if (entity instanceof LivingEntity l) {

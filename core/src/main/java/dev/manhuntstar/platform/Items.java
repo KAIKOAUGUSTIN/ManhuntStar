@@ -26,7 +26,9 @@ public final class Items {
     public static final ItemType FLINT_AND_STEEL = ItemType.of("FLINT_AND_STEEL");
     public static final ItemType GOLDEN_APPLE = ItemType.of("GOLDEN_APPLE");
     public static final ItemType GOLDEN_BOOTS = ItemType.of("GOLDEN_BOOTS");
+    public static final ItemType GOLDEN_CHESTPLATE = ItemType.of("GOLDEN_CHESTPLATE");
     public static final ItemType GOLDEN_HELMET = ItemType.of("GOLDEN_HELMET");
+    public static final ItemType GOLDEN_LEGGINGS = ItemType.of("GOLDEN_LEGGINGS");
     public static final ItemType IRON_BLOCK = ItemType.of("IRON_BLOCK");
     public static final ItemType IRON_INGOT = ItemType.of("IRON_INGOT");
     public static final ItemType RAW_IRON = ItemType.of("RAW_IRON");
