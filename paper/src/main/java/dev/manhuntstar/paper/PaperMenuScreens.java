@@ -77,7 +77,7 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent event) {
         String text = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
-        if (plugin.menus().chatTyped(PaperEntities.of(event.getPlayer()), text)) {
+        if (plugin.core().menus().chatTyped(PaperEntities.of(event.getPlayer()), text)) {
             event.setCancelled(true);
         }
     }
@@ -92,7 +92,7 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
             return;
         }
         ClickType c = event.getClick();
-        plugin.menus().clicked(PaperEntities.of(p), holder.menu, event.getRawSlot(), new MenuClick(c.isLeftClick(), c.isRightClick(), c.isShiftClick()));
+        plugin.core().menus().clicked(PaperEntities.of(p), holder.menu, event.getRawSlot(), new MenuClick(c.isLeftClick(), c.isRightClick(), c.isShiftClick()));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -104,6 +104,6 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        plugin.menus().forget(event.getPlayer().getUniqueId());
+        plugin.core().menus().forget(event.getPlayer().getUniqueId());
     }
 }

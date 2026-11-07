@@ -13,4 +13,7 @@ public interface BotGlow {
 
     /** {@link #apply} for each bot (after the glow options change). */
     void applyAll(Collection<Bot> bots);
+
+    /** On shutdown: removes what the glow left in the world (teams...). */
+    void cleanup();
 }

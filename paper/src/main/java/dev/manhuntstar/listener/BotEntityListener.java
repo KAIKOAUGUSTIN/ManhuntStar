@@ -37,11 +37,11 @@ public final class BotEntityListener implements Listener {
     }
 
     private BotManager manager() {
-        return plugin.botManager();
+        return plugin.core().botManager();
     }
 
     private GameEvents events() {
-        return plugin.gameEvents();
+        return plugin.core().gameEvents();
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

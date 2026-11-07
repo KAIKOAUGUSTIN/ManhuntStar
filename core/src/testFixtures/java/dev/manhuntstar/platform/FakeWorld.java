@@ -187,6 +187,11 @@ public class FakeWorld implements GameWorld {
     }
 
     @Override
+    public List<GameEntity> entities() {
+        return new ArrayList<>(entities);
+    }
+
+    @Override
     public List<GameEntity> nearbyEntities(Box box) {
         List<GameEntity> out = new ArrayList<>();
         for (GameEntity e : entities) {

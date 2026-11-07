@@ -45,10 +45,12 @@ public final class DebugRenderer implements PathDebug {
         paths.remove(botId);
     }
 
+    @Override
     public void clearAll() {
         paths.clear();
     }
 
+    @Override
     public void tick(int now, boolean enabled) {
         if (!enabled) {
             if (!paths.isEmpty()) {

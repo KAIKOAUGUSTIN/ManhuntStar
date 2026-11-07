@@ -33,9 +33,9 @@ public final class MetricsService {
         }
         metrics = new Metrics(plugin, id);
         // bStats collects the values on the main thread and sends them off it
-        metrics.addCustomChart(new SingleLineChart("bots", () -> plugin.botManager().aliveBots().size()));
-        metrics.addCustomChart(new SimplePie("language", () -> plugin.messages().language()));
-        metrics.addCustomChart(new SimplePie("default_difficulty", () -> plugin.settings().defaultDifficulty.get().configName()));
+        metrics.addCustomChart(new SingleLineChart("bots", () -> plugin.core().botManager().aliveBots().size()));
+        metrics.addCustomChart(new SimplePie("language", () -> plugin.core().messages().language()));
+        metrics.addCustomChart(new SimplePie("default_difficulty", () -> plugin.core().settings().defaultDifficulty.get().configName()));
     }
 
     public void shutdown() {

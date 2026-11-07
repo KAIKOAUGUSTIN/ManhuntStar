@@ -12,4 +12,10 @@ public interface PathDebug {
     void update(Bot bot, List<Pos> path, int index, Set<Pos> mine, Set<Pos> place);
 
     void clear(UUID botId);
+
+    /** Forgets every path (the option was turned off). */
+    void clearAll();
+
+    /** Draws the paths again now and then while {@code enabled} (called every tick). */
+    void tick(int now, boolean enabled);
 }

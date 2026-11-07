@@ -15,4 +15,13 @@ public interface BotTabList {
 
     /** Sends every bot to a player who just joined. */
     void sendAll(GamePlayer player);
+
+    /** Puts the bots in or takes them out of the list after the "tab-list" option changes. */
+    void resync();
+
+    /** Called every tick (the bots' ping changes now and then). */
+    void tick(int now);
+
+    /** On shutdown: takes every bot out of the list. */
+    void clear();
 }

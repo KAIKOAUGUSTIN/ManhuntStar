@@ -87,6 +87,11 @@ public class PaperEntity implements GameEntity {
     }
 
     @Override
+    public void setCustomNameVisible(boolean visible) {
+        entity.setCustomNameVisible(visible);
+    }
+
+    @Override
     public Place place() {
         return Locations.place(entity.getLocation());
     }

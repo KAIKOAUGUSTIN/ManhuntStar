@@ -49,39 +49,39 @@ public final class WorldPlayerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         Block b = event.getBlockPlaced();
-        plugin.gameEvents().playerPlacedBlock(PaperWorld.of(b.getWorld()), Locations.pos(b));
+        plugin.core().gameEvents().playerPlacedBlock(PaperWorld.of(b.getWorld()), Locations.pos(b));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
         Block b = event.getBlock();
-        plugin.gameEvents().playerBrokeBlock(PaperWorld.of(b.getWorld()), Locations.pos(b), PaperBlocks.of(b.getType()));
+        plugin.core().gameEvents().playerBrokeBlock(PaperWorld.of(b.getWorld()), Locations.pos(b), PaperBlocks.of(b.getType()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         for (Block b : event.blockList()) {
-            plugin.gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
+            plugin.core().gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
         for (Block b : event.blockList()) {
-            plugin.gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
+            plugin.core().gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onFlow(BlockFromToEvent event) {
         Block to = event.getToBlock();
-        plugin.gameEvents().blockChanged(PaperWorld.of(to.getWorld()), to.getX(), to.getZ());
+        plugin.core().gameEvents().blockChanged(PaperWorld.of(to.getWorld()), to.getX(), to.getZ());
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBurn(BlockBurnEvent event) {
         Block b = event.getBlock();
-        plugin.gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
+        plugin.core().gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
     }
 
     // ------------------------------------------------------------------ crafting table
@@ -90,14 +90,14 @@ public final class WorldPlayerListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null
                 && event.getClickedBlock().getType() == Material.CRAFTING_TABLE) {
-            plugin.gameEvents().playerUsedCraftingTable(PaperEntities.of(event.getPlayer()));
+            plugin.core().gameEvents().playerUsedCraftingTable(PaperEntities.of(event.getPlayer()));
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onOpen(InventoryOpenEvent event) {
         if (event.getInventory().getType() == InventoryType.WORKBENCH && event.getPlayer() instanceof Player p) {
-            plugin.gameEvents().playerUsedCraftingTable(PaperEntities.of(p));
+            plugin.core().gameEvents().playerUsedCraftingTable(PaperEntities.of(p));
         }
     }
 
@@ -105,19 +105,19 @@ public final class WorldPlayerListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        plugin.gameEvents().playerJoined(PaperEntities.of(event.getPlayer()));
+        plugin.core().gameEvents().playerJoined(PaperEntities.of(event.getPlayer()));
     }
 
     /** The player respawned far away: bots more than 150 blocks away reappear near them after a while. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onRespawn(PlayerRespawnEvent event) {
-        plugin.gameEvents().playerRespawned(PaperEntities.of(event.getPlayer()));
+        plugin.core().gameEvents().playerRespawned(PaperEntities.of(event.getPlayer()));
     }
 
     /** Bots count as online players in the server list (number and names). */
     @EventHandler(priority = EventPriority.HIGH)
     public void onPing(PaperServerListPingEvent event) {
-        List<Bot> bots = plugin.gameEvents().botsForServerList();
+        List<Bot> bots = plugin.core().gameEvents().botsForServerList();
         if (bots.isEmpty()) {
             return;
         }
@@ -150,11 +150,11 @@ public final class WorldPlayerListener implements Listener {
     }
 
     private boolean isListCommand(String raw) {
-        return plugin.gameEvents().replacesListCommand(raw);
+        return plugin.core().gameEvents().replacesListCommand(raw);
     }
 
     /** Same text as the game's /list (translated by the client), with the bots among the players. */
     private void sendList(CommandSender to) {
-        to.sendMessage(plugin.gameEvents().listText());
+        to.sendMessage(plugin.core().gameEvents().listText());
     }
 }

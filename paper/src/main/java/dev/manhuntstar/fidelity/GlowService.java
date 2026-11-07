@@ -95,6 +95,7 @@ public final class GlowService implements BotGlow {
     }
 
     /** On shutdown: removes the teams (the entities are already gone). */
+    @Override
     public void cleanup() {
         for (String name : new String[]{HUNTER_TEAM, ESCAPE_TEAM}) {
             Team t = board().getTeam(name);

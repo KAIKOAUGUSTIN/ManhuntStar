@@ -158,6 +158,7 @@ public final class TabListService implements BotTabList {
     }
 
     /** Turns it on/off with the "tab-list" option. */
+    @Override
     public void resync() {
         if (!available) {
             return;
@@ -172,6 +173,7 @@ public final class TabListService implements BotTabList {
     }
 
     /** A ping that varies a little, like a real player's (every 5 s). */
+    @Override
     public void tick(int now) {
         if (!active() || listed.isEmpty() || now % 100 != 0) {
             return;
@@ -197,6 +199,7 @@ public final class TabListService implements BotTabList {
         return set;
     }
 
+    @Override
     public void clear() {
         if (available && !listed.isEmpty()) {
             broadcast(removePacket(new ArrayList<>(listed.keySet())));

@@ -232,6 +232,15 @@ public final class PaperWorld implements GameWorld {
     }
 
     @Override
+    public List<GameEntity> entities() {
+        List<GameEntity> out = new ArrayList<>();
+        for (Entity e : world.getEntities()) {
+            out.add(PaperEntities.of(e));
+        }
+        return out;
+    }
+
+    @Override
     public List<GameEntity> nearbyEntities(Box box) {
         List<GameEntity> out = new ArrayList<>();
         for (Entity e : world.getNearbyEntities(Locations.boundingBox(box))) {

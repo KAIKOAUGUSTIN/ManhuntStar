@@ -87,6 +87,9 @@ public interface GameWorld {
 
     List<? extends GamePlayer> players();
 
+    /** Every entity in the loaded part of the world. */
+    List<GameEntity> entities();
+
     /** Entities whose box overlaps the given box. */
     List<GameEntity> nearbyEntities(Box box);
 

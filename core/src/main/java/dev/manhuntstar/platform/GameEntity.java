@@ -124,6 +124,9 @@ public interface GameEntity {
     /** The name shown over the entity. */
     void setCustomName(Component name);
 
+    /** Whether the name shows above the entity even when no one looks at it. */
+    void setCustomNameVisible(boolean visible);
+
     /** Entities whose box is within the given distances of this one's box. */
     List<GameEntity> nearbyEntities(double x, double y, double z);
 }
