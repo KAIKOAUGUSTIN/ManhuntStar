@@ -5,7 +5,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.manhuntstar.bot.SkinData;
-import dev.manhuntstar.host.SkinSource;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
 import java.io.ByteArrayOutputStream;
@@ -35,7 +34,7 @@ import java.util.logging.Logger;
  * once to MineSkin to get a signature (as the mod did). Everything is cached on disk.
  * Fixes the mod, which looked for the skins in a fixed folder on the author's computer.
  */
-public final class SkinService implements SkinSource {
+public final class SkinService {
 
     private static final long CACHE_TTL_MS = 7L * 24 * 60 * 60 * 1000;
     private static final String ROBOT_KEY = "#robo";
@@ -68,7 +67,6 @@ public final class SkinService implements SkinSource {
     }
 
     /** Skin for the name (asynchronous); never fails: at worst it gives null (the game's default skin). */
-    @Override
     public CompletableFuture<SkinData> resolve(String name) {
         String key = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
         CachedSkin c = cache.get(key);

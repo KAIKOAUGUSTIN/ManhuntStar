@@ -2,18 +2,20 @@ package dev.manhuntstar;
 
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.host.AimDiagnostics;
 import dev.manhuntstar.host.BotEventSink;
 import dev.manhuntstar.host.BotGlow;
 import dev.manhuntstar.host.BotTabList;
 import dev.manhuntstar.host.DeathMessageSource;
+import dev.manhuntstar.host.Menus;
 import dev.manhuntstar.host.PathDebug;
-import dev.manhuntstar.host.SkinSource;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.skin.SkinService;
 import dev.manhuntstar.util.ChunkTickets;
 import java.util.logging.Logger;
 
@@ -41,7 +43,7 @@ public interface ManhuntHost {
 
     BotStorage storage();
 
-    SkinSource skins();
+    SkinService skins();
 
     BotGlow glow();
 
@@ -54,4 +56,15 @@ public interface ManhuntHost {
     BotEventSink events();
 
     AimDiagnostics aim();
+
+    Menus menus();
+
+    /** Reads config.yml and the language files again and applies them (/manhunt reload). */
+    void reloadAll();
+
+    /** An option changed (command or menu): applies its effect and writes config.yml. */
+    void onSettingChanged(Setting<?> setting);
+
+    /** Writes config.yml (options, player list and ring point). */
+    void saveSettings();
 }

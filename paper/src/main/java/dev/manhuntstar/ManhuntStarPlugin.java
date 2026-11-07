@@ -25,6 +25,7 @@ import dev.manhuntstar.paper.Kinds;
 import dev.manhuntstar.paper.PaperAimDiagnostics;
 import dev.manhuntstar.paper.PaperBlocks;
 import dev.manhuntstar.paper.PaperBotEvents;
+import dev.manhuntstar.paper.PaperCommands;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.paper.PaperServer;
@@ -137,7 +138,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         dev.manhuntstar.debug.AimDebug.install(this);
 
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS,
-                event -> event.registrar().register(new ManhuntCommand(this).build(), "Manhunt* hunter bots"));
+                event -> event.registrar().register(new ManhuntCommand<>(this, new PaperCommands()).build(), "Manhunt* hunter bots"));
 
         removeOrphans();
         BotStorage.LoadResult saved = storage.load();
@@ -257,6 +258,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     }
 
     /** /manhunt reload: reads config.yml and the language files again and applies them. */
+    @Override
     public void reloadAll() {
         loadConfigFiles();
         for (Setting<?> s : settings.all()) {
@@ -265,12 +267,14 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
     }
 
     /** An option changed (command or menu): applies its effect and writes config.yml. */
+    @Override
     public void onSettingChanged(Setting<?> s) {
         applySideEffects(s);
         saveSettings();
     }
 
     /** Writes config.yml (options, player list and ring point). */
+    @Override
     public void saveSettings() {
         settings.save(yaml, new File(getDataFolder(), "config.yml"), getLogger());
     }
@@ -382,6 +386,7 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntHost {
         return botManager;
     }
 
+    @Override
     public MenuManager menus() {
         return menus;
     }

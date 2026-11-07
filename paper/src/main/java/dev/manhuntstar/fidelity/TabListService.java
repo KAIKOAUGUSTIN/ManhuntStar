@@ -135,6 +135,7 @@ public final class TabListService implements BotTabList {
     }
 
     /** Updates name/skin (e.g. after /manhunt skin). */
+    @Override
     public void refresh(Bot bot) {
         if (!active() || !listed.containsKey(bot.id())) {
             return;

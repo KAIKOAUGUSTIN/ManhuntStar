@@ -10,6 +10,9 @@ public interface BotTabList {
 
     void remove(Bot bot);
 
+    /** Sends the bot again (after its skin changes). */
+    void refresh(Bot bot);
+
     /** Sends every bot to a player who just joined. */
     void sendAll(GamePlayer player);
 }

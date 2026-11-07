@@ -87,6 +87,7 @@ public final class GlowService implements BotGlow {
         }
     }
 
+    @Override
     public void applyAll(Collection<Bot> bots) {
         for (Bot b : bots) {
             apply(b);

@@ -13,7 +13,9 @@ import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Setting.Category;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.host.Menus;
 import dev.manhuntstar.paper.PaperEntities;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.util.Locations;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import java.util.ArrayList;
@@ -55,7 +57,7 @@ import org.bukkit.inventory.meta.SkullMeta;
  * (bot name, skin, player) is typed in chat; the menu text comes from the language file
  * ({@code menu.*}).
  */
-public final class MenuManager implements Listener {
+public final class MenuManager implements Listener, Menus {
 
     private static final List<Category> CONFIG_CATEGORIES = List.of(Category.GENERAL, Category.BOTS, Category.COMBAT,
             Category.MOBILITY, Category.PATHFINDING, Category.TACTICS, Category.APPEARANCE);
@@ -175,6 +177,11 @@ public final class MenuManager implements Listener {
     }
 
     // ------------------------------------------------------------------ main menu
+
+    @Override
+    public void openMain(GamePlayer player) {
+        openMain(PaperEntities.bukkit(player));
+    }
 
     public void openMain(Player p) {
         Menu m = create(3, "menu.title.main");

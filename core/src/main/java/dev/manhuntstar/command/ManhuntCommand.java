@@ -1,17 +1,19 @@
 package dev.manhuntstar.command;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import dev.manhuntstar.ManhuntStarPlugin;
+import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
@@ -23,26 +25,15 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
-import dev.manhuntstar.paper.PaperEntities;
-import dev.manhuntstar.paper.PaperItems;
 import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameItem;
+import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.ItemType;
-import dev.manhuntstar.util.Locations;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import io.papermc.paper.command.brigadier.argument.resolvers.FinePositionResolver;
-import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
+import dev.manhuntstar.platform.Place;
 import java.util.List;
 import java.util.Locale;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * {@code /manhunt}. Match: start, pause, resume, target, ring, players. Bots: create, remove, list,
@@ -50,36 +41,46 @@ import org.bukkit.inventory.ItemStack;
  * The verbs are the same everywhere: create/remove for bots and groups, add/remove for
  * lists and clear to erase a value. Positions accept {@code ~ ~ ~}; with no position, where you are is used.
  */
-public final class ManhuntCommand {
+public final class ManhuntCommand<S> {
 
     private static final String[] DIFFICULTIES = {"easy", "medium", "hard", "terminator"};
     private static final String[] ABILITIES = {"tnt-craft", "bow-burst", "firework-crossbow"};
 
-    private final ManhuntStarPlugin plugin;
+    private final ManhuntHost host;
+    private final CommandPlatform<S> platform;
 
-    public ManhuntCommand(ManhuntStarPlugin plugin) {
-        this.plugin = plugin;
+    public ManhuntCommand(ManhuntHost host, CommandPlatform<S> platform) {
+        this.host = host;
+        this.platform = platform;
     }
 
     private Messages msg() {
-        return plugin.messages();
+        return host.messages();
     }
 
     private BotManager manager() {
-        return plugin.botManager();
+        return host.botManager();
     }
 
     private Settings settings() {
-        return plugin.settings();
+        return host.settings();
     }
 
-    private static CommandSender sender(CommandContext<CommandSourceStack> ctx) {
-        return ctx.getSource().getSender();
+    private Audience sender(CommandContext<S> ctx) {
+        return platform.sender(ctx.getSource());
+    }
+
+    private LiteralArgumentBuilder<S> literal(String name) {
+        return LiteralArgumentBuilder.literal(name);
+    }
+
+    private <T> RequiredArgumentBuilder<S, T> argument(String name, ArgumentType<T> type) {
+        return RequiredArgumentBuilder.argument(name, type);
     }
 
     // ------------------------------------------------------------------ suggestions
 
-    private SuggestionProvider<CommandSourceStack> botNames() {
+    private SuggestionProvider<S> botNames() {
         return (ctx, b) -> {
             for (Bot bot : manager().allBots()) {
                 suggestName(b, bot.name());
@@ -88,7 +89,7 @@ public final class ManhuntCommand {
         };
     }
 
-    private SuggestionProvider<CommandSourceStack> groupNames() {
+    private SuggestionProvider<S> groupNames() {
         return (ctx, b) -> {
             for (BotGroup g : manager().groups()) {
                 suggestName(b, g.name());
@@ -97,16 +98,16 @@ public final class ManhuntCommand {
         };
     }
 
-    private static SuggestionProvider<CommandSourceStack> onlinePlayerNames() {
+    private SuggestionProvider<S> onlinePlayerNames() {
         return (ctx, b) -> {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                suggestName(b, p.getName());
+            for (GamePlayer p : host.server().onlinePlayers()) {
+                suggestName(b, p.name());
             }
             return b.buildFuture();
         };
     }
 
-    private SuggestionProvider<CommandSourceStack> listedPlayerNames() {
+    private SuggestionProvider<S> listedPlayerNames() {
         return (ctx, b) -> {
             for (String n : settings().playerList()) {
                 suggestName(b, n);
@@ -123,7 +124,7 @@ public final class ManhuntCommand {
         }
     }
 
-    private static SuggestionProvider<CommandSourceStack> words(String... options) {
+    private SuggestionProvider<S> words(String... options) {
         return (ctx, b) -> {
             for (String o : options) {
                 if (o.startsWith(b.getRemaining().toLowerCase(Locale.ROOT))) {
@@ -136,81 +137,81 @@ public final class ManhuntCommand {
 
     // ------------------------------------------------------------------ tree
 
-    public LiteralCommandNode<CommandSourceStack> build() {
-        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("manhunt")
-                .requires(src -> src.getSender().hasPermission("manhuntstar.admin"))
+    public LiteralCommandNode<S> build() {
+        LiteralArgumentBuilder<S> root = literal("manhunt")
+                .requires(src -> platform.hasPermission(src, "manhuntstar.admin"))
                 .executes(this::help);
-        root.then(Commands.literal("help").executes(this::help));
-        root.then(Commands.literal("menu").executes(this::menu));
+        root.then(literal("help").executes(this::help));
+        root.then(literal("menu").executes(this::menu));
 
         // match
-        root.then(Commands.literal("start").executes(this::start));
-        root.then(Commands.literal("pause").executes(this::pause));
-        root.then(Commands.literal("resume").executes(this::resume));
-        root.then(Commands.literal("target")
-                .then(Commands.literal("clear").executes(this::targetClear))
-                .then(Commands.argument("player", ArgumentTypes.player()).executes(this::target)));
-        root.then(Commands.literal("ring").executes(this::ringInfo)
-                .then(Commands.literal("point")
+        root.then(literal("start").executes(this::start));
+        root.then(literal("pause").executes(this::pause));
+        root.then(literal("resume").executes(this::resume));
+        root.then(literal("target")
+                .then(literal("clear").executes(this::targetClear))
+                .then(argument("player", platform.playerArgument()).executes(this::target)));
+        root.then(literal("ring").executes(this::ringInfo)
+                .then(literal("point")
                         .executes(ctx -> ringPoint(ctx, here(ctx)))
-                        .then(Commands.literal("clear").executes(this::ringPointClear))
-                        .then(Commands.argument("pos", ArgumentTypes.finePosition()).executes(ctx -> ringPoint(ctx, pos(ctx))))));
-        root.then(Commands.literal("players").executes(this::playersInfo)
-                .then(Commands.literal("add").then(Commands.argument("player", StringArgumentType.word()).suggests(onlinePlayerNames())
+                        .then(literal("clear").executes(this::ringPointClear))
+                        .then(argument("pos", platform.positionArgument()).executes(ctx -> ringPoint(ctx, pos(ctx))))));
+        root.then(literal("players").executes(this::playersInfo)
+                .then(literal("add").then(argument("player", StringArgumentType.word()).suggests(onlinePlayerNames())
                         .executes(ctx -> playersEdit(ctx, true))))
-                .then(Commands.literal("remove").then(Commands.argument("player", StringArgumentType.word()).suggests(listedPlayerNames())
+                .then(literal("remove").then(argument("player", StringArgumentType.word()).suggests(listedPlayerNames())
                         .executes(ctx -> playersEdit(ctx, false))))
-                .then(Commands.literal("mode").then(Commands.argument("mode", StringArgumentType.word())
+                .then(literal("mode").then(argument("mode", StringArgumentType.word())
                         .suggests(words("off", "allowlist", "blocklist")).executes(this::playersMode))));
 
         // bots
-        root.then(Commands.literal("create").then(
-                createOptions(Commands.argument("name", StringArgumentType.string()), true, true, false).then(
-                        createOptions(Commands.argument("amount", IntegerArgumentType.integer(1, 100)), true, true, false).then(
-                                createOptions(Commands.argument("difficulty", StringArgumentType.word()).suggests(words(DIFFICULTIES)), true, true, true)))));
-        root.then(Commands.literal("remove")
-                .then(Commands.literal("all").executes(ctx -> {
+        root.then(literal("create").then(
+                createOptions(argument("name", StringArgumentType.string()), true, true, false).then(
+                        createOptions(argument("amount", IntegerArgumentType.integer(1, 100)), true, true, false).then(
+                                createOptions(argument("difficulty", StringArgumentType.word()).suggests(words(DIFFICULTIES)), true, true, true)))));
+        root.then(literal("remove")
+                .then(literal("all").executes(ctx -> {
                     msg().send(sender(ctx), "command.confirm-remove-all");
                     return Command.SINGLE_SUCCESS;
-                }).then(Commands.literal("confirm").executes(this::removeAll)))
-                .then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames()).executes(this::remove)));
-        root.then(Commands.literal("list").executes(this::list));
-        root.then(Commands.literal("info").then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames()).executes(this::info)));
-        root.then(Commands.literal("tp")
-                .then(Commands.literal("all").executes(ctx -> tpAll(ctx, null))
-                        .then(Commands.argument("player", ArgumentTypes.player()).executes(ctx -> tpAll(ctx, player(ctx)))))
-                .then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames()).executes(ctx -> tp(ctx, null))
-                        .then(Commands.argument("player", ArgumentTypes.player()).executes(ctx -> tp(ctx, player(ctx))))));
-        root.then(Commands.literal("skin").then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames())
-                .then(Commands.argument("player", StringArgumentType.word()).suggests(onlinePlayerNames()).executes(this::skin))));
-        root.then(Commands.literal("spawnpoint").then(Commands.argument("bot", StringArgumentType.string()).suggests(botNames())
+                }).then(literal("confirm").executes(this::removeAll)))
+                .then(argument("bot", StringArgumentType.string()).suggests(botNames()).executes(this::remove)));
+        root.then(literal("list").executes(this::list));
+        root.then(literal("info").then(argument("bot", StringArgumentType.string()).suggests(botNames()).executes(this::info)));
+        root.then(literal("tp")
+                .then(literal("all").executes(ctx -> tpAll(ctx, null))
+                        .then(argument("player", platform.playerArgument()).executes(ctx -> tpAll(ctx, player(ctx)))))
+                .then(argument("bot", StringArgumentType.string()).suggests(botNames()).executes(ctx -> tp(ctx, null))
+                        .then(argument("player", platform.playerArgument()).executes(ctx -> tp(ctx, player(ctx))))));
+        root.then(literal("skin").then(argument("bot", StringArgumentType.string()).suggests(botNames())
+                .then(argument("player", StringArgumentType.word()).suggests(onlinePlayerNames()).executes(this::skin))));
+        root.then(literal("spawnpoint").then(argument("bot", StringArgumentType.string()).suggests(botNames())
                 .executes(ctx -> botSpawnpoint(ctx, here(ctx), false))
-                .then(Commands.literal("clear").executes(ctx -> botSpawnpoint(ctx, null, true)))
-                .then(Commands.argument("pos", ArgumentTypes.finePosition()).executes(ctx -> botSpawnpoint(ctx, pos(ctx), false)))));
-        root.then(Commands.literal("equip")
-                .then(Commands.literal("item").then(Commands.argument("item", ArgumentTypes.itemStack()).executes(this::equipItem)))
-                .then(Commands.literal("armor").then(Commands.argument("tier", StringArgumentType.word())
+                .then(literal("clear").executes(ctx -> botSpawnpoint(ctx, null, true)))
+                .then(argument("pos", platform.positionArgument()).executes(ctx -> botSpawnpoint(ctx, pos(ctx), false)))));
+        root.then(literal("equip")
+                .then(literal("item").then(argument("item", platform.itemArgument()).executes(this::equipItem)))
+                .then(literal("armor").then(argument("tier", StringArgumentType.word())
                         .suggests(words("leather", "chainmail", "iron", "gold", "diamond", "netherite")).executes(this::equipArmor))));
-        root.then(Commands.literal("test").then(Commands.argument("ability", StringArgumentType.word()).suggests(words(ABILITIES)).executes(this::test)));
+        root.then(literal("test").then(argument("ability", StringArgumentType.word()).suggests(words(ABILITIES)).executes(this::test)));
 
         // groups
-        root.then(Commands.literal("group").then(Commands.argument("group", StringArgumentType.string()).suggests(groupNames())
-                .then(Commands.literal("role").then(Commands.argument("role", StringArgumentType.word()).suggests(words("hunter", "escape")).executes(this::groupRole)))
-                .then(Commands.literal("enemy")
-                        .then(Commands.literal("add").then(Commands.argument("other", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, true))))
-                        .then(Commands.literal("remove").then(Commands.argument("other", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, false)))))
-                .then(Commands.literal("spawnpoint")
+        root.then(literal("group").then(argument("group", StringArgumentType.string()).suggests(groupNames())
+                .then(literal("role").then(argument("role", StringArgumentType.word()).suggests(words("hunter", "escape")).executes(this::groupRole)))
+                .then(literal("enemy")
+                        .then(literal("add").then(argument("other", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, true))))
+                        .then(literal("remove").then(argument("other", StringArgumentType.string()).suggests(groupNames()).executes(ctx -> groupEnemy(ctx, false)))))
+                .then(literal("spawnpoint")
                         .executes(ctx -> groupSpawnpoint(ctx, here(ctx), false))
-                        .then(Commands.literal("clear").executes(ctx -> groupSpawnpoint(ctx, null, true)))
-                        .then(Commands.argument("pos", ArgumentTypes.finePosition()).executes(ctx -> groupSpawnpoint(ctx, pos(ctx), false))))
-                .then(Commands.literal("phases").then(Commands.argument("enabled", BoolArgumentType.bool()).executes(this::groupPhases)))
-                .then(Commands.literal("chaseplayers").then(Commands.argument("enabled", BoolArgumentType.bool()).executes(this::groupChase)))
-                .then(Commands.literal("remove").executes(this::groupRemove))));
+                        .then(literal("clear").executes(ctx -> groupSpawnpoint(ctx, null, true)))
+                        .then(argument("pos", platform.positionArgument()).executes(ctx -> groupSpawnpoint(ctx, pos(ctx), false))))
+                .then(literal("phases").then(argument("enabled", BoolArgumentType.bool()).executes(this::groupPhases)))
+                .then(literal("chaseplayers").then(argument("enabled", BoolArgumentType.bool()).executes(this::groupChase)))
+                .then(literal("remove").executes(this::groupRemove))));
 
         // options
         root.then(settingsNode());
-        root.then(Commands.literal("reload").executes(ctx -> {
-            plugin.reloadAll();
+        root.then(literal("reload").executes(ctx -> {
+            host.reloadAll();
             msg().send(sender(ctx), "command.reloaded", Messages.p("language", msg().language()));
             return Command.SINGLE_SUCCESS;
         }));
@@ -221,17 +222,17 @@ public final class ManhuntCommand {
      * create's options, always in this order: {@code [skin <player>] [at <x y z>] [phase] [aggression]}.
      * Each level of the tree gets the executor and the branches that still fit in it.
      */
-    private <T extends ArgumentBuilder<CommandSourceStack, T>> T createOptions(T node, boolean skin, boolean at, boolean phase) {
+    private <T extends ArgumentBuilder<S, T>> T createOptions(T node, boolean skin, boolean at, boolean phase) {
         node.executes(this::create);
         if (skin) {
-            node.then(Commands.literal("skin").then(createOptions(Commands.argument("skin", StringArgumentType.string()).suggests(onlinePlayerNames()), false, true, true)));
+            node.then(literal("skin").then(createOptions(argument("skin", StringArgumentType.string()).suggests(onlinePlayerNames()), false, true, true)));
         }
         if (at) {
-            node.then(Commands.literal("at").then(createOptions(Commands.argument("pos", ArgumentTypes.finePosition()), false, false, true)));
+            node.then(literal("at").then(createOptions(argument("pos", platform.positionArgument()), false, false, true)));
         }
         if (phase) {
-            node.then(Commands.argument("phase", IntegerArgumentType.integer(1, 10)).executes(this::create)
-                    .then(Commands.argument("aggression", IntegerArgumentType.integer(0, 10)).executes(this::create)));
+            node.then(argument("phase", IntegerArgumentType.integer(1, 10)).executes(this::create)
+                    .then(argument("aggression", IntegerArgumentType.integer(0, 10)).executes(this::create)));
         }
         return node;
     }
@@ -239,7 +240,7 @@ public final class ManhuntCommand {
     // ------------------------------------------------------------------ arguments
 
     /** Optional argument: null when the typed branch doesn't have this argument. */
-    private static <V> V opt(CommandContext<CommandSourceStack> ctx, String name, Class<V> type) {
+    private static <V> V opt(CommandContext<?> ctx, String name, Class<V> type) {
         try {
             return ctx.getArgument(name, type);
         } catch (IllegalArgumentException e) {
@@ -247,87 +248,87 @@ public final class ManhuntCommand {
         }
     }
 
-    private static Player player(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        return ctx.getArgument("player", PlayerSelectorArgumentResolver.class).resolve(ctx.getSource()).getFirst();
+    private GamePlayer player(CommandContext<S> ctx) throws CommandSyntaxException {
+        return platform.player(ctx, "player");
     }
 
-    private static Location pos(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        Location base = ctx.getSource().getLocation();
-        return ctx.getArgument("pos", FinePositionResolver.class).resolve(ctx.getSource()).toLocation(base.getWorld());
+    private Place pos(CommandContext<S> ctx) throws CommandSyntaxException {
+        return platform.position(ctx, "pos");
     }
 
     /** Where whoever typed it is; null on the console (no position of its own). */
-    private static Location here(CommandContext<CommandSourceStack> ctx) {
-        return ctx.getSource().getExecutor() instanceof Entity ? ctx.getSource().getLocation() : null;
+    private Place here(CommandContext<S> ctx) {
+        return platform.executorLocation(ctx.getSource());
     }
 
-    private int noLocation(CommandContext<CommandSourceStack> ctx) {
+    private int noLocation(CommandContext<S> ctx) {
         msg().send(sender(ctx), "command.no-location");
         return 0;
     }
 
     // ------------------------------------------------------------------ general
 
-    private int help(CommandContext<CommandSourceStack> ctx) {
+    private int help(CommandContext<S> ctx) {
         for (Component line : msg().lines("help")) {
             sender(ctx).sendMessage(line);
         }
         return Command.SINGLE_SUCCESS;
     }
 
-    private int menu(CommandContext<CommandSourceStack> ctx) {
-        if (!(sender(ctx) instanceof Player p)) {
+    private int menu(CommandContext<S> ctx) {
+        GamePlayer p = platform.playerSender(ctx.getSource());
+        if (p == null) {
             msg().send(sender(ctx), "command.players-only");
             return 0;
         }
-        plugin.menus().openMain(p);
+        host.menus().openMain(p);
         return Command.SINGLE_SUCCESS;
     }
 
     // ------------------------------------------------------------------ match
 
-    private int start(CommandContext<CommandSourceStack> ctx) {
+    private int start(CommandContext<S> ctx) {
         if (manager().rings().releaseAll() == 0) {
             msg().send(sender(ctx), "countdown.nothing");
         }
         return Command.SINGLE_SUCCESS;
     }
 
-    private int pause(CommandContext<CommandSourceStack> ctx) {
+    private int pause(CommandContext<S> ctx) {
         if (!manager().pause().pause()) {
             msg().send(sender(ctx), "pause.already-paused");
             return 0;
         }
-        Bukkit.broadcast(msg().prefixed("pause.paused"));
+        host.server().broadcast(msg().prefixed("pause.paused"));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int resume(CommandContext<CommandSourceStack> ctx) {
+    private int resume(CommandContext<S> ctx) {
         if (!manager().pause().resume()) {
             msg().send(sender(ctx), "pause.not-paused");
             return 0;
         }
-        Bukkit.broadcast(msg().prefixed("pause.resumed"));
+        host.server().broadcast(msg().prefixed("pause.resumed"));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int target(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        Player p = player(ctx);
-        manager().setForcedTarget(p.getUniqueId());
+    private int target(CommandContext<S> ctx) throws CommandSyntaxException {
+        GamePlayer p = player(ctx);
+        manager().setForcedTarget(p.uuid());
         for (Bot b : manager().aliveBots()) {
-            b.setTargetPlayer(p.getUniqueId());
+            b.setTargetPlayer(p.uuid());
         }
-        msg().send(sender(ctx), "command.target-set", Messages.p("player", p.getName()));
+        msg().send(sender(ctx), "command.target-set", Messages.p("player", p.name()));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int targetClear(CommandContext<CommandSourceStack> ctx) {
+    private int targetClear(CommandContext<S> ctx) {
         manager().setForcedTarget(null);
         msg().send(sender(ctx), "command.target-cleared");
         return Command.SINGLE_SUCCESS;
     }
 
-    private int ringInfo(CommandContext<CommandSourceStack> ctx) {
+    private int ringInfo(CommandContext<S> ctx) {
         Settings.RingPoint pt = settings().ringPoint();
         msg().send(sender(ctx), "ring.info",
                 Messages.p("radius", settings().ringRadius.value() <= 0 ? msg().raw("common.automatic") : settings().ringRadius.display()),
@@ -338,42 +339,42 @@ public final class ManhuntCommand {
     }
 
     /** Sets the ring point and switches the center to manual. */
-    private int ringPoint(CommandContext<CommandSourceStack> ctx, Location loc) {
-        if (loc == null || loc.getWorld() == null) {
+    private int ringPoint(CommandContext<S> ctx, Place loc) {
+        if (loc == null || loc.world() == null) {
             return noLocation(ctx);
         }
-        settings().setRingPoint(new Settings.RingPoint(loc.getWorld().getName(), loc.getX(), loc.getY(), loc.getZ()));
+        settings().setRingPoint(new Settings.RingPoint(loc.world().name(), loc.x(), loc.y(), loc.z()));
         settings().ringCenter.set(RingCenter.MANUAL);
-        plugin.onSettingChanged(settings().ringCenter);
-        msg().send(sender(ctx), "ring.point-set", Messages.p("world", loc.getWorld().getName()),
-                Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
+        host.onSettingChanged(settings().ringCenter);
+        msg().send(sender(ctx), "ring.point-set", Messages.p("world", loc.world().name()),
+                Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.x(), loc.y(), loc.z())));
         return Command.SINGLE_SUCCESS;
     }
 
     /** Clears the ring point and switches the center back to automatic. */
-    private int ringPointClear(CommandContext<CommandSourceStack> ctx) {
+    private int ringPointClear(CommandContext<S> ctx) {
         settings().setRingPoint(null);
         settings().ringCenter.set(RingCenter.AUTO);
-        plugin.onSettingChanged(settings().ringCenter);
+        host.onSettingChanged(settings().ringCenter);
         msg().send(sender(ctx), "ring.point-cleared");
         return Command.SINGLE_SUCCESS;
     }
 
-    private int playersInfo(CommandContext<CommandSourceStack> ctx) {
+    private int playersInfo(CommandContext<S> ctx) {
         List<String> names = settings().playerList();
         msg().send(sender(ctx), "player-list.info", Messages.p("mode", settings().playerListMode.display()),
                 Messages.p("names", names.isEmpty() ? msg().raw("player-list.empty") : String.join(", ", names)));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int playersEdit(CommandContext<CommandSourceStack> ctx, boolean add) {
+    private int playersEdit(CommandContext<S> ctx, boolean add) {
         String name = StringArgumentType.getString(ctx, "player");
         boolean changed = add ? settings().addListedPlayer(name) : settings().removeListedPlayer(name);
         if (!changed) {
             msg().send(sender(ctx), add ? "player-list.already-listed" : "player-list.not-listed", Messages.p("player", name));
             return 0;
         }
-        plugin.saveSettings();
+        host.saveSettings();
         msg().send(sender(ctx), add ? "player-list.added" : "player-list.removed", Messages.p("player", name));
         if (settings().playerListMode.get() == PlayerListMode.OFF) {
             msg().send(sender(ctx), "player-list.off-warning");
@@ -381,11 +382,11 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int playersMode(CommandContext<CommandSourceStack> ctx) {
+    private int playersMode(CommandContext<S> ctx) {
         if (applySilently(ctx, settings().playerListMode, StringArgumentType.getString(ctx, "mode")) == 0) {
             return 0;
         }
-        plugin.onSettingChanged(settings().playerListMode);
+        host.onSettingChanged(settings().playerListMode);
         String mode = settings().playerListMode.display();
         msg().send(sender(ctx), "player-list.mode", Messages.p("mode", mode), Messages.p("explanation", msg().raw("player-list.explanation." + mode)));
         return Command.SINGLE_SUCCESS;
@@ -394,8 +395,8 @@ public final class ManhuntCommand {
     // ------------------------------------------------------------------ bots
 
     /** Creates where whoever typed it is (or at the ring point, with the center on manual), or at "at x y z". */
-    private int create(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        CommandSender s = sender(ctx);
+    private int create(CommandContext<S> ctx) throws CommandSyntaxException {
+        Audience s = sender(ctx);
         Integer amount = opt(ctx, "amount", Integer.class);
         String diffRaw = opt(ctx, "difficulty", String.class);
         String skin = opt(ctx, "skin", String.class);
@@ -406,24 +407,24 @@ public final class ManhuntCommand {
             msg().send(s, "command.invalid-difficulty");
             return 0;
         }
-        Location loc;
-        if (opt(ctx, "pos", FinePositionResolver.class) != null) {
+        Place loc;
+        if (opt(ctx, "pos", Object.class) != null) {
             loc = pos(ctx);
         } else {
             if (manager().manualRingPointMissing()) {
                 msg().send(s, "ring.no-point");
             }
-            loc = Locations.location(manager().ringCenterFor(Locations.place(ctx.getSource().getLocation())));
+            loc = manager().ringCenterFor(platform.location(ctx.getSource()));
         }
-        if (loc == null || loc.getWorld() == null) {
+        if (loc == null || loc.world() == null) {
             return noLocation(ctx);
         }
         String name = StringArgumentType.getString(ctx, "name");
         int count = amount == null ? 1 : amount;
         msg().send(s, "command.creating", Messages.p("amount", count), Messages.p("difficulty", msg().difficulty(difficulty)), Messages.p("name", name));
-        manager().createBots(Locations.place(loc), name, skin, count, difficulty, phase == null ? 0 : phase, aggression == null ? 0 : aggression).whenComplete((bots, err) -> {
+        manager().createBots(loc, name, skin, count, difficulty, phase == null ? 0 : phase, aggression == null ? 0 : aggression).whenComplete((bots, err) -> {
             if (err != null) {
-                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to create bots", err);
+                host.logger().log(java.util.logging.Level.SEVERE, "Failed to create bots", err);
                 msg().send(s, "command.create-error");
             } else {
                 msg().send(s, "command.created", Messages.p("amount", bots.size()), Messages.p("name", name));
@@ -432,7 +433,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int remove(CommandContext<CommandSourceStack> ctx) {
+    private int remove(CommandContext<S> ctx) {
         String name = StringArgumentType.getString(ctx, "bot");
         List<Bot> list = manager().botsNamed(name);
         if (list.isEmpty()) {
@@ -446,23 +447,23 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int removeAll(CommandContext<CommandSourceStack> ctx) {
+    private int removeAll(CommandContext<S> ctx) {
         int n = manager().deleteAll();
         msg().send(sender(ctx), "command.all-removed", Messages.p("amount", n));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int list(CommandContext<CommandSourceStack> ctx) {
-        CommandSender s = sender(ctx);
+    private int list(CommandContext<S> ctx) {
+        Audience s = sender(ctx);
         msg().send(s, "command.list-title", Messages.p("amount", manager().allBots().size()), Messages.p("alive", manager().aliveCount()));
         for (Bot b : manager().allBots()) {
             String where = b.isAlive() ? String.format(Locale.ROOT, "%s %.0f %.0f %.0f", b.world().name(), b.pos().x(), b.pos().y(), b.pos().z())
                     : msg().raw("command.list-dead");
-            Player t = PaperEntities.bukkit(b.target());
+            GamePlayer t = b.target();
             s.sendMessage(msg().get("command.list-line", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
                     Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
                     Messages.p("health", String.format(Locale.ROOT, "%.0f", b.health())), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
-                    Messages.p("target", t == null ? "-" : t.getName()), Messages.p("location", where), Messages.p("kills", b.kills()),
+                    Messages.p("target", t == null ? "-" : t.name()), Messages.p("location", where), Messages.p("kills", b.kills()),
                     Messages.c("state", stateOf(b))));
         }
         return Command.SINGLE_SUCCESS;
@@ -480,18 +481,18 @@ public final class ManhuntCommand {
         return msg().get("state." + b.brain().state(), Messages.p("target", b.brain().stateTarget()), Messages.p("detail", b.brain().stateDetail()));
     }
 
-    private int info(CommandContext<CommandSourceStack> ctx) {
+    private int info(CommandContext<S> ctx) {
         Bot b = manager().bot(StringArgumentType.getString(ctx, "bot"));
         if (b == null) {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
-        Player t = PaperEntities.bukkit(b.target());
+        GamePlayer t = b.target();
         sender(ctx).sendMessage(msg().get("command.info", Messages.p("name", b.name()), Messages.p("display-name", b.visualName()),
                 Messages.p("phase", b.progression().phase()), Messages.p("difficulty", msg().difficulty(b.difficulty())),
                 Messages.p("health", String.format(Locale.ROOT, "%.1f/%.0f", b.health(), b.maxHealth())),
                 Messages.p("hunger", b.hunger().foodLevel()), Messages.p("group", b.groupName() == null ? "-" : b.groupName()),
-                Messages.p("target", t == null ? "-" : t.getName()), Messages.p("kills", b.kills()), Messages.p("aggression", b.aggression()),
+                Messages.p("target", t == null ? "-" : t.name()), Messages.p("kills", b.kills()), Messages.p("aggression", b.aggression()),
                 Messages.p("alive", msg().yesNo(b.isAlive())), Messages.c("state", b.isAlive() ? stateOf(b) : brainState(b)),
                 Messages.p("location", b.isAlive() ? String.format(Locale.ROOT, "%s %.1f %.1f %.1f", b.world().name(), b.pos().x(), b.pos().y(), b.pos().z()) : "-"),
                 Messages.p("speed", String.format(Locale.ROOT, "%.2f", b.velocity().horizontalLength() * 20)),
@@ -500,35 +501,35 @@ public final class ManhuntCommand {
     }
 
     /** Brings the bots with this name to the player (or to you). */
-    private int tp(CommandContext<CommandSourceStack> ctx, Player to) {
-        Player dest = to != null ? to : ctx.getSource().getExecutor() instanceof Player p ? p : null;
+    private int tp(CommandContext<S> ctx, GamePlayer to) {
+        GamePlayer dest = to != null ? to : platform.playerExecutor(ctx.getSource());
         if (dest == null) {
             msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         String name = StringArgumentType.getString(ctx, "bot");
-        int n = manager().teleportBotsToPlayer(name, PaperEntities.of(dest));
+        int n = manager().teleportBotsToPlayer(name, dest);
         if (n == 0) {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
         msg().send(sender(ctx), n == 1 ? "command.tp-one" : "command.tp-all", Messages.p("bot", name), Messages.p("amount", n),
-                Messages.p("player", dest.getName()));
+                Messages.p("player", dest.name()));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int tpAll(CommandContext<CommandSourceStack> ctx, Player to) {
-        Player dest = to != null ? to : ctx.getSource().getExecutor() instanceof Player p ? p : null;
+    private int tpAll(CommandContext<S> ctx, GamePlayer to) {
+        GamePlayer dest = to != null ? to : platform.playerExecutor(ctx.getSource());
         if (dest == null) {
             msg().send(sender(ctx), "command.players-only");
             return 0;
         }
-        int n = manager().teleportAllTo(PaperEntities.of(dest));
-        msg().send(sender(ctx), "command.tp-all", Messages.p("amount", n), Messages.p("player", dest.getName()));
+        int n = manager().teleportAllTo(dest);
+        msg().send(sender(ctx), "command.tp-all", Messages.p("amount", n), Messages.p("player", dest.name()));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int skin(CommandContext<CommandSourceStack> ctx) {
+    private int skin(CommandContext<S> ctx) {
         String name = StringArgumentType.getString(ctx, "bot");
         String player = StringArgumentType.getString(ctx, "player");
         List<Bot> list = manager().botsNamed(name);
@@ -536,15 +537,15 @@ public final class ManhuntCommand {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
-        CommandSender s = sender(ctx);
-        plugin.skins().fetchPlayerSkin(player).thenAccept(skin -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+        Audience s = sender(ctx);
+        host.skins().fetchPlayerSkin(player).thenAccept(skin -> host.server().runNextTick(() -> {
             if (skin == null) {
                 msg().send(s, "command.skin-failed", Messages.p("player", player));
                 return;
             }
             for (Bot b : list) {
                 b.setSkin(skin);
-                plugin.tabList().refresh(b);
+                host.tabList().refresh(b);
             }
             manager().markDirty();
             msg().send(s, "command.skin-ok", Messages.p("bot", name), Messages.p("player", player));
@@ -553,39 +554,39 @@ public final class ManhuntCommand {
     }
 
     /** Respawn point of the bots with this name (where you are, at a position, or clear). */
-    private int botSpawnpoint(CommandContext<CommandSourceStack> ctx, Location loc, boolean clear) {
+    private int botSpawnpoint(CommandContext<S> ctx, Place loc, boolean clear) {
         String name = StringArgumentType.getString(ctx, "bot");
         List<Bot> list = manager().botsNamed(name);
         if (list.isEmpty()) {
             msg().send(sender(ctx), "command.bot-not-found");
             return 0;
         }
-        if (!clear && (loc == null || loc.getWorld() == null)) {
+        if (!clear && (loc == null || loc.world() == null)) {
             return noLocation(ctx);
         }
         for (Bot b : list) {
-            manager().setCustomSpawnpoint(b, clear ? null : Locations.place(loc));
+            manager().setCustomSpawnpoint(b, clear ? null : loc);
         }
         if (clear) {
             msg().send(sender(ctx), "command.spawnpoint-bot-cleared", Messages.p("bot", name));
         } else {
             msg().send(sender(ctx), "command.spawnpoint-bot", Messages.p("bot", name),
-                    Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
+                    Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.x(), loc.y(), loc.z())));
         }
         return Command.SINGLE_SUCCESS;
     }
 
-    private int equipItem(CommandContext<CommandSourceStack> ctx) {
-        ItemStack stack = ctx.getArgument("item", ItemStack.class);
+    private int equipItem(CommandContext<S> ctx) {
+        GameItem stack = platform.item(ctx, "item");
         for (Bot b : manager().aliveBots()) {
-            b.setItem(EquipSlot.HAND, PaperItems.of(stack.clone()));
-            b.inventory().add(PaperItems.of(stack.clone()));
+            b.setItem(EquipSlot.HAND, stack.copy());
+            b.inventory().add(stack.copy());
         }
-        msg().send(sender(ctx), "command.item-given", Messages.p("item", stack.getType().getKey().getKey()));
+        msg().send(sender(ctx), "command.item-given", Messages.p("item", stack.type().name().toLowerCase(Locale.ROOT)));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int equipArmor(CommandContext<CommandSourceStack> ctx) {
+    private int equipArmor(CommandContext<S> ctx) {
         String tier = StringArgumentType.getString(ctx, "tier").toLowerCase(Locale.ROOT);
         String prefix = switch (tier) {
             case "leather" -> "LEATHER";
@@ -610,24 +611,25 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int test(CommandContext<CommandSourceStack> ctx) {
-        if (!(sender(ctx) instanceof Player p)) {
+    private int test(CommandContext<S> ctx) {
+        GamePlayer p = platform.playerSender(ctx.getSource());
+        if (p == null) {
             msg().send(sender(ctx), "command.players-only");
             return 0;
         }
         String cap = StringArgumentType.getString(ctx, "ability");
-        String err = manager().tactics().debugExecute(PaperEntities.of(p), cap);
+        String err = manager().tactics().debugExecute(p, cap);
         if (err == null) {
-            msg().send(p, "ability.started", Messages.p("ability", cap));
+            msg().send(sender(ctx), "ability.started", Messages.p("ability", cap));
             return Command.SINGLE_SUCCESS;
         }
-        msg().send(p, "ability." + err, Messages.p("ability", cap));
+        msg().send(sender(ctx), "ability." + err, Messages.p("ability", cap));
         return 0;
     }
 
     // ------------------------------------------------------------------ groups
 
-    private BotGroup groupArg(CommandContext<CommandSourceStack> ctx) {
+    private BotGroup groupArg(CommandContext<S> ctx) {
         String name = StringArgumentType.getString(ctx, "group");
         BotGroup g = manager().group(name);
         if (g == null) {
@@ -636,7 +638,7 @@ public final class ManhuntCommand {
         return g;
     }
 
-    private int groupRole(CommandContext<CommandSourceStack> ctx) {
+    private int groupRole(CommandContext<S> ctx) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -652,13 +654,13 @@ public final class ManhuntCommand {
             return 0;
         }
         g.setRole(role);
-        plugin.glow().applyAll(manager().aliveBots());
+        host.glow().applyAll(manager().aliveBots());
         manager().markDirty();
         msg().send(sender(ctx), "group.role", Messages.p("group", g.name()), Messages.p("role", msg().raw(role == BotRole.ESCAPE ? "role.escape" : "role.hunter")));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int groupEnemy(CommandContext<CommandSourceStack> ctx, boolean add) {
+    private int groupEnemy(CommandContext<S> ctx, boolean add) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -674,7 +676,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int groupSpawnpoint(CommandContext<CommandSourceStack> ctx, Location loc, boolean clear) {
+    private int groupSpawnpoint(CommandContext<S> ctx, Place loc, boolean clear) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -682,18 +684,18 @@ public final class ManhuntCommand {
         if (clear) {
             g.setSpawnpoint(null, null);
             msg().send(sender(ctx), "group.spawnpoint-cleared", Messages.p("group", g.name()));
-        } else if (loc == null || loc.getWorld() == null) {
+        } else if (loc == null || loc.world() == null) {
             return noLocation(ctx);
         } else {
-            g.setSpawnpoint(loc.getWorld().getName(), Locations.vec(loc));
+            g.setSpawnpoint(loc.world().name(), loc.pos());
             msg().send(sender(ctx), "group.spawnpoint", Messages.p("group", g.name()),
-                    Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.getX(), loc.getY(), loc.getZ())));
+                    Messages.p("pos", String.format(Locale.ROOT, "%.1f %.1f %.1f", loc.x(), loc.y(), loc.z())));
         }
         manager().markDirty();
         return Command.SINGLE_SUCCESS;
     }
 
-    private int groupPhases(CommandContext<CommandSourceStack> ctx) {
+    private int groupPhases(CommandContext<S> ctx) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -704,7 +706,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int groupChase(CommandContext<CommandSourceStack> ctx) {
+    private int groupChase(CommandContext<S> ctx) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -715,7 +717,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int groupRemove(CommandContext<CommandSourceStack> ctx) {
+    private int groupRemove(CommandContext<S> ctx) {
         BotGroup g = groupArg(ctx);
         if (g == null) {
             return 0;
@@ -727,8 +729,8 @@ public final class ManhuntCommand {
 
     // ------------------------------------------------------------------ options
 
-    private LiteralArgumentBuilder<CommandSourceStack> settingsNode() {
-        SuggestionProvider<CommandSourceStack> keys = (ctx, b) -> {
+    private LiteralArgumentBuilder<S> settingsNode() {
+        SuggestionProvider<S> keys = (ctx, b) -> {
             String rem = b.getRemaining().toLowerCase(Locale.ROOT);
             for (Setting<?> s : settings().all()) {
                 if (s.key().startsWith(rem)) {
@@ -737,7 +739,7 @@ public final class ManhuntCommand {
             }
             return b.buildFuture();
         };
-        SuggestionProvider<CommandSourceStack> values = (ctx, b) -> {
+        SuggestionProvider<S> values = (ctx, b) -> {
             Setting<?> s = settings().byKey(StringArgumentType.getString(ctx, "key"));
             if (s != null) {
                 String rem = b.getRemaining().toLowerCase(Locale.ROOT);
@@ -757,26 +759,26 @@ public final class ManhuntCommand {
             }
             return b.buildFuture();
         };
-        return Commands.literal("settings")
+        return literal("settings")
                 .executes(this::listSettings)
-                .then(Commands.argument("key", StringArgumentType.word()).suggests(keys)
+                .then(argument("key", StringArgumentType.word()).suggests(keys)
                         .executes(this::showSetting)
-                        .then(Commands.argument("value", StringArgumentType.greedyString()).suggests(values)
+                        .then(argument("value", StringArgumentType.greedyString()).suggests(values)
                                 .executes(this::changeSetting)));
     }
 
-    private int listSettings(CommandContext<CommandSourceStack> ctx) {
-        CommandSender s = sender(ctx);
+    private int listSettings(CommandContext<S> ctx) {
+        Audience s = sender(ctx);
         msg().send(s, "settings.title");
         for (Setting<?> st : settings().all()) {
             s.sendMessage(msg().get("settings.line", Messages.p("key", st.key()), Messages.p("value", st.display()), Messages.p("path", st.path())));
         }
         s.sendMessage(msg().get("settings.line", Messages.p("key", msg().raw("settings.effective-nodes")),
-                Messages.p("value", plugin.pathService().effectiveNodeCap()), Messages.p("path", settings().nodeCap.path())));
+                Messages.p("value", host.pathService().effectiveNodeCap()), Messages.p("path", settings().nodeCap.path())));
         return Command.SINGLE_SUCCESS;
     }
 
-    private Setting<?> settingArg(CommandContext<CommandSourceStack> ctx) {
+    private Setting<?> settingArg(CommandContext<S> ctx) {
         String key = StringArgumentType.getString(ctx, "key");
         Setting<?> s = settings().byKey(key);
         if (s == null) {
@@ -785,7 +787,7 @@ public final class ManhuntCommand {
         return s;
     }
 
-    private int showSetting(CommandContext<CommandSourceStack> ctx) {
+    private int showSetting(CommandContext<S> ctx) {
         Setting<?> s = settingArg(ctx);
         if (s == null) {
             return 0;
@@ -794,7 +796,7 @@ public final class ManhuntCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private int changeSetting(CommandContext<CommandSourceStack> ctx) {
+    private int changeSetting(CommandContext<S> ctx) {
         Setting<?> s = settingArg(ctx);
         if (s == null) {
             return 0;
@@ -817,12 +819,12 @@ public final class ManhuntCommand {
         if (applySilently(ctx, s, v) == 0) {
             return 0;
         }
-        plugin.onSettingChanged(s);
+        host.onSettingChanged(s);
         msg().send(sender(ctx), "settings.changed", Messages.p("key", s.key()), Messages.p("value", s.display()));
         return Command.SINGLE_SUCCESS;
     }
 
-    private int applySilently(CommandContext<CommandSourceStack> ctx, Setting<?> s, String raw) {
+    private int applySilently(CommandContext<S> ctx, Setting<?> s, String raw) {
         try {
             s.setFromText(raw);
             return Command.SINGLE_SUCCESS;
