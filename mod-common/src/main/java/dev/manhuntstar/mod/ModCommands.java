@@ -10,6 +10,7 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.Place;
 import net.kyori.adventure.audience.Audience;
 import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
@@ -33,9 +34,16 @@ public final class ModCommands implements CommandPlatform<CommandSourceStack> {
         return ModServer.get().audiences().audience(source);
     }
 
+    /** The player whose own command source typed it (each player has one; {@code execute as} keeps it). */
     @Override
     public GamePlayer playerSender(CommandSourceStack source) {
-        return ((CommandSourceStackAccessor) source).manhuntstar$source() instanceof ServerPlayer p ? ModEntities.of(p) : null;
+        CommandSource typed = ((CommandSourceStackAccessor) source).manhuntstar$source();
+        for (ServerPlayer p : source.getServer().getPlayerList().getPlayers()) {
+            if (p.commandSource() == typed) {
+                return ModEntities.of(p);
+            }
+        }
+        return null;
     }
 
     @Override

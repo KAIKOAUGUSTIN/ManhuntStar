@@ -9,7 +9,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Core logs with {@code java.util.logging} (Bukkit's plugin logger); the mods send those lines to the
- * game's own log, so they show up in the console and in latest.log like the game's.
+ * game's own log, so they show up in the console and in latest.log like the game's, with the name in
+ * front like a plugin's.
  */
 public final class ModLogging {
 
@@ -23,16 +24,18 @@ public final class ModLogging {
         for (Handler h : logger.getHandlers()) {
             logger.removeHandler(h);
         }
-        logger.addHandler(new ToGameLog(LoggerFactory.getLogger(name)));
+        logger.addHandler(new ToGameLog(LoggerFactory.getLogger(name), "[" + name + "] "));
         logger.setLevel(Level.ALL);
         return logger;
     }
 
     private static final class ToGameLog extends Handler {
         private final org.slf4j.Logger out;
+        private final String prefix;
 
-        ToGameLog(org.slf4j.Logger out) {
+        ToGameLog(org.slf4j.Logger out, String prefix) {
             this.out = out;
+            this.prefix = prefix;
         }
 
         @Override
@@ -46,6 +49,8 @@ public final class ModLogging {
                     // not a pattern: the text as it is
                 }
             }
+            // the plugin's name in front, as Bukkit's plugin logger does
+            text = prefix + text;
             int level = record.getLevel().intValue();
             Throwable thrown = record.getThrown();
             if (level >= Level.SEVERE.intValue()) {
