@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Announces a release on Discord as a Components V2 card: the version, its release notes, the jar,
-# a button to the release page and a role mention at the bottom.
+# Announces a release on Discord as a Components V2 card: the version, its release notes, the plugin's
+# jar, where the mods are, a button to the release page and a role mention at the bottom.
 #
 # Usage: discord-release.sh <version> <release notes .md> <jar>
 # Environment:
@@ -22,6 +22,7 @@ jar="$3"
 server="${GITHUB_SERVER_URL:-https://github.com}"
 repo="${GITHUB_REPOSITORY:?}"
 role="${DISCORD_ROLE_ID:-}"
+mods=$(sed -n 's/^minecraftVersions=//p' gradle.properties 2> /dev/null | sed 's/ //g; s/,/, /g')
 
 card() {
     jq -n \
@@ -31,6 +32,7 @@ card() {
         --arg release_url "$server/$repo/releases/tag/v$version" \
         --arg repo "$repo" \
         --arg role "$role" \
+        --arg mods "$mods" \
         --argjson now "$(date +%s)" \
         '
         # a message holds up to 4000 characters of text in total
@@ -41,6 +43,7 @@ card() {
               { type: 10, content: $body }
             ]
             + (if $file != "" then [{ type: 13, file: { url: "attachment://\($file)" } }] else [] end)
+            + (if $mods != "" then [{ type: 10, content: "-# The jar above is the Paper plugin; the Fabric and NeoForge mods (Minecraft \($mods)) are on the release page." }] else [] end)
             + [
               { type: 1, components: [{ type: 2, style: 5, label: "View release", url: $release_url }] },
               { type: 14, divider: true, spacing: 1 },

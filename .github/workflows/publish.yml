@@ -1,9 +1,12 @@
-# Publish: sends a release that's already on GitHub to Modrinth and/or Hangar, by hand (Actions >
-# Publish > Run workflow). For a release made before the API keys were set, or one whose upload
-# failed. Versions that are already there are skipped.
+# Publish: sends a release that's already on GitHub to Modrinth, Hangar and/or CurseForge, by hand
+# (Actions > Publish > Run workflow). For a release made before the API keys were set, or one whose
+# upload failed. Modrinth gets every jar (the Paper plugin and the mods), Hangar the plugin and
+# CurseForge the mods. Versions already on Modrinth or Hangar are skipped; CurseForge can't tell, so
+# "all" leaves it out: choose curseforge to send the mods there.
 #
-# Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" scope) and HANGAR_API_KEY
-# (Hangar API key, "create_version" permission). Optional variables: MODRINTH_PROJECT and
+# Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" scope), HANGAR_API_KEY
+# (Hangar API key, "create_version" permission) and CURSEFORGE_TOKEN (CurseForge API token).
+# Variables: CURSEFORGE_PROJECT_ID (the CurseForge project's ID) and, optionally, MODRINTH_PROJECT and
 # HANGAR_PROJECT, the project slugs (defaults: manhuntstar and ManhuntStar).
 name: Publish
 
@@ -15,10 +18,10 @@ on:
         required: false
         default: ""
       target:
-        description: "Where to publish"
+        description: "Where to publish (all = Modrinth and Hangar)"
         type: choice
-        options: [both, modrinth, hangar]
-        default: both
+        options: [all, modrinth, hangar, curseforge]
+        default: all
 
 permissions:
   contents: read
@@ -42,19 +45,30 @@ jobs:
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
         run: |
           missing=0
-          if [ "$TARGET" != hangar ] && [ -z "$MODRINTH_TOKEN" ]; then
+          if { [ "$TARGET" = all ] || [ "$TARGET" = modrinth ]; } && [ -z "$MODRINTH_TOKEN" ]; then
             echo "::error::The MODRINTH_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
             missing=1
           fi
-          if [ "$TARGET" != modrinth ] && [ -z "$HANGAR_API_KEY" ]; then
+          if { [ "$TARGET" = all ] || [ "$TARGET" = hangar ]; } && [ -z "$HANGAR_API_KEY" ]; then
             echo "::error::The HANGAR_API_KEY secret is missing (Settings > Secrets and variables > Actions)."
+            missing=1
+          fi
+          if [ "$TARGET" = curseforge ] && [ -z "$CURSEFORGE_TOKEN" ]; then
+            echo "::error::The CURSEFORGE_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
+            missing=1
+          fi
+          if [ "$TARGET" = curseforge ] && [ -z "$CURSEFORGE_PROJECT_ID" ]; then
+            echo "::error::The CURSEFORGE_PROJECT_ID variable is missing (Settings > Secrets and variables > Actions > Variables)."
             missing=1
           fi
           exit $missing
 
-      # the jar and the notes come from the GitHub release; the supported versions from that tag
+      # the jars and the notes come from the GitHub release; the supported versions from that tag
+      # (releases before the mods have the plugin's jar only)
       - name: Download the release
         id: release
         env:
@@ -66,28 +80,53 @@ jobs:
             tag=$(gh release view --json tagName --jq .tagName)
           fi
           version="${tag#v}"
-          gh release download "$tag" --pattern "ManhuntStar-$version.jar" --dir "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/jars"
+          gh release download "$tag" --dir "$RUNNER_TEMP/jars" \
+            --pattern "ManhuntStar-$version.jar" --pattern "ManhuntStar-*-$version+*.jar"
           gh release view "$tag" --json body --jq .body > "$RUNNER_TEMP/notes.md"
           git show "$tag:gradle/libs.versions.toml" > "$RUNNER_TEMP/catalog.toml"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Publishing ManhuntStar $version (Paper $(bash .github/scripts/paper-versions.sh "$RUNNER_TEMP/catalog.toml"))"
+          echo "Publishing ManhuntStar $version (Paper $(bash .github/scripts/paper-versions.sh "$RUNNER_TEMP/catalog.toml")):"
+          ls "$RUNNER_TEMP/jars"
 
       - name: Publish on Modrinth
-        if: inputs.target != 'hangar'
+        if: inputs.target == 'all' || inputs.target == 'modrinth'
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_PROJECT: ${{ vars.MODRINTH_PROJECT }}
           VERSION: ${{ steps.release.outputs.version }}
-        run: >-
-          bash .github/scripts/publish-modrinth.sh "$VERSION" "$RUNNER_TEMP/notes.md"
-          "$RUNNER_TEMP/ManhuntStar-$VERSION.jar" "$RUNNER_TEMP/catalog.toml"
+        run: |
+          failed=0
+          for jar in "$RUNNER_TEMP/jars"/ManhuntStar-*.jar; do
+            bash .github/scripts/publish-modrinth.sh "$VERSION" "$RUNNER_TEMP/notes.md" "$jar" "$RUNNER_TEMP/catalog.toml" || failed=1
+          done
+          exit $failed
 
       - name: Publish on Hangar
-        if: (success() || failure()) && steps.release.outcome == 'success' && inputs.target != 'modrinth'
+        if: (success() || failure()) && steps.release.outcome == 'success' && (inputs.target == 'all' || inputs.target == 'hangar')
         env:
           HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
           HANGAR_PROJECT: ${{ vars.HANGAR_PROJECT }}
           VERSION: ${{ steps.release.outputs.version }}
         run: >-
           bash .github/scripts/publish-hangar.sh "$VERSION" "$RUNNER_TEMP/notes.md"
-          "$RUNNER_TEMP/ManhuntStar-$VERSION.jar" "$RUNNER_TEMP/catalog.toml"
+          "$RUNNER_TEMP/jars/ManhuntStar-$VERSION.jar" "$RUNNER_TEMP/catalog.toml"
+
+      - name: Publish on CurseForge
+        if: inputs.target == 'curseforge'
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          shopt -s nullglob
+          jars=("$RUNNER_TEMP/jars"/ManhuntStar-*-"$VERSION"+*.jar)
+          if [ ${#jars[@]} -eq 0 ]; then
+            echo "::error::Release $VERSION has no mod jars."
+            exit 1
+          fi
+          failed=0
+          for jar in "${jars[@]}"; do
+            bash .github/scripts/publish-curseforge.sh "$VERSION" "$RUNNER_TEMP/notes.md" "$jar" || failed=1
+          done
+          exit $failed

@@ -52,3 +52,14 @@ sonar {
         property("sonar.host.url", "https://sonarcloud.io")
     }
 }
+
+// Each Minecraft version's project of a mod module (:fabric:26.2, :fabric:26.3...) compiles the same
+// sources, which SonarQube can't index twice: they are analyzed once, in the newest version's project.
+val newestMinecraft = providers.gradleProperty("minecraftVersions").get().split(",").last().trim()
+subprojects {
+    if (parent != rootProject && name != newestMinecraft) {
+        sonar {
+            isSkipProject = true
+        }
+    }
+}
