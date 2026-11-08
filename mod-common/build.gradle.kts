@@ -31,6 +31,7 @@ val mixinextras = "io.github.llamalad7:mixinextras-common:${libs.versions.mixine
 dependencies {
     compileOnly(project(":core"))
     compileOnly("net.kyori:adventure-platform-mod-shared:$adventurePlatformMod")
+    compileOnly("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
     // Mixin and MixinExtras come with both loaders
     compileOnly("net.fabricmc:sponge-mixin:${libs.versions.sponge.mixin.get()}")
     compileOnly(mixinextras)
