@@ -15,7 +15,6 @@ import dev.manhuntstar.util.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -32,7 +31,6 @@ import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
 import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.SwingAnimation;
 
 /** A Minecraft {@link LivingEntity} as a core {@link GameLiving}, doing what Bukkit's {@code CraftLivingEntity} does. */
 public class ModLiving extends ModEntity implements GameLiving {
@@ -118,7 +116,7 @@ public class ModLiving extends ModEntity implements GameLiving {
 
     @Override
     public int noDamageTicks() {
-        return vanilla().damageCooldownTime;
+        return MinecraftCompat.damageCooldown(vanilla());
     }
 
     /** The game's damage cooldown, which Paper lets plugins change and the mod doesn't. */
@@ -129,9 +127,7 @@ public class ModLiving extends ModEntity implements GameLiving {
 
     @Override
     public void swingMainHand() {
-        LivingEntity e = vanilla();
-        SwingAnimation animation = e.getItemInHand(InteractionHand.MAIN_HAND).get(DataComponents.ATTACK_ANIMATION);
-        e.swing(InteractionHand.MAIN_HAND, animation != null ? animation : SwingAnimation.DEFAULT, true);
+        MinecraftCompat.swingMainHand(vanilla());
     }
 
     @Override
@@ -271,7 +267,7 @@ public class ModLiving extends ModEntity implements GameLiving {
         launch.shootFromRotation(e, e.getXRot(), e.getYRot(), 0.0F, power, 1.0F);
         if (velocity != null) {
             launch.setDeltaMovement(ModConvert.vanilla(velocity));
-            launch.syncVelocity = true;
+            MinecraftCompat.syncVelocity(launch);
         }
         level.addFreshEntity(launch);
         return (GameProjectile) ModEntities.of((Entity) launch);

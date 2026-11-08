@@ -1,8 +1,8 @@
-// Settings shared by every module (core, paper).
+// Settings shared by every module (core, paper and the mods).
 //
 // The version lives in gradle.properties and is bumped by the release workflow.
 // Dependency versions live in gradle/libs.versions.toml (read by Dependabot).
-// The plugin jar ends up in build/libs/ here at the root (see paper/build.gradle.kts).
+// The plugin's and the mods' jars end up in build/libs/ here at the root.
 
 plugins {
     // "clean" also removes build/libs/ at the root, where the plugin jar goes

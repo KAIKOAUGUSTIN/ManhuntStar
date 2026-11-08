@@ -404,7 +404,7 @@ public final class ModWorld implements GameWorld {
         // the rocket's lifetime comes from its flight duration, as in the game
         FireworkRocketEntity fw = new FireworkRocketEntity(level, ModItem.stack(rocket), ModEntities.vanilla(shooter), at.x(), at.y(), at.z(), true);
         fw.setDeltaMovement(ModConvert.vanilla(velocity));
-        fw.syncVelocity = true;
+        MinecraftCompat.syncVelocity(fw);
         level.addFreshEntity(fw);
         return (GameProjectile) ModEntities.of(fw);
     }

@@ -14,7 +14,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.item.ItemStack;
@@ -159,7 +158,7 @@ public final class ModBlock implements GameBlock {
             return;
         }
         BlockState below = level.getBlockState(pos.below());
-        if (below.is(BlockTags.ICE_MELTS_WHEN_DESTROYED_ABOVE) || below.liquid()) {
+        if (MinecraftCompat.meltsIceAbove(below) || below.liquid()) {
             level.setBlockAndUpdate(pos, IceBlock.meltsInto());
         }
     }

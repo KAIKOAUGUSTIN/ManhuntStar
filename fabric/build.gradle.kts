@@ -8,7 +8,20 @@ plugins {
 
 description = "Manhunt* - ManHunt hunter bots for Fabric"
 
-val minecraft = libs.versions.minecraft.get()
+// This is the build of one Minecraft version (:fabric:26.3 and so on, see settings.gradle.kts), from the
+// sources in src/ here.
+val minecraft = project.name
+// every module's versions are named alike (26.3), so the group tells them apart
+group = "dev.manhuntstar.fabric"
+val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
+fun forMinecraft(name: String): String = catalog.findVersion("mc${minecraft.replace(".", "")}-$name")
+    .orElseThrow { GradleException("gradle/libs.versions.toml has no $name for Minecraft $minecraft") }.requiredVersion
+val adventurePlatformMod = forMinecraft("adventure-platform-mod")
+
+sourceSets.main {
+    java.srcDir(parent!!.file("src/main/java"))
+    resources.srcDir(parent!!.file("src/main/resources"))
+}
 
 val commonJava by configurations.creating {
     isCanBeResolved = true
@@ -26,16 +39,16 @@ val bundled by configurations.creating {
 dependencies {
     minecraft("com.mojang:minecraft:$minecraft")
     implementation("net.fabricmc:fabric-loader:${libs.versions.fabric.loader.get()}")
-    implementation("net.fabricmc.fabric-api:fabric-api:${libs.versions.fabric.api.get()}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${forMinecraft("fabric-api")}")
 
     implementation(project(":core"))
     bundled(project(":core"))
-    commonJava(project(path = ":mod-common", configuration = "commonJava"))
-    commonResources(project(path = ":mod-common", configuration = "commonResources"))
+    commonJava(project(path = ":mod-common:$minecraft", configuration = "commonJava"))
+    commonResources(project(path = ":mod-common:$minecraft", configuration = "commonResources"))
 
     // inside the mod jar (jar-in-jar): Adventure for the mods, and SnakeYAML, which Minecraft doesn't have
-    implementation("net.kyori:adventure-platform-fabric:${libs.versions.adventurePlatformMod.get()}")
-    include("net.kyori:adventure-platform-fabric:${libs.versions.adventurePlatformMod.get()}")
+    implementation("net.kyori:adventure-platform-fabric:$adventurePlatformMod")
+    include("net.kyori:adventure-platform-fabric:$adventurePlatformMod")
     implementation("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
     include("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
 }

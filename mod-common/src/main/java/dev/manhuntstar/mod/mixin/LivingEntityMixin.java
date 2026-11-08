@@ -3,11 +3,9 @@ package dev.manhuntstar.mod.mixin;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
 import dev.manhuntstar.mod.ModHooks;
-import java.util.function.Predicate;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -47,10 +45,12 @@ public abstract class LivingEntityMixin {
         }
     }
 
-    /** A chorus fruit or an enderman's teleport. */
-    @Inject(method = "randomTeleport(DDDZLjava/util/function/Predicate;)Z", at = @At("RETURN"))
-    private void manhuntstar$randomTeleport(double x, double y, double z, boolean particles, Predicate<BlockState> invalid,
-            CallbackInfoReturnable<Boolean> cir) {
+    /**
+     * A chorus fruit or an enderman's teleport. Minecraft 26.2 does it in randomTeleport(x, y, z, particles),
+     * 26.3 in the overload that takes what to avoid (the other 26.3 overload calls this one).
+     */
+    @Inject(method = {"randomTeleport(DDDZ)Z", "randomTeleport(DDDZLjava/util/function/Predicate;)Z"}, at = @At("RETURN"))
+    private void manhuntstar$randomTeleport(CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValueZ()) {
             ModHooks.teleported((LivingEntity) (Object) this);
         }

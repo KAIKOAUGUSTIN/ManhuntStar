@@ -31,7 +31,6 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
-import net.minecraft.world.entity.monster.Enderman;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.monster.breeze.Breeze;
@@ -115,7 +114,7 @@ public final class ModTypes {
         if (s.isAir()) {
             out.add(BlockTrait.AIR);
         }
-        if (s.is(BlockTags.BLOCKS_MOTION)) {
+        if (MinecraftCompat.blocksMotion(s)) {
             out.add(BlockTrait.SOLID);
         }
         if (s.isRedstoneConductor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)) {
@@ -216,7 +215,7 @@ public final class ModTypes {
                 add(out, sample, AbstractBoat.class, EntityTrait.BOAT);
                 add(out, sample, AbstractHorse.class, EntityTrait.HORSE);
                 add(out, sample, EnderDragon.class, EntityTrait.ENDER_DRAGON);
-                add(out, sample, Enderman.class, EntityTrait.ENDERMAN);
+                add(out, sample, MinecraftCompat.ENDERMAN, EntityTrait.ENDERMAN);
                 add(out, sample, Spider.class, EntityTrait.SPIDER);
                 add(out, sample, Slime.class, EntityTrait.SLIME);
                 add(out, sample, Warden.class, EntityTrait.WARDEN);

@@ -87,7 +87,7 @@ public class ModEntity implements GameEntity {
     @Override
     public void setVelocity(Vec3 velocity) {
         entity.setDeltaMovement(ModConvert.vanilla(velocity));
-        entity.syncVelocity = true;
+        MinecraftCompat.syncVelocity(entity);
     }
 
     @Override
@@ -249,7 +249,7 @@ public class ModEntity implements GameEntity {
 
     @Override
     public void setInvulnerable(boolean invulnerable) {
-        entity.setPermanentlyInvulnerable(invulnerable);
+        MinecraftCompat.setInvulnerable(entity, invulnerable);
     }
 
     private String markTag(String key) {
