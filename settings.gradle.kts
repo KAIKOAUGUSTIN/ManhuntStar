@@ -20,4 +20,5 @@ rootProject.name = "ManhuntStar"
 // paper: the Paper plugin, built on top of core.
 // mod-common: the mods' code that only uses Minecraft itself (the same for Fabric and NeoForge).
 // fabric: the Fabric mod (mod-common's code compiled with Fabric's, plus core).
-include("core", "paper", "mod-common", "fabric")
+// neoforge: the NeoForge mod (the same with NeoForge).
+include("core", "paper", "mod-common", "fabric", "neoforge")

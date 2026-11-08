@@ -24,7 +24,7 @@ public final class ManhuntStarFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        Logger logger = ModLogging.logger("Manhunt*");
+        Logger logger = ModLogging.logger("Manhunt*", true);
         FabricLoader fabric = FabricLoader.getInstance();
         String version = fabric.getModContainer("manhuntstar").map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("unknown");
         String loader = fabric.getModContainer("fabricloader").map(ModContainer::getMetadata).map(m -> "Fabric " + m.getVersion().getFriendlyString())

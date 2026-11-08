@@ -17,14 +17,17 @@ public final class ModLogging {
     private ModLogging() {
     }
 
-    /** A logger named {@code name} whose lines go to the game's log. */
-    public static Logger logger(String name) {
+    /**
+     * A logger named {@code name} whose lines go to the game's log; {@code prefix} puts the name in front of
+     * each line, for a console that doesn't show logger names (Fabric's).
+     */
+    public static Logger logger(String name, boolean prefix) {
         Logger logger = Logger.getLogger("dev.manhuntstar.mod." + name);
         logger.setUseParentHandlers(false);
         for (Handler h : logger.getHandlers()) {
             logger.removeHandler(h);
         }
-        logger.addHandler(new ToGameLog(LoggerFactory.getLogger(name), "[" + name + "] "));
+        logger.addHandler(new ToGameLog(LoggerFactory.getLogger(name), prefix ? "[" + name + "] " : ""));
         logger.setLevel(Level.ALL);
         return logger;
     }
