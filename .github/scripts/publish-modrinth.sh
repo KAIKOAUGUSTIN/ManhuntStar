@@ -55,7 +55,7 @@ code=$(request "$api/tag/game_version")
 supported=$(bash "$(dirname "$0")/game-versions.sh" "$catalog" | jq -R . | jq -sc .)
 game_versions=$(jq -c --argjson supported "$supported" '
     [.[] | select(.version_type == "release") | .version
-         | select(. as $v | any($supported[]; $v == . or ($v | startswith(. + "."))))]
+         | select(. as $v | any($supported[]; . as $s | $v == $s or ($v | startswith($s + "."))))]
     | reverse' "$response")
 [[ "$game_versions" != "[]" ]] || fail "none of the supported versions ($supported) exists on Modrinth yet."
 
