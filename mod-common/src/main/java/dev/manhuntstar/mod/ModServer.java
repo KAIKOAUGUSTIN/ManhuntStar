@@ -185,9 +185,14 @@ public final class ModServer implements GameServer {
         return ModItem.of(ModItem.deserialize(data));
     }
 
+    /** To every player and the console (Bukkit's broadcast), without the game's "System chat:" in the log. */
     @Override
     public void broadcast(Component message) {
-        server.getPlayerList().broadcastSystemMessage(vanilla(message), false);
+        net.minecraft.network.chat.Component text = vanilla(message);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.sendSystemMessage(text);
+        }
+        audiences.console().sendMessage(message);
     }
 
     @Override

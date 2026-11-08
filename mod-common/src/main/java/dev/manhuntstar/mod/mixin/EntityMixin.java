@@ -1,9 +1,13 @@
 package dev.manhuntstar.mod.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import dev.manhuntstar.mod.EntityExt;
 import dev.manhuntstar.mod.ModEntities;
+import dev.manhuntstar.mod.ModHooks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.level.portal.TeleportTransition;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -80,5 +84,24 @@ public abstract class EntityMixin implements EntityExt {
     @Inject(method = "restoreFrom", at = @At("HEAD"))
     private void manhuntstar$follow(Entity old, CallbackInfo ci) {
         ModEntities.moved(old, (Entity) (Object) this);
+    }
+
+    /** The game teleported the entity (a command, a pearl...); the mod's own teleports and portals don't count. */
+    @Inject(method = "teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/world/entity/Entity;", at = @At("RETURN"))
+    private void manhuntstar$teleported(TeleportTransition transition, CallbackInfoReturnable<Entity> cir) {
+        if (cir.getReturnValue() != null) {
+            ModHooks.teleported(cir.getReturnValue());
+        }
+    }
+
+    @WrapMethod(method = "handlePortal")
+    private void manhuntstar$portal(Operation<Void> original) {
+        boolean was = ModHooks.PORTAL.get();
+        ModHooks.PORTAL.set(true);
+        try {
+            original.call();
+        } finally {
+            ModHooks.PORTAL.set(was);
+        }
     }
 }

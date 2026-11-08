@@ -190,8 +190,13 @@ public class ModEntity implements GameEntity {
             return false;
         }
         ServerLevel level = ModWorld.vanilla(world);
-        return entity.teleport(new TeleportTransition(level, ModConvert.vanilla(position), net.minecraft.world.phys.Vec3.ZERO, yaw, pitch,
-                Set.of(), TeleportTransition.DO_NOTHING)) != null;
+        ModHooks.MOD_TELEPORT.set(true);
+        try {
+            return entity.teleport(new TeleportTransition(level, ModConvert.vanilla(position), net.minecraft.world.phys.Vec3.ZERO, yaw, pitch,
+                    Set.of(), TeleportTransition.DO_NOTHING)) != null;
+        } finally {
+            ModHooks.MOD_TELEPORT.set(false);
+        }
     }
 
     @Override
