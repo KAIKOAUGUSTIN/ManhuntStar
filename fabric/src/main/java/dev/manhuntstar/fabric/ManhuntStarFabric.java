@@ -4,6 +4,8 @@ import dev.manhuntstar.mod.ModLogging;
 import dev.manhuntstar.mod.ModPermissions;
 import dev.manhuntstar.mod.ModPlatform;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -55,14 +57,20 @@ public final class ManhuntStarFabric implements ModInitializer {
                 }
             }
             if (check == null) {
+                logger.warning(PERMISSIONS_API + " has no permission check Manhunt* knows; operators can use /manhunt.");
                 return;
             }
             Method found = check;
+            AtomicBoolean warned = new AtomicBoolean();
             ModPermissions.use((source, permission) -> {
                 boolean op = source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
                 try {
                     return (boolean) found.invoke(null, source, permission, op);
                 } catch (ReflectiveOperationException e) {
+                    // logged once: the check runs on every command
+                    if (warned.compareAndSet(false, true)) {
+                        logger.log(Level.WARNING, "A permission check through " + PERMISSIONS_API + " failed; operators can use /manhunt.", e);
+                    }
                     return op;
                 }
             });

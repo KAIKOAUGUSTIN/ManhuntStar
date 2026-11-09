@@ -236,7 +236,7 @@ public final class HorseRoutine {
             untamedTicks = 0;
         }
         untamedTicks++;
-        detail = "domando " + (untamedTicks * 100 / TAME_TICKS) + "%";
+        detail = "taming " + (untamedTicks * 100 / TAME_TICKS) + "%";
         if (untamedTicks >= TAME_TICKS) {
             horse.setRearing(false);
             horse.setDomestication(horse.maxDomestication());
@@ -416,7 +416,7 @@ public final class HorseRoutine {
             if (noMoveTicks > 5) {
                 runoutTicks = 0; // wall ahead: turn back now
             }
-            detail += ", passando";
+            detail += ", passing";
             return;
         }
         Vec3 tp = target.position();

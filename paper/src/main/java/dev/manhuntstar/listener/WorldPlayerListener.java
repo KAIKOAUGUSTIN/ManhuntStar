@@ -29,6 +29,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.event.world.WorldUnloadEvent;
 
 /**
  * World and player events: blocks placed by players (towers/skybases), block changes
@@ -82,6 +83,12 @@ public final class WorldPlayerListener implements Listener {
     public void onBurn(BlockBurnEvent event) {
         Block b = event.getBlock();
         plugin.core().gameEvents().blockChanged(PaperWorld.of(b.getWorld()), b.getX(), b.getZ());
+    }
+
+    /** An unloaded world (a ManHunt round's world deleted, for example) leaves the world cache. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldUnload(WorldUnloadEvent event) {
+        PaperWorld.forget(event.getWorld());
     }
 
     // ------------------------------------------------------------------ crafting table

@@ -145,6 +145,7 @@ public final class ModPlatform implements ManhuntPlatform {
             core = null;
             server = null;
             mobGoals = null;
+            ModWorld.forgetAll();
         }
     }
 

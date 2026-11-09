@@ -96,6 +96,14 @@ public final class ModWorld implements GameWorld {
         this.id = UUID.nameUUIDFromBytes(("manhuntstar:" + level.dimension().identifier()).getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Forgets every world when the server stops, so a singleplayer world closed to the title screen isn't
+     * kept in memory until the next one opens.
+     */
+    static void forgetAll() {
+        CACHE.clear();
+    }
+
     public static ModWorld of(Level level) {
         if (!(level instanceof ServerLevel server)) {
             return null;

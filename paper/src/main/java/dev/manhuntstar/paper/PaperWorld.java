@@ -76,6 +76,11 @@ public final class PaperWorld implements GameWorld {
         return fresh;
     }
 
+    /** Forgets an unloaded world, so the cache doesn't keep it in memory. */
+    public static void forget(World world) {
+        CACHE.computeIfPresent(world.getUID(), (id, cached) -> cached.world == world ? null : cached);
+    }
+
     /** The Bukkit world behind a core world. */
     public static World bukkit(GameWorld world) {
         return world == null ? null : ((PaperWorld) world).world;
