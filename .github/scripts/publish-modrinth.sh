@@ -7,7 +7,9 @@
 #   ManhuntStar-<loader>-<version>+<minecraft>.jar  a mod (fabric or neoforge): version number
 #                                                   <version>+<loader>-<minecraft>, the Minecraft releases
 #                                                   of that version (26.2, 26.2.1...); Fabric's needs
-#                                                   Fabric API
+#                                                   Fabric API. Mods are marked server only (players
+#                                                   don't need them; singleplayer works too): Modrinth
+#                                                   wants every mod version's environment
 # A version number that is already there is left alone, so a run can be repeated.
 #
 # Usage: publish-modrinth.sh <version> <release notes .md> <jar> [catalog]
@@ -49,6 +51,8 @@ fail() {
 
 file=$(basename "$jar")
 dependencies='[]'
+# the environment field is for mods only (empty: left out)
+environment=''
 case "$file" in
     "ManhuntStar-$version.jar")
         loader=paper
@@ -71,6 +75,7 @@ case "$file" in
             name="ManhuntStar $version (NeoForge $minecraft)"
         fi
         supported=$(jq -nc --arg v "$minecraft" '[$v]')
+        environment=server_only
         ;;
     *)
         fail "can't tell what $file is (expected ManhuntStar-$version.jar or ManhuntStar-<loader>-$version+<minecraft>.jar)."
@@ -103,6 +108,7 @@ jq -n \
     --argjson game_versions "$game_versions" \
     --arg loader "$loader" \
     --argjson dependencies "$dependencies" \
+    --arg environment "$environment" \
     '{
         name: $name,
         version_number: $number,
@@ -116,7 +122,7 @@ jq -n \
         project_id: $project_id,
         file_parts: ["jar"],
         primary_file: "jar"
-    }' > "$tmp/modrinth-version.json"
+    } + (if $environment != "" then { environment: $environment } else {} end)' > "$tmp/modrinth-version.json"
 
 code=$(request -X POST \
     -F "data=<$tmp/modrinth-version.json;type=application/json" \
