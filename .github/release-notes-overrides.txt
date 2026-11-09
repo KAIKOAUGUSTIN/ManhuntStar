@@ -52,3 +52,4 @@ ed4f39f -
 1ca4f44 Changed: CodeRabbit also reviews pull requests into dev, leaving out files that don't need a review
 # after 2.0.0: the environments on Modrinth, in one line
 9a2cfd5 Changed: every ManhuntStar version on Modrinth says where it runs, which Modrinth needs before it takes the mods
+4145d8d -
