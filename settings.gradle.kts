@@ -14,6 +14,13 @@ pluginManagement {
     }
 }
 
+// Gradle runs on Java 25 (gradle/gradle-daemon-jvm.properties): Loom only runs on 25 or newer. With Java 21
+// or older on the machine, Gradle downloads a Java 25 for itself; this plugin tells
+// "./gradlew updateDaemonJvm --jvm-version=25" where to download it from.
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 rootProject.name = "ManhuntStar"
 
 // core: code that doesn't depend on any platform (no Paper, no Minecraft).
