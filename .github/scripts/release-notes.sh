@@ -8,7 +8,8 @@
 #   "Updated: ..."  -> Updated  (also "Update:", and Dependabot's "Bump ..." commits)
 #   "Removed: ..."  -> Removed  (also "Remove:")
 # Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
-# (and so another section), for commits whose message can't be changed anymore.
+# (and so another section), for commits whose message can't be changed anymore, or leave it out with
+# "-". Commits that end up with the same text are listed once, with the first one's SHA.
 #
 # Usage: release-notes.sh <version> <previous version> <commits.tsv> <output.md>
 # commits.tsv: one line per commit, "sha<TAB>author login<TAB>first line of the message".
@@ -46,10 +47,11 @@ while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
     # the workflow's own version commits are left out
     [[ "$author" == "github-actions[bot]" ]] && continue
-    [[ -n "${seen[$message]:-}" ]] && continue
-    seen[$message]=1
     replacement=$(override_for "$sha")
     [[ -n "$replacement" ]] && message="$replacement"
+    [[ "$message" == "-" ]] && continue
+    [[ -n "${seen[$message]:-}" ]] && continue
+    seen[$message]=1
     type=Changed
     text="$message"
     shopt -s nocasematch
@@ -74,6 +76,8 @@ while IFS=$'\t' read -r sha author message; do
 done < "$commits"
 
 paper=$(bash "$(dirname "$0")/paper-versions.sh")
+# the Minecraft versions the mods are built for (minecraftVersions in gradle.properties)
+mods=$(sed -n 's/^minecraftVersions=//p' gradle.properties 2> /dev/null | sed 's/ //g; s/,/, /g')
 
 {
     listed=0
@@ -86,7 +90,11 @@ paper=$(bash "$(dirname "$0")/paper-versions.sh")
     if [[ "$listed" == 0 ]]; then
         printf 'No changes listed.\n\n'
     fi
-    printf '**Paper:** %s · **Java:** 25\n' "$paper"
+    if [[ -n "$mods" ]]; then
+        printf '**Paper:** %s · **Fabric and NeoForge:** %s · **Java:** 25\n' "$paper" "$mods"
+    else
+        printf '**Paper:** %s · **Java:** 25\n' "$paper"
+    fi
     if [[ -n "$repo" ]] && git rev-parse -q --verify "refs/tags/v${previous}" > /dev/null; then
         printf '\n**Full changelog since %s:** https://github.com/%s/compare/v%s...v%s\n' "$previous" "$repo" "$previous" "$version"
     fi

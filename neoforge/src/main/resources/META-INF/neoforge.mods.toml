@@ -1,0 +1,31 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-only"
+issueTrackerURL = "https://github.com/KAIKOAUGUSTIN/ManhuntStar/issues"
+
+[[mods]]
+modId = "manhuntstar"
+version = "${version}"
+displayName = "Manhunt*"
+authors = "KAIKOAUGUSTIN"
+displayURL = "https://modrinth.com/plugin/manhuntstar"
+description = '''ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it.'''
+# only the server needs the mod: players join with a plain game
+displayTest = "IGNORE_SERVER_VERSION"
+
+[[mixins]]
+config = "manhuntstar.mixins.json"
+
+[[dependencies.manhuntstar]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.manhuntstar]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft},${minecraft}.99)"
+ordering = "NONE"
+side = "BOTH"

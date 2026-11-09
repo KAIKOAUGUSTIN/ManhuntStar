@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "manhuntstar",
+  "version": "${version}",
+  "name": "Manhunt*",
+  "description": "ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it.",
+  "authors": ["KAIKOAUGUSTIN"],
+  "contact": {
+    "homepage": "https://modrinth.com/plugin/manhuntstar",
+    "sources": "https://github.com/KAIKOAUGUSTIN/ManhuntStar",
+    "issues": "https://github.com/KAIKOAUGUSTIN/ManhuntStar/issues"
+  },
+  "license": "GPL-3.0-only",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.manhuntstar.fabric.ManhuntStarFabric"]
+  },
+  "mixins": ["manhuntstar.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft}",
+    "java": ">=25"
+  }
+}

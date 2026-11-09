@@ -1,8 +1,52 @@
 # Release notes overrides: the text used in the release notes for a commit whose message can't be
 # changed anymore (it's already on dev or main), for example one written before the New:, Changed:,
 # Updated: and Removed: prefixes. One commit per line: the short or full SHA, a space, then the text,
-# with its prefix. Lines starting with # are ignored. A line can stay after its release; it only
-# matches that commit.
+# with its prefix, or "-" to leave the commit out. Commits given the same text are listed once. Lines
+# starting with # are ignored. A line can stay after its release; it only matches that commit.
 17e7580 New: one jar for Paper 26.2 and 26.3
 1ce8986 New: Discord notification for dev builds
 6bf5a28 New: SECURITY.md
+
+# 1.7.0: the Fabric and NeoForge mods, in one line
+3b3337b New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+1ac5caf New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+bae6408 New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+32d6861 New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+52ed4a7 New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+3b5b334 New: Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client)
+5142b91 New: releases carry the Fabric and NeoForge mods, also on Modrinth and CurseForge
+300c841 New: releases carry the Fabric and NeoForge mods, also on Modrinth and CurseForge
+# 1.7.0: the move of the AI and the rules to core, in one line
+5cb47d8 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+696960d Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+8a753fb Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+73d3b6b Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+8044a19 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+3b5a3d8 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+bb0e2ff Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+8b43477 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+f28f8f8 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+c0c516e Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+2513283 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+ffabbed Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+6a6ebdc Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+0a257c2 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+7c7399a Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+b83af4f Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+5dae392 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+b76c241 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+df83163 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+2e86f87 Changed: the bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same)
+# 1.7.0: comment translations and build internals, left out
+567da31 -
+f6fd0f7 -
+a37fac0 -
+8143f3c -
+b709367 -
+018c4ea -
+adc9c1f -
+31aea6b -
+ed4f39f -
+300a4d4 -
+# 1.7.0: CodeRabbit, in one line with the commit that adds the path filters
+1ca4f44 Changed: CodeRabbit also reviews pull requests into dev, leaving out files that don't need a review
