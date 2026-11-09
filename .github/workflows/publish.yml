@@ -6,8 +6,8 @@
 #
 # Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" scope), HANGAR_API_KEY
 # (Hangar API key, "create_version" permission) and CURSEFORGE_TOKEN (CurseForge API token).
-# Variables: CURSEFORGE_PROJECT_ID (the CurseForge project's ID) and, optionally, MODRINTH_PROJECT and
-# HANGAR_PROJECT, the project slugs (defaults: manhuntstar and ManhuntStar).
+# Variables (optional): MODRINTH_PROJECT, HANGAR_PROJECT and CURSEFORGE_PROJECT_ID, the projects
+# (defaults: manhuntstar, ManhuntStar and 1793171).
 name: Publish
 
 on:
@@ -46,7 +46,6 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           HANGAR_API_KEY: ${{ secrets.HANGAR_API_KEY }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
         run: |
           missing=0
           if { [ "$TARGET" = all ] || [ "$TARGET" = modrinth ]; } && [ -z "$MODRINTH_TOKEN" ]; then
@@ -59,10 +58,6 @@ jobs:
           fi
           if [ "$TARGET" = curseforge ] && [ -z "$CURSEFORGE_TOKEN" ]; then
             echo "::error::The CURSEFORGE_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
-            missing=1
-          fi
-          if [ "$TARGET" = curseforge ] && [ -z "$CURSEFORGE_PROJECT_ID" ]; then
-            echo "::error::The CURSEFORGE_PROJECT_ID variable is missing (Settings > Secrets and variables > Actions > Variables)."
             missing=1
           fi
           exit $missing

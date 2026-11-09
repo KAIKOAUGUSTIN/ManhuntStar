@@ -123,9 +123,9 @@ jobs:
             --verify-tag
 
       # Modrinth, Hangar and CurseForge: each one is skipped while its secret (MODRINTH_TOKEN,
-      # HANGAR_API_KEY, CURSEFORGE_TOKEN) is missing; CurseForge also needs the CURSEFORGE_PROJECT_ID
-      # variable. The MODRINTH_PROJECT and HANGAR_PROJECT variables change the project slugs (defaults:
-      # manhuntstar and ManhuntStar). A failed upload shows up as an error without stopping the
+      # HANGAR_API_KEY, CURSEFORGE_TOKEN) is missing. The MODRINTH_PROJECT, HANGAR_PROJECT and
+      # CURSEFORGE_PROJECT_ID variables change the projects (defaults: manhuntstar, ManhuntStar and
+      # 1793171). A failed upload shows up as an error without stopping the
       # release; the Publish workflow can send that version again.
       - name: Publish on Modrinth
         continue-on-error: true
@@ -155,8 +155,8 @@ jobs:
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
           VERSION: ${{ steps.version.outputs.next }}
         run: |
-          if [ -z "$CURSEFORGE_TOKEN" ] || [ -z "$CURSEFORGE_PROJECT_ID" ]; then
-            echo "CURSEFORGE_TOKEN or CURSEFORGE_PROJECT_ID is not set; skipping CurseForge."
+          if [ -z "$CURSEFORGE_TOKEN" ]; then
+            echo "CURSEFORGE_TOKEN is not set; skipping CurseForge."
             exit 0
           fi
           failed=0

@@ -10,18 +10,20 @@
 # Usage: publish-curseforge.sh <version> <release notes .md> <jar>
 # Environment:
 #   CURSEFORGE_TOKEN       API token (curseforge.com > My profile > API tokens); nothing is published
-#                          while it or the project ID is empty
-#   CURSEFORGE_PROJECT_ID  the project's ID (the number in the project page's About section)
+#                          while it's empty
+#   CURSEFORGE_PROJECT_ID  the project's ID, the number in the project page's About section
+#                          (default: 1793171, https://www.curseforge.com/minecraft/mc-mods/manhuntstar)
 set -euo pipefail
 
-if [[ -z "${CURSEFORGE_TOKEN:-}" || -z "${CURSEFORGE_PROJECT_ID:-}" ]]; then
-    echo "CURSEFORGE_TOKEN or CURSEFORGE_PROJECT_ID is not set; skipping CurseForge."
+if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
+    echo "CURSEFORGE_TOKEN is not set; skipping CurseForge."
     exit 0
 fi
 
 version="$1"
 notes="$2"
 jar="$3"
+project="${CURSEFORGE_PROJECT_ID:-1793171}"
 api="${CURSEFORGE_API:-https://minecraft.curseforge.com/api}"
 tmp="${RUNNER_TEMP:-/tmp}"
 response="$tmp/curseforge-response.json"
@@ -93,7 +95,7 @@ jq -n \
 code=$(request -X POST \
     -F "metadata=<$tmp/curseforge-file.json;type=application/json" \
     -F "file=@$jar;filename=$file;type=application/java-archive" \
-    "$api/projects/$CURSEFORGE_PROJECT_ID/upload-file")
+    "$api/projects/$project/upload-file")
 [[ "$code" == 200 ]] || fail "upload refused (HTTP $code)."
 
 echo "Published ManhuntStar $version ($loader $minecraft) on CurseForge: file $(jq -r '.id' "$response")"
