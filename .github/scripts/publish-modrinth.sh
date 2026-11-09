@@ -14,7 +14,8 @@
 #
 # Modrinth wants the environment of every version once a project has mods, and it refuses new versions
 # (at least while the project is in review) as long as one of them says "unknown". The versions published
-# before this script sent it say that, so they get one first, from their loaders (as above).
+# before this script sent it say that, so they get one first, from their loaders (as above), which takes
+# the "Write versions" scope.
 #
 # Usage: publish-modrinth.sh <version> <release notes .md> <jar> [catalog]
 # Environment:
@@ -97,13 +98,19 @@ code=$(request "$api/project/$project_id/version")
 versions="$tmp/modrinth-versions.json"
 cp "$response" "$versions"
 
-# "<id> <environment> <version number>" of each version without an environment
+# "<id> <environment> <version number>" of each version without an environment. One that can't be fixed
+# only stops the mods (Modrinth then refuses them), so the plugin still goes up.
+unknown=''
 while read -r id missing old; do
     code=$(request -X PATCH -H "Content-Type: application/json" \
         --data "$(jq -nc --arg environment "$missing" '{ environment: $environment }')" \
         "$api3/version/$id")
-    [[ "$code" == 204 ]] || fail "could not set the environment of version $old (HTTP $code); the token needs the \"Write versions\" scope."
-    echo "Version $old on Modrinth now says $missing."
+    if [[ "$code" == 204 ]]; then
+        echo "Version $old on Modrinth now says $missing."
+    else
+        echo "::warning::Modrinth: could not set the environment of version $old (HTTP $code); the token needs the \"Write versions\" scope."
+        unknown="$unknown $old"
+    fi
 done < <(jq -r '.[] | select((.environment // "unknown") == "unknown")
     | "\(.id) \(if any(.loaders[]; . == "fabric" or . == "neoforge") then "server_only" else "dedicated_server_only" end) \(.version_number)"' "$versions")
 
@@ -149,6 +156,9 @@ code=$(request -X POST \
     -F "data=<$tmp/modrinth-version.json;type=application/json" \
     -F "jar=@$jar;filename=$file;type=application/java-archive" \
     "$api/version")
-[[ "$code" == 200 ]] || fail "upload refused (HTTP $code)."
+if [[ "$code" != 200 ]]; then
+    [[ -z "$unknown" ]] || fail "upload refused (HTTP $code); these versions still say \"unknown\":$unknown."
+    fail "upload refused (HTTP $code)."
+fi
 
 echo "Published $name on Modrinth for $game_versions: https://modrinth.com/project/$project/version/$(jq -r '.id' "$response")"
