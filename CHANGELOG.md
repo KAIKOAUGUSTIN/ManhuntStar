@@ -2,6 +2,27 @@
 
 Generated automatically on every merge into main.
 
+## 2.0.0 - 2026-11-09
+
+### New
+
+- SonarQube Cloud analysis in the Build workflow (183f193)
+- Fabric and NeoForge mods for Minecraft 26.2 and 26.3, server side only (players join with a vanilla client) (3b3337b)
+- Releases carry the Fabric and NeoForge mods, also on Modrinth and CurseForge (5142b91)
+
+### Changed
+
+- The bots' AI and the hunt rules moved to a core shared by the plugin and the mods (the plugin plays the same) (5cb47d8)
+- Modrinth versions also list Minecraft's patch releases (26.2.1 and the like) (15a6479)
+- README with a CurseForge button, and the Discord invite that doesn't expire (f5cba75)
+- Shorter release notes, with the Minecraft versions of the mods (d95cee5)
+- CodeRabbit also reviews pull requests into dev, leaving out files that don't need a review (1ca4f44)
+- Worlds that unload or close leave Manhunt*'s world cache, so they aren't kept in memory (30f4e57)
+
+**Paper:** 26.2-26.3 · **Fabric and NeoForge:** 26.2, 26.3 · **Java:** 25
+
+**Full changelog since 1.6.1:** https://github.com/KAIKOAUGUSTIN/ManhuntStar/compare/v1.6.1...v2.0.0
+
 ## 1.6.1 - 2026-11-05
 
 ### New
