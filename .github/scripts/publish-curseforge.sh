@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Publishes one mod jar of a version on CurseForge, with the release notes as the changelog: the
-# Minecraft releases of its version (26.2, 26.2.1...), its loader, Server and Java 25; Fabric's needs
-# Fabric API. The jar is ManhuntStar-<loader>-<version>+<minecraft>.jar. The Paper plugin isn't sent
+# Minecraft releases of its version (26.2, 26.2.1...), its loader, Server and Client (it runs on servers
+# and in singleplayer's internal server; players joining a server don't need it), and Java 25; Fabric's
+# needs Fabric API. The jar is ManhuntStar-<loader>-<version>+<minecraft>.jar. The Paper plugin isn't sent
 # (CurseForge keeps Bukkit plugins in a section of their own).
 #
 # CurseForge's upload API can't list a project's files, so every run uploads again: the release
@@ -66,7 +67,7 @@ ids() {
         | {
             minecraft: [.[] | select((.type | startswith("minecraft-")) and (.name == $minecraft or (.name | startswith($minecraft + ".")))) | .id],
             loader: [.[] | select(.type == "modloader" and .name == $loader) | .id],
-            extra: [.[] | select((.type == "environment" and .name == "Server") or (.type == "java" and .name == "Java 25")) | .id]
+            extra: [.[] | select((.type == "environment" and (.name == "Server" or .name == "Client")) or (.type == "java" and .name == "Java 25")) | .id]
           }' "$response"
 }
 found=$(ids)
