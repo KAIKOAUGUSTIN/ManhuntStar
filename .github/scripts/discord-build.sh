@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Posts a dev build to a Discord channel as a Components V2 card: the pushed commits, the commit, the
-# last release, the supported Paper versions, buttons for the run and the artifact, the jar (when the
-# build passed) and a role mention at the bottom.
+# last release, the supported Paper and mod versions, buttons for the run and the artifact (every jar),
+# the plugin's jar (when the build passed) and a role mention at the bottom.
 #
 # Environment:
 #   DISCORD_WEBHOOK_URL  the channel's webhook (Server Settings > Integrations > Webhooks); nothing
 #                        is sent when it's empty
 #   DISCORD_ROLE_ID      role mentioned at the bottom of the card (optional)
 #   STATUS               the job status: success or failure
-#   JAR                  the built jar (attached on success, when it exists)
+#   JAR                  the plugin's jar (attached on success, when it exists)
 #   ARTIFACT_URL         link to the run's artifact (optional)
 #   GITHUB_*             set by GitHub Actions (repository, sha, ref name, run id, event file)
 set -euo pipefail
@@ -39,6 +39,7 @@ fi
 
 version=$(sed -n 's/^version=//p' gradle.properties)
 paper=$(bash "$(dirname "$0")/paper-versions.sh")
+mods=$(sed -n 's/^minecraftVersions=//p' gradle.properties | sed 's/ //g; s/,/, /g')
 
 if [[ "$status" == "success" ]]; then
     title="✅ New build on $branch"
@@ -70,6 +71,7 @@ card() {
         --arg commit_url "$server/$repo/commit/$sha" \
         --arg version "$version" \
         --arg paper "$paper" \
+        --arg mods "$mods" \
         --arg role "$role" \
         --argjson now "$(date +%s)" \
         '
@@ -86,7 +88,10 @@ card() {
                   + (if $count > 10 then "\n-# ...and \($count - 10) more" else "" end)
               ) },
               { type: 14, divider: true, spacing: 1 },
-              { type: 10, content: "**Commit** [`\($short)`](\($commit_url))  ·  **Last release** v\($version)  ·  **Paper** \($paper)" }
+              { type: 10, content: (
+                  "**Commit** [`\($short)`](\($commit_url))  ·  **Last release** v\($version)  ·  **Paper** \($paper)"
+                  + (if $mods != "" then "  ·  **Fabric and NeoForge** \($mods)" else "" end)
+              ) }
             ]
             + (if $file != "" then [{ type: 13, file: { url: "attachment://\($file)" } }] else [] end)
             + [{ type: 1, components: (

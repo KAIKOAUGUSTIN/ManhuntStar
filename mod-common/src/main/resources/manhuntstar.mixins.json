@@ -1,0 +1,37 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.manhuntstar.mod.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "AbstractArrowAccessor",
+    "AbstractHorseAccessor",
+    "AttributeMapMixin",
+    "BlockItemMixin",
+    "CommandSourceStackAccessor",
+    "CommandsMixin",
+    "EntityCallbacksMixin",
+    "EntityMixin",
+    "FireBlockMixin",
+    "FlowingFluidMixin",
+    "ItemEntityAccessor",
+    "LivingEntityMixin",
+    "MannequinAccessor",
+    "MinecraftServerMixin",
+    "MobAccessor",
+    "MobMixin",
+    "PlayerInfoUpdatePacketAccessor",
+    "PlayerListMixin",
+    "ProjectileMixin",
+    "ServerExplosionMixin",
+    "ServerGamePacketListenerImplMixin",
+    "ServerPlayerGameModeMixin",
+    "ServerPlayerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

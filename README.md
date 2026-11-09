@@ -4,7 +4,7 @@
 
 # 🏹 ManhuntStar
 
-**ManHunt** hunter bots for Paper servers.
+**ManHunt** hunter bots for Paper, Fabric and NeoForge servers.
 
 <p align="center">
   <a href="https://modrinth.com/plugin/manhuntstar"><img src="https://img.shields.io/badge/Modrinth-Download-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Download on Modrinth"></a>
@@ -20,10 +20,21 @@ If you like ManhuntStar, consider giving the repository a ⭐ on GitHub! It help
 
 ## 📦 Installation
 
-1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest).
+**Paper** (plugin):
+
+1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or Hangar.
 2. Put it in your server's `plugins/` folder and start the server.
 
 Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
+
+**Fabric or NeoForge** (mod):
+
+1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest) or Modrinth.
+2. Put it in the `mods/` folder and start the server. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too.
+
+Requirements: Minecraft 26.2 or 26.3 and Java 25. Only the server needs the mod: players join with a vanilla client. It also works in singleplayer and LAN worlds.
+
+The mods do the same as the plugin; their files (`config.yml`, `lang/`, `skins/`, the saved bots) are in `config/manhuntstar/` instead of `plugins/ManhuntStar/`. `/manhunt` is for operators, or for whoever has the `manhuntstar.admin` permission in a permissions mod such as LuckPerms.
 
 ## 🎯 Quick start
 
@@ -86,7 +97,7 @@ Names with `%`, accents or spaces go in quotes in commands, for example `/manhun
 
 ## 🔧 Configuration
 
-Everything is commented in `plugins/ManhuntStar/config.yml` and can also be changed in game, with `/manhunt settings` or in `/manhunt menu`. Highlights:
+Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar/config.yml` on Fabric and NeoForge) and can also be changed in game, with `/manhunt settings` or in `/manhunt menu`. Highlights:
 
 - ⏱️ **Ring and countdown before the hunt** (`manhunt.countdown-seconds`, default 20): the bots wait in the ring until a player who was inside leaves; then the head-start countdown begins, and only then do they start hunting. A ring created far from everyone waits for someone to walk in and out (or for `/manhunt start`). With `manhunt.countdown-on-ring-leave: false` the countdown starts as soon as the bots are created; `0` = the bots are released as soon as someone leaves the ring.
 - 📍 **Ring radius and center**: `manhunt.ring-radius` (`0` = automatic, grows with the number of bots) and `manhunt.ring-center` (`auto` = where the ring is created; `manual` = at the point set with `/manhunt ring point`).
@@ -95,7 +106,7 @@ Everything is commented in `plugins/ManhuntStar/config.yml` and can also be chan
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
 - 🔔 **Update check** (`general.update-check`, on by default): looks for a new version when the server starts and every 6 hours. A new version is logged to the console and shown to admins when they join, with a download link.
-- 📊 **Anonymous statistics** on [bStats](https://bstats.org) (server count, Paper version, number of bots, language and default difficulty). To turn them off for every plugin, set `enabled: false` in `plugins/bStats/config.yml`.
+- 📊 **Anonymous statistics** on [bStats](https://bstats.org), on Paper only (server count, Paper version, number of bots, language and default difficulty). To turn them off for every plugin, set `enabled: false` in `plugins/bStats/config.yml`.
 - Combat, mobility, pathfinding, tactics, saving, default difficulty...
 
 Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
@@ -125,19 +136,19 @@ Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` 
 
 Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...), but when an update changes their default texts, your copy is moved to `lang/old/` and replaced; a file with your own name is never replaced.
 
-Want your translation in the plugin? Open a pull request adding it to `src/main/resources/lang/`.
+Want your translation in the plugin? Open a pull request adding it to `core/src/main/resources/lang/`.
 
 ## 🔌 API for other plugins
 
-`dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot behind an entity. Events: `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
+On Paper, `dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot behind an entity. Events: `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
 
 ## 🏗️ Building
 
-Needs JDK 25. Run `./gradlew build`; the jar ends up in `build/libs/`.
+Needs JDK 25. Run `./gradlew build`; the jars end up in `build/libs/`: the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version (the versions are in `gradle.properties`).
 
 ## ⚠️ Limitations
 
-- Other plugins that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
+- Other plugins and mods that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
 - Bot and group names in the menu are typed in chat.
 
 ## 🙏 Credits

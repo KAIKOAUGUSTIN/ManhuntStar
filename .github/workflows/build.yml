@@ -1,9 +1,11 @@
-# Build: compiles, runs the tests and keeps the jar as an artifact, on every PR and on every push to
-# dev and main. The jar is on the run's Summary page (Artifacts) for 14 days.
+# Build: compiles, runs the tests and keeps the jars as an artifact, on every PR and on every push to
+# dev and main: the Paper plugin and the Fabric and NeoForge mods (one per Minecraft version in
+# gradle.properties). They are on the run's Summary page (Artifacts) for 14 days.
 #
 # Every push to dev (a merged PR or a direct push; not PRs while open) is also posted to Discord as a
-# card with the commits and the jar, mentioning DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is
-# set (Settings > Secrets and variables > Actions).
+# card with the commits and the plugin's jar (the mods are in the artifact), mentioning
+# DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is set (Settings > Secrets and variables >
+# Actions).
 #
 # Each run is also analyzed by SonarQube Cloud (project kaikoaugustin_manhunt-star) when the SONAR_TOKEN
 # secret is available; PRs from forks and Dependabot don't get it and skip the analysis.
@@ -69,7 +71,7 @@ jobs:
             echo "name=ManhuntStar-$GITHUB_REF_NAME-${SHA::7}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload the jar
+      - name: Upload the jars
         id: upload
         uses: actions/upload-artifact@v7
         with:
@@ -83,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name || 'ManhuntStar' }}-tests
-          path: build/reports/tests/
+          path: "*/build/reports/tests/"
           retention-days: 14
 
       - name: Discord notification
@@ -97,6 +99,6 @@ jobs:
           STATUS: ${{ job.status }}
           ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
         run: |
-          JAR=$(ls build/libs/ManhuntStar-*.jar 2> /dev/null | head -n 1 || true)
+          JAR="build/libs/ManhuntStar-$(sed -n 's/^version=//p' gradle.properties).jar"
           export JAR
           bash .github/scripts/discord-build.sh

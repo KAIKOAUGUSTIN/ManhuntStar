@@ -1,85 +1,45 @@
+// Settings shared by every module (core, paper and the mods).
+//
+// The version lives in gradle.properties and is bumped by the release workflow.
+// Dependency versions live in gradle/libs.versions.toml (read by Dependabot).
+// The plugin's and the mods' jars end up in build/libs/ here at the root.
+
 plugins {
-    java
-    jacoco
-    alias(libs.plugins.shadow)
+    // "clean" also removes build/libs/ at the root, where the plugin jar goes
+    base
     alias(libs.plugins.sonarqube)
 }
 
-group = "dev.manhuntstar"
-description = "Manhunt* - ManHunt hunter bots for Paper"
+subprojects {
+    group = "dev.manhuntstar"
+    version = rootProject.version
 
-// The plugin version lives in gradle.properties and is bumped by the release workflow.
-// Dependency versions live in gradle/libs.versions.toml (read by Dependabot).
-
-repositories {
-    mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
-}
-
-// Supported Paper versions: compiled against the oldest (paper-api-min) and checked against the newest
-// (paper-api). One jar runs on both; src/main/java/dev/manhuntstar/util/PaperCompat.java handles
-// what differs between them.
-val paperMin = libs.versions.paper.api.min.get()
-val apiVersion = Regex("""^(\d+\.\d+)""").find(paperMin)?.groupValues?.get(1)
-    ?: error("Can't read the api-version from paper-api-min ($paperMin)")
-
-val paperLatest = configurations.create("paperLatest")
-
-dependencies {
-    compileOnly("io.papermc.paper:paper-api:$paperMin")
-    add(paperLatest.name, libs.paper.api)
-
-    // bundled in the jar (relocated, see shadowJar)
-    implementation(libs.bstats.bukkit)
-
-    testImplementation(libs.paper.api)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.encoding = "UTF-8"
-    options.release.set(25)
-    options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:removal"))
-}
-
-tasks.processResources {
-    val props = mapOf(
-        "version" to project.version.toString(),
-        "apiVersion" to apiVersion,
-        "bstatsId" to (findProperty("bstatsId")?.toString() ?: "0"),
-    )
-    inputs.properties(props)
-    filteringCharset = "UTF-8"
-    filesMatching(listOf("plugin.yml", "manhuntstar.properties")) {
-        expand(props)
+    repositories {
+        mavenCentral()
     }
-}
 
-// Compiles the same code against the newest Paper API, to catch anything it removed or changed.
-val compileAgainstLatest = tasks.register<JavaCompile>("compileAgainstLatest") {
-    description = "Compiles the plugin against the newest supported Paper API."
-    group = "verification"
-    source = sourceSets.main.get().java
-    classpath = files(paperLatest, configurations.runtimeClasspath)
-    destinationDirectory.set(layout.buildDirectory.dir("compat/latest"))
-}
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+        options.release.set(25)
+        options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:removal"))
+    }
 
-tasks.check {
-    dependsOn(compileAgainstLatest)
-}
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+    }
 
-tasks.test {
-    useJUnitPlatform()
-    finalizedBy(tasks.jacocoTestReport)
-}
-
-// Test coverage for SonarQube Cloud: the sonar task reads this XML report.
-tasks.jacocoTestReport {
-    dependsOn(tasks.test)
-    reports {
-        xml.required.set(true)
+    // Test coverage for SonarQube Cloud: the sonar task reads each module's XML report.
+    pluginManager.withPlugin("java") {
+        apply(plugin = "jacoco")
+        tasks.named<Test>("test") {
+            finalizedBy(tasks.named("jacocoTestReport"))
+        }
+        tasks.named<JacocoReport>("jacocoTestReport") {
+            dependsOn(tasks.named("test"))
+            reports {
+                xml.required.set(true)
+            }
+        }
     }
 }
 
@@ -93,14 +53,13 @@ sonar {
     }
 }
 
-// The plugin jar is the shadow jar: the plugin plus bStats, moved into its own package so it doesn't
-// clash with other plugins' copies (bStats refuses to start when it isn't relocated).
-tasks.shadowJar {
-    archiveFileName.set("ManhuntStar-${project.version}.jar")
-    relocate("org.bstats", "dev.manhuntstar.libs.bstats")
-    exclude("META-INF/maven/**", "META-INF/LICENSE*", "META-INF/NOTICE*")
-}
-
-tasks.jar {
-    enabled = false
+// Each Minecraft version's project of a mod module (:fabric:26.2, :fabric:26.3...) compiles the same
+// sources, which SonarQube can't index twice: they are analyzed once, in the newest version's project.
+val newestMinecraft = providers.gradleProperty("minecraftVersions").get().split(",").last().trim()
+subprojects {
+    if (parent != rootProject && name != newestMinecraft) {
+        sonar {
+            isSkipProject = true
+        }
+    }
 }

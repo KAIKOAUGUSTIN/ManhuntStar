@@ -3,11 +3,13 @@
 # 1. Bumps the version in gradle.properties (patch; a "minor" or "major" label on the PR changes that,
 #    "skip-release" skips everything).
 # 2. Builds and tests with the new version.
-# 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jar.
+# 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jars
+#    (the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version).
 #    The release notes group the PR's commits by the prefix of their message: "New:", "Changed:",
 #    "Updated:" and "Removed:" (no prefix = Changed, Dependabot = Updated). The same notes go to
-#    CHANGELOG.md, the GitHub release, Modrinth, Hangar and Discord.
-# 4. Publishes it on Modrinth and Hangar (each one when its secret is set).
+#    CHANGELOG.md, the GitHub release, Modrinth, Hangar, CurseForge and Discord.
+# 4. Publishes it on Modrinth (every jar), Hangar (the plugin) and CurseForge (the mods), each one when
+#    its secret is set.
 # 5. Announces the release on Discord (when a webhook secret is set).
 # 6. Brings main back into dev, so dev starts from the new version.
 #
@@ -115,13 +117,14 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.next }}
         run: |
-          gh release create "v$VERSION" "build/libs/ManhuntStar-$VERSION.jar" \
+          gh release create "v$VERSION" "build/libs/ManhuntStar-$VERSION.jar" build/libs/ManhuntStar-*-"$VERSION"+*.jar \
             --title "ManhuntStar $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             --verify-tag
 
-      # Modrinth and Hangar: each one is skipped while its secret (MODRINTH_TOKEN, HANGAR_API_KEY) is
-      # missing. The MODRINTH_PROJECT and HANGAR_PROJECT variables change the project slugs (defaults:
+      # Modrinth, Hangar and CurseForge: each one is skipped while its secret (MODRINTH_TOKEN,
+      # HANGAR_API_KEY, CURSEFORGE_TOKEN) is missing; CurseForge also needs the CURSEFORGE_PROJECT_ID
+      # variable. The MODRINTH_PROJECT and HANGAR_PROJECT variables change the project slugs (defaults:
       # manhuntstar and ManhuntStar). A failed upload shows up as an error without stopping the
       # release; the Publish workflow can send that version again.
       - name: Publish on Modrinth
@@ -130,7 +133,12 @@ jobs:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_PROJECT: ${{ vars.MODRINTH_PROJECT }}
           VERSION: ${{ steps.version.outputs.next }}
-        run: bash .github/scripts/publish-modrinth.sh "$VERSION" "$RUNNER_TEMP/notes.md" "build/libs/ManhuntStar-$VERSION.jar"
+        run: |
+          failed=0
+          for jar in "build/libs/ManhuntStar-$VERSION.jar" build/libs/ManhuntStar-*-"$VERSION"+*.jar; do
+            bash .github/scripts/publish-modrinth.sh "$VERSION" "$RUNNER_TEMP/notes.md" "$jar" || failed=1
+          done
+          exit $failed
 
       - name: Publish on Hangar
         continue-on-error: true
@@ -139,6 +147,23 @@ jobs:
           HANGAR_PROJECT: ${{ vars.HANGAR_PROJECT }}
           VERSION: ${{ steps.version.outputs.next }}
         run: bash .github/scripts/publish-hangar.sh "$VERSION" "$RUNNER_TEMP/notes.md" "build/libs/ManhuntStar-$VERSION.jar"
+
+      - name: Publish on CurseForge
+        continue-on-error: true
+        env:
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          if [ -z "$CURSEFORGE_TOKEN" ] || [ -z "$CURSEFORGE_PROJECT_ID" ]; then
+            echo "CURSEFORGE_TOKEN or CURSEFORGE_PROJECT_ID is not set; skipping CurseForge."
+            exit 0
+          fi
+          failed=0
+          for jar in build/libs/ManhuntStar-*-"$VERSION"+*.jar; do
+            bash .github/scripts/publish-curseforge.sh "$VERSION" "$RUNNER_TEMP/notes.md" "$jar" || failed=1
+          done
+          exit $failed
 
       # The DISCORD_RELEASE_WEBHOOK_URL secret (or DISCORD_WEBHOOK_URL, when there's no separate
       # release channel); skipped when neither is set. A failed post doesn't fail the release.

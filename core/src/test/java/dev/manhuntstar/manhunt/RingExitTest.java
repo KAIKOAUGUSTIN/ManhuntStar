@@ -1,0 +1,85 @@
+package dev.manhuntstar.manhunt;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+/** Who sets off the ring: only players who were inside and left for a few ticks in a row. */
+class RingExitTest {
+
+    private static final double LEAVE = 6.5;
+
+    /** Stays outside for {@code ticks} ticks; returns whether it fired in any of them. */
+    private static boolean stayOutside(RingExit exit, UUID p, int ticks) {
+        boolean fired = false;
+        for (int i = 0; i < ticks; i++) {
+            fired |= exit.observe(p, 20.0);
+        }
+        return fired;
+    }
+
+    @Test
+    void someoneWhoNeverEnteredDoesNotTrigger() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID far = UUID.randomUUID();
+        assertFalse(stayOutside(exit, far, 100));
+    }
+
+    @Test
+    void leavingTriggersAfterSomeTicksOutside() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID p = UUID.randomUUID();
+        assertFalse(exit.observe(p, 2.0));
+        assertFalse(stayOutside(exit, p, RingExit.OUTSIDE_TICKS - 1));
+        assertTrue(exit.observe(p, 20.0));
+    }
+
+    @Test
+    void aShortPushOutsideDoesNotTrigger() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID p = UUID.randomUUID();
+        exit.observe(p, 2.0);
+        assertFalse(stayOutside(exit, p, RingExit.OUTSIDE_TICKS - 1));
+        assertFalse(exit.observe(p, LEAVE));
+        assertFalse(stayOutside(exit, p, RingExit.OUTSIDE_TICKS - 1));
+    }
+
+    @Test
+    void anyoneWhoWasInsideCanTriggerAndTheFirstWins() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        exit.observe(a, 1.0);
+        exit.observe(b, 3.0);
+        boolean aFired = false;
+        boolean bFired = false;
+        for (int i = 0; i < RingExit.OUTSIDE_TICKS && !bFired; i++) {
+            aFired |= exit.observe(a, 1.0);
+            bFired = exit.observe(b, 15.0);
+        }
+        assertFalse(aFired);
+        assertTrue(bFired);
+    }
+
+    @Test
+    void enteringLaterAlsoCounts() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID p = UUID.randomUUID();
+        assertFalse(stayOutside(exit, p, 10));
+        exit.observe(p, 4.0);
+        assertTrue(stayOutside(exit, p, RingExit.OUTSIDE_TICKS));
+    }
+
+    @Test
+    void forgottenPlayerStopsCounting() {
+        RingExit exit = new RingExit(LEAVE);
+        UUID p = UUID.randomUUID();
+        exit.observe(p, 1.0);
+        exit.forget(p);
+        assertFalse(stayOutside(exit, p, 10));
+        assertTrue(exit.inside().isEmpty());
+    }
+}
