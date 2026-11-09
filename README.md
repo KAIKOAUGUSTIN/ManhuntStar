@@ -9,7 +9,8 @@
 <p align="center">
   <a href="https://modrinth.com/plugin/manhuntstar"><img src="https://img.shields.io/badge/Modrinth-Download-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Download on Modrinth"></a>
   <a href="https://hangar.papermc.io/KAIKOAUGUSTIN/ManhuntStar"><img src="https://img.shields.io/badge/Hangar-Download-3371ED?style=for-the-badge" alt="Download on Hangar"></a>
-  <a href="https://discord.gg/SmPcGTbgUM"><img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the Discord server"></a>
+  <a href="https://www.curseforge.com/minecraft/mc-mods/manhuntstar"><img src="https://img.shields.io/badge/CurseForge-Download-F16436?style=for-the-badge&logo=curseforge&logoColor=white" alt="Download on CurseForge"></a>
+  <a href="https://discord.gg/X6P447F7vx"><img src="https://img.shields.io/badge/Discord-Join%20the%20server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the Discord server"></a>
 </p>
 
 No friends online? Spawn a pack of hunters that play like real players and try to stop you from beating the game. They run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, get stronger through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow you to the Nether and the End.
@@ -29,7 +30,7 @@ Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
 
 **Fabric or NeoForge** (mod):
 
-1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest) or Modrinth.
+1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or CurseForge.
 2. Put it in the `mods/` folder and start the server. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too.
 
 Requirements: Minecraft 26.2 or 26.3 and Java 25. Only the server needs the mod: players join with a vanilla client. It also works in singleplayer and LAN worlds.
