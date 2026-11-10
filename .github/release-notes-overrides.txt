@@ -53,3 +53,5 @@ ed4f39f -
 # after 2.0.0: the environments on Modrinth, in one line
 9a2cfd5 Changed: every ManhuntStar version on Modrinth says where it runs, which Modrinth needs before it takes the mods
 4145d8d -
+# after 2.0.0: the plan for error reports, left out
+7500cb9 -

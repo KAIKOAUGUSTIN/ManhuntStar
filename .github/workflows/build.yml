@@ -7,7 +7,7 @@
 # DISCORD_ROLE_ID, when the DISCORD_WEBHOOK_URL secret is set (Settings > Secrets and variables >
 # Actions).
 #
-# Each run is also analyzed by SonarQube Cloud (project kaikoaugustin_manhunt-star) when the SONAR_TOKEN
+# Each run is also analyzed by SonarQube Cloud (project KAIKOAUGUSTIN_ManhuntStar) when the SONAR_TOKEN
 # secret is available; PRs from forks and Dependabot don't get it and skip the analysis.
 name: Build
 

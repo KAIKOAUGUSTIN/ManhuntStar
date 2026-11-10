@@ -47,7 +47,7 @@ subprojects {
 // the SONAR_TOKEN environment variable (the SONAR_TOKEN secret in the workflow).
 sonar {
     properties {
-        property("sonar.projectKey", "kaikoaugustin_manhunt-star")
+        property("sonar.projectKey", "KAIKOAUGUSTIN_ManhuntStar")
         property("sonar.organization", "kaikoaugustin")
         property("sonar.host.url", "https://sonarcloud.io")
     }
