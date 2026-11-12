@@ -2,7 +2,6 @@ package dev.manhuntstar.mod;
 
 import dev.faststats.Metrics;
 import dev.faststats.data.Metric;
-import dev.manhuntstar.ManhuntCore;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.metrics.UsageStats;
 import java.io.File;
@@ -36,7 +35,7 @@ public final class ModStatistics {
 
     /** The custom metrics, for the context's factory: {@code .metrics(ModStatistics.metrics(platform))}. */
     public static Function<Metrics.Factory, Metrics> metrics(ModPlatform platform) {
-        // FastStats reads them off the server thread: core's copies, empty while no server runs
+        // FastStats reads them off the server thread: core's copies, empty until a server has started
         return factory -> factory
                 .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
                 .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
@@ -45,7 +44,7 @@ public final class ModStatistics {
     }
 
     private static <T> T read(ModPlatform platform, Function<UsageStats, T> value) {
-        ManhuntCore core = platform.core();
-        return core == null ? null : value.apply(core.usage());
+        UsageStats usage = platform.usage();
+        return usage == null ? null : value.apply(usage);
     }
 }
