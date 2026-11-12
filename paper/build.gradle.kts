@@ -9,9 +9,6 @@ description = "Manhunt* - ManHunt hunter bots for Paper"
 
 repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
-    maven("https://repo.faststats.dev/releases") {
-        content { includeGroup("dev.faststats.metrics") }
-    }
 }
 
 // Supported Paper versions: compiled against the oldest (paper-api-min) and checked against the newest
@@ -42,7 +39,7 @@ tasks.processResources {
     val props = mapOf(
         "version" to project.version.toString(),
         "apiVersion" to apiVersion,
-        "faststatsToken" to (findProperty("faststatsToken")?.toString() ?: ""),
+        "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
     )
     inputs.properties(props)
     filteringCharset = "UTF-8"

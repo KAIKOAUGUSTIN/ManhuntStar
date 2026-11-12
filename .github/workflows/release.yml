@@ -89,6 +89,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Build and test
+        env:
+          # FastStats project token, put into the plugin and the mods (only release jars send statistics)
+          FASTSTATS_TOKEN: ${{ secrets.FASTSTATS_TOKEN }}
         run: ./gradlew build
 
       - name: Release notes and CHANGELOG
