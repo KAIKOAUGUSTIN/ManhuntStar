@@ -53,7 +53,10 @@ dependencies {
     implementation("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
     include("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
     // and FastStats (anonymous statistics), a mod of its own built for each Minecraft version
-    implementation(faststats)
+    // (not its Gson: Minecraft brings Gson and pins its own version)
+    implementation(faststats) {
+        exclude(group = "com.google.code.gson")
+    }
     include(faststats)
 }
 
