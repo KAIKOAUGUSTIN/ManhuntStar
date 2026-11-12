@@ -66,7 +66,8 @@ public final class ModPlatform implements ManhuntPlatform {
     private final YamlFiles yaml;
 
     private ModServer server;
-    private ManhuntCore core;
+    // also read by FastStats' thread (ModStatistics)
+    private volatile ManhuntCore core;
     private volatile boolean running;
     private ModMobGoals mobGoals;
     private ModAimDiagnostics aim;

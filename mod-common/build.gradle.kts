@@ -47,6 +47,8 @@ dependencies {
     compileOnly(project(":core"))
     compileOnly("net.kyori:adventure-platform-mod-shared:$adventurePlatformMod")
     compileOnly("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
+    // FastStats: each loader brings its own build of the SDK (jar-in-jar); the shared code only uses its API
+    compileOnly(libs.faststats.core)
     // Mixin and MixinExtras come with both loaders
     compileOnly("net.fabricmc:sponge-mixin:${libs.versions.sponge.mixin.get()}")
     compileOnly(mixinextras)

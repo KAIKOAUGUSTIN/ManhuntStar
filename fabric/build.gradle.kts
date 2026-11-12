@@ -17,6 +17,7 @@ val catalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
 fun forMinecraft(name: String): String = catalog.findVersion("mc${minecraft.replace(".", "")}-$name")
     .orElseThrow { GradleException("gradle/libs.versions.toml has no $name for Minecraft $minecraft") }.requiredVersion
 val adventurePlatformMod = forMinecraft("adventure-platform-mod")
+val faststats = "dev.faststats.metrics:fabric:${libs.versions.faststats.get()}+mc$minecraft"
 
 sourceSets.main {
     java.srcDir(parent!!.file("src/main/java"))
@@ -51,6 +52,9 @@ dependencies {
     include("net.kyori:adventure-platform-fabric:$adventurePlatformMod")
     implementation("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
     include("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
+    // and FastStats (anonymous statistics), a mod of its own built for each Minecraft version
+    implementation(faststats)
+    include(faststats)
 }
 
 tasks.compileJava {
@@ -61,9 +65,13 @@ tasks.compileJava {
 tasks.processResources {
     dependsOn(commonResources)
     from(commonResources)
-    val props = mapOf("version" to project.version.toString(), "minecraft" to minecraft)
+    val props = mapOf(
+        "version" to project.version.toString(),
+        "minecraft" to minecraft,
+        "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
+    )
     inputs.properties(props)
-    filesMatching("fabric.mod.json") {
+    filesMatching(listOf("fabric.mod.json", "manhuntstar.properties")) {
         expand(props)
     }
 }

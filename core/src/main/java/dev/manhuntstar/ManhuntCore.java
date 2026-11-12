@@ -16,6 +16,7 @@ import dev.manhuntstar.host.DeathMessageSource;
 import dev.manhuntstar.host.ManhuntPlatform;
 import dev.manhuntstar.host.PathDebug;
 import dev.manhuntstar.host.PlatformServices;
+import dev.manhuntstar.metrics.UsageStats;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.platform.Attr;
@@ -47,6 +48,7 @@ public final class ManhuntCore implements ManhuntHost {
     private final Logger logger;
     private final File dataFolder;
     private final Settings settings = new Settings();
+    private final UsageStats usage = new UsageStats();
     private final Messages messages = new Messages();
     private final ChunkTickets chunkTickets = new ChunkTickets();
     private final GameEvents gameEvents = new GameEvents(this);
@@ -94,6 +96,7 @@ public final class ManhuntCore implements ManhuntHost {
         if (restored > 0) {
             logger.info(restored + " bot(s) restored from bots.yml.");
         }
+        usage.update(this);
         platform.started(this);
         updates.apply(settings.updateCheck.on());
         logger.info("Manhunt* enabled (" + platform.description() + ", language " + messages.language() + ").");
@@ -131,6 +134,9 @@ public final class ManhuntCore implements ManhuntHost {
         mobTargeting.tick(now);
         services.debugRenderer().tick(now, settings.debugPaths.on());
         services.tabList().tick(now);
+        if (now % UsageStats.UPDATE_TICKS == 0) {
+            usage.update(this);
+        }
     }
 
     /** Bot mannequins left in the world (e.g. a server crash): removed before restoring. */
@@ -250,6 +256,11 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     // ------------------------------------------------------------------ access
+
+    /** The values sent to FastStats, copied on the server thread for FastStats' own thread. */
+    public UsageStats usage() {
+        return usage;
+    }
 
     /** What the bots do when the game reports something; the platform's listeners call it. */
     public GameEvents gameEvents() {

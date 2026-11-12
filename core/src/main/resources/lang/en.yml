@@ -277,6 +277,9 @@ options:
   updatecheck:
     name: "Update check"
     description: "Looks for a new version on GitHub when the server starts and every 6 hours, and tells admins when they join."
+  metrics:
+    name: "Anonymous statistics"
+    description: "Sends anonymous statistics to FastStats (server count, versions, bots, language and default difficulty). Takes effect at the next restart."
   bothealth:
     name: "Max health"
     description: "Bot max health."
