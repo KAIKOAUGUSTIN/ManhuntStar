@@ -65,7 +65,7 @@ public final class ManhuntStarNeoForge {
         }
         String token = ModStatistics.token(platform);
         if (!token.isEmpty()) {
-            ModStatistics.configure(new NeoForgeContext.Factory("manhuntstar", token), platform).create();
+            ModStatistics.start(new NeoForgeContext.Factory("manhuntstar", token), platform);
         }
     }
 }

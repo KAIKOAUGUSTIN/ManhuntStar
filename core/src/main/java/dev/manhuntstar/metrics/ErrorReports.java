@@ -1,6 +1,7 @@
 package dev.manhuntstar.metrics;
 
 import dev.faststats.ErrorTracker;
+import dev.faststats.SimpleContext;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -67,6 +68,21 @@ public final class ErrorReports {
     /** For the FastStats context: {@code .errorTrackerService(reports.tracker())}. */
     public ErrorTracker tracker() {
         return tracker;
+    }
+
+    /**
+     * Keeps tracking only if {@code context} sends the reports. It doesn't when FastStats is off for every
+     * plugin (faststats/config.properties: enabled or submitErrors false) or on FastStats' first run on
+     * this server; then nothing would send or clear what the tracker collects, so it stops.
+     *
+     * @return whether the reports are sent (and the tracking goes on)
+     */
+    public boolean closeUnlessSentBy(SimpleContext context) {
+        boolean sent = context.submissionActive && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();
+        if (!sent) {
+            close();
+        }
+        return sent;
     }
 
     /** Stops tracking (the plugin being disabled): the JVM's handler for uncaught errors goes back. */

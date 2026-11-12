@@ -7,12 +7,13 @@ import dev.manhuntstar.metrics.ErrorReports;
 import dev.manhuntstar.metrics.UsageStats;
 import java.io.File;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 /**
  * The mods' FastStats (https://faststats.dev), shared by the loaders: anonymous statistics and error
  * reports. Each loader makes its own context (FabricContext, NeoForgeContext) when the mod loads, on a
- * dedicated server only, with {@link #token} and {@link #configure}; the SDK then starts and stops with
- * the server.
+ * dedicated server only, with {@link #token} and {@link #start}; the SDK then starts and stops with the
+ * server.
  *
  * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code language} and
  * {@code default_difficulty}. The error reports are {@link ErrorReports}. No feature flags.
@@ -35,20 +36,35 @@ public final class ModStatistics {
         return token;
     }
 
-    /** Gives the context's factory the metrics and the error tracker that config.yml leaves on. */
-    public static <F extends SimpleContext.Factory<?, F>> F configure(F factory, ModPlatform platform) {
-        if (metricsEnabled(platform)) {
-            factory.metrics(f -> f
-                    .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
-                    .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
-                    .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
-                    .create());
+    /**
+     * Makes the context with the metrics and the error tracker that config.yml leaves on. If FastStats
+     * can't start (its config.properties can't be written...), the mod loads anyway, without it.
+     */
+    public static <C extends SimpleContext, F extends SimpleContext.Factory<C, F>> void start(F factory, ModPlatform platform) {
+        ErrorReports errors = null;
+        try {
+            if (metricsEnabled(platform)) {
+                factory.metrics(f -> f
+                        .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
+                        .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
+                        .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
+                        .create());
+            }
+            if (errorReportsEnabled(platform)) {
+                // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
+                errors = new ErrorReports(platform.logger());
+                factory.errorTrackerService(errors.tracker());
+            }
+            C context = factory.create();
+            if (errors != null) {
+                errors.closeUnlessSentBy(context);
+            }
+        } catch (RuntimeException e) {
+            if (errors != null) {
+                errors.close();
+            }
+            platform.logger().log(Level.WARNING, "FastStats could not start; no statistics or error reports this time.", e);
         }
-        if (errorReportsEnabled(platform)) {
-            // kept until the JVM exits: a dedicated server doesn't start twice
-            factory.errorTrackerService(new ErrorReports(platform.logger()).tracker());
-        }
-        return factory;
     }
 
     private static boolean metricsEnabled(ModPlatform platform) {

@@ -56,7 +56,7 @@ public final class ManhuntStarFabric implements ModInitializer {
         }
         String token = ModStatistics.token(platform);
         if (!token.isEmpty()) {
-            ModStatistics.configure(new FabricContext.Factory("manhuntstar", token), platform).create();
+            ModStatistics.start(new FabricContext.Factory("manhuntstar", token), platform);
         }
     }
 
