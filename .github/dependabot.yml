@@ -4,6 +4,9 @@ registries:
   papermc:
     type: maven-repository
     url: https://repo.papermc.io/repository/maven-public/
+  faststats:
+    type: maven-repository
+    url: https://repo.faststats.dev/releases
 
 updates:
   # Gradle dependencies (gradle/libs.versions.toml) and the Gradle Wrapper itself.
@@ -13,6 +16,7 @@ updates:
     target-branch: dev
     registries:
       - papermc
+      - faststats
     schedule:
       interval: weekly
       day: monday

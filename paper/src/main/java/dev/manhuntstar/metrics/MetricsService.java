@@ -1,61 +1,87 @@
 package dev.manhuntstar.metrics;
 
+import dev.faststats.bukkit.BukkitContext;
+import dev.faststats.data.Metric;
 import dev.manhuntstar.ManhuntStarPlugin;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
-import org.bstats.charts.SingleLineChart;
+import org.bukkit.scheduler.BukkitTask;
 
 /**
- * Anonymous usage statistics on bStats (https://bstats.org): server count, Paper and Java versions,
- * and the charts below. Server owners can turn it off for every plugin in
- * {@code plugins/bStats/config.yml}. The plugin ID comes from {@code bstatsId} in gradle.properties;
- * with 0 nothing is sent.
+ * Anonymous usage statistics on FastStats (https://faststats.dev): server count, Paper, Minecraft and
+ * Java versions, and the metrics below. Server owners can turn it off for every plugin in
+ * {@code plugins/faststats/config.properties}; on the first start that file is created and nothing is
+ * sent until the next restart. The project token comes from {@code faststatsToken} in
+ * gradle.properties; when it is empty nothing is sent.
  *
- * <p>Custom charts (each one has to be created on the bStats page with the same ID):
- * {@code bots} (single line chart), {@code language} and {@code default_difficulty} (simple pies).
+ * <p>Custom metrics (each one has to be created on the FastStats project with the same ID):
+ * {@code bots} (number), {@code language} and {@code default_difficulty} (strings). Only metrics are
+ * turned on: no error tracking and no feature flags.
  */
 public final class MetricsService {
 
+    /** How often the values are copied on the main thread (1 minute); FastStats reads the copies. */
+    private static final long SNAPSHOT_TICKS = 20L * 60;
+
     private final ManhuntStarPlugin plugin;
-    private Metrics metrics;
+    private BukkitContext context;
+    private BukkitTask snapshotTask;
+    private volatile int bots;
+    private volatile String language;
+    private volatile String defaultDifficulty;
 
     public MetricsService(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
     }
 
     public void start() {
-        int id = pluginId();
-        if (id <= 0) {
+        String token = token();
+        if (token.isEmpty()) {
             return;
         }
-        metrics = new Metrics(plugin, id);
-        // bStats collects the values on the main thread and sends them off it
-        metrics.addCustomChart(new SingleLineChart("bots", () -> plugin.core().botManager().aliveBots().size()));
-        metrics.addCustomChart(new SimplePie("language", () -> plugin.core().messages().language()));
-        metrics.addCustomChart(new SimplePie("default_difficulty", () -> plugin.core().settings().defaultDifficulty.get().configName()));
+        // FastStats collects and sends the values off the main thread (every 30 minutes), where the
+        // bots can't be read: it gets the copies made on the main thread
+        snapshot();
+        snapshotTask = plugin.getServer().getScheduler().runTaskTimer(plugin, this::snapshot, SNAPSHOT_TICKS, SNAPSHOT_TICKS);
+        context = new BukkitContext.Factory(plugin, token)
+                .metrics(factory -> factory
+                        .addMetric(Metric.number("bots", () -> bots))
+                        .addMetric(Metric.string("language", () -> language))
+                        .addMetric(Metric.string("default_difficulty", () -> defaultDifficulty))
+                        .create())
+                .create();
+        context.ready();
+    }
+
+    private void snapshot() {
+        bots = plugin.core().botManager().aliveBots().size();
+        language = plugin.core().messages().language();
+        defaultDifficulty = plugin.core().settings().defaultDifficulty.get().configName();
     }
 
     public void shutdown() {
-        if (metrics != null) {
-            metrics.shutdown();
-            metrics = null;
+        if (snapshotTask != null) {
+            snapshotTask.cancel();
+            snapshotTask = null;
+        }
+        if (context != null) {
+            context.shutdown();
+            context = null;
         }
     }
 
-    /** The ID written into manhuntstar.properties at build time, or 0. */
-    static int pluginId() {
+    /** The project token written into manhuntstar.properties at build time, or an empty string. */
+    static String token() {
         try (InputStream in = MetricsService.class.getResourceAsStream("/manhuntstar.properties")) {
             if (in == null) {
-                return 0;
+                return "";
             }
             Properties props = new Properties();
             props.load(in);
-            return Integer.parseInt(props.getProperty("bstats-id", "0").trim());
-        } catch (IOException | NumberFormatException e) {
-            return 0;
+            return props.getProperty("faststats-token", "").trim();
+        } catch (IOException e) {
+            return "";
         }
     }
 }

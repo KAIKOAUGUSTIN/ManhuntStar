@@ -1,4 +1,4 @@
-# Dependency submission: tells GitHub which libraries go inside the jars (the Paper plugin's bStats, and
+# Dependency submission: tells GitHub which libraries go inside the jars (the Paper plugin's FastStats, and
 # the mods' Adventure and SnakeYAML), so the dependency graph and the Dependabot alerts are about what
 # ManhuntStar ships, not about Minecraft's and Paper's own libraries or the build tools
 # (.github/scripts/dependency-graph.sh). GitHub's automatic submission sends every dependency of the
