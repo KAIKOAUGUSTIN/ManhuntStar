@@ -55,8 +55,9 @@ public final class ManhuntStarNeoForge {
     }
 
     /**
-     * Anonymous statistics on FastStats ({@link ModStatistics}), on a dedicated server only. Made now,
-     * before the server exists: the SDK starts sending when the server has started and stops with it.
+     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
+     * only. Made now, before the server exists: the SDK starts sending when the server has started and
+     * stops with it.
      */
     private static void startStatistics(ModPlatform platform) {
         if (FMLEnvironment.getDist() != Dist.DEDICATED_SERVER) {
@@ -64,7 +65,7 @@ public final class ManhuntStarNeoForge {
         }
         String token = ModStatistics.token(platform);
         if (!token.isEmpty()) {
-            new NeoForgeContext.Factory("manhuntstar", token).metrics(ModStatistics.metrics(platform)).create();
+            ModStatistics.configure(new NeoForgeContext.Factory("manhuntstar", token), platform).create();
         }
     }
 }

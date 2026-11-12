@@ -280,6 +280,9 @@ options:
   metrics:
     name: "匿名统计"
     description: "向 FastStats 发送匿名统计（服务器数量、版本、机器人、语言和默认难度）。下次重启后生效。"
+  errorreports:
+    name: "错误报告"
+    description: "向 FastStats 发送 ManhuntStar 自身的错误（类型、消息和堆栈，不含 IP 地址）。下次重启后生效。"
   bothealth:
     name: "最大生命值"
     description: "机器人的最大生命值。"

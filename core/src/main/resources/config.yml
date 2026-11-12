@@ -32,6 +32,11 @@ general:
   # mod at once, set enabled=false in faststats/config.properties (in plugins/ on Paper, config/ on the
   # mods). [metrics]
   metrics: true
+  # Error reports on FastStats: ManhuntStar's own errors (type, message and stack trace, without IP
+  # addresses or the system user name), sent with the statistics. Read when the server starts. To turn
+  # them off for every plugin and mod at once, set submitErrors=false in faststats/config.properties.
+  # [errorreports]
+  error-reports: true
 
 bots:
   # Bot max health. [bothealth]

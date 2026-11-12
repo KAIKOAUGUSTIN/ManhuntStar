@@ -69,6 +69,8 @@ public final class Settings {
     public final Setting.Bool updateCheck = bool("general.update-check", null, "updatecheck", Category.GENERAL, true);
     /** Read when the server starts (the mods also read it before core starts: {@link #metricsEnabled}). */
     public final Setting.Bool metrics = bool(METRICS_PATH, null, "metrics", Category.GENERAL, true);
+    /** Read when the server starts (the mods also read it before core starts: {@link #errorReportsEnabled}). */
+    public final Setting.Bool errorReports = bool(ERROR_REPORTS_PATH, null, "errorreports", Category.GENERAL, true);
 
     // --- Bots ---
     public final Setting.Dbl botHealth = dbl("bots.max-health", "bots.vida-maxima", "bothealth", Category.BOTS, 20.0, 1.0, 500.0, 1.0);
@@ -153,6 +155,7 @@ public final class Settings {
     /** config.yml sections with Portuguese keys (up to version 1.5): a sign that it needs migrating. */
     private static final List<String> LEGACY_SECTIONS = List.of("geral", "combate", "mobilidade", "taticas", "aparencia");
     private static final String METRICS_PATH = "general.metrics";
+    private static final String ERROR_REPORTS_PATH = "general.error-reports";
     private static final String MOBS_PATH = "bots.mobs-that-ignore-bots";
     private static final String LEGACY_MOBS_PATH = "bots.mobs-que-nao-atacam-bots";
     private static final String PLAYER_LIST_PATH = "manhunt.player-list";
@@ -275,12 +278,21 @@ public final class Settings {
      * they load, before the server (and core) exist. True without a config.yml, like the default.
      */
     public static boolean metricsEnabled(YamlFiles yaml, File file) {
+        return readBeforeStart(yaml, file, METRICS_PATH);
+    }
+
+    /** {@code general.error-reports}, read like {@link #metricsEnabled}. */
+    public static boolean errorReportsEnabled(YamlFiles yaml, File file) {
+        return readBeforeStart(yaml, file, ERROR_REPORTS_PATH);
+    }
+
+    private static boolean readBeforeStart(YamlFiles yaml, File file, String path) {
         if (!file.isFile()) {
             return true;
         }
-        Setting.Bool metrics = new Setting.Bool(METRICS_PATH, null, "metrics", Category.GENERAL, true);
-        metrics.load(yaml.load(file));
-        return metrics.on();
+        Setting.Bool setting = new Setting.Bool(path, null, path, Category.GENERAL, true);
+        setting.load(yaml.load(file));
+        return setting.on();
     }
 
     /** Does config.yml still have the Portuguese keys from versions up to 1.5? */

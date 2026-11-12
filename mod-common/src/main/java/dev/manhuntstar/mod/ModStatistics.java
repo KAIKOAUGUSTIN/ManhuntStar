@@ -1,19 +1,21 @@
 package dev.manhuntstar.mod;
 
-import dev.faststats.Metrics;
+import dev.faststats.SimpleContext;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.metrics.ErrorReports;
 import dev.manhuntstar.metrics.UsageStats;
 import java.io.File;
 import java.util.function.Function;
 
 /**
- * The mods' anonymous statistics on FastStats (https://faststats.dev), shared by the loaders: each one
- * makes its own FastStats context (FabricContext, NeoForgeContext) when the mod loads, on a dedicated
- * server only, with {@link #token} and {@link #metrics}. The SDK then starts and stops with the server.
+ * The mods' FastStats (https://faststats.dev), shared by the loaders: anonymous statistics and error
+ * reports. Each loader makes its own context (FabricContext, NeoForgeContext) when the mod loads, on a
+ * dedicated server only, with {@link #token} and {@link #configure}; the SDK then starts and stops with
+ * the server.
  *
  * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code language} and
- * {@code default_difficulty}. Only metrics are turned on: no error tracking and no feature flags.
+ * {@code default_difficulty}. The error reports are {@link ErrorReports}. No feature flags.
  */
 public final class ModStatistics {
 
@@ -21,28 +23,47 @@ public final class ModStatistics {
     }
 
     /**
-     * The project token when this server sends statistics, or an empty string: a build without a token
-     * (FASTSTATS_TOKEN), or {@code general.metrics: false} in config.yml. config.yml is read here, before
-     * core starts, since FastStats has to be set up when the mod loads.
+     * The project token when this server sends anything, or an empty string: a build without a token
+     * (FASTSTATS_TOKEN), or both {@code general.metrics} and {@code general.error-reports} off in config.yml.
+     * config.yml is read here, before core starts, since FastStats has to be set up when the mod loads.
      */
     public static String token(ModPlatform platform) {
         String token = UsageStats.token();
-        if (token.isEmpty() || !Settings.metricsEnabled(platform.yaml(), new File(platform.dataFolder(), "config.yml"))) {
+        if (token.isEmpty() || (!metricsEnabled(platform) && !errorReportsEnabled(platform))) {
             return "";
         }
         return token;
     }
 
-    /** The custom metrics, for the context's factory: {@code .metrics(ModStatistics.metrics(platform))}. */
-    public static Function<Metrics.Factory, Metrics> metrics(ModPlatform platform) {
-        // FastStats reads them off the server thread: core's copies, empty until a server has started
-        return factory -> factory
-                .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
-                .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
-                .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
-                .create();
+    /** Gives the context's factory the metrics and the error tracker that config.yml leaves on. */
+    public static <F extends SimpleContext.Factory<?, F>> F configure(F factory, ModPlatform platform) {
+        if (metricsEnabled(platform)) {
+            factory.metrics(f -> f
+                    .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
+                    .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
+                    .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
+                    .create());
+        }
+        if (errorReportsEnabled(platform)) {
+            // kept until the JVM exits: a dedicated server doesn't start twice
+            factory.errorTrackerService(new ErrorReports(platform.logger()).tracker());
+        }
+        return factory;
     }
 
+    private static boolean metricsEnabled(ModPlatform platform) {
+        return Settings.metricsEnabled(platform.yaml(), config(platform));
+    }
+
+    private static boolean errorReportsEnabled(ModPlatform platform) {
+        return Settings.errorReportsEnabled(platform.yaml(), config(platform));
+    }
+
+    private static File config(ModPlatform platform) {
+        return new File(platform.dataFolder(), "config.yml");
+    }
+
+    /** FastStats reads the values off the server thread: core's copies, empty until a server has started. */
     private static <T> T read(ModPlatform platform, Function<UsageStats, T> value) {
         UsageStats usage = platform.usage();
         return usage == null ? null : value.apply(usage);

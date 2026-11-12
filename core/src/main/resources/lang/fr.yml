@@ -280,6 +280,9 @@ options:
   metrics:
     name: "Statistiques anonymes"
     description: "Envoie des statistiques anonymes à FastStats (nombre de serveurs, versions, bots, langue et difficulté par défaut). Prend effet au prochain redémarrage."
+  errorreports:
+    name: "Rapports d'erreur"
+    description: "Envoie à FastStats les erreurs de ManhuntStar lui-même (type, message et pile d'appels, sans adresses IP). Prend effet au prochain redémarrage."
   bothealth:
     name: "Vie maximale"
     description: "Vie maximale des bots."

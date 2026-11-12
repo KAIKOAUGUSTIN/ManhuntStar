@@ -29,12 +29,20 @@ dependencies {
     compileOnly("org.yaml:snakeyaml:$snakeyaml")
     compileOnly("com.google.code.gson:gson:$gson")
     compileOnlyApi("com.mojang:brigadier:$brigadier")
+    // FastStats' API, for the error reports (ErrorReports): the plugin and the mods bring the SDK itself.
+    // Not its Gson: the platforms bring theirs.
+    compileOnly(libs.faststats.core) {
+        isTransitive = false
+    }
 
     testImplementation("net.kyori:adventure-api:$adventure")
     testImplementation("net.kyori:adventure-text-minimessage:$adventure")
     testImplementation("org.yaml:snakeyaml:$snakeyaml")
     testImplementation("com.google.code.gson:gson:$gson")
     testImplementation("com.mojang:brigadier:$brigadier")
+    testImplementation(libs.faststats.core) {
+        isTransitive = false
+    }
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
