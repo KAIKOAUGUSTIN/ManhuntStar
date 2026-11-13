@@ -75,7 +75,8 @@ public final class ManhuntCore implements ManhuntHost {
     public void enable() {
         File config = new File(dataFolder, "config.yml");
         File pendingOptOut = new File(dataFolder, "faststats-opt-out.pending");
-        // Record the opt-out before any migration can advance config-version on disk.
+        // bStats' choice is noted before config.yml gets the new version: if it can't be written below
+        // (or the server stops first), the next start tries again
         if (!pendingOptOut.exists() && BStatsOptOut.isOff(yaml, platform.bStatsConfig())
                 && (!config.exists() || Settings.isLegacy(yaml, config)
                 || ConfigUpgrade.VERSIONS.versionOf(yaml.load(config)) < ConfigUpgrade.FASTSTATS)) {
@@ -83,7 +84,8 @@ public final class ManhuntCore implements ManhuntHost {
                 Files.createDirectories(dataFolder.toPath());
                 Files.createFile(pendingOptOut.toPath());
             } catch (IOException e) {
-                throw new IllegalStateException("Could not retain pending bStats opt-out migration", e);
+                // still carried over below; only a retry after a failed write is lost
+                logger.warning("Could not write " + pendingOptOut.getName() + ": " + e.getMessage());
             }
         }
         boolean legacy = migrateLegacyFiles();

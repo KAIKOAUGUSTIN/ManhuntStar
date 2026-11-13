@@ -12,11 +12,11 @@ import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.util.SafeFiles;
 import dev.manhuntstar.util.Vec3;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -167,11 +167,7 @@ public final class BotStorage {
             Files.createDirectories(target.getParent());
             Path tmp = target.resolveSibling("bots.yml.tmp");
             Files.writeString(tmp, text, StandardCharsets.UTF_8);
-            try {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            SafeFiles.replace(tmp, target);
         } catch (IOException e) {
             logger.warning("Could not save bots.yml: " + e.getMessage());
         }

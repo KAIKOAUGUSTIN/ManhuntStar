@@ -3,6 +3,7 @@ package dev.manhuntstar.config.upgrade;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.config.SnakeYamlFiles;
 import dev.manhuntstar.platform.ConfigNode;
@@ -36,7 +37,7 @@ class FileVersionsTest {
     @Test
     void stepsRunFromTheFileVersion() {
         ConfigNode n = node("a:\n  old: 5\ngone: true\nmode: both\nsection:\n  one: 1\n  deep:\n    two: 2\n");
-        assertEquals(1, versions.upgrade(n));
+        assertTrue(versions.upgrade(n));
         assertEquals(5, n.getInt("a.new", 0));
         assertFalse(n.contains("a.old"));
         assertNull(n.get("gone"));
@@ -50,7 +51,7 @@ class FileVersionsTest {
     @Test
     void laterVersionsSkipTheEarlierSteps() {
         ConfigNode n = node("v: 3\na:\n  old: 5\nmode: both\n");
-        assertEquals(3, versions.upgrade(n));
+        assertTrue(versions.upgrade(n));
         assertEquals(5, n.getInt("a.old", 0));
         assertEquals("both", n.getString("mode"));
         assertEquals(4, n.getInt("v", 0));
@@ -59,7 +60,7 @@ class FileVersionsTest {
     @Test
     void aNewerFileIsNotTouched() {
         ConfigNode n = node("v: 9\na:\n  old: 5\n");
-        assertEquals(9, versions.upgrade(n));
+        assertFalse(versions.upgrade(n));
         assertEquals(5, n.getInt("a.old", 0));
         assertEquals(9, n.getInt("v", 0));
     }

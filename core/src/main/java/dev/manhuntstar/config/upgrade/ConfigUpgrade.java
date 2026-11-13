@@ -3,6 +3,7 @@ package dev.manhuntstar.config.upgrade;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.util.SafeFiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,7 +69,7 @@ public final class ConfigUpgrade {
             }
             settings.load(node, logger);
             settings.saveOrThrow(yaml, temporary);
-            Files.move(temporary.toPath(), config.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            SafeFiles.replace(temporary.toPath(), config.toPath());
         } catch (IOException e) {
             logger.warning("Could not update config.yml to version " + latest + ": " + e.getMessage());
             return from;

@@ -49,18 +49,18 @@ public final class FileVersions {
      * Applies the steps from the node's version to {@link #latest} and writes the new version in it. A
      * node of the latest version, or of a newer one (a newer ManhuntStar wrote it), isn't changed.
      *
-     * @return the version the node had
+     * @return whether the node was upgraded (it was older than the latest version)
      */
-    public int upgrade(ConfigNode node) {
+    public boolean upgrade(ConfigNode node) {
         int from = versionOf(node);
         if (from >= latest()) {
-            return from;
+            return false;
         }
         for (int v = Math.max(from, first); v < latest(); v++) {
             steps.get(v - first).accept(node);
         }
         node.set(key, latest());
-        return from;
+        return true;
     }
 
     // ------------------------------------------------------------------ steps

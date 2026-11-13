@@ -4,6 +4,7 @@ import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.config.upgrade.LanguageUpgrade;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.util.SafeFiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,7 +110,7 @@ public final class Messages {
                 }
             }
             yaml.save(merged, temporary);
-            Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            SafeFiles.replace(temporary.toPath(), file.toPath());
         } finally {
             Files.deleteIfExists(temporary.toPath());
         }

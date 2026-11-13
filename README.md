@@ -124,13 +124,7 @@ Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar
 - 🐞 **Error reports** on FastStats (`faststats.error-reports`, on by default): ManhuntStar's own errors (type, message and stack trace, without IP addresses or the system user name), sent with the statistics. `faststats.error-reports: false` turns them off (at the next restart); `submitErrors=false` in `faststats/config.properties` turns off every plugin's and mod's.
 - Combat, mobility, pathfinding, tactics, saving, default difficulty...
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:dc127e7fe202157b5182963e465fd7d9e45fedb0a04b57a5c37e570385d5d8c3 -->
-
 Updating ManhuntStar: `config.yml` and the language files in `lang/` have a version. When a new version changes one of them, it is updated on the first start: new options and texts are added with their comments, renamed ones are moved, and your values and edited texts are kept. A copy of the previous file goes to `old/` (`lang/old/` for the languages).
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
 
