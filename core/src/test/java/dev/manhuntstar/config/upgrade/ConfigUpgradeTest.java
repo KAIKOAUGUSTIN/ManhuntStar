@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.config.FailingSaveYamlFiles;
 import dev.manhuntstar.config.SnakeYamlFiles;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
@@ -58,9 +59,35 @@ class ConfigUpgradeTest {
             """;
 
     @Test
+    void failedSaveLeavesActiveConfigAndBackupIntact() throws IOException {
+        Path active = dir.resolve("config.yml");
+        Files.writeString(active, V1);
+        YamlFiles failing = new FailingSaveYamlFiles(yaml, temporary -> {
+            assertFalse(temporary.toPath().equals(active));
+            assertEquals("pt-br", yaml.load(active.toFile()).getString("general.language"));
+        });
+        assertEquals(ConfigUpgrade.VERSIONS.latest(), ConfigUpgrade.upgrade(failing, dir.toFile(),
+                () -> getClass().getResourceAsStream("/config.yml"), settings(), logger));
+        assertEquals(V1, Files.readString(active));
+        assertEquals(V1, Files.readString(dir.resolve("old/config-v1.yml")));
+        try (var files = Files.list(dir)) {
+            assertFalse(files.anyMatch(file -> file.toString().endsWith(".tmp")));
+        }
+    }
+
+    @Test
+    void customLanguageSurvivesUpgrade() throws IOException {
+        Files.writeString(dir.resolve("config.yml"), V1.replace("pt-br", "custom"));
+        Settings settings = settings();
+        settings.setLanguages(() -> List.of("en", "custom"));
+        ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings, logger);
+        assertEquals("custom", yaml.load(dir.resolve("config.yml").toFile()).getString("general.language"));
+    }
+
+    @Test
     void anOlderConfigGetsTheNewOptionsAndKeepsTheValues() throws IOException {
         Files.writeString(dir.resolve("config.yml"), V1, StandardCharsets.UTF_8);
-        int from = ConfigUpgrade.upgrade(yaml, dir.toFile(), this::saveBundled, settings(), logger);
+        int from = ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger);
 
         assertEquals(1, from);
         assertTrue(Files.isRegularFile(dir.resolve("old/config-v1.yml")));
@@ -81,7 +108,7 @@ class ConfigUpgradeTest {
     void theLatestVersionIsLeftAlone() throws IOException {
         saveBundled();
         String before = Files.readString(dir.resolve("config.yml"));
-        assertEquals(ConfigUpgrade.VERSIONS.latest(), ConfigUpgrade.upgrade(yaml, dir.toFile(), this::saveBundled, settings(), logger));
+        assertEquals(ConfigUpgrade.VERSIONS.latest(), ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger));
         assertEquals(before, Files.readString(dir.resolve("config.yml")));
         assertFalse(Files.exists(dir.resolve("old")));
     }
@@ -90,7 +117,7 @@ class ConfigUpgradeTest {
     void aConfigFromANewerManhuntStarIsLeftAlone() throws IOException {
         String newer = "config-version: 99\ngeneral:\n  language: fr\n";
         Files.writeString(dir.resolve("config.yml"), newer);
-        ConfigUpgrade.upgrade(yaml, dir.toFile(), this::saveBundled, settings(), logger);
+        ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger);
         assertEquals(newer, Files.readString(dir.resolve("config.yml")));
         assertFalse(Files.exists(dir.resolve("old")));
     }

@@ -95,27 +95,34 @@ public final class Messages {
         File old = new File(file.getParentFile(), "old");
         Files.createDirectories(old.toPath());
         File backup = new File(old, lang + "-v" + current + ".yml");
-        Files.move(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        copyBundled(resources, lang, file);
-        ConfigNode merged = yaml.load(file);
-        Set<String> reset = LanguageUpgrade.resetSince(current);
-        for (String key : own.keys(true)) {
-            Object text = own.get(key);
-            boolean known = merged.contains(key) && !(merged.get(key) instanceof ConfigNode);
-            if (known && !(text instanceof ConfigNode) && !key.equals(LanguageUpgrade.VERSIONS.key()) && !reset.contains(key)) {
-                merged.set(key, text);
+        Files.copy(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        File temporary = Files.createTempFile(file.getParentFile().toPath(), lang + "-", ".tmp").toFile();
+        try {
+            copyBundled(resources, lang, temporary);
+            ConfigNode merged = yaml.load(temporary);
+            Set<String> reset = LanguageUpgrade.resetSince(current);
+            for (String key : own.keys(true)) {
+                Object text = own.get(key);
+                boolean known = merged.contains(key) && !(merged.get(key) instanceof ConfigNode);
+                if (known && !(text instanceof ConfigNode) && !key.equals(LanguageUpgrade.VERSIONS.key()) && !reset.contains(key)) {
+                    merged.set(key, text);
+                }
             }
+            yaml.save(merged, temporary);
+            Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temporary.toPath());
         }
-        yaml.save(merged, file);
         logger.info(FOLDER + "/" + file.getName() + " updated to version " + LanguageUpgrade.VERSIONS.latest()
                 + ", keeping your texts; the previous one is in " + FOLDER + "/old/" + backup.getName() + ".");
     }
 
     private static void copyBundled(Function<String, InputStream> resources, String lang, File file) throws IOException {
         try (InputStream in = resources.apply(resource(lang))) {
-            if (in != null) {
-                Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            if (in == null) {
+                throw new IOException("Missing bundled language " + lang);
             }
+            Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

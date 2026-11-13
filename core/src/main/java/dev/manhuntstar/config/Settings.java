@@ -362,6 +362,15 @@ public final class Settings {
 
     /** Writes the current values keeping the file's comments and extra keys. */
     public void save(YamlFiles yaml, File file, Logger logger) {
+        try {
+            saveOrThrow(yaml, file);
+        } catch (IOException e) {
+            logger.warning("Could not save config.yml: " + e.getMessage());
+        }
+    }
+
+    /** Writes current values and lets callers handle a failed write. */
+    public void saveOrThrow(YamlFiles yaml, File file) throws IOException {
         ConfigNode cfg = yaml.load(file);
         for (Setting<?> s : byKey.values()) {
             s.save(cfg);
@@ -385,10 +394,6 @@ public final class Settings {
             cfg.set(RING_POINT_PATH + ".y", point.y());
             cfg.set(RING_POINT_PATH + ".z", point.z());
         }
-        try {
-            yaml.save(cfg, file);
-        } catch (IOException e) {
-            logger.warning("Could not save config.yml: " + e.getMessage());
-        }
+        yaml.save(cfg, file);
     }
 }

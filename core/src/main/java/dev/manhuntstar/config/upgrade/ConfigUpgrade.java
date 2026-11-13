@@ -5,9 +5,11 @@ import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -35,10 +37,10 @@ public final class ConfigUpgrade {
      * Upgrades {@code dataFolder/config.yml} when it is older than {@link FileVersions#latest}. A
      * config.yml from a newer ManhuntStar is read as it is, with a warning.
      *
-     * @param saveBundled copies the config.yml inside the jar to the data folder (it isn't there then)
+     * @param bundled opens the config.yml inside the jar
      * @return the version the file had (the latest when nothing was done)
      */
-    public static int upgrade(YamlFiles yaml, File dataFolder, Runnable saveBundled, Settings settings, Logger logger) {
+    public static int upgrade(YamlFiles yaml, File dataFolder, Supplier<InputStream> bundled, Settings settings, Logger logger) {
         File config = new File(dataFolder, "config.yml");
         ConfigNode node = yaml.load(config);
         int from = VERSIONS.versionOf(node);
@@ -53,16 +55,32 @@ public final class ConfigUpgrade {
         }
         VERSIONS.upgrade(node);
         File backup = new File(new File(dataFolder, "old"), "config-v" + from + ".yml");
+        File temporary = null;
         try {
             Files.createDirectories(backup.getParentFile().toPath());
-            Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            temporary = Files.createTempFile(dataFolder.toPath(), "config-", ".tmp").toFile();
+            try (InputStream in = bundled.get()) {
+                if (in == null) {
+                    throw new IOException("Missing bundled config.yml");
+                }
+                Files.copy(in, temporary.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+            settings.load(node, logger);
+            settings.saveOrThrow(yaml, temporary);
+            Files.move(temporary.toPath(), config.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             logger.warning("Could not update config.yml to version " + latest + ": " + e.getMessage());
             return latest;
+        } finally {
+            if (temporary != null) {
+                try {
+                    Files.deleteIfExists(temporary.toPath());
+                } catch (IOException e) {
+                    logger.warning("Could not remove temporary config.yml: " + e.getMessage());
+                }
+            }
         }
-        saveBundled.run();
-        settings.load(node, logger);
-        settings.save(yaml, config, logger);
         logger.info("config.yml updated to version " + latest + " (new options added with their comments); the previous one is in old/"
                 + backup.getName() + ".");
         return from;

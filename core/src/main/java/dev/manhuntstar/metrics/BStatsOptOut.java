@@ -29,19 +29,14 @@ public final class BStatsOptOut {
      *
      * @return whether it did
      */
-    public static boolean carryOver(YamlFiles yaml, File bStatsConfig, File config, Logger logger) {
+    public static boolean carryOver(YamlFiles yaml, File bStatsConfig, File config, Logger logger) throws IOException {
         if (!isOff(yaml, bStatsConfig)) {
             return false;
         }
         ConfigNode cfg = yaml.load(config);
         cfg.set(Settings.STATISTICS_PATH, false);
         cfg.set(Settings.ERROR_REPORTS_PATH, false);
-        try {
-            yaml.save(cfg, config);
-        } catch (IOException e) {
-            logger.warning("Could not write config.yml: " + e.getMessage());
-            return false;
-        }
+        yaml.save(cfg, config);
         logger.info("bStats was off for every plugin, so FastStats starts off too (faststats section in config.yml).");
         return true;
     }

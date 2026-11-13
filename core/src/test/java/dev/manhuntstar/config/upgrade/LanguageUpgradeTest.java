@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.config.Messages;
+import dev.manhuntstar.config.FailingSaveYamlFiles;
 import dev.manhuntstar.config.SnakeYamlFiles;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
@@ -31,6 +32,23 @@ class LanguageUpgradeTest {
 
     private InputStream resource(String path) {
         return getClass().getResourceAsStream("/" + path);
+    }
+
+    @Test
+    void failedSaveLeavesActiveLanguageAndBackupIntact() throws IOException {
+        Path active = dir.resolve("en.yml");
+        String original = "version: 1\nprefix: mine\n";
+        Files.writeString(active, original);
+        YamlFiles failing = new FailingSaveYamlFiles(yaml, temporary -> {
+            assertFalse(temporary.toPath().equals(active));
+            assertEquals("mine", yaml.load(active.toFile()).getString("prefix"));
+        });
+        Messages.install(failing, dir.toFile(), this::resource, Logger.getAnonymousLogger());
+        assertEquals(original, Files.readString(active));
+        assertEquals(original, Files.readString(dir.resolve("old/en-v1.yml")));
+        try (var files = Files.list(dir)) {
+            assertFalse(files.anyMatch(file -> file.toString().endsWith(".tmp")));
+        }
     }
 
     @Test

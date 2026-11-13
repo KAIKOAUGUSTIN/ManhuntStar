@@ -79,15 +79,25 @@ public final class ManhuntCore implements ManhuntHost {
         if (fresh) {
             platform.saveResource("config.yml");
         }
+        settings.setLanguages(() -> Messages.available(langFolder()));
         int configVersion = fresh || legacy ? 0
-                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.saveResource("config.yml"), settings, logger);
+                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.resource("config.yml"), settings, logger);
+        boolean optOutSaveFailed = false;
         if (configVersion < ConfigUpgrade.FASTSTATS) {
             // the faststats section is new to this config.yml: bStats' choice carries over
-            BStatsOptOut.carryOver(yaml, platform.bStatsConfig(), config, logger);
+            try {
+                BStatsOptOut.carryOver(yaml, platform.bStatsConfig(), config, logger);
+            } catch (IOException e) {
+                logger.warning("Could not write config.yml: " + e.getMessage());
+                optOutSaveFailed = true;
+            }
         }
         Messages.install(yaml, langFolder(), platform::resource, logger);
-        settings.setLanguages(() -> Messages.available(langFolder()));
         loadConfigFiles();
+        if (optOutSaveFailed) {
+            settings.statistics.set(false);
+            settings.errorReports.set(false);
+        }
 
         pathService = new PathService(server, settings, logger);
         skins = new SkinService(dataFolder, logger, yaml, settings.skinFallbackUpload::on);

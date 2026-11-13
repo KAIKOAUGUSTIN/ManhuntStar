@@ -2,6 +2,8 @@ package dev.manhuntstar.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import dev.manhuntstar.config.FailingSaveYamlFiles;
 
 import dev.manhuntstar.config.SnakeYamlFiles;
 import dev.manhuntstar.platform.ConfigNode;
@@ -44,6 +46,14 @@ class BStatsOptOutTest {
     }
 
     @Test
+    void failedSaveIsPropagated() throws IOException {
+        File disabled = bStats("enabled: false\n");
+        YamlFiles failing = new FailingSaveYamlFiles(yaml, file -> {});
+        assertThrows(IOException.class, () -> BStatsOptOut.carryOver(failing, disabled, config, logger));
+        assertTrue(fastStatsOn());
+    }
+
+    @Test
     void bStatsOffTurnsFastStatsOff() throws IOException {
         assertTrue(BStatsOptOut.carryOver(yaml, bStats("enabled: false\nserverUuid: abc\n"), config, logger));
         ConfigNode cfg = yaml.load(config);
@@ -59,7 +69,7 @@ class BStatsOptOutTest {
     }
 
     @Test
-    void noBStatsLeavesFastStatsOn() {
+    void noBStatsLeavesFastStatsOn() throws IOException {
         assertFalse(BStatsOptOut.carryOver(yaml, dir.resolve("bStats/config.yml").toFile(), config, logger));
         assertFalse(BStatsOptOut.carryOver(yaml, null, config, logger));
         assertTrue(fastStatsOn());
