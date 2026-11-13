@@ -7,6 +7,7 @@ import dev.manhuntstar.bot.MobTargeting;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.config.upgrade.ConfigUpgrade;
 import dev.manhuntstar.gui.MenuManager;
 import dev.manhuntstar.host.AimDiagnostics;
 import dev.manhuntstar.host.BotEventSink;
@@ -71,9 +72,14 @@ public final class ManhuntCore implements ManhuntHost {
 
     /** Starts everything, once the platform has registered the game's blocks, items and entity types. */
     public void enable() {
-        migrateLegacyFiles();
-        if (!new File(dataFolder, "config.yml").exists()) {
+        boolean legacy = migrateLegacyFiles();
+        File config = new File(dataFolder, "config.yml");
+        boolean fresh = !config.exists();
+        if (fresh) {
             platform.saveResource("config.yml");
+        }
+        if (!fresh && !legacy) {
+            ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.saveResource("config.yml"), settings, logger);
         }
         Messages.install(yaml, langFolder(), platform::resource, logger);
         settings.setLanguages(() -> Messages.available(langFolder()));
@@ -174,8 +180,11 @@ public final class ManhuntCore implements ManhuntHost {
      * Files from versions up to 1.5, with Portuguese keys: the old config.yml becomes
      * config-old.yml and its values go into a new config.yml (with the language set to pt-br, the only
      * one there was); messages.yml becomes messages-old.yml, because the texts now live in the lang/ folder.
+     *
+     * @return whether config.yml was one of those (it is now of the latest version)
      */
-    private void migrateLegacyFiles() {
+    private boolean migrateLegacyFiles() {
+        boolean migrated = false;
         File config = new File(dataFolder, "config.yml");
         if (config.exists() && Settings.isLegacy(yaml, config)) {
             settings.loadLegacy(yaml, config, logger);
@@ -184,6 +193,7 @@ public final class ManhuntCore implements ManhuntHost {
                 Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 platform.saveResource("config.yml");
                 settings.save(yaml, config, logger);
+                migrated = true;
                 logger.info("config.yml moved to the new English keys (language pt-br); the old file is config-old.yml.");
             } catch (IOException e) {
                 logger.warning("Could not migrate config.yml: " + e.getMessage());
@@ -199,6 +209,7 @@ public final class ManhuntCore implements ManhuntHost {
                 logger.warning("Could not rename messages.yml: " + e.getMessage());
             }
         }
+        return migrated;
     }
 
     /** /manhunt reload: reads config.yml and the language files again and applies them. */

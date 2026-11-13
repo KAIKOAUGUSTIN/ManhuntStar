@@ -155,8 +155,8 @@ public final class Settings {
 
     /** config.yml sections with Portuguese keys (up to version 1.5): a sign that it needs migrating. */
     private static final List<String> LEGACY_SECTIONS = List.of("geral", "combate", "mobilidade", "taticas", "aparencia");
-    static final String STATISTICS_PATH = "faststats.statistics";
-    static final String ERROR_REPORTS_PATH = "faststats.error-reports";
+    public static final String STATISTICS_PATH = "faststats.statistics";
+    public static final String ERROR_REPORTS_PATH = "faststats.error-reports";
     private static final String MOBS_PATH = "bots.mobs-that-ignore-bots";
     private static final String LEGACY_MOBS_PATH = "bots.mobs-que-nao-atacam-bots";
     private static final String PLAYER_LIST_PATH = "manhunt.player-list";
@@ -309,6 +309,11 @@ public final class Settings {
 
     public void load(YamlFiles yaml, File file, Logger logger) {
         load(yaml.load(file), false, logger);
+    }
+
+    /** Reads an already loaded config.yml (one that was just upgraded, before it is written again). */
+    public void load(ConfigNode cfg, Logger logger) {
+        load(cfg, false, logger);
     }
 
     /**

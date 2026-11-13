@@ -5,6 +5,10 @@
 #  The command key of each option is in square brackets.
 # ==============================================================================
 
+# The version of this file: ManhuntStar uses it to update the file (adding new options with their
+# comments, renaming the ones that changed), keeping your values. Don't change it.
+config-version: 2
+
 general:
   # Language of the plugin's messages and menu: a file name from the lang/ folder (en, pt-br, fr, ru, zh-cn
   # or one you add). Missing texts fall back to English. [language]
