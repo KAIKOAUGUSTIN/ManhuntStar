@@ -17,6 +17,7 @@ import dev.manhuntstar.host.DeathMessageSource;
 import dev.manhuntstar.host.ManhuntPlatform;
 import dev.manhuntstar.host.PathDebug;
 import dev.manhuntstar.host.PlatformServices;
+import dev.manhuntstar.metrics.BStatsOptOut;
 import dev.manhuntstar.metrics.UsageStats;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
@@ -78,8 +79,11 @@ public final class ManhuntCore implements ManhuntHost {
         if (fresh) {
             platform.saveResource("config.yml");
         }
-        if (!fresh && !legacy) {
-            ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.saveResource("config.yml"), settings, logger);
+        int configVersion = fresh || legacy ? 0
+                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.saveResource("config.yml"), settings, logger);
+        if (configVersion < ConfigUpgrade.FASTSTATS) {
+            // the faststats section is new to this config.yml: bStats' choice carries over
+            BStatsOptOut.carryOver(yaml, platform.bStatsConfig(), config, logger);
         }
         Messages.install(yaml, langFolder(), platform::resource, logger);
         settings.setLanguages(() -> Messages.available(langFolder()));
