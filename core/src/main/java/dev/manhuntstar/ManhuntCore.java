@@ -73,8 +73,20 @@ public final class ManhuntCore implements ManhuntHost {
 
     /** Starts everything, once the platform has registered the game's blocks, items and entity types. */
     public void enable() {
-        boolean legacy = migrateLegacyFiles();
         File config = new File(dataFolder, "config.yml");
+        File pendingOptOut = new File(dataFolder, "faststats-opt-out.pending");
+        // Record the opt-out before any migration can advance config-version on disk.
+        if (!pendingOptOut.exists() && BStatsOptOut.isOff(yaml, platform.bStatsConfig())
+                && (!config.exists() || Settings.isLegacy(yaml, config)
+                || ConfigUpgrade.VERSIONS.versionOf(yaml.load(config)) < ConfigUpgrade.FASTSTATS)) {
+            try {
+                Files.createDirectories(dataFolder.toPath());
+                Files.createFile(pendingOptOut.toPath());
+            } catch (IOException e) {
+                throw new IllegalStateException("Could not retain pending bStats opt-out migration", e);
+            }
+        }
+        boolean legacy = migrateLegacyFiles();
         boolean fresh = !config.exists();
         if (fresh) {
             platform.saveResource("config.yml");
@@ -83,10 +95,11 @@ public final class ManhuntCore implements ManhuntHost {
         int configVersion = fresh || legacy ? 0
                 : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.resource("config.yml"), settings, logger);
         boolean optOutSaveFailed = false;
-        if (configVersion < ConfigUpgrade.FASTSTATS) {
+        if (configVersion < ConfigUpgrade.FASTSTATS || pendingOptOut.exists()) {
             // the faststats section is new to this config.yml: bStats' choice carries over
             try {
                 BStatsOptOut.carryOver(yaml, platform.bStatsConfig(), config, logger);
+                Files.deleteIfExists(pendingOptOut.toPath());
             } catch (IOException e) {
                 logger.warning("Could not write config.yml: " + e.getMessage());
                 optOutSaveFailed = true;

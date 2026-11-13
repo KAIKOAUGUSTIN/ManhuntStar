@@ -38,7 +38,7 @@ public final class ConfigUpgrade {
      * config.yml from a newer ManhuntStar is read as it is, with a warning.
      *
      * @param bundled opens the config.yml inside the jar
-     * @return the version the file had (the latest when nothing was done)
+     * @return the version the file had, including on failure (the latest when no upgrade was needed)
      */
     public static int upgrade(YamlFiles yaml, File dataFolder, Supplier<InputStream> bundled, Settings settings, Logger logger) {
         File config = new File(dataFolder, "config.yml");
@@ -71,7 +71,7 @@ public final class ConfigUpgrade {
             Files.move(temporary.toPath(), config.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             logger.warning("Could not update config.yml to version " + latest + ": " + e.getMessage());
-            return latest;
+            return from;
         } finally {
             if (temporary != null) {
                 try {

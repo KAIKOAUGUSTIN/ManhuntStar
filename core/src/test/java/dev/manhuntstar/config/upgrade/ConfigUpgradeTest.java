@@ -8,6 +8,7 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.config.FailingSaveYamlFiles;
 import dev.manhuntstar.config.SnakeYamlFiles;
 import dev.manhuntstar.platform.ConfigNode;
+import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.YamlFiles;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,7 +67,7 @@ class ConfigUpgradeTest {
             assertFalse(temporary.toPath().equals(active));
             assertEquals("pt-br", yaml.load(active.toFile()).getString("general.language"));
         });
-        assertEquals(ConfigUpgrade.VERSIONS.latest(), ConfigUpgrade.upgrade(failing, dir.toFile(),
+        assertEquals(1, ConfigUpgrade.upgrade(failing, dir.toFile(),
                 () -> getClass().getResourceAsStream("/config.yml"), settings(), logger));
         assertEquals(V1, Files.readString(active));
         assertEquals(V1, Files.readString(dir.resolve("old/config-v1.yml")));
@@ -86,6 +87,7 @@ class ConfigUpgradeTest {
 
     @Test
     void anOlderConfigGetsTheNewOptionsAndKeepsTheValues() throws IOException {
+        EntityKind.register("CREEPER");
         Files.writeString(dir.resolve("config.yml"), V1, StandardCharsets.UTF_8);
         int from = ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger);
 

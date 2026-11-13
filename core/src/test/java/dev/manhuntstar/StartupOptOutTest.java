@@ -1,5 +1,6 @@
 package dev.manhuntstar;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,9 +13,14 @@ import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.pathfinding.BlockCosts;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.platform.ConfigNode;
+import java.io.File;
+import java.io.IOException;
+import java.io.Reader;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,9 +33,39 @@ class StartupOptOutTest {
 
     @Test
     void failedOptOutSaveStillDisablesBothOptionsBeforePlatformStarts() throws Exception {
+        checkFailedSaveAndRetry(false, true);
+    }
+
+    @Test
+    void failedUpgradeStillCarriesOverOldOptOut() throws Exception {
+        checkFailedSaveAndRetry(true, true);
+    }
+
+    @Test
+    void failedOptOutAfterSuccessfulUpgradeRetriesOnNextStartup() throws Exception {
+        checkFailedSaveAndRetry(true, false);
+    }
+
+    private void checkFailedSaveAndRetry(boolean oldConfig, boolean failUpgrade) throws Exception {
+        if (oldConfig) {
+            Files.writeString(dir.resolve("config.yml"), "general:\n  update-check: false\n");
+        }
         Logger logger = Logger.getAnonymousLogger();
         YamlFiles yaml = new SnakeYamlFiles(logger);
-        YamlFiles failing = new FailingSaveYamlFiles(yaml, file -> {});
+        AtomicBoolean fail = new AtomicBoolean(true);
+        YamlFiles failing = new YamlFiles() {
+            public ConfigNode load(File file) { return yaml.load(file); }
+            public ConfigNode load(Reader reader) { return yaml.load(reader); }
+            public ConfigNode create() { return yaml.create(); }
+            public String saveToString(ConfigNode node) { return yaml.saveToString(node); }
+            public void save(ConfigNode node, File file) throws IOException {
+                if (fail.get() && (failUpgrade || file.getName().equals("config.yml"))) {
+                    new FailingSaveYamlFiles(yaml, ignored -> {}).save(node, file);
+                } else {
+                    yaml.save(node, file);
+                }
+            }
+        };
         Path bStats = dir.resolve("bstats.yml");
         Files.writeString(bStats, "enabled: false\n");
         ManhuntPlatform platform = (ManhuntPlatform) Proxy.newProxyInstance(
@@ -70,8 +106,27 @@ class StartupOptOutTest {
             assertThrows(ConfigLoaded.class, core::enable);
             assertFalse(core.settings().statistics.on());
             assertFalse(core.settings().errorReports.on());
-            assertTrue(yaml.load(dir.resolve("config.yml").toFile()).getBoolean("faststats.statistics", false));
-            assertTrue(yaml.load(dir.resolve("config.yml").toFile()).getBoolean("faststats.error-reports", false));
+            ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
+            assertEquals(oldConfig && failUpgrade ? 1 : 2, saved.getInt("config-version", 1));
+            assertTrue(saved.getBoolean("faststats.statistics", true));
+            assertTrue(saved.getBoolean("faststats.error-reports", true));
+            assertTrue(Files.exists(dir.resolve("faststats-opt-out.pending")));
+
+            core.disable();
+            fail.set(false);
+            ManhuntCore restarted = new ManhuntCore(platform);
+            try {
+                assertThrows(ConfigLoaded.class, restarted::enable);
+                assertFalse(restarted.settings().statistics.on());
+                assertFalse(restarted.settings().errorReports.on());
+                saved = yaml.load(dir.resolve("config.yml").toFile());
+                assertEquals(2, saved.getInt("config-version", 0));
+                assertFalse(saved.getBoolean("faststats.statistics", true));
+                assertFalse(saved.getBoolean("faststats.error-reports", true));
+                assertFalse(Files.exists(dir.resolve("faststats-opt-out.pending")));
+            } finally {
+                restarted.disable();
+            }
         } finally {
             try {
                 core.disable();
