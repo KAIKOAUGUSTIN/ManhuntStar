@@ -50,7 +50,7 @@ public final class ModStatistics {
                         .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
                         .create());
             }
-            if (errorReportsEnabled(platform)) {
+            if (errorReportsEnabled(platform) && ErrorReports.sentBy(platform.fastStatsConfig())) {
                 // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
                 errors = new ErrorReports(platform.logger());
                 factory.errorTrackerService(errors.tracker());

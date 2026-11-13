@@ -3,13 +3,44 @@ package dev.manhuntstar.metrics;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.yaml.snakeyaml.error.YAMLException;
 
 /** Which errors ErrorReports sends: only ManhuntStar's, and not the server's config typos. */
 class ErrorReportsTest {
+
+    @TempDir
+    Path dir;
+
+    private File fastStatsConfig(String text) throws IOException {
+        Path file = dir.resolve("config.properties");
+        Files.writeString(file, text);
+        return file.toFile();
+    }
+
+    @Test
+    void notSentOnFastStatsFirstRun() {
+        assertFalse(ErrorReports.sentBy(dir.resolve("config.properties").toFile()));
+    }
+
+    @Test
+    void sentWhenFastStatsSendsErrors() throws IOException {
+        assertTrue(ErrorReports.sentBy(fastStatsConfig("enabled=true\nsubmitErrors=true\nsubmitMetrics=true\n")));
+        assertTrue(ErrorReports.sentBy(fastStatsConfig("enabled=true\n")));
+    }
+
+    @Test
+    void notSentWhenFastStatsIsOffOrErrorsAre() throws IOException {
+        assertFalse(ErrorReports.sentBy(fastStatsConfig("enabled=false\nsubmitErrors=true\n")));
+        assertFalse(ErrorReports.sentBy(fastStatsConfig("enabled=true\nsubmitErrors=false\n")));
+    }
 
     private static Throwable thrownAt(String className, Throwable cause) {
         Throwable t = new IllegalStateException("boom", cause);

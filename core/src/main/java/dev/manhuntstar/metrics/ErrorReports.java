@@ -2,8 +2,13 @@ package dev.manhuntstar.metrics;
 
 import dev.faststats.ErrorTracker;
 import dev.faststats.SimpleContext;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Properties;
 import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -63,6 +68,31 @@ public final class ErrorReports {
             }
         };
         logger.addHandler(handler);
+    }
+
+    /**
+     * Would FastStats send error reports, going by its config.properties as it is now? Read only (the
+     * SDK writes the file when it starts): no when the file isn't there yet (FastStats' first run on
+     * the server sends nothing), when {@code enabled} or {@code submitErrors} is false, or with
+     * {@code -Dfaststats.enabled=false}. Checked before making an {@code ErrorReports}, so that nothing
+     * is tracked when nothing will be sent.
+     */
+    public static boolean sentBy(File fastStatsConfig) {
+        if (!Boolean.parseBoolean(System.getProperty("faststats.enabled", "true")) || !fastStatsConfig.isFile()) {
+            return false;
+        }
+        Properties props = new Properties();
+        try (InputStream in = Files.newInputStream(fastStatsConfig.toPath())) {
+            props.load(in);
+        } catch (IOException | IllegalArgumentException e) {
+            return false;
+        }
+        return isTrue(props, "enabled") && isTrue(props, "submitErrors");
+    }
+
+    /** A missing key is true, like FastStats' own defaults. */
+    private static boolean isTrue(Properties props, String key) {
+        return Boolean.parseBoolean(props.getProperty(key, "true").trim());
     }
 
     /** For the FastStats context: {@code .errorTrackerService(reports.tracker())}. */

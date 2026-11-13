@@ -23,6 +23,14 @@ public interface ManhuntPlatform {
     /** The folder of config.yml, bots.yml, the languages and the skins. */
     File dataFolder();
 
+    /**
+     * FastStats' own config.properties, shared by every plugin or mod that uses it: next to the data
+     * folder ({@code plugins/faststats} on Paper, {@code config/faststats} on the mods).
+     */
+    default File fastStatsConfig() {
+        return new File(new File(dataFolder().getParentFile(), "faststats"), "config.properties");
+    }
+
     /** A file bundled in the jar (config.yml, the languages), or null. */
     InputStream resource(String path);
 

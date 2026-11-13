@@ -45,7 +45,7 @@ public final class MetricsService {
                     .addMetric(Metric.string("default_difficulty", usage::defaultDifficulty))
                     .create());
         }
-        if (errorReports) {
+        if (errorReports && ErrorReports.sentBy(plugin.fastStatsConfig())) {
             errors = new ErrorReports(plugin.getLogger());
             factory.errorTrackerService(errors.tracker());
         }
