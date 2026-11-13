@@ -3,7 +3,7 @@
   "id": "manhuntstar",
   "version": "${version}",
   "name": "Manhunt*",
-  "description": "ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it.",
+  "description": "ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it; install it on your client for singleplayer.",
   "authors": ["KAIKOAUGUSTIN"],
   "contact": {
     "homepage": "https://modrinth.com/plugin/manhuntstar",
