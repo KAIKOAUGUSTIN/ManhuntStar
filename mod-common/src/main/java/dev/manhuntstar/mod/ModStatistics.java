@@ -25,12 +25,12 @@ public final class ModStatistics {
 
     /**
      * The project token when this server sends anything, or an empty string: a build without a token
-     * (FASTSTATS_TOKEN), or both {@code general.metrics} and {@code general.error-reports} off in config.yml.
+     * (FASTSTATS_TOKEN), or both {@code faststats.statistics} and {@code faststats.error-reports} off in config.yml.
      * config.yml is read here, before core starts, since FastStats has to be set up when the mod loads.
      */
     public static String token(ModPlatform platform) {
         String token = UsageStats.token();
-        if (token.isEmpty() || (!metricsEnabled(platform) && !errorReportsEnabled(platform))) {
+        if (token.isEmpty() || (!statisticsEnabled(platform) && !errorReportsEnabled(platform))) {
             return "";
         }
         return token;
@@ -43,7 +43,7 @@ public final class ModStatistics {
     public static <C extends SimpleContext, F extends SimpleContext.Factory<C, F>> void start(F factory, ModPlatform platform) {
         ErrorReports errors = null;
         try {
-            if (metricsEnabled(platform)) {
+            if (statisticsEnabled(platform)) {
                 factory.metrics(f -> f
                         .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
                         .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
@@ -67,8 +67,8 @@ public final class ModStatistics {
         }
     }
 
-    private static boolean metricsEnabled(ModPlatform platform) {
-        return Settings.metricsEnabled(platform.yaml(), config(platform));
+    private static boolean statisticsEnabled(ModPlatform platform) {
+        return Settings.statisticsEnabled(platform.yaml(), config(platform));
     }
 
     private static boolean errorReportsEnabled(ModPlatform platform) {

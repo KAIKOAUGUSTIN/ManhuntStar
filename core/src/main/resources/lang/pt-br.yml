@@ -277,7 +277,7 @@ options:
   updatecheck:
     name: "Aviso de atualização"
     description: "Procura uma versão nova no GitHub quando o servidor liga e a cada 6 horas, e avisa os admins quando entram."
-  metrics:
+  statistics:
     name: "Estatísticas anônimas"
     description: "Envia estatísticas anônimas ao FastStats (quantidade de servidores, versões, bots, idioma e dificuldade padrão). Vale a partir do próximo reinício."
   errorreports:

@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 /**
  * ManhuntStar's error reports on FastStats (https://faststats.dev), shared by the plugin and the mods:
  * the tracker given to the FastStats context ({@code errorTrackerService}). Turned off with
- * {@code general.error-reports: false}, or for every plugin and mod with {@code submitErrors=false} in
+ * {@code faststats.error-reports: false}, or for every plugin and mod with {@code submitErrors=false} in
  * faststats/config.properties.
  *
  * <p>What it reports:

@@ -9,7 +9,7 @@ import java.util.logging.Level;
 /**
  * FastStats (https://faststats.dev): anonymous usage statistics (server count, Paper, Minecraft and
  * Java versions, and the metrics in {@link UsageStats}) and error reports ({@link ErrorReports}).
- * {@code general.metrics} and {@code general.error-reports} in config.yml turn each one off (read when the
+ * {@code faststats.statistics} and {@code faststats.error-reports} in config.yml turn each one off (read when the
  * server starts); {@code plugins/faststats/config.properties} turns them off for every plugin. When
  * FastStats first runs on a server (no such file yet, from any plugin) the file is created and nothing is
  * sent until the next restart. Builds without a project token (FASTSTATS_TOKEN) send nothing.
@@ -30,7 +30,7 @@ public final class MetricsService {
     public void start() {
         String token = UsageStats.token();
         Settings settings = plugin.core().settings();
-        boolean metrics = settings.metrics.on();
+        boolean metrics = settings.statistics.on();
         boolean errorReports = settings.errorReports.on();
         if (token.isEmpty() || (!metrics && !errorReports)) {
             return;

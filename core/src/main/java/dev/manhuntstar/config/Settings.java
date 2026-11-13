@@ -67,8 +67,9 @@ public final class Settings {
     public final Setting.Bool respectPvp = bool("general.respect-disabled-pvp", "geral.respeitar-pvp-desligado", "respectpvp", Category.GENERAL, false);
     public final Setting.Bool skinFallbackUpload = bool("general.mineskin-fallback-skin", "geral.skin-robo-mineskin", "mineskin", Category.GENERAL, true);
     public final Setting.Bool updateCheck = bool("general.update-check", null, "updatecheck", Category.GENERAL, true);
-    /** Read when the server starts (the mods also read it before core starts: {@link #metricsEnabled}). */
-    public final Setting.Bool metrics = bool(METRICS_PATH, null, "metrics", Category.GENERAL, true);
+    // --- FastStats (shown with the general options) ---
+    /** Read when the server starts (the mods also read it before core starts: {@link #statisticsEnabled}). */
+    public final Setting.Bool statistics = bool(STATISTICS_PATH, null, "statistics", Category.GENERAL, true);
     /** Read when the server starts (the mods also read it before core starts: {@link #errorReportsEnabled}). */
     public final Setting.Bool errorReports = bool(ERROR_REPORTS_PATH, null, "errorreports", Category.GENERAL, true);
 
@@ -154,8 +155,8 @@ public final class Settings {
 
     /** config.yml sections with Portuguese keys (up to version 1.5): a sign that it needs migrating. */
     private static final List<String> LEGACY_SECTIONS = List.of("geral", "combate", "mobilidade", "taticas", "aparencia");
-    private static final String METRICS_PATH = "general.metrics";
-    private static final String ERROR_REPORTS_PATH = "general.error-reports";
+    static final String STATISTICS_PATH = "faststats.statistics";
+    static final String ERROR_REPORTS_PATH = "faststats.error-reports";
     private static final String MOBS_PATH = "bots.mobs-that-ignore-bots";
     private static final String LEGACY_MOBS_PATH = "bots.mobs-que-nao-atacam-bots";
     private static final String PLAYER_LIST_PATH = "manhunt.player-list";
@@ -274,14 +275,14 @@ public final class Settings {
     }
 
     /**
-     * Reads {@code general.metrics} from config.yml before core starts: the mods set up FastStats when
+     * Reads {@code faststats.statistics} from config.yml before core starts: the mods set up FastStats when
      * they load, before the server (and core) exist. True without a config.yml, like the default.
      */
-    public static boolean metricsEnabled(YamlFiles yaml, File file) {
-        return readBeforeStart(yaml, file, METRICS_PATH);
+    public static boolean statisticsEnabled(YamlFiles yaml, File file) {
+        return readBeforeStart(yaml, file, STATISTICS_PATH);
     }
 
-    /** {@code general.error-reports}, read like {@link #metricsEnabled}. */
+    /** {@code faststats.error-reports}, read like {@link #statisticsEnabled}. */
     public static boolean errorReportsEnabled(YamlFiles yaml, File file) {
         return readBeforeStart(yaml, file, ERROR_REPORTS_PATH);
     }

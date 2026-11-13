@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** general.metrics and general.error-reports read from config.yml before core starts (the mods do). */
+/** faststats.statistics and faststats.error-reports read from config.yml before core starts (the mods do). */
 class SettingsBeforeStartTest {
 
     private final YamlFiles yaml = new SnakeYamlFiles(Logger.getAnonymousLogger());
@@ -30,31 +30,31 @@ class SettingsBeforeStartTest {
     @Test
     void onWithoutAConfigFile() {
         File missing = dir.resolve("config.yml").toFile();
-        assertTrue(Settings.metricsEnabled(yaml, missing));
+        assertTrue(Settings.statisticsEnabled(yaml, missing));
         assertTrue(Settings.errorReportsEnabled(yaml, missing));
     }
 
     @Test
     void onWhenTheKeysAreMissing() throws IOException {
         File file = config("general:\n  language: en\n");
-        assertTrue(Settings.metricsEnabled(yaml, file));
+        assertTrue(Settings.statisticsEnabled(yaml, file));
         assertTrue(Settings.errorReportsEnabled(yaml, file));
     }
 
     @Test
     void eachKeyTurnsOffItsOwnThing() throws IOException {
-        File file = config("general:\n  metrics: false\n  error-reports: true\n");
-        assertFalse(Settings.metricsEnabled(yaml, file));
+        File file = config("faststats:\n  statistics: false\n  error-reports: true\n");
+        assertFalse(Settings.statisticsEnabled(yaml, file));
         assertTrue(Settings.errorReportsEnabled(yaml, file));
 
-        file = config("general:\n  metrics: on\n  error-reports: off\n");
-        assertTrue(Settings.metricsEnabled(yaml, file));
+        file = config("faststats:\n  statistics: on\n  error-reports: off\n");
+        assertTrue(Settings.statisticsEnabled(yaml, file));
         assertFalse(Settings.errorReportsEnabled(yaml, file));
     }
 
     @Test
     void anInvalidValueKeepsTheDefault() throws IOException {
-        File file = config("general:\n  metrics: maybe\n");
-        assertTrue(Settings.metricsEnabled(yaml, file));
+        File file = config("faststats:\n  statistics: maybe\n");
+        assertTrue(Settings.statisticsEnabled(yaml, file));
     }
 }

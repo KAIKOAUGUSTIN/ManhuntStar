@@ -277,7 +277,7 @@ options:
   updatecheck:
     name: "检查更新"
     description: "在服务器启动时以及每 6 小时在 GitHub 上检查新版本，并在管理员进入时提醒。"
-  metrics:
+  statistics:
     name: "匿名统计"
     description: "向 FastStats 发送匿名统计（服务器数量、版本、机器人、语言和默认难度）。下次重启后生效。"
   errorreports:
