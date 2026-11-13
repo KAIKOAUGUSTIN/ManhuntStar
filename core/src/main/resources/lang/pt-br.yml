@@ -3,10 +3,11 @@
 #  Formato MiniMessage: https://docs.advntr.dev/minimessage/format.html
 #  As tags como <bot>, <phase> e <amount> são preenchidas pelo plugin; mantenha-as ao traduzir.
 #  Chaves que faltarem usam o texto em inglês (en.yml). "version" muda quando os textos padrão
-#  mudam: um arquivo mais antigo vai para lang/old/ e é trocado pelo novo.
+#  mudam: um arquivo mais antigo é atualizado (textos novos entram, os que mudaram são renomeados ou
+#  trocados) e mantém os textos que você editou; uma cópia dele vai para lang/old/. Não mude "version".
 # ==============================================================================
 
-version: 1
+version: 2
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 

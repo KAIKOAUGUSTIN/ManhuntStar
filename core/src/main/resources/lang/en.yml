@@ -3,10 +3,11 @@
 #  MiniMessage format: https://docs.advntr.dev/minimessage/format.html
 #  Tags such as <bot>, <phase> and <amount> are filled in by the plugin; keep them when translating.
 #  Missing keys fall back to this file. "version" changes when the default texts change: an older
-#  file is moved to lang/old/ and replaced with the new one.
+#  file is updated (new texts added, the ones that changed renamed or replaced) and keeps the texts you
+#  edited; a copy of it goes to lang/old/. Don't change "version".
 # ==============================================================================
 
-version: 1
+version: 2
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
