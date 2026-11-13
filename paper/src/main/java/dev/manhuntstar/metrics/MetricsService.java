@@ -1,5 +1,6 @@
 package dev.manhuntstar.metrics;
 
+import dev.faststats.ErrorTracker;
 import dev.faststats.bukkit.BukkitContext;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.ManhuntStarPlugin;
@@ -48,6 +49,9 @@ public final class MetricsService {
         if (errorReports && ErrorReports.sentBy(plugin.fastStatsConfig())) {
             errors = new ErrorReports(plugin.getLogger());
             factory.errorTrackerService(errors.tracker());
+        } else if (errorReports) {
+            // Let the SDK create its config and show first-run consent without attaching error handlers.
+            factory.errorTrackerService(ErrorTracker.contextUnaware());
         }
         try {
             context = factory.create();

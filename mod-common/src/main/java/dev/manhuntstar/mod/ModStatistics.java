@@ -1,5 +1,6 @@
 package dev.manhuntstar.mod;
 
+import dev.faststats.ErrorTracker;
 import dev.faststats.SimpleContext;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.config.Settings;
@@ -54,6 +55,9 @@ public final class ModStatistics {
                 // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
                 errors = new ErrorReports(platform.logger());
                 factory.errorTrackerService(errors.tracker());
+            } else if (errorReportsEnabled(platform)) {
+                // Let the SDK create its config and show first-run consent without attaching error handlers.
+                factory.errorTrackerService(ErrorTracker.contextUnaware());
             }
             C context = factory.create();
             if (errors != null) {
