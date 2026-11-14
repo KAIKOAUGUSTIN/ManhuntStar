@@ -29,6 +29,11 @@ final class MinecraftCompat {
         entity.setInvulnerable(invulnerable);
     }
 
+    /** Whether it was made invulnerable with {@link #setInvulnerable} (on 26.2 that's all isInvulnerable() reads). */
+    static boolean isInvulnerable(Entity entity) {
+        return entity.isInvulnerable();
+    }
+
     /** The ticks left before the entity can be hurt again (Bukkit's noDamageTicks). */
     static int damageCooldown(LivingEntity entity) {
         return entity.invulnerableTime;

@@ -32,6 +32,14 @@ final class MinecraftCompat {
         entity.setPermanentlyInvulnerable(invulnerable);
     }
 
+    /**
+     * Whether it was made invulnerable with {@link #setInvulnerable}. On 26.3 isInvulnerable() is also true
+     * for a moment after the entity is hurt, which isn't what was set.
+     */
+    static boolean isInvulnerable(Entity entity) {
+        return entity.isPermanentlyInvulnerable();
+    }
+
     /** The ticks left before the entity can be hurt again (Bukkit's noDamageTicks). */
     static int damageCooldown(LivingEntity entity) {
         return entity.damageCooldownTime;
