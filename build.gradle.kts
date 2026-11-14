@@ -72,6 +72,9 @@ sonar {
         property("sonar.projectKey", "KAIKOAUGUSTIN_ManhuntStar")
         property("sonar.organization", "kaikoaugustin")
         property("sonar.host.url", "https://sonarcloud.io")
+        // images aren't source code: without this the scanner reads .github/assets/icon.png as UTF-8 text and
+        // reports a file encoding problem
+        property("sonar.exclusions", "**/*.png")
     }
 }
 
