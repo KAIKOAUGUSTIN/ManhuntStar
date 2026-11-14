@@ -24,6 +24,9 @@ sourceSets.main {
     java.srcDir(parent!!.file("src/main/java"))
     resources.srcDir(parent!!.file("src/main/resources"))
 }
+sourceSets.test {
+    java.srcDir(parent!!.file("src/test/java"))
+}
 
 repositories {
     exclusiveContent {
@@ -56,6 +59,17 @@ dependencies {
     compileOnly("net.fabricmc:sponge-mixin:${libs.versions.sponge.mixin.get()}")
     compileOnly(mixinextras)
     annotationProcessor(mixinextras)
+
+    // ModYamlFiles runs the YAML contract every platform runs (core's test fixtures)
+    testImplementation(project(":core"))
+    testImplementation(testFixtures(project(":core")))
+    testImplementation("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")
+    // core's settings and texts use Adventure, which the game brings when the mod runs
+    testImplementation("net.kyori:adventure-api:${libs.versions.adventure.get()}")
+    testImplementation("net.kyori:adventure-text-minimessage:${libs.versions.adventure.get()}")
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // What the loaders' modules take: the sources and resources, to compile and pack them themselves

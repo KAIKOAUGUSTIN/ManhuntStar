@@ -11,6 +11,7 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.config.Setting.Category;
+import dev.manhuntstar.config.upgrade.FileVersions;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.YamlFiles;
@@ -377,9 +378,15 @@ public final class Settings {
         }
     }
 
-    /** Writes current values and lets callers handle a failed write. */
+    /**
+     * Writes current values and lets callers handle a failed write. A config.yml that can't be read (a
+     * YAML error) isn't overwritten: the owner's values would be replaced by the ones in memory.
+     */
     public void saveOrThrow(YamlFiles yaml, File file) throws IOException {
         ConfigNode cfg = yaml.load(file);
+        if (FileVersions.unreadable(cfg, file)) {
+            throw new IOException(file.getName() + " can't be read (see the error above), so it isn't overwritten: fix it and use /manhunt reload");
+        }
         for (Setting<?> s : byKey.values()) {
             s.save(cfg);
         }
@@ -396,6 +403,8 @@ public final class Settings {
         RingPoint point = ringPoint;
         if (point == null) {
             cfg.set(RING_POINT_PATH, null);
+            // a 1.5 config.yml not migrated yet: its point would come back on the next read
+            cfg.set(LEGACY_RING_POINT_PATH, null);
         } else {
             cfg.set(RING_POINT_PATH + ".world", point.world());
             cfg.set(RING_POINT_PATH + ".x", point.x());

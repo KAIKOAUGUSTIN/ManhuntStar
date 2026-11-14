@@ -42,6 +42,22 @@ public abstract class YamlFilesContract {
         return yaml().load(new StringReader(text));
     }
 
+    /**
+     * A value that can't be built (an unknown tag) after a key that could: the whole document comes back
+     * empty, never with the keys read before the error, so a file that can't be read is never rewritten
+     * with values missing (FileVersions.unreadable).
+     */
+    @Test
+    void aFileThatFailsPartWayLoadsEmpty(@TempDir Path dir) throws java.io.IOException {
+        String text = "general:\n  language: en\nbots: !!manhuntstar.Unknown {x: 1}\n";
+        Path file = dir.resolve("config.yml");
+        Files.writeString(file, text);
+        ConfigNode cfg = yaml().load(file.toFile());
+        assertEquals(Set.of(), cfg.keys(false));
+        assertTrue(dev.manhuntstar.config.upgrade.FileVersions.unreadable(cfg, file.toFile()));
+        assertEquals(Set.of(), read(text).keys(false));
+    }
+
     @Test
     void readsValuesAndSections() {
         ConfigNode cfg = read("""
