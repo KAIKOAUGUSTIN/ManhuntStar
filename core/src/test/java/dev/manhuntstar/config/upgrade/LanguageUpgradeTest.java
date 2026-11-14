@@ -78,6 +78,17 @@ class LanguageUpgradeTest {
     }
 
     @Test
+    void aLanguageWithAYamlErrorIsLeftAlone() throws IOException {
+        Path lang = dir.resolve("lang");
+        Files.createDirectories(lang);
+        String broken = "version: 1\nprefix: \"mine\n  bad: [\n";
+        Files.writeString(lang.resolve("en.yml"), broken);
+        Messages.install(yaml, lang.toFile(), this::resource, Logger.getAnonymousLogger());
+        assertEquals(broken, Files.readString(lang.resolve("en.yml")));
+        assertFalse(Files.exists(lang.resolve("old")));
+    }
+
+    @Test
     void theLatestVersionIsLeftAlone() throws IOException {
         Path lang = dir.resolve("lang");
         Files.createDirectories(lang);

@@ -66,6 +66,18 @@ class FileVersionsTest {
     }
 
     @Test
+    void aFileThatDidntParseIsUnreadable(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws java.io.IOException {
+        java.io.File file = dir.resolve("x.yml").toFile();
+        java.nio.file.Files.writeString(file.toPath(), "a: [unclosed\n");
+        assertTrue(FileVersions.unreadable(node(""), file));
+        java.nio.file.Files.writeString(file.toPath(), "# only a comment\n\n");
+        assertFalse(FileVersions.unreadable(node(""), file), "nothing to keep: not unreadable");
+        java.nio.file.Files.writeString(file.toPath(), "a: 1\n");
+        assertFalse(FileVersions.unreadable(node("a: 1\n"), file));
+        assertFalse(FileVersions.unreadable(node(""), dir.resolve("missing.yml").toFile()));
+    }
+
+    @Test
     void aRenameKeepsAValueAlreadyAtTheNewPath() {
         ConfigNode n = node("a:\n  old: 5\n  new: 7\n");
         FileVersions.rename("a.old", "a.new").accept(n);

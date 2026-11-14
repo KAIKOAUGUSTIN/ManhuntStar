@@ -88,6 +88,10 @@ public final class ConfigUpgrade {
         ConfigNode node = yaml.load(config);
         int from = VERSIONS.versionOf(node);
         int latest = VERSIONS.latest();
+        if (FileVersions.unreadable(node, config)) {
+            logger.warning("config.yml can't be read (see the error above), so it isn't updated: fix it and restart.");
+            return from;
+        }
         if (from > latest) {
             logger.warning("config.yml is from a newer ManhuntStar (version " + from + "; this one writes " + latest
                     + "): it is read as it is.");

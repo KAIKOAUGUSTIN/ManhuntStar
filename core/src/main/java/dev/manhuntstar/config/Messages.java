@@ -1,6 +1,7 @@
 package dev.manhuntstar.config;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.config.upgrade.FileVersions;
 import dev.manhuntstar.config.upgrade.LanguageUpgrade;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
@@ -73,7 +74,9 @@ public final class Messages {
                 if (file.exists()) {
                     ConfigNode own = yaml.load(file);
                     int current = LanguageUpgrade.VERSIONS.versionOf(own);
-                    if (current < bundled.getInt(LanguageUpgrade.VERSIONS.key(), 1)) {
+                    if (FileVersions.unreadable(own, file)) {
+                        logger.warning(FOLDER + "/" + file.getName() + " can't be read (see the error above), so it isn't updated: fix it and restart.");
+                    } else if (current < bundled.getInt(LanguageUpgrade.VERSIONS.key(), 1)) {
                         update(yaml, file, own, current, resources, lang, logger);
                     }
                     continue;

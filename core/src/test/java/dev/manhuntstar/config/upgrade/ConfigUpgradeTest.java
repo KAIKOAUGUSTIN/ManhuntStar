@@ -145,6 +145,15 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void aConfigWithAYamlErrorIsLeftAlone() throws IOException {
+        String broken = "general:\n  language: pt-br\n bots: [unclosed\n";
+        Files.writeString(dir.resolve("config.yml"), broken);
+        ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger, true);
+        assertEquals(broken, Files.readString(dir.resolve("config.yml")), "the owner's file isn't replaced by the defaults");
+        assertFalse(Files.exists(dir.resolve("old")));
+    }
+
+    @Test
     void theLatestVersionIsLeftAlone() throws IOException {
         saveBundled();
         String before = Files.readString(dir.resolve("config.yml"));

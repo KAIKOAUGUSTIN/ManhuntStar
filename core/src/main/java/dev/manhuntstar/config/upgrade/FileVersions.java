@@ -1,6 +1,11 @@
 package dev.manhuntstar.config.upgrade;
 
 import dev.manhuntstar.platform.ConfigNode;
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -61,6 +66,28 @@ public final class FileVersions {
         }
         node.set(key, latest());
         return true;
+    }
+
+    /**
+     * Did the file fail to load (a YAML error, which the loaders log and read as an empty document)?
+     * True when nothing was read but the file has more than comments and blank lines. Such a file isn't
+     * upgraded: rewriting it would replace the owner's values with the defaults.
+     */
+    public static boolean unreadable(ConfigNode loaded, File file) {
+        if (!loaded.keys(false).isEmpty() || !file.isFile()) {
+            return false;
+        }
+        try {
+            for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                String text = line.trim();
+                if (!text.isEmpty() && !text.startsWith("#")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (IOException | UncheckedIOException e) {
+            return true;
+        }
     }
 
     // ------------------------------------------------------------------ steps

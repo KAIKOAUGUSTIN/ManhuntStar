@@ -180,7 +180,13 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     private void loadConfigFiles() {
-        settings.load(yaml, new File(dataFolder, "config.yml"), logger);
+        File config = new File(dataFolder, "config.yml");
+        if (Settings.isLegacy(yaml, config)) {
+            // the Portuguese config.yml of 1.5 that couldn't be migrated yet: read the way it is written
+            settings.loadLegacy(yaml, config, logger);
+        } else {
+            settings.load(yaml, config, logger);
+        }
         loadMessages();
     }
 
