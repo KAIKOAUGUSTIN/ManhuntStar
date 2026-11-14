@@ -84,4 +84,23 @@ class FileVersionsTest {
         assertEquals(7, n.getInt("a.new", 0));
         assertFalse(n.contains("a.old"));
     }
+
+    @Test
+    void aRenamedSectionKeepsTheValuesAlreadyInTheNewOne() {
+        ConfigNode n = node("section:\n  a: 1\n  b: 2\nmoved:\n  b: 9\n");
+        FileVersions.rename("section", "moved").accept(n);
+        assertEquals(1, n.getInt("moved.a", 0));
+        assertEquals(9, n.getInt("moved.b", 0), "the value already at the new path stays");
+        assertFalse(n.contains("section"));
+    }
+
+    @Test
+    void mapValuesLeavesAMissingValueAlone() {
+        ConfigNode n = node("other: 1\n");
+        FileVersions.mapValues("mode", Map.of("both", "all")).accept(n);
+        assertFalse(n.contains("mode"));
+        ConfigNode kept = node("mode: closest\n");
+        FileVersions.mapValues("mode", Map.of("both", "all")).accept(kept);
+        assertEquals("closest", kept.getString("mode"));
+    }
 }

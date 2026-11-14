@@ -137,6 +137,12 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void aJarWithoutItsConfigYmlLeavesNoFile() {
+        assertFalse(ConfigUpgrade.create(yaml, dir.toFile(), () -> null, false, logger));
+        assertFalse(Files.exists(dir.resolve("config.yml")));
+    }
+
+    @Test
     void aNewConfigWithoutBStatsChoiceIsTheOneInsideTheJar() throws IOException {
         assertTrue(ConfigUpgrade.create(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), false, logger));
         try (InputStream in = getClass().getResourceAsStream("/config.yml")) {
