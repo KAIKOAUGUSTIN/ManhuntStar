@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** bots.yml: an older save that was still queued doesn't overwrite a newer one; versions. */
+/** bots.yml: an older save that was still queued doesn't overwrite a newer one; an unreadable file isn't overwritten; versions. */
 class BotStorageTest {
 
     @Test
@@ -39,6 +39,23 @@ class BotStorageTest {
         BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), new BukkitYamlFiles());
         storage.save(List.of(), List.of(), null, false);
         assertEquals(BotStorage.VERSIONS.latest(), new BukkitYamlFiles().load(dir.resolve("bots.yml").toFile()).getInt("versao", 0));
+    }
+
+    @Test
+    void anUnreadableBotsFileIsNotOverwritten(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("bots.yml");
+        // a YAML error (a tab before a key) in a file that has saved bots
+        String broken = "versao: 1\nbots:\n\tabc:\n    nome: Hunter\n";
+        Files.writeString(file, broken);
+        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste-ilegivel"), new BukkitYamlFiles());
+        BotStorage.LoadResult loaded = storage.load();
+        assertTrue(loaded.bots().isEmpty());
+        assertTrue(loaded.groups().isEmpty());
+        // what a pause, a ring or a command does after the start: a save of the (empty) state
+        storage.save(List.of(), List.of(new BotGroup("nova")), null, false);
+        storage.save(List.of(), List.of(), null, true);
+        storage.shutdown();
+        assertEquals(broken, Files.readString(file));
     }
 
     @Test
