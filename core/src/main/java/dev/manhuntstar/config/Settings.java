@@ -321,20 +321,25 @@ public final class Settings {
      * with {@link #save}; the language is set to pt-br, which was the only one there was.
      */
     public void loadLegacy(YamlFiles yaml, File file, Logger logger) {
-        load(yaml.load(file), true, logger);
-        language.set("pt-br");
+        ConfigNode cfg = yaml.load(file);
+        load(cfg, true, logger);
+        if (!cfg.contains(language.path())) {
+            language.set("pt-br");
+        }
     }
 
     private void load(ConfigNode cfg, boolean legacy, Logger logger) {
+        // a Portuguese config.yml that couldn't be migrated yet may already have English keys, written by a
+        // change in game (and the faststats options only have English ones): those win
         for (Setting<?> s : byKey.values()) {
-            if (legacy) {
+            if (legacy && !cfg.contains(s.path())) {
                 s.load(cfg, s.legacyPath(), LEGACY_VALUES);
             } else {
                 s.load(cfg);
             }
         }
         Set<EntityKind> excluded = new HashSet<>();
-        for (String name : cfg.getStringList(legacy ? LEGACY_MOBS_PATH : MOBS_PATH)) {
+        for (String name : cfg.getStringList(legacy && !cfg.contains(MOBS_PATH) ? LEGACY_MOBS_PATH : MOBS_PATH)) {
             EntityKind kind = EntityKind.find(name.trim().toUpperCase(Locale.ROOT));
             if (kind != null) {
                 excluded.add(kind);
@@ -344,15 +349,16 @@ public final class Settings {
         }
         excludedMobs = Set.copyOf(excluded);
         List<String> names = new ArrayList<>();
-        for (String name : cfg.getStringList(legacy ? LEGACY_PLAYER_LIST_PATH : PLAYER_LIST_PATH)) {
+        for (String name : cfg.getStringList(legacy && !cfg.contains(PLAYER_LIST_PATH) ? LEGACY_PLAYER_LIST_PATH : PLAYER_LIST_PATH)) {
             String n = name.trim();
             if (!n.isEmpty() && names.stream().noneMatch(n::equalsIgnoreCase)) {
                 names.add(n);
             }
         }
         playerList = List.copyOf(names);
-        ConfigNode point = cfg.section(legacy ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
-        String worldKey = legacy ? "mundo" : "world";
+        boolean legacyPoint = legacy && !cfg.contains(RING_POINT_PATH);
+        ConfigNode point = cfg.section(legacyPoint ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
+        String worldKey = legacyPoint ? "mundo" : "world";
         ringPoint = point == null || !point.isString(worldKey) ? null
                 : new RingPoint(point.getString(worldKey), point.getDouble("x", 0), point.getDouble("y", 0), point.getDouble("z", 0));
         if (minNetherDelay.value() > maxNetherDelay.value()) {
