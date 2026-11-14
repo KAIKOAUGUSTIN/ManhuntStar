@@ -33,8 +33,10 @@ import dev.manhuntstar.update.UpdateChecker;
 import dev.manhuntstar.util.ChunkTickets;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -74,45 +76,25 @@ public final class ManhuntCore implements ManhuntHost {
     /** Starts everything, once the platform has registered the game's blocks, items and entity types. */
     public void enable() {
         File config = new File(dataFolder, "config.yml");
-        File pendingOptOut = new File(dataFolder, "faststats-opt-out.pending");
+        Supplier<InputStream> bundledConfig = () -> platform.resource("config.yml");
+        // bStats' choice goes into the same write as the faststats section (ConfigUpgrade)
         boolean bStatsOff = BStatsOptOut.isOff(yaml, platform.bStatsConfig());
-        // bStats' choice is noted before config.yml gets the new version: if it can't be written below
-        // (or the server stops first), the next start tries again
-        if (!pendingOptOut.exists() && bStatsOff
-                && (!config.exists() || Settings.isLegacy(yaml, config)
-                || ConfigUpgrade.VERSIONS.versionOf(yaml.load(config)) < ConfigUpgrade.FASTSTATS)) {
-            try {
-                Files.createDirectories(dataFolder.toPath());
-                Files.createFile(pendingOptOut.toPath());
-            } catch (IOException e) {
-                // still carried over below; only a retry after a failed write is lost
-                logger.warning("Could not write " + pendingOptOut.getName() + ": " + e.getMessage());
-            }
-        }
-        boolean legacy = migrateLegacyFiles();
-        boolean fresh = !config.exists();
-        if (fresh) {
-            platform.saveResource("config.yml");
-        }
         settings.setLanguages(() -> Messages.available(langFolder()));
-        int configVersion = fresh || legacy ? 0
-                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.resource("config.yml"), settings, logger, bStatsOff);
-        boolean optOutSaveFailed = false;
-        if (configVersion < ConfigUpgrade.FASTSTATS || pendingOptOut.exists()) {
-            // the faststats section is new to this config.yml: bStats' choice carries over
-            try {
-                BStatsOptOut.carryOver(yaml, platform.bStatsConfig(), config, logger);
-                Files.deleteIfExists(pendingOptOut.toPath());
-            } catch (IOException e) {
-                logger.warning("Could not write config.yml: " + e.getMessage());
-                optOutSaveFailed = true;
+        boolean legacy = migrateLegacyFiles(bStatsOff, bundledConfig);
+        if (!config.exists()) {
+            if (!ConfigUpgrade.create(yaml, dataFolder, bundledConfig, bStatsOff, logger) && !bStatsOff) {
+                platform.saveResource("config.yml");
             }
+        } else if (!legacy && !Settings.isLegacy(yaml, config)) {
+            ConfigUpgrade.upgrade(yaml, dataFolder, bundledConfig, settings, logger, bStatsOff);
         }
+        // a config.yml that couldn't get the faststats section yet: FastStats stays off this start, and the
+        // next start writes it again
+        boolean keepFastStatsOff = bStatsOff && ConfigUpgrade.withoutFastStats(yaml, config);
         Messages.install(yaml, langFolder(), platform::resource, logger);
         loadConfigFiles();
-        if (optOutSaveFailed) {
-            settings.statistics.set(false);
-            settings.errorReports.set(false);
+        if (keepFastStatsOff) {
+            BStatsOptOut.turnOff(settings);
         }
 
         pathService = new PathService(server, settings, logger);
@@ -207,24 +189,30 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     /**
-     * Files from versions up to 1.5, with Portuguese keys: the old config.yml becomes
+     * Files from versions up to 1.5, with Portuguese keys: the old config.yml is copied to
      * config-old.yml and its values go into a new config.yml (with the language set to pt-br, the only
-     * one there was); messages.yml becomes messages-old.yml, because the texts now live in the lang/ folder.
+     * one there was, and FastStats off when bStats was); messages.yml becomes messages-old.yml, because
+     * the texts now live in the lang/ folder. A config.yml that can't be written stays as it was, and the
+     * next start migrates it again.
      *
      * @return whether config.yml was one of those (it is now of the latest version)
      */
-    private boolean migrateLegacyFiles() {
+    private boolean migrateLegacyFiles(boolean bStatsOff, Supplier<InputStream> bundledConfig) {
         boolean migrated = false;
         File config = new File(dataFolder, "config.yml");
         if (config.exists() && Settings.isLegacy(yaml, config)) {
             settings.loadLegacy(yaml, config, logger);
-            File backup = new File(dataFolder, "config-old.yml");
+            if (bStatsOff) {
+                BStatsOptOut.turnOff(settings);
+            }
             try {
-                Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                platform.saveResource("config.yml");
-                settings.save(yaml, config, logger);
+                Files.copy(config.toPath(), new File(dataFolder, "config-old.yml").toPath(), StandardCopyOption.REPLACE_EXISTING);
+                ConfigUpgrade.rewrite(yaml, dataFolder, bundledConfig, settings);
                 migrated = true;
                 logger.info("config.yml moved to the new English keys (language pt-br); the old file is config-old.yml.");
+                if (bStatsOff) {
+                    BStatsOptOut.logCarriedOver(logger);
+                }
             } catch (IOException e) {
                 logger.warning("Could not migrate config.yml: " + e.getMessage());
             }

@@ -4,14 +4,14 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
 import java.io.File;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 /**
  * Up to 2.0.0 the Paper plugin sent its statistics to bStats, which server owners turn off for every
  * plugin with {@code enabled: false} in {@code plugins/bStats/config.yml}. That choice is kept: when
- * config.yml gets the faststats section (a new config.yml, or an older one being updated) and bStats is
- * off, both FastStats options start off. Afterwards they are the owner's to change.
+ * config.yml gets the faststats section (a new config.yml, an older one being updated, or the Portuguese
+ * one of 1.5), both FastStats options are written off in the same write (ConfigUpgrade). Afterwards they
+ * are the owner's to change.
  */
 public final class BStatsOptOut {
 
@@ -23,21 +23,19 @@ public final class BStatsOptOut {
         return bStatsConfig != null && bStatsConfig.isFile() && !yaml.load(bStatsConfig).getBoolean("enabled", true);
     }
 
-    /**
-     * Turns off {@code faststats.statistics} and {@code faststats.error-reports} in config.yml when bStats
-     * is off (the file keeps its comments).
-     *
-     * @return whether it did
-     */
-    public static boolean carryOver(YamlFiles yaml, File bStatsConfig, File config, Logger logger) throws IOException {
-        if (!isOff(yaml, bStatsConfig)) {
-            return false;
-        }
-        ConfigNode cfg = yaml.load(config);
-        cfg.set(Settings.STATISTICS_PATH, false);
-        cfg.set(Settings.ERROR_REPORTS_PATH, false);
-        yaml.save(cfg, config);
+    /** Turns both FastStats options off in a config.yml being written. */
+    public static void turnOff(ConfigNode config) {
+        config.set(Settings.STATISTICS_PATH, false);
+        config.set(Settings.ERROR_REPORTS_PATH, false);
+    }
+
+    /** Both options off in the settings (when config.yml couldn't be written with them this start). */
+    public static void turnOff(Settings settings) {
+        settings.statistics.set(false);
+        settings.errorReports.set(false);
+    }
+
+    public static void logCarriedOver(Logger logger) {
         logger.info("bStats was off for every plugin, so FastStats starts off too (faststats section in config.yml).");
-        return true;
     }
 }

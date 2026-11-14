@@ -118,6 +118,33 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void aNewConfigGetsBStatsChoiceInTheSameWrite() throws IOException {
+        assertTrue(ConfigUpgrade.create(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), true, logger));
+        ConfigNode cfg = yaml.load(dir.resolve("config.yml").toFile());
+        assertEquals(ConfigUpgrade.VERSIONS.latest(), cfg.getInt("config-version", 0));
+        assertFalse(cfg.getBoolean("faststats.statistics", true));
+        assertFalse(cfg.getBoolean("faststats.error-reports", true));
+        assertTrue(Files.readString(dir.resolve("config.yml")).contains("# Anonymous statistics"));
+        assertFalse(ConfigUpgrade.withoutFastStats(yaml, dir.resolve("config.yml").toFile()));
+    }
+
+    @Test
+    void aNewConfigThatCantBeWrittenLeavesNoFile() {
+        YamlFiles failing = new FailingSaveYamlFiles(yaml, file -> { });
+        assertFalse(ConfigUpgrade.create(failing, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), true, logger));
+        assertFalse(Files.exists(dir.resolve("config.yml")));
+        assertTrue(ConfigUpgrade.withoutFastStats(yaml, dir.resolve("config.yml").toFile()));
+    }
+
+    @Test
+    void aNewConfigWithoutBStatsChoiceIsTheOneInsideTheJar() throws IOException {
+        assertTrue(ConfigUpgrade.create(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), false, logger));
+        try (InputStream in = getClass().getResourceAsStream("/config.yml")) {
+            assertEquals(new String(in.readAllBytes(), StandardCharsets.UTF_8), Files.readString(dir.resolve("config.yml")));
+        }
+    }
+
+    @Test
     void theLatestVersionIsLeftAlone() throws IOException {
         saveBundled();
         String before = Files.readString(dir.resolve("config.yml"));

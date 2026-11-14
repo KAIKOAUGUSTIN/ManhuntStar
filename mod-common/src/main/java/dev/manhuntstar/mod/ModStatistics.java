@@ -51,15 +51,16 @@ public final class ModStatistics {
                         .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
                         .create());
             }
-            if (errorReportsEnabled(platform) && ErrorReports.sentBy(platform.fastStatsConfig())) {
-                // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
-                errors = new ErrorReports(platform.logger());
-                factory.errorTrackerService(errors.tracker());
-            } else if (errorReportsEnabled(platform) && !statisticsEnabled(platform)) {
-                // the context needs a service: an idle tracker lets FastStats make its config and show its
-                // first-run notice, without tracking anything. With statistics on they are the service, and
-                // an idle tracker would only collect FastStats' own errors (the mods always keep the service)
-                factory.errorTrackerService(ErrorTracker.contextUnaware());
+            switch (ErrorReports.mode(errorReportsEnabled(platform), statisticsEnabled(platform), platform.fastStatsConfig())) {
+                case TRACK -> {
+                    // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
+                    errors = new ErrorReports(platform.logger());
+                    factory.errorTrackerService(errors.tracker());
+                }
+                case IDLE -> factory.errorTrackerService(ErrorTracker.contextUnaware());
+                case NONE -> {
+                    // no error reports from this start
+                }
             }
             C context = factory.create();
             if (errors != null) {

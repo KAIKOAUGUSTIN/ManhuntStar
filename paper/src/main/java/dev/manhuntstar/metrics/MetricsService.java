@@ -46,13 +46,15 @@ public final class MetricsService {
                     .addMetric(Metric.string("default_difficulty", usage::defaultDifficulty))
                     .create());
         }
-        if (errorReports && ErrorReports.sentBy(plugin.fastStatsConfig())) {
-            errors = new ErrorReports(plugin.getLogger());
-            factory.errorTrackerService(errors.tracker());
-        } else if (errorReports && !metrics) {
-            // the context needs a service: an idle tracker lets FastStats make its config and show its
-            // first-run notice, without tracking anything (with statistics on, they are the service)
-            factory.errorTrackerService(ErrorTracker.contextUnaware());
+        switch (ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig())) {
+            case TRACK -> {
+                errors = new ErrorReports(plugin.getLogger());
+                factory.errorTrackerService(errors.tracker());
+            }
+            case IDLE -> factory.errorTrackerService(ErrorTracker.contextUnaware());
+            case NONE -> {
+                // no error reports from this start
+            }
         }
         try {
             context = factory.create();

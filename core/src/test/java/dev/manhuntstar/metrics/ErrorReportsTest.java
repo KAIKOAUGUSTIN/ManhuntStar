@@ -1,5 +1,6 @@
 package dev.manhuntstar.metrics;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,34 @@ class ErrorReportsTest {
         Path file = dir.resolve("config.properties");
         Files.writeString(file, text);
         return file.toFile();
+    }
+
+    @Test
+    void errorReportsOffNeverTrack() throws IOException {
+        File sends = fastStatsConfig("enabled=true\nsubmitErrors=true\n");
+        assertEquals(ErrorReports.Mode.NONE, ErrorReports.mode(false, true, sends));
+        assertEquals(ErrorReports.Mode.NONE, ErrorReports.mode(false, false, sends));
+    }
+
+    @Test
+    void errorsAreTrackedWhenFastStatsSendsThem() throws IOException {
+        File sends = fastStatsConfig("enabled=true\nsubmitErrors=true\n");
+        assertEquals(ErrorReports.Mode.TRACK, ErrorReports.mode(true, true, sends));
+        assertEquals(ErrorReports.Mode.TRACK, ErrorReports.mode(true, false, sends));
+    }
+
+    @Test
+    void onlyErrorReportsOnFastStatsFirstRunGetAnIdleTracker() {
+        File missing = dir.resolve("config.properties").toFile();
+        assertEquals(ErrorReports.Mode.IDLE, ErrorReports.mode(true, false, missing));
+        assertEquals(ErrorReports.Mode.NONE, ErrorReports.mode(true, true, missing), "statistics are the service");
+    }
+
+    @Test
+    void errorsTurnedOffInFastStatsAreNotTracked() throws IOException {
+        File off = fastStatsConfig("enabled=true\nsubmitErrors=false\n");
+        assertEquals(ErrorReports.Mode.IDLE, ErrorReports.mode(true, false, off));
+        assertEquals(ErrorReports.Mode.NONE, ErrorReports.mode(true, true, off));
     }
 
     @Test

@@ -70,6 +70,36 @@ public final class ErrorReports {
         logger.addHandler(handler);
     }
 
+    /** What the plugin and the mods give the FastStats context for error reports. */
+    public enum Mode {
+        /** Nothing: error reports are off, or statistics are the context's service and nothing is sent. */
+        NONE,
+        /** An {@code ErrorReports} that tracks ManhuntStar's errors: FastStats sends them. */
+        TRACK,
+        /**
+         * An idle tracker ({@code ErrorTracker.contextUnaware()}), which nothing feeds: only error reports
+         * are on and FastStats won't send them (its first run on the server, or off in its config). The
+         * context needs a service to make its config and show its first-run notice.
+         */
+        IDLE
+    }
+
+    /**
+     * Decides {@link Mode} from config.yml's two options and FastStats' config.properties. With
+     * statistics on there is never an idle tracker: they are the context's service already, and on the
+     * mods, where FastStats always keeps the error service, an idle tracker would only collect FastStats'
+     * own errors without sending them.
+     */
+    public static Mode mode(boolean errorReports, boolean statistics, File fastStatsConfig) {
+        if (!errorReports) {
+            return Mode.NONE;
+        }
+        if (sentBy(fastStatsConfig)) {
+            return Mode.TRACK;
+        }
+        return statistics ? Mode.NONE : Mode.IDLE;
+    }
+
     /**
      * Would FastStats send error reports, going by its config.properties as it is now? Read only (the
      * SDK writes the file when it starts): no when the file isn't there yet (FastStats' first run on

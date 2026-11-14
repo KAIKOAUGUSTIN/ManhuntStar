@@ -32,7 +32,7 @@ class StartupOptOutTest {
     private static class ConfigLoaded extends RuntimeException {}
 
     @Test
-    void failedOptOutSaveStillDisablesBothOptionsBeforePlatformStarts() throws Exception {
+    void failedFirstConfigStillDisablesBothOptionsAndIsWrittenNextStart() throws Exception {
         checkFailedSaveAndRetry(false, true);
     }
 
@@ -42,7 +42,7 @@ class StartupOptOutTest {
     }
 
     @Test
-    void failedOptOutAfterSuccessfulUpgradeRetriesOnNextStartup() throws Exception {
+    void upgradeWritesTheOptOutWithTheNewVersion() throws Exception {
         checkFailedSaveAndRetry(true, false);
     }
 
@@ -107,12 +107,17 @@ class StartupOptOutTest {
             assertFalse(core.settings().statistics.on());
             assertFalse(core.settings().errorReports.on());
             ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
-            assertEquals(oldConfig && failUpgrade ? 1 : 2, saved.getInt("config-version", 1));
-            // an upgrade that went through wrote the opt-out with the new version
-            boolean upgraded = oldConfig && !failUpgrade;
-            assertEquals(!upgraded, saved.getBoolean("faststats.statistics", true));
-            assertEquals(!upgraded, saved.getBoolean("faststats.error-reports", true));
-            assertTrue(Files.exists(dir.resolve("faststats-opt-out.pending")));
+            // never a config.yml with the faststats section but without bStats' choice: a write that
+            // failed left the previous file (or none), for the next start to write again
+            if (!oldConfig) {
+                assertFalse(Files.exists(dir.resolve("config.yml")));
+            } else if (failUpgrade) {
+                assertEquals(1, saved.getInt("config-version", 1));
+            } else {
+                assertEquals(2, saved.getInt("config-version", 1));
+                assertFalse(saved.getBoolean("faststats.statistics", true));
+                assertFalse(saved.getBoolean("faststats.error-reports", true));
+            }
 
             core.disable();
             fail.set(false);
@@ -125,7 +130,6 @@ class StartupOptOutTest {
                 assertEquals(2, saved.getInt("config-version", 0));
                 assertFalse(saved.getBoolean("faststats.statistics", true));
                 assertFalse(saved.getBoolean("faststats.error-reports", true));
-                assertFalse(Files.exists(dir.resolve("faststats-opt-out.pending")));
             } finally {
                 restarted.disable();
             }
