@@ -153,7 +153,7 @@ Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` 
 2. Translate the texts between quotes. Keep the tags in `<...>`: `<bot>`, `<player>`, `<amount>` and the like are filled in by the plugin, and color tags such as `<red>` or `<bold>` follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format.
 3. Run `/manhunt reload`, then `/manhunt settings language es`.
 
-Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...), but when an update changes their default texts, your copy is moved to `lang/old/` and replaced; a file with your own name is never replaced.
+Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...): when an update brings a new version of one of them, it is updated on the first start, adding the new texts and keeping the ones you edited (except a text that no longer exists, or one whose meaning changed so much that the update replaces it), and a copy of your previous file goes to `lang/old/<language>-v<version>.yml`. A file with your own name is never changed.
 
 Want your translation in the plugin? Open a pull request adding it to `core/src/main/resources/lang/`.
 
