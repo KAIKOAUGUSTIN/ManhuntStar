@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Writes the dependency snapshot sent to GitHub (dependency graph and Dependabot alerts) with only what
 # goes inside the jars, plus the Gradle version:
-#   the Paper plugin   runtimeClasspath of :paper (bStats; core is our own code)
+#   the Paper plugin   runtimeClasspath of :paper (FastStats; core is our own code)
 #   the Fabric mods    includeInternal of :fabric:<minecraft> (the jar-in-jar libraries)
 #   the NeoForge mods  jarJar of :neoforge:<minecraft> (the same)
 # Everything else the build resolves (Minecraft and Paper and their libraries, which come with the game

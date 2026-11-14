@@ -116,6 +116,9 @@ public final class ModYamlFiles implements YamlFiles {
             // a missing file is an empty document
         } catch (IOException | YAMLException | ClassCastException e) {
             logger.log(Level.SEVERE, "Cannot load " + file, e);
+            // not the keys read before the error: an empty document is how a file that can't be read
+            // looks to the callers (FileVersions.unreadable), and they then don't rewrite it
+            return new ModConfigNode();
         }
         return doc;
     }
@@ -127,6 +130,7 @@ public final class ModYamlFiles implements YamlFiles {
             loadInto(doc, read(reader));
         } catch (IOException | YAMLException | ClassCastException e) {
             logger.log(Level.SEVERE, "Cannot load configuration from stream", e);
+            return new ModConfigNode();
         }
         return doc;
     }

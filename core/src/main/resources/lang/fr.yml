@@ -3,10 +3,12 @@
 #  Format MiniMessage : https://docs.advntr.dev/minimessage/format.html
 #  Les balises comme <bot>, <phase> et <amount> sont remplies par le plugin ; gardez-les en traduisant.
 #  Les clés manquantes utilisent le texte anglais (en.yml). « version » change quand les textes par
-#  défaut changent : un fichier plus ancien est déplacé dans lang/old/ et remplacé par le nouveau.
+#  défaut changent : un fichier plus ancien est mis à jour (nouveaux textes ajoutés, ceux qui ont changé
+#  renommés ou remplacés) et garde les textes que vous avez modifiés ; une copie va dans lang/old/.
+#  Ne modifiez pas « version ».
 # ==============================================================================
 
-version: 1
+version: 2
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -277,6 +279,12 @@ options:
   updatecheck:
     name: "Vérification des mises à jour"
     description: "Cherche une nouvelle version sur GitHub au démarrage du serveur et toutes les 6 heures, et prévient les admins quand ils se connectent."
+  statistics:
+    name: "Statistiques anonymes"
+    description: "Envoie des statistiques anonymes à FastStats (nombre de serveurs, versions, bots, langue et difficulté par défaut). Prend effet au prochain redémarrage."
+  errorreports:
+    name: "Rapports d'erreur"
+    description: "Envoie à FastStats les erreurs de ManhuntStar lui-même (type, message et pile d'appels, sans adresses IP). Prend effet au prochain redémarrage."
   bothealth:
     name: "Vie maximale"
     description: "Vie maximale des bots."

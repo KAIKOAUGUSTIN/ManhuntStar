@@ -15,6 +15,16 @@
 
 No friends online? Spawn a pack of hunters that play like real players and try to stop you from beating the game. They run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, get stronger through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow you to the Nether and the End.
 
+## 🖥️ Where it runs
+
+|  | Paper (plugin) | Fabric / NeoForge (mod) |
+|---|---|---|
+| **Server** | ✅ On the server only | ✅ On the server only |
+| **Players** | Join with a vanilla client | Join with a vanilla client |
+| **Singleplayer / LAN** | — | ✅ Install it on your own client |
+
+ManhuntStar runs on the server side: players never need to install anything to join. The mods also run in singleplayer, where the game has its own server inside the client; there, and for LAN worlds you open, the mod goes in your client's `mods/` folder (only the host needs it).
+
 ## ⭐ Support the project
 
 If you like ManhuntStar, consider giving the repository a ⭐ on GitHub! It helps the project gain visibility and motivates further development.
@@ -31,9 +41,12 @@ Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
 **Fabric or NeoForge** (mod):
 
 1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or CurseForge.
-2. Put it in the `mods/` folder and start the server. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too.
+2. Put it in the `mods/` folder:
+   - **On a server:** the server's `mods/` folder, then start the server. Players join with a vanilla client.
+   - **For singleplayer or LAN:** your client's `mods/` folder, then open a world. Friends joining your LAN world don't need it.
+3. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too, in the same `mods/` folder.
 
-Requirements: Minecraft 26.2 or 26.3 and Java 25. Only the server needs the mod: players join with a vanilla client. It also works in singleplayer and LAN worlds.
+Requirements: Minecraft 26.2 or 26.3 and Java 25.
 
 The mods do the same as the plugin; their files (`config.yml`, `lang/`, `skins/`, the saved bots) are in `config/manhuntstar/` instead of `plugins/ManhuntStar/`. `/manhunt` is for operators, or for whoever has the `manhuntstar.admin` permission in a permissions mod such as LuckPerms.
 
@@ -107,8 +120,11 @@ Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
 - 🔔 **Update check** (`general.update-check`, on by default): looks for a new version when the server starts and every 6 hours. A new version is logged to the console and shown to admins when they join, with a download link.
-- 📊 **Anonymous statistics** on [bStats](https://bstats.org), on Paper only (server count, Paper version, number of bots, language and default difficulty). To turn them off for every plugin, set `enabled: false` in `plugins/bStats/config.yml`.
+- 📊 **Anonymous statistics** on [FastStats](https://faststats.dev) (`faststats.statistics`, on by default), on Paper and on the mods' dedicated servers (singleplayer and LAN worlds send nothing): server count, Minecraft, loader and Java versions, number of bots, language and default difficulty. When FastStats first runs on a server (no `faststats/config.properties` yet, from any plugin or mod), nothing is sent until the next restart. `faststats.statistics: false` turns off ManhuntStar's (at the next restart); `enabled=false` in `faststats/config.properties` (`plugins/` on Paper, `config/` on the mods) turns off every plugin's and mod's. If bStats was turned off for every plugin (`enabled: false` in `plugins/bStats/config.yml`), both FastStats options start off.
+- 🐞 **Error reports** on FastStats (`faststats.error-reports`, on by default): ManhuntStar's own errors (type, message and stack trace, without IP addresses or the system user name), sent with the statistics. `faststats.error-reports: false` turns them off (at the next restart); `submitErrors=false` in `faststats/config.properties` turns off every plugin's and mod's.
 - Combat, mobility, pathfinding, tactics, saving, default difficulty...
+
+Updating ManhuntStar: `config.yml` and the language files in `lang/` have a version. When a new version changes one of them, it is updated on the first start: new options and texts are added with their comments, renamed ones are moved, and your values and edited texts are kept. A copy of the previous file goes to `old/` (`lang/old/` for the languages).
 
 Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
 

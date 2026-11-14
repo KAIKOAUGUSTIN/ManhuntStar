@@ -51,6 +51,25 @@ jobs:
             exit 1
           fi
 
+      # without it the jars would send no statistics and no error reports
+      - name: Check FASTSTATS_TOKEN
+        env:
+          FASTSTATS_TOKEN: ${{ secrets.FASTSTATS_TOKEN }}
+        run: |
+          # the same check as the build (build.gradle.kts), with the reason; the token itself is never printed
+          token="${FASTSTATS_TOKEN#"${FASTSTATS_TOKEN%%[![:space:]]*}"}"
+          token="${token%"${token##*[![:space:]]}"}"
+          if [ -z "$FASTSTATS_TOKEN" ]; then
+            echo "::error::The FASTSTATS_TOKEN secret is missing (Settings > Secrets and variables > Actions)."
+            exit 1
+          elif [ -z "$token" ]; then
+            echo "::error::The FASTSTATS_TOKEN secret only has spaces or line breaks: paste the FastStats project token into it again."
+            exit 1
+          elif ! printf '%s' "$token" | grep -Eq '^[a-z0-9]{32}$'; then
+            echo "::error::The FASTSTATS_TOKEN secret isn't a FastStats project token: it should be 32 lowercase letters and digits (${#token} characters now)."
+            exit 1
+          fi
+
       - uses: actions/checkout@v7
         with:
           ref: main
@@ -86,9 +105,13 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - uses: gradle/actions/setup-gradle@v6
+      # pinned to a commit: this job hands secrets to the build (Dependabot keeps it up to date)
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Build and test
+        env:
+          # FastStats project token, put into the plugin and the mods (only release jars send statistics)
+          FASTSTATS_TOKEN: ${{ secrets.FASTSTATS_TOKEN }}
         run: ./gradlew build
 
       - name: Release notes and CHANGELOG

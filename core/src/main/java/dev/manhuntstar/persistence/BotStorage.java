@@ -6,16 +6,17 @@ import dev.manhuntstar.bot.BotSnapshot;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.PersistentGear;
 import dev.manhuntstar.bot.SkinData;
+import dev.manhuntstar.config.upgrade.FileVersions;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.util.SafeFiles;
 import dev.manhuntstar.util.Vec3;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -55,6 +56,12 @@ public final class BotStorage {
     public record LoadResult(List<BotSnapshot> bots, List<BotGroup> groups, ConfigNode manhunt) {
     }
 
+    /**
+     * bots.yml's versions ({@code versao}): 1 is the format up to now. A change to the format adds a step,
+     * so a bots.yml from an older ManhuntStar is read the new way.
+     */
+    public static final FileVersions VERSIONS = new FileVersions("versao", 1, List.of());
+
     public BotStorage(File dataFolder, Logger logger, YamlFiles yaml) {
         this.file = new File(dataFolder, "bots.yml");
         this.logger = logger;
@@ -64,7 +71,7 @@ public final class BotStorage {
     /** @param manhunt writes the rings and the hunt in the "manhunt" section (null = not saved) */
     public void save(List<BotSnapshot> bots, List<BotGroup> groups, Consumer<ConfigNode> manhunt, boolean async) {
         ConfigNode y = yaml.create();
-        y.set("versao", 1);
+        y.set(VERSIONS.key(), VERSIONS.latest());
         if (manhunt != null) {
             manhunt.accept(y.createSection("manhunt"));
         }
@@ -160,11 +167,7 @@ public final class BotStorage {
             Files.createDirectories(target.getParent());
             Path tmp = target.resolveSibling("bots.yml.tmp");
             Files.writeString(tmp, text, StandardCharsets.UTF_8);
-            try {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
-            }
+            SafeFiles.replace(tmp, target);
         } catch (IOException e) {
             logger.warning("Could not save bots.yml: " + e.getMessage());
         }
@@ -177,6 +180,13 @@ public final class BotStorage {
             return new LoadResult(bots, groups, null);
         }
         ConfigNode y = yaml.load(file);
+        int version = VERSIONS.versionOf(y);
+        if (version > VERSIONS.latest()) {
+            logger.warning("bots.yml is from a newer ManhuntStar (version " + version + "; this one reads " + VERSIONS.latest()
+                    + "): what can be read is loaded, and the file is written in this version's format.");
+        } else {
+            VERSIONS.upgrade(y);
+        }
         ConfigNode gs = y.section("grupos");
         if (gs != null) {
             for (String k : gs.keys(false)) {

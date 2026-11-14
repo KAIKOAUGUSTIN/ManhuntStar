@@ -1,14 +1,18 @@
 package dev.manhuntstar.neoforge;
 
+import dev.faststats.neoforge.NeoForgeContext;
 import dev.manhuntstar.mod.ModLogging;
 import dev.manhuntstar.mod.ModPermissions;
 import dev.manhuntstar.mod.ModPlatform;
+import dev.manhuntstar.mod.ModStatistics;
 import java.util.logging.Logger;
 import net.minecraft.server.permissions.Permissions;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -47,5 +51,21 @@ public final class ManhuntStarNeoForge {
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> ModPlatform.registerCommands(event.getDispatcher(), event.getBuildContext()));
         NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> platform.serverStarted(event.getServer()));
         NeoForge.EVENT_BUS.addListener((ServerStoppingEvent event) -> platform.serverStopping());
+        startStatistics(platform);
+    }
+
+    /**
+     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
+     * only. Made now, before the server exists: the SDK starts sending when the server has started and
+     * stops with it.
+     */
+    private static void startStatistics(ModPlatform platform) {
+        if (FMLEnvironment.getDist() != Dist.DEDICATED_SERVER) {
+            return;
+        }
+        String token = ModStatistics.token(platform);
+        if (!token.isEmpty()) {
+            ModStatistics.start(new NeoForgeContext.Factory("manhuntstar", token), platform);
+        }
     }
 }

@@ -6,6 +6,7 @@ import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.command.ManhuntCommand;
 import dev.manhuntstar.host.ManhuntPlatform;
 import dev.manhuntstar.host.PlatformServices;
+import dev.manhuntstar.metrics.UsageStats;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.Platform;
 import dev.manhuntstar.platform.ScheduledTask;
@@ -67,6 +68,11 @@ public final class ModPlatform implements ManhuntPlatform {
 
     private ModServer server;
     private ManhuntCore core;
+    /**
+     * The values sent to FastStats, of the last core started. Kept when the server stops: FastStats sends
+     * once more when it stops, after Manhunt* has (ModStatistics). Read by FastStats' thread.
+     */
+    private volatile UsageStats usage;
     private volatile boolean running;
     private ModMobGoals mobGoals;
     private ModAimDiagnostics aim;
@@ -96,6 +102,11 @@ public final class ModPlatform implements ManhuntPlatform {
         return core;
     }
 
+    /** Null until a server has started. */
+    UsageStats usage() {
+        return usage;
+    }
+
     ModMobGoals mobGoals() {
         return mobGoals;
     }
@@ -118,6 +129,7 @@ public final class ModPlatform implements ManhuntPlatform {
             Platform.set(server);
             ModTypes.init(minecraft.overworld());
             core = new ManhuntCore(this);
+            usage = core.usage();
             core.enable();
         } catch (Throwable t) {
             logger.log(Level.SEVERE, "Manhunt* could not start", t);

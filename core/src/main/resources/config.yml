@@ -5,6 +5,10 @@
 #  The command key of each option is in square brackets.
 # ==============================================================================
 
+# The version of this file: ManhuntStar uses it to update the file (adding new options with their
+# comments, renaming the ones that changed), keeping your values. Don't change it.
+config-version: 2
+
 general:
   # Language of the plugin's messages and menu: a file name from the lang/ folder (en, pt-br, fr, ru, zh-cn
   # or one you add). Missing texts fall back to English. [language]
@@ -27,6 +31,18 @@ general:
   # Look for a new version on GitHub when the server starts and every 6 hours. A new version is
   # logged to the console and shown to admins (manhuntstar.admin) when they join. [updatecheck]
   update-check: true
+
+# FastStats (https://faststats.dev), on Paper and on the mods' dedicated servers (singleplayer sends
+# nothing). Both are read when the server starts. When bStats was off for every plugin
+# (plugins/bStats/config.yml), both start off. To turn FastStats off for every plugin and mod at once,
+# use faststats/config.properties (in plugins/ on Paper, config/ on the mods).
+faststats:
+  # Anonymous statistics: server count, versions, number of bots, language and default difficulty.
+  # [statistics]
+  statistics: true
+  # Error reports: ManhuntStar's own errors (type, message and stack trace, without IP addresses or the
+  # system user name), sent with the statistics. [errorreports]
+  error-reports: true
 
 bots:
   # Bot max health. [bothealth]

@@ -2,11 +2,11 @@
 #  Manhunt* - 简体中文
 #  MiniMessage 格式：https://docs.advntr.dev/minimessage/format.html
 #  <bot>、<phase>、<amount> 等标签由插件填写，翻译时请保留。
-#  缺少的键会使用英文文本（en.yml）。默认文本变化时 "version" 会改变：旧文件会移到 lang/old/
-#  并被新文件替换。
+#  缺少的键会使用英文文本（en.yml）。默认文本变化时 "version" 会改变：旧文件会被更新（加入新文本，
+#  重命名或替换已改变的文本），并保留你修改过的文本；旧文件的副本会放到 lang/old/。请勿修改 "version"。
 # ==============================================================================
 
-version: 1
+version: 2
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -277,6 +277,12 @@ options:
   updatecheck:
     name: "检查更新"
     description: "在服务器启动时以及每 6 小时在 GitHub 上检查新版本，并在管理员进入时提醒。"
+  statistics:
+    name: "匿名统计"
+    description: "向 FastStats 发送匿名统计（服务器数量、版本、机器人、语言和默认难度）。下次重启后生效。"
+  errorreports:
+    name: "错误报告"
+    description: "向 FastStats 发送 ManhuntStar 自身的错误（类型、消息和堆栈，不含 IP 地址）。下次重启后生效。"
   bothealth:
     name: "最大生命值"
     description: "机器人的最大生命值。"

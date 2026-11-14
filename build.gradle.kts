@@ -10,12 +10,34 @@ plugins {
     alias(libs.plugins.sonarqube)
 }
 
+// FastStats project token (https://faststats.dev), put into the plugin and the mods at build time
+// (manhuntstar.properties). It comes from the FASTSTATS_TOKEN environment variable (the secret of the same
+// name in the Release workflow) or -PfaststatsToken, and is not in the repository: forks, pull requests
+// and local builds have none, and their jars send no statistics.
+val faststatsToken = providers.environmentVariable("FASTSTATS_TOKEN")
+    .orElse(providers.gradleProperty("faststatsToken"))
+    .map { it.trim() }
+    .getOrElse("")
+require(faststatsToken.isEmpty() || Regex("[a-z0-9]{32}").matches(faststatsToken)) {
+    "FASTSTATS_TOKEN isn't a FastStats project token (32 lowercase letters and digits)"
+}
+extra["faststatsToken"] = faststatsToken
+
 subprojects {
     group = "dev.manhuntstar"
     version = rootProject.version
 
     repositories {
         mavenCentral()
+        // the FastStats SDK (Paper plugin and mods) is only on FastStats' repository
+        exclusiveContent {
+            forRepository {
+                maven("https://repo.faststats.dev/releases") { name = "FastStats" }
+            }
+            filter {
+                includeGroup("dev.faststats.metrics")
+            }
+        }
     }
 
     tasks.withType<JavaCompile>().configureEach {

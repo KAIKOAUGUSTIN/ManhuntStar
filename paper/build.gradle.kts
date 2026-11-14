@@ -24,9 +24,9 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:$paperMin")
     add(paperLatest.name, libs.paper.api)
 
-    // bundled in the jar: core as is, bStats relocated (see shadowJar)
+    // bundled in the jar: core as is, FastStats relocated (see shadowJar)
     implementation(project(":core"))
-    implementation(libs.bstats.bukkit)
+    implementation(libs.faststats.bukkit)
 
     testImplementation(libs.paper.api)
     testImplementation(testFixtures(project(":core")))
@@ -39,7 +39,7 @@ tasks.processResources {
     val props = mapOf(
         "version" to project.version.toString(),
         "apiVersion" to apiVersion,
-        "bstatsId" to (findProperty("bstatsId")?.toString() ?: "0"),
+        "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
     )
     inputs.properties(props)
     filteringCharset = "UTF-8"
@@ -61,13 +61,14 @@ tasks.check {
     dependsOn(compileAgainstLatest)
 }
 
-// The plugin jar is the shadow jar: the plugin, core and bStats, moved into its own package so it
-// doesn't clash with other plugins' copies (bStats refuses to start when it isn't relocated).
+// The plugin jar is the shadow jar: the plugin, core and FastStats, moved into its own package so it
+// doesn't clash with other plugins' copies of another version. FastStats' Gson and annotations aren't
+// bundled: Paper already brings Gson.
 // It goes to build/libs/ at the root, where the workflows and the README expect it.
 tasks.shadowJar {
     archiveFileName.set("ManhuntStar-${project.version}.jar")
     destinationDirectory.set(rootProject.layout.buildDirectory.dir("libs"))
-    relocate("org.bstats", "dev.manhuntstar.libs.bstats")
+    relocate("dev.faststats", "dev.manhuntstar.libs.faststats")
     exclude("META-INF/maven/**", "META-INF/LICENSE*", "META-INF/NOTICE*")
 }
 

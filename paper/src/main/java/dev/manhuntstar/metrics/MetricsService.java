@@ -1,61 +1,83 @@
 package dev.manhuntstar.metrics;
 
+import dev.faststats.ErrorTracker;
+import dev.faststats.bukkit.BukkitContext;
+import dev.faststats.data.Metric;
 import dev.manhuntstar.ManhuntStarPlugin;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.SimplePie;
-import org.bstats.charts.SingleLineChart;
+import dev.manhuntstar.config.Settings;
+import java.util.logging.Level;
 
 /**
- * Anonymous usage statistics on bStats (https://bstats.org): server count, Paper and Java versions,
- * and the charts below. Server owners can turn it off for every plugin in
- * {@code plugins/bStats/config.yml}. The plugin ID comes from {@code bstatsId} in gradle.properties;
- * with 0 nothing is sent.
+ * FastStats (https://faststats.dev): anonymous usage statistics (server count, Paper, Minecraft and
+ * Java versions, and the metrics in {@link UsageStats}) and error reports ({@link ErrorReports}).
+ * {@code faststats.statistics} and {@code faststats.error-reports} in config.yml turn each one off (read when the
+ * server starts); {@code plugins/faststats/config.properties} turns them off for every plugin. When
+ * FastStats first runs on a server (no such file yet, from any plugin) the file is created and nothing is
+ * sent until the next restart. Builds without a project token (FASTSTATS_TOKEN) send nothing.
  *
- * <p>Custom charts (each one has to be created on the bStats page with the same ID):
- * {@code bots} (single line chart), {@code language} and {@code default_difficulty} (simple pies).
+ * <p>Custom metrics (each one has to be created on the FastStats project with the same ID):
+ * {@code bots} (number), {@code language} and {@code default_difficulty} (strings). No feature flags.
  */
 public final class MetricsService {
 
     private final ManhuntStarPlugin plugin;
-    private Metrics metrics;
+    private BukkitContext context;
+    private ErrorReports errors;
 
     public MetricsService(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
     }
 
     public void start() {
-        int id = pluginId();
-        if (id <= 0) {
+        String token = UsageStats.token();
+        Settings settings = plugin.core().settings();
+        boolean metrics = settings.statistics.on();
+        boolean errorReports = settings.errorReports.on();
+        if (token.isEmpty() || (!metrics && !errorReports)) {
             return;
         }
-        metrics = new Metrics(plugin, id);
-        // bStats collects the values on the main thread and sends them off it
-        metrics.addCustomChart(new SingleLineChart("bots", () -> plugin.core().botManager().aliveBots().size()));
-        metrics.addCustomChart(new SimplePie("language", () -> plugin.core().messages().language()));
-        metrics.addCustomChart(new SimplePie("default_difficulty", () -> plugin.core().settings().defaultDifficulty.get().configName()));
+        BukkitContext.Factory factory = new BukkitContext.Factory(plugin, token);
+        if (metrics) {
+            // FastStats reads the values off the main thread (every 30 minutes): it gets core's copies
+            UsageStats usage = plugin.core().usage();
+            factory.metrics(f -> f
+                    .addMetric(Metric.number("bots", usage::bots))
+                    .addMetric(Metric.string("language", usage::language))
+                    .addMetric(Metric.string("default_difficulty", usage::defaultDifficulty))
+                    .create());
+        }
+        switch (ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig())) {
+            case TRACK -> {
+                errors = new ErrorReports(plugin.getLogger());
+                factory.errorTrackerService(errors.tracker());
+            }
+            case IDLE -> factory.errorTrackerService(ErrorTracker.contextUnaware());
+            case NONE -> {
+                // no error reports from this start
+            }
+        }
+        try {
+            context = factory.create();
+            context.ready();
+        } catch (RuntimeException e) {
+            // e.g. plugins/faststats/config.properties can't be written: Manhunt* runs without FastStats
+            plugin.getLogger().log(Level.WARNING, "FastStats could not start; no statistics or error reports this time.", e);
+            shutdown();
+            return;
+        }
+        if (errors != null && !errors.closeUnlessSentBy(context)) {
+            errors = null;
+        }
     }
 
     public void shutdown() {
-        if (metrics != null) {
-            metrics.shutdown();
-            metrics = null;
+        if (context != null) {
+            context.shutdown();
+            context = null;
         }
-    }
-
-    /** The ID written into manhuntstar.properties at build time, or 0. */
-    static int pluginId() {
-        try (InputStream in = MetricsService.class.getResourceAsStream("/manhuntstar.properties")) {
-            if (in == null) {
-                return 0;
-            }
-            Properties props = new Properties();
-            props.load(in);
-            return Integer.parseInt(props.getProperty("bstats-id", "0").trim());
-        } catch (IOException | NumberFormatException e) {
-            return 0;
+        if (errors != null) {
+            errors.close();
+            errors = null;
         }
     }
 }
