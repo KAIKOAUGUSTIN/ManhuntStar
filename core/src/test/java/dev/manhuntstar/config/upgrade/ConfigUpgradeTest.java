@@ -107,6 +107,17 @@ class ConfigUpgradeTest {
     }
 
     @Test
+    void bStatsOffIsWrittenWithTheNewVersion() throws IOException {
+        Files.writeString(dir.resolve("config.yml"), V1, StandardCharsets.UTF_8);
+        ConfigUpgrade.upgrade(yaml, dir.toFile(), () -> getClass().getResourceAsStream("/config.yml"), settings(), logger, true);
+        ConfigNode cfg = yaml.load(dir.resolve("config.yml").toFile());
+        assertEquals(ConfigUpgrade.VERSIONS.latest(), cfg.getInt("config-version", 0));
+        assertFalse(cfg.getBoolean("faststats.statistics", true));
+        assertFalse(cfg.getBoolean("faststats.error-reports", true));
+        assertEquals(40, cfg.getInt("bots.max-health", 0));
+    }
+
+    @Test
     void theLatestVersionIsLeftAlone() throws IOException {
         saveBundled();
         String before = Files.readString(dir.resolve("config.yml"));

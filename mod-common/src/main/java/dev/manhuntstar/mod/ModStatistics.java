@@ -55,8 +55,10 @@ public final class ModStatistics {
                 // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
                 errors = new ErrorReports(platform.logger());
                 factory.errorTrackerService(errors.tracker());
-            } else if (errorReportsEnabled(platform)) {
-                // Let the SDK create its config and show first-run consent without attaching error handlers.
+            } else if (errorReportsEnabled(platform) && !statisticsEnabled(platform)) {
+                // the context needs a service: an idle tracker lets FastStats make its config and show its
+                // first-run notice, without tracking anything. With statistics on they are the service, and
+                // an idle tracker would only collect FastStats' own errors (the mods always keep the service)
                 factory.errorTrackerService(ErrorTracker.contextUnaware());
             }
             C context = factory.create();

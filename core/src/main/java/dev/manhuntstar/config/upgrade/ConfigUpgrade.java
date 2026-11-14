@@ -42,6 +42,16 @@ public final class ConfigUpgrade {
      * @return the version the file had, including on failure (the latest when no upgrade was needed)
      */
     public static int upgrade(YamlFiles yaml, File dataFolder, Supplier<InputStream> bundled, Settings settings, Logger logger) {
+        return upgrade(yaml, dataFolder, bundled, settings, logger, false);
+    }
+
+    /**
+     * Like {@link #upgrade(YamlFiles, File, Supplier, Settings, Logger)}; with {@code fastStatsOff}
+     * (bStats was off for every plugin), a config.yml that gets the faststats section gets it turned off
+     * in the same write, so the new version is never on disk without the owner's choice.
+     */
+    public static int upgrade(YamlFiles yaml, File dataFolder, Supplier<InputStream> bundled, Settings settings, Logger logger,
+            boolean fastStatsOff) {
         File config = new File(dataFolder, "config.yml");
         ConfigNode node = yaml.load(config);
         int from = VERSIONS.versionOf(node);
@@ -55,6 +65,10 @@ public final class ConfigUpgrade {
             return latest;
         }
         VERSIONS.upgrade(node);
+        if (fastStatsOff && from < FASTSTATS) {
+            node.set(Settings.STATISTICS_PATH, false);
+            node.set(Settings.ERROR_REPORTS_PATH, false);
+        }
         File backup = new File(new File(dataFolder, "old"), "config-v" + from + ".yml");
         File temporary = null;
         try {

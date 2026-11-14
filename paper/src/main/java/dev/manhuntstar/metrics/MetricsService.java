@@ -49,8 +49,9 @@ public final class MetricsService {
         if (errorReports && ErrorReports.sentBy(plugin.fastStatsConfig())) {
             errors = new ErrorReports(plugin.getLogger());
             factory.errorTrackerService(errors.tracker());
-        } else if (errorReports) {
-            // Let the SDK create its config and show first-run consent without attaching error handlers.
+        } else if (errorReports && !metrics) {
+            // the context needs a service: an idle tracker lets FastStats make its config and show its
+            // first-run notice, without tracking anything (with statistics on, they are the service)
             factory.errorTrackerService(ErrorTracker.contextUnaware());
         }
         try {

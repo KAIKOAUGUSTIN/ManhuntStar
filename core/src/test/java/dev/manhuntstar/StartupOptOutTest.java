@@ -108,8 +108,10 @@ class StartupOptOutTest {
             assertFalse(core.settings().errorReports.on());
             ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
             assertEquals(oldConfig && failUpgrade ? 1 : 2, saved.getInt("config-version", 1));
-            assertTrue(saved.getBoolean("faststats.statistics", true));
-            assertTrue(saved.getBoolean("faststats.error-reports", true));
+            // an upgrade that went through wrote the opt-out with the new version
+            boolean upgraded = oldConfig && !failUpgrade;
+            assertEquals(!upgraded, saved.getBoolean("faststats.statistics", true));
+            assertEquals(!upgraded, saved.getBoolean("faststats.error-reports", true));
             assertTrue(Files.exists(dir.resolve("faststats-opt-out.pending")));
 
             core.disable();

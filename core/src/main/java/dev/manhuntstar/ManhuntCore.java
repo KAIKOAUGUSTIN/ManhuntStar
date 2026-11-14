@@ -75,9 +75,10 @@ public final class ManhuntCore implements ManhuntHost {
     public void enable() {
         File config = new File(dataFolder, "config.yml");
         File pendingOptOut = new File(dataFolder, "faststats-opt-out.pending");
+        boolean bStatsOff = BStatsOptOut.isOff(yaml, platform.bStatsConfig());
         // bStats' choice is noted before config.yml gets the new version: if it can't be written below
         // (or the server stops first), the next start tries again
-        if (!pendingOptOut.exists() && BStatsOptOut.isOff(yaml, platform.bStatsConfig())
+        if (!pendingOptOut.exists() && bStatsOff
                 && (!config.exists() || Settings.isLegacy(yaml, config)
                 || ConfigUpgrade.VERSIONS.versionOf(yaml.load(config)) < ConfigUpgrade.FASTSTATS)) {
             try {
@@ -95,7 +96,7 @@ public final class ManhuntCore implements ManhuntHost {
         }
         settings.setLanguages(() -> Messages.available(langFolder()));
         int configVersion = fresh || legacy ? 0
-                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.resource("config.yml"), settings, logger);
+                : ConfigUpgrade.upgrade(yaml, dataFolder, () -> platform.resource("config.yml"), settings, logger, bStatsOff);
         boolean optOutSaveFailed = false;
         if (configVersion < ConfigUpgrade.FASTSTATS || pendingOptOut.exists()) {
             // the faststats section is new to this config.yml: bStats' choice carries over
