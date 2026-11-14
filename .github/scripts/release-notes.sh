@@ -8,6 +8,7 @@
 #   "Fixed: ..."    -> Fixed    (also "Fix:")
 #   "Updated: ..."  -> Updated  (also "Update:", and Dependabot's "Bump ..." commits)
 #   "Removed: ..."  -> Removed  (also "Remove:")
+#   "Internal: ..." -> left out (the repository's own tools: CI, the release notes, the build setup)
 # Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
 # (and so another section), for commits whose message can't be changed anymore, or leave it out with
 # "-". Commits that end up with the same text are listed once, with the first one's SHA.
@@ -51,6 +52,12 @@ while IFS=$'\t' read -r sha author message; do
     replacement=$(override_for "$sha")
     [[ -n "$replacement" ]] && message="$replacement"
     [[ "$message" == "-" ]] && continue
+    shopt -s nocasematch
+    if [[ "$message" =~ ^internal: ]]; then
+        shopt -u nocasematch
+        continue
+    fi
+    shopt -u nocasematch
     [[ -n "${seen[$message]:-}" ]] && continue
     seen[$message]=1
     type=Changed
@@ -69,9 +76,11 @@ while IFS=$'\t' read -r sha author message; do
         type=Updated
     fi
     shopt -u nocasematch
-    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case
+    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case,
+    # and so do file names and other names with a dot, slash, underscore, hyphen or digit
+    # ("config.yml", "lang/", "setup-gradle")
     first="${text%% *}"
-    if [[ "$first" == "${first,,}" ]]; then
+    if [[ "$first" == "${first,,}" && "$first" != *[./_0-9-]* ]]; then
         text="${text^}"
     fi
     sections[$type]+="- ${text} (${sha:0:7})"$'\n'
