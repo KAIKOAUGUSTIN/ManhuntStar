@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.bot.BotGroup;
-import dev.manhuntstar.paper.BukkitYamlFiles;
+import dev.manhuntstar.config.SnakeYamlFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,9 +19,14 @@ import org.junit.jupiter.api.io.TempDir;
 /** bots.yml: an older save that was still queued doesn't overwrite a newer one; an unreadable file isn't overwritten; versions. */
 class BotStorageTest {
 
+    /** core's own YAML files (SnakeYAML), as the mods use; BukkitYamlFiles has the same contract (YamlFilesContract). */
+    private static SnakeYamlFiles yaml() {
+        return new SnakeYamlFiles(Logger.getLogger("teste-yaml"));
+    }
+
     @Test
     void anOlderQueuedSaveDoesNotOverwriteANewerOne(@TempDir Path dir) {
-        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), new BukkitYamlFiles());
+        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), yaml());
         // the background write waits for this monitor (the same one write uses): it only runs after the
         // direct save, as when the server shuts down right after a periodic save
         synchronized (storage) {
@@ -36,9 +41,9 @@ class BotStorageTest {
 
     @Test
     void aSaveWritesTheVersion(@TempDir Path dir) {
-        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), new BukkitYamlFiles());
+        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste"), yaml());
         storage.save(List.of(), List.of(), null, false);
-        assertEquals(BotStorage.VERSIONS.latest(), new BukkitYamlFiles().load(dir.resolve("bots.yml").toFile()).getInt("versao", 0));
+        assertEquals(BotStorage.VERSIONS.latest(), yaml().load(dir.resolve("bots.yml").toFile()).getInt("versao", 0));
     }
 
     @Test
@@ -47,7 +52,7 @@ class BotStorageTest {
         // a YAML error (a tab before a key) in a file that has saved bots
         String broken = "versao: 1\nbots:\n\tabc:\n    nome: Hunter\n";
         Files.writeString(file, broken);
-        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste-ilegivel"), new BukkitYamlFiles());
+        BotStorage storage = new BotStorage(dir.toFile(), Logger.getLogger("teste-ilegivel"), yaml());
         BotStorage.LoadResult loaded = storage.load();
         assertTrue(loaded.bots().isEmpty());
         assertTrue(loaded.groups().isEmpty());
@@ -79,7 +84,7 @@ class BotStorageTest {
         };
         logger.addHandler(handler);
         try {
-            List<BotGroup> groups = new BotStorage(dir.toFile(), logger, new BukkitYamlFiles()).load().groups();
+            List<BotGroup> groups = new BotStorage(dir.toFile(), logger, yaml()).load().groups();
             assertEquals("Equipe", groups.getFirst().name());
             assertTrue(records.stream().anyMatch(r -> r.getMessage().contains("newer ManhuntStar")));
         } finally {

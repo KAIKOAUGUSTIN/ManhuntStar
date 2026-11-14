@@ -29,7 +29,15 @@ class StartupOptOutTest {
     @TempDir
     Path dir;
 
+    /** A config.yml from 1.5 or older: Portuguese keys and values. */
+    private static final String LEGACY_CONFIG = "geral:\n  tab-list: false\nbots:\n  respawn: nao\n";
+
     private static class ConfigLoaded extends RuntimeException {}
+
+    @FunctionalInterface
+    private interface Body {
+        void run() throws Exception;
+    }
 
     @Test
     void failedFirstConfigStillDisablesBothOptionsAndIsWrittenNextStart() throws Exception {
@@ -44,6 +52,69 @@ class StartupOptOutTest {
     @Test
     void upgradeWritesTheOptOutWithTheNewVersion() throws Exception {
         checkFailedSaveAndRetry(true, false);
+    }
+
+    @Test
+    void aLegacyConfigIsMigratedWithTheBStatsOptOut() throws Exception {
+        startLegacy(true, false, (core, yaml) -> {
+            assertTrue(Files.exists(dir.resolve("config-old.yml")), "the 1.5 file is kept as config-old.yml");
+            ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
+            assertEquals(2, saved.getInt("config-version", 0));
+            assertFalse(saved.getBoolean("faststats.statistics", true));
+            assertFalse(saved.getBoolean("faststats.error-reports", true));
+            assertFalse(saved.getBoolean("bots.respawn", true), "respawn: nao stays off");
+            assertFalse(core.settings().statistics.on());
+            assertFalse(core.settings().errorReports.on());
+            assertFalse(core.settings().tabList.on());
+        });
+    }
+
+    @Test
+    void aLegacyConfigWithBStatsOnKeepsFastStatsOn() throws Exception {
+        startLegacy(false, false, (core, yaml) -> {
+            assertTrue(Files.exists(dir.resolve("config-old.yml")));
+            ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
+            assertEquals(2, saved.getInt("config-version", 0));
+            assertTrue(saved.getBoolean("faststats.statistics", false));
+            assertTrue(core.settings().statistics.on());
+            assertTrue(core.settings().errorReports.on());
+        });
+    }
+
+    @Test
+    void aLegacyConfigThatCantBeMigratedIsReadAsItIsWithFastStatsOff() throws Exception {
+        startLegacy(true, true, (core, yaml) -> {
+            ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
+            assertTrue(saved.isSection("geral"), "a failed write leaves the 1.5 file for the next start");
+            assertFalse(core.settings().statistics.on());
+            assertFalse(core.settings().errorReports.on());
+            assertFalse(core.settings().tabList.on(), "read the way 1.5 wrote it");
+            assertFalse(core.settings().respawn.on());
+        });
+    }
+
+    @FunctionalInterface
+    private interface LegacyCheck {
+        void check(ManhuntCore core, YamlFiles yaml) throws Exception;
+    }
+
+    /** Starts once with a 1.5 config.yml, bStats on or off, and every write failing or not. */
+    private void startLegacy(boolean bStatsOff, boolean failSaves, LegacyCheck check) throws Exception {
+        Files.writeString(dir.resolve("config.yml"), LEGACY_CONFIG);
+        Path bStats = dir.resolve("bstats.yml");
+        Files.writeString(bStats, "enabled: " + !bStatsOff + "\n");
+        Logger logger = Logger.getAnonymousLogger();
+        YamlFiles yaml = new SnakeYamlFiles(logger);
+        YamlFiles files = failSaves ? new FailingSaveYamlFiles(yaml, ignored -> {}) : yaml;
+        withGlobals(() -> {
+            ManhuntCore core = new ManhuntCore(platform(files, bStats, logger));
+            try {
+                assertThrows(ConfigLoaded.class, core::enable);
+                check.check(core, yaml);
+            } finally {
+                core.disable();
+            }
+        });
     }
 
     private void checkFailedSaveAndRetry(boolean oldConfig, boolean failUpgrade) throws Exception {
@@ -68,11 +139,53 @@ class StartupOptOutTest {
         };
         Path bStats = dir.resolve("bstats.yml");
         Files.writeString(bStats, "enabled: false\n");
-        ManhuntPlatform platform = (ManhuntPlatform) Proxy.newProxyInstance(
+        ManhuntPlatform platform = platform(failing, bStats, logger);
+        withGlobals(() -> {
+            ManhuntCore core = new ManhuntCore(platform);
+            try {
+                assertThrows(ConfigLoaded.class, core::enable);
+                assertFalse(core.settings().statistics.on());
+                assertFalse(core.settings().errorReports.on());
+                ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
+                // never a config.yml with the faststats section but without bStats' choice: a write that
+                // failed left the previous file (or none), for the next start to write again
+                if (!oldConfig) {
+                    assertFalse(Files.exists(dir.resolve("config.yml")));
+                } else if (failUpgrade) {
+                    assertEquals(1, saved.getInt("config-version", 1));
+                } else {
+                    assertEquals(2, saved.getInt("config-version", 1));
+                    assertFalse(saved.getBoolean("faststats.statistics", true));
+                    assertFalse(saved.getBoolean("faststats.error-reports", true));
+                }
+
+                core.disable();
+                fail.set(false);
+                ManhuntCore restarted = new ManhuntCore(platform);
+                try {
+                    assertThrows(ConfigLoaded.class, restarted::enable);
+                    assertFalse(restarted.settings().statistics.on());
+                    assertFalse(restarted.settings().errorReports.on());
+                    saved = yaml.load(dir.resolve("config.yml").toFile());
+                    assertEquals(2, saved.getInt("config-version", 0));
+                    assertFalse(saved.getBoolean("faststats.statistics", true));
+                    assertFalse(saved.getBoolean("faststats.error-reports", true));
+                } finally {
+                    restarted.disable();
+                }
+            } finally {
+                core.disable();
+            }
+        });
+    }
+
+    /** The platform of these tests: core starts until it asks for the platform's services. */
+    private ManhuntPlatform platform(YamlFiles yaml, Path bStats, Logger logger) {
+        return (ManhuntPlatform) Proxy.newProxyInstance(
                 ManhuntPlatform.class.getClassLoader(), new Class<?>[]{ManhuntPlatform.class},
                 (proxy, method, args) -> switch (method.getName()) {
                     case "server" -> new FakeServer();
-                    case "yaml" -> failing;
+                    case "yaml" -> yaml;
                     case "logger" -> logger;
                     case "dataFolder" -> dir.toFile();
                     case "bStatsConfig" -> bStats.toFile();
@@ -87,7 +200,10 @@ class StartupOptOutTest {
                     case "services" -> throw new ConfigLoaded();
                     default -> throw new AssertionError(method.getName());
                 });
-        // A real startup initializes this process-wide cache; restore it for other synthetic worlds.
+    }
+
+    /** A real startup initializes process-wide state; it is put back for the other synthetic worlds. */
+    private static void withGlobals(Body body) throws Exception {
         var costs = BlockCosts.class.getDeclaredField("costs");
         var waterloggable = BlockCosts.class.getDeclaredField("waterloggable");
         costs.setAccessible(true);
@@ -101,46 +217,12 @@ class StartupOptOutTest {
             previousServer = null;
         }
         Platform.set(new FakeServer());
-        ManhuntCore core = new ManhuntCore(platform);
         try {
-            assertThrows(ConfigLoaded.class, core::enable);
-            assertFalse(core.settings().statistics.on());
-            assertFalse(core.settings().errorReports.on());
-            ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
-            // never a config.yml with the faststats section but without bStats' choice: a write that
-            // failed left the previous file (or none), for the next start to write again
-            if (!oldConfig) {
-                assertFalse(Files.exists(dir.resolve("config.yml")));
-            } else if (failUpgrade) {
-                assertEquals(1, saved.getInt("config-version", 1));
-            } else {
-                assertEquals(2, saved.getInt("config-version", 1));
-                assertFalse(saved.getBoolean("faststats.statistics", true));
-                assertFalse(saved.getBoolean("faststats.error-reports", true));
-            }
-
-            core.disable();
-            fail.set(false);
-            ManhuntCore restarted = new ManhuntCore(platform);
-            try {
-                assertThrows(ConfigLoaded.class, restarted::enable);
-                assertFalse(restarted.settings().statistics.on());
-                assertFalse(restarted.settings().errorReports.on());
-                saved = yaml.load(dir.resolve("config.yml").toFile());
-                assertEquals(2, saved.getInt("config-version", 0));
-                assertFalse(saved.getBoolean("faststats.statistics", true));
-                assertFalse(saved.getBoolean("faststats.error-reports", true));
-            } finally {
-                restarted.disable();
-            }
+            body.run();
         } finally {
-            try {
-                core.disable();
-            } finally {
-                Platform.set(previousServer);
-                costs.set(null, previousCosts);
-                waterloggable.set(null, previousWaterloggable);
-            }
+            Platform.set(previousServer);
+            costs.set(null, previousCosts);
+            waterloggable.set(null, previousWaterloggable);
         }
     }
 }

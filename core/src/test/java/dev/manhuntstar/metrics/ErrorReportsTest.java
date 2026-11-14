@@ -2,14 +2,18 @@ package dev.manhuntstar.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.yaml.snakeyaml.error.YAMLException;
@@ -24,6 +28,30 @@ class ErrorReportsTest {
         Path file = dir.resolve("config.properties");
         Files.writeString(file, text);
         return file.toFile();
+    }
+
+    @Test
+    void trackingStartsWithTheReportsAndCloseGivesBackTheJvmsHandler() {
+        Logger logger = Logger.getAnonymousLogger();
+        logger.setUseParentHandlers(false);
+        Thread.UncaughtExceptionHandler before = Thread.getDefaultUncaughtExceptionHandler();
+        ErrorReports reports = new ErrorReports(logger);
+        try {
+            assertEquals(1, logger.getHandlers().length, "what the logger logs as SEVERE is tracked");
+            assertTrue(reports.tracker().isContextAttached());
+            assertNotSame(before, Thread.getDefaultUncaughtExceptionHandler(), "uncaught errors are tracked too");
+            // through the handler: a SEVERE with an exception is tracked, a warning isn't
+            logger.log(Level.SEVERE, "Manhunt* could not start", new IllegalStateException("boom"));
+            logger.log(Level.WARNING, "MineSkin is down", new IllegalStateException("boom"));
+            Handler handler = logger.getHandlers()[0];
+            handler.flush();
+            handler.close();
+        } finally {
+            reports.close();
+        }
+        assertEquals(0, logger.getHandlers().length);
+        assertFalse(reports.tracker().isContextAttached());
+        assertSame(before, Thread.getDefaultUncaughtExceptionHandler(), "the JVM's own handler is back");
     }
 
     @Test
