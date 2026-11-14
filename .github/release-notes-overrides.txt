@@ -52,29 +52,28 @@ ed4f39f -
 # 1.7.0: CodeRabbit, in one line with the commit that adds the path filters
 1ca4f44 Changed: CodeRabbit also reviews pull requests into dev, leaving out files that don't need a review
 # after 2.0.0: one line per change for the server owners; the fixes to what this release brings go in its line
-# FastStats statistics (with the build of the mods and the token in the jars)
-2e0019a New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
-4a2bda8 New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
-794ef57 New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
-faba2a3 New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
-d45b9a6 New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
-d71af4f New: anonymous statistics go to FastStats instead of bStats, on Paper and now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off)
+# FastStats statistics (with the build of the mods, the token in the jars and the bStats opt-out carried over)
+2e0019a New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+4a2bda8 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+794ef57 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+faba2a3 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+d45b9a6 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+d71af4f New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+7a44d5c New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+17cac16 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+42f3b4d New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+04f8b6d New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
+a0ea688 New: anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin)
 # FastStats error reports
-f8e3655 New: error reports on FastStats, with ManhuntStar's own errors and without IP addresses or the system user name (faststats.error-reports: false turns them off)
-33c95ff New: error reports on FastStats, with ManhuntStar's own errors and without IP addresses or the system user name (faststats.error-reports: false turns them off)
-878e912 New: error reports on FastStats, with ManhuntStar's own errors and without IP addresses or the system user name (faststats.error-reports: false turns them off)
-96647ed New: error reports on FastStats, with ManhuntStar's own errors and without IP addresses or the system user name (faststats.error-reports: false turns them off)
-# the bStats opt-out carried over
-7a44d5c New: if bStats was turned off for every plugin, both FastStats options start off
-17cac16 New: if bStats was turned off for every plugin, both FastStats options start off
-42f3b4d New: if bStats was turned off for every plugin, both FastStats options start off
-04f8b6d New: if bStats was turned off for every plugin, both FastStats options start off
-a0ea688 New: if bStats was turned off for every plugin, both FastStats options start off
+f8e3655 New: error reports on FastStats, only ManhuntStar's own errors and without IP addresses or user names (faststats.error-reports: false turns them off)
+33c95ff New: error reports on FastStats, only ManhuntStar's own errors and without IP addresses or user names (faststats.error-reports: false turns them off)
+878e912 New: error reports on FastStats, only ManhuntStar's own errors and without IP addresses or user names (faststats.error-reports: false turns them off)
+96647ed New: error reports on FastStats, only ManhuntStar's own errors and without IP addresses or user names (faststats.error-reports: false turns them off)
 # versioned config.yml, languages and bots.yml
-6535eeb New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/: new options and texts are added with their comments, and a copy of the previous file goes to old/
-1125e9a New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/: new options and texts are added with their comments, and a copy of the previous file goes to old/
-d4d7f44 New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/: new options and texts are added with their comments, and a copy of the previous file goes to old/
-2799935 New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/: new options and texts are added with their comments, and a copy of the previous file goes to old/
+6535eeb New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/, adds what's new and keeps a copy of the old file in old/
+1125e9a New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/, adds what's new and keeps a copy of the old file in old/
+d4d7f44 New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/, adds what's new and keeps a copy of the old file in old/
+2799935 New: updating ManhuntStar keeps your config.yml values and the texts you edited in lang/, adds what's new and keeps a copy of the old file in old/
 # files with a YAML error
 4afc919 Fixed: a config.yml, language file or bots.yml with a YAML error is never rewritten, so your values and saved bots aren't lost
 000b3b0 Fixed: a config.yml, language file or bots.yml with a YAML error is never rewritten, so your values and saved bots aren't lost
@@ -83,18 +82,18 @@ d542c54 Fixed: a config.yml, language file or bots.yml with a YAML error is neve
 # upgrading from 1.5
 468e730 Fixed: upgrading from 1.5, a config.yml that can't be migrated keeps its values, and respawn: nao keeps respawn off
 4b0883b Fixed: upgrading from 1.5, a config.yml that can't be migrated keeps its values, and respawn: nao keeps respawn off
-# where it runs: README, Modrinth and CurseForge
-f53f631 Changed: the README, Modrinth and CurseForge say where ManhuntStar runs: the mods also work in singleplayer and LAN, and players join with a vanilla client
-31a56e3 Changed: the README, Modrinth and CurseForge say where ManhuntStar runs: the mods also work in singleplayer and LAN, and players join with a vanilla client
-9a2cfd5 Changed: the README, Modrinth and CurseForge say where ManhuntStar runs: the mods also work in singleplayer and LAN, and players join with a vanilla client
-7ef0aa2 Changed: the README, Modrinth and CurseForge say where ManhuntStar runs: the mods also work in singleplayer and LAN, and players join with a vanilla client
-0fc312a Changed: the README, Modrinth and CurseForge say where ManhuntStar runs: the mods also work in singleplayer and LAN, and players join with a vanilla client
-# the build's dependencies and actions
-87365a3 Changed: the build checks the checksum of every dependency it downloads, and the workflows pin setup-gradle to a commit
-5d2f15a Changed: the build checks the checksum of every dependency it downloads, and the workflows pin setup-gradle to a commit
-74ee289 Changed: the build checks the checksum of every dependency it downloads, and the workflows pin setup-gradle to a commit
-c2bafa5 Changed: the build checks the checksum of every dependency it downloads, and the workflows pin setup-gradle to a commit
-# the repository's own tools, a plan that was never built and a newer Paper API for the build only, left out
+# where the mods run (README, Modrinth and CurseForge)
+f53f631 Changed: the Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client
+31a56e3 Changed: the Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client
+9a2cfd5 Changed: the Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client
+7ef0aa2 Changed: the Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client
+0fc312a Changed: the Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client
+# the repository's own tools (dependency checksums, pinned actions, CI, release notes), a plan that was never
+# built and a newer Paper API for the build only, left out
+87365a3 -
+5d2f15a -
+74ee289 -
+c2bafa5 -
 4145d8d -
 7500cb9 -
 e74d587 -
