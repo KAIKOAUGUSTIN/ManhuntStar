@@ -3,17 +3,25 @@
 # comes from its name:
 #   ManhuntStar-<version>.jar                       the Paper plugin: loader paper, version number
 #                                                   <version>, every Minecraft release Modrinth lists for
-#                                                   the supported Paper versions (26.2, 26.2.1, 26.3...)
+#                                                   the supported Paper versions (26.2, 26.2.1, 26.3...),
+#                                                   environment dedicated server only
 #   ManhuntStar-<loader>-<version>+<minecraft>.jar  a mod (fabric or neoforge): version number
 #                                                   <version>+<loader>-<minecraft>, the Minecraft releases
 #                                                   of that version (26.2, 26.2.1...); Fabric's needs
-#                                                   Fabric API
+#                                                   Fabric API. Environment server only (players don't
+#                                                   need the mod; singleplayer works too)
 # A version number that is already there is left alone, so a run can be repeated.
+#
+# Modrinth wants the environment of every version once a project has mods, and it refuses new versions
+# (at least while the project is in review) as long as one of them says "unknown". The versions published
+# before this script sent it say that, so they get one first, from their loaders (as above), which takes
+# the "Write versions" scope.
 #
 # Usage: publish-modrinth.sh <version> <release notes .md> <jar> [catalog]
 # Environment:
-#   MODRINTH_TOKEN    personal access token with the "Create versions" scope; nothing is published
-#                     when it's empty
+#   MODRINTH_TOKEN    personal access token with the "Create versions" and "Write versions" scopes
+#                     (the second one only to give older versions their environment); nothing is
+#                     published when it's empty
 #   MODRINTH_PROJECT  project slug or ID (default: manhuntstar)
 set -euo pipefail
 
@@ -28,6 +36,8 @@ jar="$3"
 catalog="${4:-gradle/libs.versions.toml}"
 project="${MODRINTH_PROJECT:-manhuntstar}"
 api="${MODRINTH_API:-https://api.modrinth.com/v2}"
+# the environment of a version can only be changed through the v3 API
+api3="${api%/v2}/v3"
 tmp="${RUNNER_TEMP:-/tmp}"
 response="$tmp/modrinth-response.json"
 : > "$response"
@@ -55,6 +65,7 @@ case "$file" in
         number="$version"
         name="ManhuntStar $version"
         supported=$(bash "$(dirname "$0")/game-versions.sh" "$catalog" | jq -R . | jq -sc .)
+        environment=dedicated_server_only
         ;;
     ManhuntStar-fabric-"$version"+*.jar | ManhuntStar-neoforge-"$version"+*.jar)
         rest="${file#ManhuntStar-}"
@@ -71,6 +82,7 @@ case "$file" in
             name="ManhuntStar $version (NeoForge $minecraft)"
         fi
         supported=$(jq -nc --arg v "$minecraft" '[$v]')
+        environment=server_only
         ;;
     *)
         fail "can't tell what $file is (expected ManhuntStar-$version.jar or ManhuntStar-<loader>-$version+<minecraft>.jar)."
@@ -82,7 +94,27 @@ code=$(request "$api/project/$project")
 project_id=$(jq -r '.id' "$response")
 
 code=$(request "$api/project/$project_id/version")
-if [[ "$code" == 200 ]] && jq -e --arg v "$number" 'any(.[]; .version_number == $v)' "$response" > /dev/null; then
+[[ "$code" == 200 ]] || fail "could not read the project's versions (HTTP $code)."
+versions="$tmp/modrinth-versions.json"
+cp "$response" "$versions"
+
+# "<id> <environment> <version number>" of each version without an environment. One that can't be fixed
+# only stops the mods (Modrinth then refuses them), so the plugin still goes up.
+unknown=''
+while read -r id missing old; do
+    code=$(request -X PATCH -H "Content-Type: application/json" \
+        --data "$(jq -nc --arg environment "$missing" '{ environment: $environment }')" \
+        "$api3/version/$id")
+    if [[ "$code" == 204 ]]; then
+        echo "Version $old on Modrinth now says $missing."
+    else
+        echo "::warning::Modrinth: could not set the environment of version $old (HTTP $code); the token needs the \"Write versions\" scope."
+        unknown="$unknown $old"
+    fi
+done < <(jq -r '.[] | select((.environment // "unknown") == "unknown")
+    | "\(.id) \(if any(.loaders[]; . == "fabric" or . == "neoforge") then "server_only" else "dedicated_server_only" end) \(.version_number)"' "$versions")
+
+if jq -e --arg v "$number" 'any(.[]; .version_number == $v)' "$versions" > /dev/null; then
     echo "Version $number is already on Modrinth; nothing to do."
     exit 0
 fi
@@ -103,6 +135,7 @@ jq -n \
     --argjson game_versions "$game_versions" \
     --arg loader "$loader" \
     --argjson dependencies "$dependencies" \
+    --arg environment "$environment" \
     '{
         name: $name,
         version_number: $number,
@@ -115,13 +148,17 @@ jq -n \
         status: "listed",
         project_id: $project_id,
         file_parts: ["jar"],
-        primary_file: "jar"
+        primary_file: "jar",
+        environment: $environment
     }' > "$tmp/modrinth-version.json"
 
 code=$(request -X POST \
     -F "data=<$tmp/modrinth-version.json;type=application/json" \
     -F "jar=@$jar;filename=$file;type=application/java-archive" \
     "$api/version")
-[[ "$code" == 200 ]] || fail "upload refused (HTTP $code)."
+if [[ "$code" != 200 ]]; then
+    [[ -z "$unknown" ]] || fail "upload refused (HTTP $code); these versions still say \"unknown\":$unknown."
+    fail "upload refused (HTTP $code)."
+fi
 
 echo "Published $name on Modrinth for $game_versions: https://modrinth.com/project/$project/version/$(jq -r '.id' "$response")"

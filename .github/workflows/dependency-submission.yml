@@ -1,0 +1,49 @@
+# Dependency submission: tells GitHub which libraries go inside the jars (FastStats in the plugin and the mods,
+# and the mods' Adventure and SnakeYAML), so the dependency graph and the Dependabot alerts are about what
+# ManhuntStar ships, not about Minecraft's and Paper's own libraries or the build tools
+# (.github/scripts/dependency-graph.sh). GitHub's automatic submission sends every dependency of the
+# build; this one, being a manual submission, takes its place for settings.gradle.kts.
+#
+# Runs on pushes to main and dev that change the build (the alerts follow main), and by hand.
+name: Dependency submission
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "**/*.gradle.kts"
+      - gradle.properties
+      - gradle/**
+      - .github/scripts/dependency-graph.sh
+      - .github/workflows/dependency-submission.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write # the dependency submission API
+
+concurrency:
+  group: dependency-submission-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: List the dependencies in the jars
+        run: bash .github/scripts/dependency-graph.sh "$RUNNER_TEMP/snapshot.json"
+
+      - name: Submit them to GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" --method POST \
+            --input "$RUNNER_TEMP/snapshot.json" --jq '"Snapshot \(.id): \(.result) \(.message // "")"'

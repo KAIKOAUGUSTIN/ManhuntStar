@@ -4,7 +4,7 @@
 
 # 🏹 ManhuntStar
 
-**ManHunt** hunter bots for Paper, Fabric and NeoForge servers.
+**ManHunt** hunter bots for Paper servers, and for Fabric and NeoForge on servers and on your own client (singleplayer and LAN).
 
 <p align="center">
   <a href="https://modrinth.com/plugin/manhuntstar"><img src="https://img.shields.io/badge/Modrinth-Download-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Download on Modrinth"></a>
@@ -14,6 +14,18 @@
 </p>
 
 No friends online? Spawn a pack of hunters that play like real players and try to stop you from beating the game. They run, jump, swim, dig, build towers and bridges, fight with weapon cooldowns, crits and shields, eat, get stronger through phases, use ender pearls, crossbows, tridents, lava buckets, horses (with spear charges), boats and elytra, and follow you to the Nether and the End.
+
+## 🖥️ Where it runs
+
+|  | Paper (plugin) | Fabric / NeoForge (mod) |
+|---|---|---|
+| **Dedicated server** | ✅ Install it on the server | ✅ Install it on the server |
+| **Client (singleplayer / LAN)** | — | ✅ Install it on your own client |
+| **Players who join** | Nothing to install (vanilla client) | Nothing to install (vanilla client) |
+
+The Paper plugin runs on the server. The Fabric and NeoForge mods are **not server side only: they are client side too**. Put them on a dedicated server, or in your own client's `mods/` folder to play with the bots in singleplayer and in the LAN worlds you open.
+
+Either way, whoever joins never needs to install anything: a vanilla client is enough. In a LAN world only the host needs the mod.
 
 ## ⭐ Support the project
 
@@ -31,9 +43,12 @@ Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
 **Fabric or NeoForge** (mod):
 
 1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or CurseForge.
-2. Put it in the `mods/` folder and start the server. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too.
+2. Put it in the `mods/` folder:
+   - **On a server:** the server's `mods/` folder, then start the server. Players join with a vanilla client.
+   - **For singleplayer or LAN:** your client's `mods/` folder, then open a world. Friends joining your LAN world don't need it.
+3. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too, in the same `mods/` folder.
 
-Requirements: Minecraft 26.2 or 26.3 and Java 25. Only the server needs the mod: players join with a vanilla client. It also works in singleplayer and LAN worlds.
+Requirements: Minecraft 26.2 or 26.3 and Java 25.
 
 The mods do the same as the plugin; their files (`config.yml`, `lang/`, `skins/`, the saved bots) are in `config/manhuntstar/` instead of `plugins/ManhuntStar/`. `/manhunt` is for operators, or for whoever has the `manhuntstar.admin` permission in a permissions mod such as LuckPerms.
 
@@ -107,8 +122,11 @@ Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
 - 🔔 **Update check** (`general.update-check`, on by default): looks for a new version when the server starts and every 6 hours. A new version is logged to the console and shown to admins when they join, with a download link.
-- 📊 **Anonymous statistics** on [bStats](https://bstats.org), on Paper only (server count, Paper version, number of bots, language and default difficulty). To turn them off for every plugin, set `enabled: false` in `plugins/bStats/config.yml`.
+- 📊 **Anonymous statistics** on [FastStats](https://faststats.dev) (`faststats.statistics`, on by default), on Paper and on the mods' dedicated servers (singleplayer and LAN worlds send nothing): server count, Minecraft, loader and Java versions, number of bots, language and default difficulty. When FastStats first runs on a server (no `faststats/config.properties` yet, from any plugin or mod), nothing is sent until the next restart. `faststats.statistics: false` turns off ManhuntStar's (at the next restart); `enabled=false` in `faststats/config.properties` (`plugins/` on Paper, `config/` on the mods) turns off every plugin's and mod's. If bStats was turned off for every plugin (`enabled: false` in `plugins/bStats/config.yml`), both FastStats options start off.
+- 🐞 **Error reports** on FastStats (`faststats.error-reports`, on by default): ManhuntStar's own errors (type, message and stack trace, without IP addresses or the system user name), sent with the statistics. `faststats.error-reports: false` turns them off (at the next restart); `submitErrors=false` in `faststats/config.properties` turns off every plugin's and mod's.
 - Combat, mobility, pathfinding, tactics, saving, default difficulty...
+
+Updating ManhuntStar: `config.yml` and the language files in `lang/` have a version. When a new version changes one of them, it is updated on the first start: new options and texts are added with their comments, renamed ones are moved, and your values and edited texts are kept. A copy of the previous file goes to `old/` (`lang/old/` for the languages).
 
 Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
 
@@ -135,7 +153,7 @@ Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` 
 2. Translate the texts between quotes. Keep the tags in `<...>`: `<bot>`, `<player>`, `<amount>` and the like are filled in by the plugin, and color tags such as `<red>` or `<bold>` follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format.
 3. Run `/manhunt reload`, then `/manhunt settings language es`.
 
-Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...), but when an update changes their default texts, your copy is moved to `lang/old/` and replaced; a file with your own name is never replaced.
+Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...): when an update brings a new version of one of them, it is updated on the first start, adding the new texts and keeping the ones you edited (except a text that no longer exists, or one whose meaning changed so much that the update replaces it), and a copy of your previous file goes to `lang/old/<language>-v<version>.yml`. A file with your own name is never changed.
 
 Want your translation in the plugin? Open a pull request adding it to `core/src/main/resources/lang/`.
 
@@ -146,6 +164,8 @@ On Paper, `dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot 
 ## 🏗️ Building
 
 Needs JDK 25. Run `./gradlew build`; the jars end up in `build/libs/`: the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version (the versions are in `gradle.properties`).
+
+Gradle checks every dependency it downloads against the checksums in `gradle/verification-metadata.xml`. After adding or updating a dependency (or a Gradle plugin), write them again with `./gradlew --write-verification-metadata sha256 build` and commit the file. Writing the file doesn't check anything: it records the checksums of whatever the repositories (or Gradle's local cache) served, so before committing, compare the new checksums with an independent source where there is one (for example the checksums the project publishes with its release).
 
 ## ⚠️ Limitations
 

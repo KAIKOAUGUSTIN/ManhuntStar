@@ -244,7 +244,7 @@ public class ModEntity implements GameEntity {
 
     @Override
     public boolean isInvulnerable() {
-        return entity.isInvulnerable();
+        return MinecraftCompat.isInvulnerable(entity);
     }
 
     @Override

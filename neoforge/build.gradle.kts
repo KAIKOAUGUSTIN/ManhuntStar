@@ -60,6 +60,8 @@ dependencies {
     // inside the mod jar (jar-in-jar): Adventure for the mods, and SnakeYAML, which Minecraft doesn't have
     jarJar(implementation("net.kyori:adventure-platform-neoforge:$adventurePlatformMod")!!)
     jarJar(implementation("org.yaml:snakeyaml:${libs.versions.snakeyaml.get()}")!!)
+    // and FastStats (anonymous statistics), a mod of its own built for each Minecraft version
+    jarJar(implementation("dev.faststats.metrics:neoforge:${libs.versions.faststats.get()}+mc$minecraft")!!)
 }
 
 tasks.compileJava {
@@ -70,9 +72,14 @@ tasks.compileJava {
 tasks.processResources {
     dependsOn(commonResources)
     from(commonResources)
-    val props = mapOf("version" to project.version.toString(), "minecraft" to minecraft, "neoforge" to forMinecraft("neoforge"))
+    val props = mapOf(
+        "version" to project.version.toString(),
+        "minecraft" to minecraft,
+        "neoforge" to forMinecraft("neoforge"),
+        "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
+    )
     inputs.properties(props)
-    filesMatching("META-INF/neoforge.mods.toml") {
+    filesMatching(listOf("META-INF/neoforge.mods.toml", "manhuntstar.properties")) {
         expand(props)
     }
 }

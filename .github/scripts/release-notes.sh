@@ -5,8 +5,10 @@
 # Each commit goes into a section by the prefix of its message, which is left out of the notes:
 #   "New: ..."      -> New      (also "Add:", "Added:")
 #   "Changed: ..."  -> Changed  (also "Change:", and commits with no prefix)
+#   "Fixed: ..."    -> Fixed    (also "Fix:")
 #   "Updated: ..."  -> Updated  (also "Update:", and Dependabot's "Bump ..." commits)
 #   "Removed: ..."  -> Removed  (also "Remove:")
+#   "Internal: ..." -> left out (the repository's own tools: CI, the release notes, the build setup)
 # Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
 # (and so another section), for commits whose message can't be changed anymore, or leave it out with
 # "-". Commits that end up with the same text are listed once, with the first one's SHA.
@@ -21,7 +23,7 @@ commits="$3"
 output="$4"
 repo="${GITHUB_REPOSITORY:-}"
 
-declare -A sections=([New]="" [Changed]="" [Updated]="" [Removed]="")
+declare -A sections=([New]="" [Changed]="" [Fixed]="" [Updated]="" [Removed]="")
 declare -A seen=()
 
 # "<sha> <text>" lines from the overrides file
@@ -42,7 +44,7 @@ override_for() {
         fi
     done
 }
-prefix='^(new|add|added|changed|change|updated|update|removed|remove):[[:space:]]*(.+)$'
+prefix='^(new|add|added|changed|change|fixed|fix|updated|update|removed|remove):[[:space:]]*(.+)$'
 while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
     # the workflow's own version commits are left out
@@ -50,6 +52,12 @@ while IFS=$'\t' read -r sha author message; do
     replacement=$(override_for "$sha")
     [[ -n "$replacement" ]] && message="$replacement"
     [[ "$message" == "-" ]] && continue
+    shopt -s nocasematch
+    if [[ "$message" =~ ^internal: ]]; then
+        shopt -u nocasematch
+        continue
+    fi
+    shopt -u nocasematch
     [[ -n "${seen[$message]:-}" ]] && continue
     seen[$message]=1
     type=Changed
@@ -59,6 +67,7 @@ while IFS=$'\t' read -r sha author message; do
         case "${BASH_REMATCH[1],,}" in
             new | add | added) type=New ;;
             changed | change) type=Changed ;;
+            fixed | fix) type=Fixed ;;
             updated | update) type=Updated ;;
             removed | remove) type=Removed ;;
         esac
@@ -67,9 +76,11 @@ while IFS=$'\t' read -r sha author message; do
         type=Updated
     fi
     shopt -u nocasematch
-    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case
+    # "update check..." becomes "Update check...", but names such as "bStats" or "iOS" keep their case,
+    # and so do file names and other names with a dot, slash, underscore, hyphen or digit
+    # ("config.yml", "lang/", "setup-gradle")
     first="${text%% *}"
-    if [[ "$first" == "${first,,}" ]]; then
+    if [[ "$first" == "${first,,}" && "$first" != *[./_0-9-]* ]]; then
         text="${text^}"
     fi
     sections[$type]+="- ${text} (${sha:0:7})"$'\n'
@@ -81,7 +92,7 @@ mods=$(sed -n 's/^minecraftVersions=//p' gradle.properties 2> /dev/null | sed 's
 
 {
     listed=0
-    for type in New Changed Updated Removed; do
+    for type in New Changed Fixed Updated Removed; do
         if [[ -n "${sections[$type]}" ]]; then
             printf '### %s\n\n%s\n' "$type" "${sections[$type]}"
             listed=1

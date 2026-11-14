@@ -98,6 +98,11 @@ public final class ManhuntStarPlugin extends JavaPlugin implements ManhuntPlatfo
     }
 
     @Override
+    public File bStatsConfig() {
+        return new File(new File(getDataFolder().getParentFile(), "bStats"), "config.yml");
+    }
+
+    @Override
     public File dataFolder() {
         return getDataFolder();
     }

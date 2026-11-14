@@ -4,7 +4,7 @@
 # and stays out of [libraries], where Dependabot would move it to the newest version.
 paper-api-min = "26.2.build.135-stable"
 # Newest supported Paper API: tests and the compileAgainstLatest check. Updated by Dependabot.
-paper-api = "26.3.build.231-stable"
+paper-api = "26.3.build.244-stable"
 # Libraries that Paper already brings (the versions of paper-api-min): core compiles against them
 # without bundling them, so they stay out of [libraries], where Dependabot would move them past what
 # the oldest supported Paper has.
@@ -13,7 +13,9 @@ snakeyaml = "2.2"
 gson = "2.14.0"
 brigadier = "1.3.10"
 junit = "6.1.3"
-bstats = "3.2.1"
+# FastStats SDK: bukkit (Paper plugin) and core here; the mods use fabric and neoforge, published per
+# Minecraft version as <this version>+mc<minecraft> (0.32.2+mc26.3).
+faststats = "0.32.2"
 shadow = "9.6.1"
 sonarqube = "7.5.0.8588"
 # Mods (Fabric and NeoForge), built for each Minecraft version in gradle.properties' minecraftVersions.
@@ -40,7 +42,8 @@ paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper-api" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-bstats-bukkit = { module = "org.bstats:bstats-bukkit", version.ref = "bstats" }
+faststats-bukkit = { module = "dev.faststats.metrics:bukkit", version.ref = "faststats" }
+faststats-core = { module = "dev.faststats.metrics:core", version.ref = "faststats" }
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

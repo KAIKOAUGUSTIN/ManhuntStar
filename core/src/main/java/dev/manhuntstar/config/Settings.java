@@ -11,6 +11,7 @@ import dev.manhuntstar.bot.Modes.RingCenter;
 import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.config.Setting.Category;
+import dev.manhuntstar.config.upgrade.FileVersions;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.EntityKind;
 import dev.manhuntstar.platform.YamlFiles;
@@ -67,6 +68,11 @@ public final class Settings {
     public final Setting.Bool respectPvp = bool("general.respect-disabled-pvp", "geral.respeitar-pvp-desligado", "respectpvp", Category.GENERAL, false);
     public final Setting.Bool skinFallbackUpload = bool("general.mineskin-fallback-skin", "geral.skin-robo-mineskin", "mineskin", Category.GENERAL, true);
     public final Setting.Bool updateCheck = bool("general.update-check", null, "updatecheck", Category.GENERAL, true);
+    // --- FastStats (shown with the general options) ---
+    /** Read when the server starts (the mods also read it before core starts: {@link #statisticsEnabled}). */
+    public final Setting.Bool statistics = bool(STATISTICS_PATH, null, "statistics", Category.GENERAL, true);
+    /** Read when the server starts (the mods also read it before core starts: {@link #errorReportsEnabled}). */
+    public final Setting.Bool errorReports = bool(ERROR_REPORTS_PATH, null, "errorreports", Category.GENERAL, true);
 
     // --- Bots ---
     public final Setting.Dbl botHealth = dbl("bots.max-health", "bots.vida-maxima", "bothealth", Category.BOTS, 20.0, 1.0, 500.0, 1.0);
@@ -150,6 +156,8 @@ public final class Settings {
 
     /** config.yml sections with Portuguese keys (up to version 1.5): a sign that it needs migrating. */
     private static final List<String> LEGACY_SECTIONS = List.of("geral", "combate", "mobilidade", "taticas", "aparencia");
+    public static final String STATISTICS_PATH = "faststats.statistics";
+    public static final String ERROR_REPORTS_PATH = "faststats.error-reports";
     private static final String MOBS_PATH = "bots.mobs-that-ignore-bots";
     private static final String LEGACY_MOBS_PATH = "bots.mobs-que-nao-atacam-bots";
     private static final String PLAYER_LIST_PATH = "manhunt.player-list";
@@ -267,6 +275,28 @@ public final class Settings {
         };
     }
 
+    /**
+     * Reads {@code faststats.statistics} from config.yml before core starts: the mods set up FastStats when
+     * they load, before the server (and core) exist. True without a config.yml, like the default.
+     */
+    public static boolean statisticsEnabled(YamlFiles yaml, File file) {
+        return readBeforeStart(yaml, file, STATISTICS_PATH);
+    }
+
+    /** {@code faststats.error-reports}, read like {@link #statisticsEnabled}. */
+    public static boolean errorReportsEnabled(YamlFiles yaml, File file) {
+        return readBeforeStart(yaml, file, ERROR_REPORTS_PATH);
+    }
+
+    private static boolean readBeforeStart(YamlFiles yaml, File file, String path) {
+        if (!file.isFile()) {
+            return true;
+        }
+        Setting.Bool setting = new Setting.Bool(path, null, path, Category.GENERAL, true);
+        setting.load(yaml.load(file));
+        return setting.on();
+    }
+
     /** Does config.yml still have the Portuguese keys from versions up to 1.5? */
     public static boolean isLegacy(YamlFiles yaml, File file) {
         ConfigNode cfg = yaml.load(file);
@@ -282,25 +312,37 @@ public final class Settings {
         load(yaml.load(file), false, logger);
     }
 
+    /** Reads an already loaded config.yml (one that was just upgraded, before it is written again). */
+    public void load(ConfigNode cfg, Logger logger) {
+        load(cfg, false, logger);
+    }
+
     /**
      * Reads a config.yml with Portuguese keys (versions up to 1.5). The new file is written afterwards
      * with {@link #save}; the language is set to pt-br, which was the only one there was.
      */
     public void loadLegacy(YamlFiles yaml, File file, Logger logger) {
-        load(yaml.load(file), true, logger);
-        language.set("pt-br");
+        ConfigNode cfg = yaml.load(file);
+        load(cfg, true, logger);
+        if (!cfg.contains(language.path())) {
+            language.set("pt-br");
+        }
     }
 
     private void load(ConfigNode cfg, boolean legacy, Logger logger) {
+        // a Portuguese config.yml that couldn't be migrated yet may already have English keys, written by a
+        // change in game (and the faststats options only have English ones): those win. The old values are
+        // translated either way: bots.respawn has the same key in both, and LEGACY_VALUES only holds
+        // Portuguese words, never an English value
         for (Setting<?> s : byKey.values()) {
             if (legacy) {
-                s.load(cfg, s.legacyPath(), LEGACY_VALUES);
+                s.load(cfg, cfg.contains(s.path()) ? s.path() : s.legacyPath(), LEGACY_VALUES);
             } else {
                 s.load(cfg);
             }
         }
         Set<EntityKind> excluded = new HashSet<>();
-        for (String name : cfg.getStringList(legacy ? LEGACY_MOBS_PATH : MOBS_PATH)) {
+        for (String name : cfg.getStringList(legacy && !cfg.contains(MOBS_PATH) ? LEGACY_MOBS_PATH : MOBS_PATH)) {
             EntityKind kind = EntityKind.find(name.trim().toUpperCase(Locale.ROOT));
             if (kind != null) {
                 excluded.add(kind);
@@ -310,15 +352,16 @@ public final class Settings {
         }
         excludedMobs = Set.copyOf(excluded);
         List<String> names = new ArrayList<>();
-        for (String name : cfg.getStringList(legacy ? LEGACY_PLAYER_LIST_PATH : PLAYER_LIST_PATH)) {
+        for (String name : cfg.getStringList(legacy && !cfg.contains(PLAYER_LIST_PATH) ? LEGACY_PLAYER_LIST_PATH : PLAYER_LIST_PATH)) {
             String n = name.trim();
             if (!n.isEmpty() && names.stream().noneMatch(n::equalsIgnoreCase)) {
                 names.add(n);
             }
         }
         playerList = List.copyOf(names);
-        ConfigNode point = cfg.section(legacy ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
-        String worldKey = legacy ? "mundo" : "world";
+        boolean legacyPoint = legacy && !cfg.contains(RING_POINT_PATH);
+        ConfigNode point = cfg.section(legacyPoint ? LEGACY_RING_POINT_PATH : RING_POINT_PATH);
+        String worldKey = legacyPoint ? "mundo" : "world";
         ringPoint = point == null || !point.isString(worldKey) ? null
                 : new RingPoint(point.getString(worldKey), point.getDouble("x", 0), point.getDouble("y", 0), point.getDouble("z", 0));
         if (minNetherDelay.value() > maxNetherDelay.value()) {
@@ -328,7 +371,22 @@ public final class Settings {
 
     /** Writes the current values keeping the file's comments and extra keys. */
     public void save(YamlFiles yaml, File file, Logger logger) {
+        try {
+            saveOrThrow(yaml, file);
+        } catch (IOException e) {
+            logger.warning("Could not save config.yml: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Writes current values and lets callers handle a failed write. A config.yml that can't be read (a
+     * YAML error) isn't overwritten: the owner's values would be replaced by the ones in memory.
+     */
+    public void saveOrThrow(YamlFiles yaml, File file) throws IOException {
         ConfigNode cfg = yaml.load(file);
+        if (FileVersions.unreadable(cfg, file)) {
+            throw new IOException(file.getName() + " can't be read (see the error above), so it isn't overwritten: fix it and use /manhunt reload");
+        }
         for (Setting<?> s : byKey.values()) {
             s.save(cfg);
         }
@@ -345,16 +403,14 @@ public final class Settings {
         RingPoint point = ringPoint;
         if (point == null) {
             cfg.set(RING_POINT_PATH, null);
+            // a 1.5 config.yml not migrated yet: its point would come back on the next read
+            cfg.set(LEGACY_RING_POINT_PATH, null);
         } else {
             cfg.set(RING_POINT_PATH + ".world", point.world());
             cfg.set(RING_POINT_PATH + ".x", point.x());
             cfg.set(RING_POINT_PATH + ".y", point.y());
             cfg.set(RING_POINT_PATH + ".z", point.z());
         }
-        try {
-            yaml.save(cfg, file);
-        } catch (IOException e) {
-            logger.warning("Could not save config.yml: " + e.getMessage());
-        }
+        yaml.save(cfg, file);
     }
 }

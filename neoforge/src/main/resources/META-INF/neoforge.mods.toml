@@ -9,7 +9,7 @@ version = "${version}"
 displayName = "Manhunt*"
 authors = "KAIKOAUGUSTIN"
 displayURL = "https://modrinth.com/plugin/manhuntstar"
-description = '''ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it.'''
+description = '''ManHunt hunter bots: they chase, fight, build, mine and travel like players. Only the server needs it; install it on your client for singleplayer.'''
 # only the server needs the mod: players join with a plain game
 displayTest = "IGNORE_SERVER_VERSION"
 

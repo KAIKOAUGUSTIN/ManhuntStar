@@ -1,8 +1,11 @@
 package dev.manhuntstar.config;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.config.upgrade.FileVersions;
+import dev.manhuntstar.config.upgrade.LanguageUpgrade;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.YamlFiles;
+import dev.manhuntstar.util.SafeFiles;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.logging.Logger;
@@ -52,8 +56,8 @@ public final class Messages {
 
     /**
      * Copies the missing languages to {@code lang/}. A file from an older version (the default texts
-     * changed, {@code version} field) goes to {@code lang/old/<language>-v<version>.yml} and is
-     * replaced by the new one.
+     * changed, {@code version} field) is updated keeping the owner's texts ({@link #update}); a copy of it
+     * goes to {@code lang/old/<language>-v<version>.yml}.
      */
     public static void install(YamlFiles yaml, File langDir, Function<String, InputStream> resources, Logger logger) {
         if (!langDir.isDirectory() && !langDir.mkdirs()) {
@@ -68,28 +72,61 @@ public final class Messages {
             }
             try {
                 if (file.exists()) {
-                    int current = yaml.load(file).getInt("version", 1);
-                    int latest = bundled.getInt("version", 1);
-                    if (current >= latest) {
-                        continue;
+                    ConfigNode own = yaml.load(file);
+                    int current = LanguageUpgrade.VERSIONS.versionOf(own);
+                    if (FileVersions.unreadable(own, file)) {
+                        logger.warning(FOLDER + "/" + file.getName() + " can't be read (see the error above), so it isn't updated: fix it and restart.");
+                    } else if (current < bundled.getInt(LanguageUpgrade.VERSIONS.key(), 1)) {
+                        update(yaml, file, own, current, resources, lang, logger);
                     }
-                    File old = new File(langDir, "old");
-                    if (!old.isDirectory() && !old.mkdirs()) {
-                        continue;
-                    }
-                    File backup = new File(old, lang + "-v" + current + ".yml");
-                    Files.move(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    logger.info(FOLDER + "/" + file.getName() + " updated to version " + latest + "; the previous one is in "
-                            + FOLDER + "/old/" + backup.getName() + ".");
+                    continue;
                 }
-                try (InputStream in = resources.apply(resource(lang))) {
-                    if (in != null) {
-                        Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    }
-                }
+                copyBundled(resources, lang, file);
             } catch (IOException e) {
                 logger.warning("Could not write " + FOLDER + "/" + file.getName() + ": " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Brings an older language file up to date: the steps rename or remove keys, the file inside the jar
+     * is written (new texts, with its comments) and the owner's texts go over it, except those whose new
+     * default replaces them ({@link LanguageUpgrade#resetSince}) and keys that no longer exist.
+     */
+    private static void update(YamlFiles yaml, File file, ConfigNode own, int current, Function<String, InputStream> resources,
+            String lang, Logger logger) throws IOException {
+        LanguageUpgrade.VERSIONS.upgrade(own);
+        File old = new File(file.getParentFile(), "old");
+        Files.createDirectories(old.toPath());
+        File backup = new File(old, lang + "-v" + current + ".yml");
+        Files.copy(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        File temporary = Files.createTempFile(file.getParentFile().toPath(), lang + "-", ".tmp").toFile();
+        try {
+            copyBundled(resources, lang, temporary);
+            ConfigNode merged = yaml.load(temporary);
+            Set<String> reset = LanguageUpgrade.resetSince(current);
+            for (String key : own.keys(true)) {
+                Object text = own.get(key);
+                boolean known = merged.contains(key) && !(merged.get(key) instanceof ConfigNode);
+                if (known && !(text instanceof ConfigNode) && !key.equals(LanguageUpgrade.VERSIONS.key()) && !reset.contains(key)) {
+                    merged.set(key, text);
+                }
+            }
+            yaml.save(merged, temporary);
+            SafeFiles.replace(temporary.toPath(), file.toPath());
+        } finally {
+            Files.deleteIfExists(temporary.toPath());
+        }
+        logger.info(FOLDER + "/" + file.getName() + " updated to version " + LanguageUpgrade.VERSIONS.latest()
+                + ", keeping your texts; the previous one is in " + FOLDER + "/old/" + backup.getName() + ".");
+    }
+
+    private static void copyBundled(Function<String, InputStream> resources, String lang, File file) throws IOException {
+        try (InputStream in = resources.apply(resource(lang))) {
+            if (in == null) {
+                throw new IOException("Missing bundled language " + lang);
+            }
+            Files.copy(in, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

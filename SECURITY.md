@@ -6,8 +6,8 @@ Only the latest release gets security fixes. Please update to it before reportin
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.6.x   | :white_check_mark: |
-| < 1.6   | :x:                |
+| 2.0.x   | :white_check_mark: |
+| < 2.0   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -15,7 +15,7 @@ Please don't report security problems in public issues or public Discord channel
 
 Report them privately in one of these ways:
 
-- **GitHub**: go to the **Security** tab of this repository and click **Report a vulnerability**. (Currently unavailable)
+- **GitHub**: go to the **Security** tab of this repository and click **Report a vulnerability**.
 - **Discord**: join the [Discord server](https://discord.gg/X6P447F7vx), open a staff ticket and choose the
   **CVE** option.
 

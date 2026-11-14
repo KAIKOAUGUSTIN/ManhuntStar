@@ -4,15 +4,21 @@ registries:
   papermc:
     type: maven-repository
     url: https://repo.papermc.io/repository/maven-public/
+  faststats:
+    type: maven-repository
+    url: https://repo.faststats.dev/releases
 
 updates:
   # Gradle dependencies (gradle/libs.versions.toml) and the Gradle Wrapper itself.
+  # Their PRs fail the build until the new checksums are in gradle/verification-metadata.xml: on the PR's
+  # branch, run ./gradlew --write-verification-metadata sha256 build and push the file.
   - package-ecosystem: gradle
     directory: /
     # PRs go to dev; main only receives from dev (and every merge into main becomes a release)
     target-branch: dev
     registries:
       - papermc
+      - faststats
     schedule:
       interval: weekly
       day: monday

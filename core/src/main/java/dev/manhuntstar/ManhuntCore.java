@@ -7,6 +7,7 @@ import dev.manhuntstar.bot.MobTargeting;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.config.Setting;
 import dev.manhuntstar.config.Settings;
+import dev.manhuntstar.config.upgrade.ConfigUpgrade;
 import dev.manhuntstar.gui.MenuManager;
 import dev.manhuntstar.host.AimDiagnostics;
 import dev.manhuntstar.host.BotEventSink;
@@ -16,6 +17,8 @@ import dev.manhuntstar.host.DeathMessageSource;
 import dev.manhuntstar.host.ManhuntPlatform;
 import dev.manhuntstar.host.PathDebug;
 import dev.manhuntstar.host.PlatformServices;
+import dev.manhuntstar.metrics.BStatsOptOut;
+import dev.manhuntstar.metrics.UsageStats;
 import dev.manhuntstar.pathfinding.PathService;
 import dev.manhuntstar.persistence.BotStorage;
 import dev.manhuntstar.platform.Attr;
@@ -30,8 +33,10 @@ import dev.manhuntstar.update.UpdateChecker;
 import dev.manhuntstar.util.ChunkTickets;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -47,6 +52,7 @@ public final class ManhuntCore implements ManhuntHost {
     private final Logger logger;
     private final File dataFolder;
     private final Settings settings = new Settings();
+    private final UsageStats usage = new UsageStats();
     private final Messages messages = new Messages();
     private final ChunkTickets chunkTickets = new ChunkTickets();
     private final GameEvents gameEvents = new GameEvents(this);
@@ -69,13 +75,27 @@ public final class ManhuntCore implements ManhuntHost {
 
     /** Starts everything, once the platform has registered the game's blocks, items and entity types. */
     public void enable() {
-        migrateLegacyFiles();
-        if (!new File(dataFolder, "config.yml").exists()) {
-            platform.saveResource("config.yml");
-        }
-        Messages.install(yaml, langFolder(), platform::resource, logger);
+        File config = new File(dataFolder, "config.yml");
+        Supplier<InputStream> bundledConfig = () -> platform.resource("config.yml");
+        // bStats' choice goes into the same write as the faststats section (ConfigUpgrade)
+        boolean bStatsOff = BStatsOptOut.isOff(yaml, platform.bStatsConfig());
         settings.setLanguages(() -> Messages.available(langFolder()));
+        boolean legacy = migrateLegacyFiles(bStatsOff, bundledConfig);
+        if (!config.exists()) {
+            if (!ConfigUpgrade.create(yaml, dataFolder, bundledConfig, bStatsOff, logger) && !bStatsOff) {
+                platform.saveResource("config.yml");
+            }
+        } else if (!legacy && !Settings.isLegacy(yaml, config)) {
+            ConfigUpgrade.upgrade(yaml, dataFolder, bundledConfig, settings, logger, bStatsOff);
+        }
+        // a config.yml that couldn't get the faststats section yet: FastStats stays off this start, and the
+        // next start writes it again
+        boolean keepFastStatsOff = bStatsOff && ConfigUpgrade.withoutFastStats(yaml, config);
+        Messages.install(yaml, langFolder(), platform::resource, logger);
         loadConfigFiles();
+        if (keepFastStatsOff) {
+            BStatsOptOut.turnOff(settings);
+        }
 
         pathService = new PathService(server, settings, logger);
         skins = new SkinService(dataFolder, logger, yaml, settings.skinFallbackUpload::on);
@@ -94,6 +114,7 @@ public final class ManhuntCore implements ManhuntHost {
         if (restored > 0) {
             logger.info(restored + " bot(s) restored from bots.yml.");
         }
+        usage.update(this);
         platform.started(this);
         updates.apply(settings.updateCheck.on());
         logger.info("Manhunt* enabled (" + platform.description() + ", language " + messages.language() + ").");
@@ -131,6 +152,9 @@ public final class ManhuntCore implements ManhuntHost {
         mobTargeting.tick(now);
         services.debugRenderer().tick(now, settings.debugPaths.on());
         services.tabList().tick(now);
+        if (now % UsageStats.UPDATE_TICKS == 0) {
+            usage.update(this);
+        }
     }
 
     /** Bot mannequins left in the world (e.g. a server crash): removed before restoring. */
@@ -156,7 +180,13 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     private void loadConfigFiles() {
-        settings.load(yaml, new File(dataFolder, "config.yml"), logger);
+        File config = new File(dataFolder, "config.yml");
+        if (Settings.isLegacy(yaml, config)) {
+            // the Portuguese config.yml of 1.5 that couldn't be migrated yet: read the way it is written
+            settings.loadLegacy(yaml, config, logger);
+        } else {
+            settings.load(yaml, config, logger);
+        }
         loadMessages();
     }
 
@@ -165,20 +195,30 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     /**
-     * Files from versions up to 1.5, with Portuguese keys: the old config.yml becomes
+     * Files from versions up to 1.5, with Portuguese keys: the old config.yml is copied to
      * config-old.yml and its values go into a new config.yml (with the language set to pt-br, the only
-     * one there was); messages.yml becomes messages-old.yml, because the texts now live in the lang/ folder.
+     * one there was, and FastStats off when bStats was); messages.yml becomes messages-old.yml, because
+     * the texts now live in the lang/ folder. A config.yml that can't be written stays as it was, and the
+     * next start migrates it again.
+     *
+     * @return whether config.yml was one of those (it is now of the latest version)
      */
-    private void migrateLegacyFiles() {
+    private boolean migrateLegacyFiles(boolean bStatsOff, Supplier<InputStream> bundledConfig) {
+        boolean migrated = false;
         File config = new File(dataFolder, "config.yml");
         if (config.exists() && Settings.isLegacy(yaml, config)) {
             settings.loadLegacy(yaml, config, logger);
-            File backup = new File(dataFolder, "config-old.yml");
+            if (bStatsOff) {
+                BStatsOptOut.turnOff(settings);
+            }
             try {
-                Files.move(config.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                platform.saveResource("config.yml");
-                settings.save(yaml, config, logger);
+                Files.copy(config.toPath(), new File(dataFolder, "config-old.yml").toPath(), StandardCopyOption.REPLACE_EXISTING);
+                ConfigUpgrade.rewrite(yaml, dataFolder, bundledConfig, settings);
+                migrated = true;
                 logger.info("config.yml moved to the new English keys (language pt-br); the old file is config-old.yml.");
+                if (bStatsOff) {
+                    BStatsOptOut.logCarriedOver(logger);
+                }
             } catch (IOException e) {
                 logger.warning("Could not migrate config.yml: " + e.getMessage());
             }
@@ -193,6 +233,7 @@ public final class ManhuntCore implements ManhuntHost {
                 logger.warning("Could not rename messages.yml: " + e.getMessage());
             }
         }
+        return migrated;
     }
 
     /** /manhunt reload: reads config.yml and the language files again and applies them. */
@@ -250,6 +291,11 @@ public final class ManhuntCore implements ManhuntHost {
     }
 
     // ------------------------------------------------------------------ access
+
+    /** The values sent to FastStats, copied on the server thread for FastStats' own thread. */
+    public UsageStats usage() {
+        return usage;
+    }
 
     /** What the bots do when the game reports something; the platform's listeners call it. */
     public GameEvents gameEvents() {

@@ -4,8 +4,9 @@
 # CurseForge the mods. Versions already on Modrinth or Hangar are skipped; CurseForge can't tell, so
 # "all" leaves it out: choose curseforge to send the mods there.
 #
-# Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" scope), HANGAR_API_KEY
-# (Hangar API key, "create_version" permission) and CURSEFORGE_TOKEN (CurseForge API token).
+# Secrets: MODRINTH_TOKEN (Modrinth personal access token, "Create versions" and "Write versions"
+# scopes), HANGAR_API_KEY (Hangar API key, "create_version" permission) and CURSEFORGE_TOKEN
+# (CurseForge API token).
 # Variables (optional): MODRINTH_PROJECT, HANGAR_PROJECT and CURSEFORGE_PROJECT_ID, the projects
 # (defaults: manhuntstar, ManhuntStar and 1793171).
 name: Publish
