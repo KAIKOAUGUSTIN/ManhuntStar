@@ -5,6 +5,7 @@
 # Each commit goes into a section by the prefix of its message, which is left out of the notes:
 #   "New: ..."      -> New      (also "Add:", "Added:")
 #   "Changed: ..."  -> Changed  (also "Change:", and commits with no prefix)
+#   "Fixed: ..."    -> Fixed    (also "Fix:")
 #   "Updated: ..."  -> Updated  (also "Update:", and Dependabot's "Bump ..." commits)
 #   "Removed: ..."  -> Removed  (also "Remove:")
 # Empty sections are left out. .github/release-notes-overrides.txt can give a commit another text
@@ -21,7 +22,7 @@ commits="$3"
 output="$4"
 repo="${GITHUB_REPOSITORY:-}"
 
-declare -A sections=([New]="" [Changed]="" [Updated]="" [Removed]="")
+declare -A sections=([New]="" [Changed]="" [Fixed]="" [Updated]="" [Removed]="")
 declare -A seen=()
 
 # "<sha> <text>" lines from the overrides file
@@ -42,7 +43,7 @@ override_for() {
         fi
     done
 }
-prefix='^(new|add|added|changed|change|updated|update|removed|remove):[[:space:]]*(.+)$'
+prefix='^(new|add|added|changed|change|fixed|fix|updated|update|removed|remove):[[:space:]]*(.+)$'
 while IFS=$'\t' read -r sha author message; do
     [[ -z "$sha" || -z "$message" ]] && continue
     # the workflow's own version commits are left out
@@ -59,6 +60,7 @@ while IFS=$'\t' read -r sha author message; do
         case "${BASH_REMATCH[1],,}" in
             new | add | added) type=New ;;
             changed | change) type=Changed ;;
+            fixed | fix) type=Fixed ;;
             updated | update) type=Updated ;;
             removed | remove) type=Removed ;;
         esac
@@ -81,7 +83,7 @@ mods=$(sed -n 's/^minecraftVersions=//p' gradle.properties 2> /dev/null | sed 's
 
 {
     listed=0
-    for type in New Changed Updated Removed; do
+    for type in New Changed Fixed Updated Removed; do
         if [[ -n "${sections[$type]}" ]]; then
             printf '### %s\n\n%s\n' "$type" "${sections[$type]}"
             listed=1

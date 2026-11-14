@@ -6,8 +6,8 @@
 # 3. Commits the version and CHANGELOG.md to main, creates the vX.Y.Z tag and the release with the jars
 #    (the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version).
 #    The release notes group the PR's commits by the prefix of their message: "New:", "Changed:",
-#    "Updated:" and "Removed:" (no prefix = Changed, Dependabot = Updated). The same notes go to
-#    CHANGELOG.md, the GitHub release, Modrinth, Hangar, CurseForge and Discord.
+#    "Fixed:", "Updated:" and "Removed:" (no prefix = Changed, Dependabot = Updated). The same notes
+#    go to CHANGELOG.md, the GitHub release, Modrinth, Hangar, CurseForge and Discord.
 # 4. Publishes it on Modrinth (every jar), Hangar (the plugin) and CurseForge (the mods), each one when
 #    its secret is set.
 # 5. Announces the release on Discord (when a webhook secret is set).
