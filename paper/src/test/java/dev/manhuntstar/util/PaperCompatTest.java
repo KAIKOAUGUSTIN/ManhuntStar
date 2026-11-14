@@ -1,6 +1,8 @@
 package dev.manhuntstar.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
@@ -25,6 +27,17 @@ class PaperCompatTest {
         assertFalse(PaperCompat.isMarkedInvulnerable(entityWithHandle(true, false)));
         assertTrue(PaperCompat.isMarkedInvulnerable(entityWithHandle(true, true)));
         assertTrue(PaperCompat.isMarkedInvulnerable(entityWithHandle(false, true)));
+    }
+
+    @Test
+    void whatCantBeReadFromTheServersEntityIsLeftToIsMarkedInvulnerable() {
+        assertNull(PaperCompat.permanentlyInvulnerable(new NoHandle()));
+        assertNull(PaperCompat.permanentlyInvulnerable(new NullHandle()));
+        assertNull(PaperCompat.permanentlyInvulnerable(new FailingHandle()));
+        assertNull(PaperCompat.permanentlyInvulnerable(new HandleOf(new Object())));
+        assertNull(PaperCompat.permanentlyInvulnerable(new HandleOf(new NotABoolean())));
+        assertEquals(Boolean.TRUE, PaperCompat.permanentlyInvulnerable(new HandleOf(new Handle(true))));
+        assertEquals(Boolean.FALSE, PaperCompat.permanentlyInvulnerable(new HandleOf(new Handle(false))));
     }
 
     /** An entity of a server without getHandle(): isMarkedInvulnerable() as it is. */
@@ -68,6 +81,41 @@ class PaperCompatTest {
 
         public boolean isPermanentlyInvulnerable() {
             return permanent;
+        }
+    }
+
+    public static final class NoHandle {
+    }
+
+    public static final class NullHandle {
+        public Object getHandle() {
+            return null;
+        }
+    }
+
+    public static final class FailingHandle {
+        public Object getHandle() {
+            throw new IllegalStateException("not on this thread");
+        }
+    }
+
+    public static final class HandleOf {
+
+        private final Object handle;
+
+        HandleOf(Object handle) {
+            this.handle = handle;
+        }
+
+        public Object getHandle() {
+            return handle;
+        }
+    }
+
+    /** A server entity whose isPermanentlyInvulnerable() isn't the one Minecraft has. */
+    public static final class NotABoolean {
+        public String isPermanentlyInvulnerable() {
+            return "yes";
         }
     }
 }
