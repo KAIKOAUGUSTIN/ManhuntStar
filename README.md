@@ -165,6 +165,8 @@ On Paper, `dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot 
 
 Needs JDK 25. Run `./gradlew build`; the jars end up in `build/libs/`: the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version (the versions are in `gradle.properties`).
 
+Gradle checks every dependency it downloads against the checksums in `gradle/verification-metadata.xml`. After adding or updating a dependency (or a Gradle plugin), write them again with `./gradlew --write-verification-metadata sha256 build` and commit the file. Writing the file doesn't check anything: it records the checksums of whatever the repositories (or Gradle's local cache) served, so before committing, compare the new checksums with an independent source where there is one (for example the checksums the project publishes with its release).
+
 ## ⚠️ Limitations
 
 - Other plugins and mods that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
