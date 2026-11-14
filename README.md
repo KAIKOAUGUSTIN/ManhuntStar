@@ -4,7 +4,7 @@
 
 # 🏹 ManhuntStar
 
-**ManHunt** hunter bots for Paper, Fabric and NeoForge servers.
+**ManHunt** hunter bots for Paper servers, and for Fabric and NeoForge on servers and on your own client (singleplayer and LAN).
 
 <p align="center">
   <a href="https://modrinth.com/plugin/manhuntstar"><img src="https://img.shields.io/badge/Modrinth-Download-00AF5C?style=for-the-badge&logo=modrinth&logoColor=white" alt="Download on Modrinth"></a>
@@ -19,11 +19,13 @@ No friends online? Spawn a pack of hunters that play like real players and try t
 
 |  | Paper (plugin) | Fabric / NeoForge (mod) |
 |---|---|---|
-| **Server** | ✅ On the server only | ✅ On the server only |
-| **Players** | Join with a vanilla client | Join with a vanilla client |
-| **Singleplayer / LAN** | — | ✅ Install it on your own client |
+| **Dedicated server** | ✅ Install it on the server | ✅ Install it on the server |
+| **Client (singleplayer / LAN)** | — | ✅ Install it on your own client |
+| **Players who join** | Nothing to install (vanilla client) | Nothing to install (vanilla client) |
 
-ManhuntStar runs on the server side: players never need to install anything to join. The mods also run in singleplayer, where the game has its own server inside the client; there, and for LAN worlds you open, the mod goes in your client's `mods/` folder (only the host needs it).
+The Paper plugin runs on the server. The Fabric and NeoForge mods are **not server side only: they are client side too**. Put them on a dedicated server, or in your own client's `mods/` folder to play with the bots in singleplayer and in the LAN worlds you open.
+
+Either way, whoever joins never needs to install anything: a vanilla client is enough. In a LAN world only the host needs the mod.
 
 ## ⭐ Support the project
 
