@@ -35,9 +35,10 @@ class LegacySettingsTest {
 
     @Test
     void onlyPortugueseKeysAreRead() throws IOException {
-        Settings s = load("geral:\n  tab-list: false\nbots:\n  vida-maxima: 35\n");
+        Settings s = load("geral:\n  tab-list: false\nbots:\n  vida-maxima: 35\n  respawn: nao\n");
         assertEquals(35.0, s.botHealth.value());
         assertFalse(s.tabList.on());
+        assertFalse(s.respawn.on(), "bots.respawn is the same key in both, with a Portuguese value");
         assertEquals("pt-br", s.language.get(), "1.5 only had Portuguese");
     }
 

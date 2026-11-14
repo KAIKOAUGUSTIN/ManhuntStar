@@ -330,10 +330,12 @@ public final class Settings {
 
     private void load(ConfigNode cfg, boolean legacy, Logger logger) {
         // a Portuguese config.yml that couldn't be migrated yet may already have English keys, written by a
-        // change in game (and the faststats options only have English ones): those win
+        // change in game (and the faststats options only have English ones): those win. The old values are
+        // translated either way: bots.respawn has the same key in both, and LEGACY_VALUES only holds
+        // Portuguese words, never an English value
         for (Setting<?> s : byKey.values()) {
-            if (legacy && !cfg.contains(s.path())) {
-                s.load(cfg, s.legacyPath(), LEGACY_VALUES);
+            if (legacy) {
+                s.load(cfg, cfg.contains(s.path()) ? s.path() : s.legacyPath(), LEGACY_VALUES);
             } else {
                 s.load(cfg);
             }
