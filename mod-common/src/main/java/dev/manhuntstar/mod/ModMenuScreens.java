@@ -101,6 +101,12 @@ public final class ModMenuScreens implements MenuScreens {
             container.setItem(i, stack(menu.icon(i)));
         }
         Component title = ModServer.get().vanilla(menu.title());
+        // From one menu to the next, the open one is closed on the server only, as Paper does. The game's openMenu
+        // closes it with closeContainer, which also tells the client to close the screen: the client then takes the
+        // mouse back and centers it, and the next screen opens with the cursor in the middle on every click.
+        if (p.containerMenu instanceof Screen) {
+            p.doCloseContainer();
+        }
         p.openMenu(new SimpleMenuProvider((id, inventory, who) -> new Screen(type(rows), id, inventory, container, rows, menu), title));
     }
 
