@@ -199,10 +199,12 @@ public final class Brain {
 
     /**
      * After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". The build it
-     * was on stays behind: from where it landed a new one starts only close to the target.
+     * was on stays behind, with the pillar block it was jumping to place: from where it landed a new one starts
+     * only close to the target.
      */
     public void startPostTeleportStabilization() {
         buildRange.clear();
+        bot.cancelPendingPillar();
         stabilizeTicks = Math.max(stabilizeTicks, 15);
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);

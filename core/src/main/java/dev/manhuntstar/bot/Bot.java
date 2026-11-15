@@ -781,6 +781,16 @@ public final class Bot {
         return pendingPillar != null;
     }
 
+    /**
+     * Drops the queued pillar block: the bot was teleported or died, and the block is where it was before
+     * ({@link #placeBlock} checks no distance). It ends like a pillar that ran out of time: the tower stops sneaking.
+     */
+    public void cancelPendingPillar() {
+        if (pendingPillar != null) {
+            finishPendingPillar();
+        }
+    }
+
     private void tickPendingPillar() {
         if (pendingPillar == null) {
             return;
@@ -797,13 +807,17 @@ public final class Bot {
             }
         }
         if (placed || pendingPillarTicks > 12 || (pendingPillarTicks > 2 && onGround() && pos().y() < target.y() + 0.5)) {
-            Runnable done = pendingPillarDone;
-            pendingPillar = null;
-            pendingPillarDone = null;
-            pendingPillarTarget = null;
-            if (done != null) {
-                done.run();
-            }
+            finishPendingPillar();
+        }
+    }
+
+    private void finishPendingPillar() {
+        Runnable done = pendingPillarDone;
+        pendingPillar = null;
+        pendingPillarDone = null;
+        pendingPillarTarget = null;
+        if (done != null) {
+            done.run();
         }
     }
 
@@ -881,6 +895,7 @@ public final class Bot {
 
     /** Recreates the AI subsystems (same as the "new" bot the mod created on every respawn). */
     void resetRuntime() {
+        cancelPendingPillar();
         brain.navigator().reset();
         createRuntime();
         idle = null;
