@@ -141,6 +141,20 @@ class MeleeReachTest {
     }
 
     @Test
+    void aPlayerNearTheTopOfTheBotsTowerCanBeOutOfReach() {
+        Vec3 feet = Vec3.ZERO;
+        Vec3 eyes = new Vec3(0, EYE, 0);
+        // closer than the 4.5 blocks at which the bot fights, but out of reach: it has to build on to them
+        Vec3 above = new Vec3(2.9, 3.3, 0);
+        assertTrue(feet.distanceTo(above) < 4.5);
+        assertFalse(MeleeReach.reaches(eyes, hitbox(2.9, 3.3, 0, 0.6, 1.8), REACH), "higher up on their tower");
+        assertTrue(MeleeReach.reaches(eyes.add(0, 1, 0), hitbox(2.9, 3.3, 0, 0.6, 1.8), REACH), "one more block of tower");
+        Vec3 acrossTheGap = new Vec3(4.0, 1.2, 0);
+        assertTrue(feet.distanceTo(acrossTheGap) < 4.5);
+        assertFalse(MeleeReach.reaches(eyes, hitbox(4.0, 1.2, 0, 0.6, 1.8), REACH), "across the gap to their bridge");
+    }
+
+    @Test
     void aPlayerStandingStillIsReachedAsAnyHitbox() {
         Vec3 eyes = new Vec3(0, EYE, 0);
         for (double x = 2.0; x <= 4.0; x += 0.05) {

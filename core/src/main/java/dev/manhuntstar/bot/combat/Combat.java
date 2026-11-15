@@ -289,6 +289,11 @@ public final class Combat {
         dealPlayerLikeHit(target, weapon, strength);
     }
 
+    /** The target's hitbox is within the player's reach from where the bot stands now, without the delay of a hit at a player. */
+    public boolean reachesFromHere(GameLiving target) {
+        return MeleeReach.reaches(bot.eyePos(), target.boundingBox(), MeleeReach.PLAYER_REACH);
+    }
+
     /** The target's hitbox is within the player's reach ({@link MeleeReach}), against a player also where they were seen. */
     private boolean inMeleeReach(GameLiving target, double range) {
         Vec3 eyes = bot.eyePos();

@@ -197,8 +197,12 @@ public final class Brain {
         redistributionCooldown = ticks;
     }
 
-    /** After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". */
+    /**
+     * After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". The build it
+     * was on stays behind: from where it landed a new one starts only close to the target.
+     */
     public void startPostTeleportStabilization() {
+        buildRange.clear();
         stabilizeTicks = Math.max(stabilizeTicks, 15);
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);
@@ -399,7 +403,7 @@ public final class Brain {
             state("breaking-through", who, "");
             return;
         }
-        if (dist < 4.5) {
+        if (dist < 4.5 && !buildsOnTo(active)) {
             state("fighting", who, "");
             melee(active, dist);
             return;
@@ -470,6 +474,17 @@ public final class Brain {
         if (!stuckMiningMode && !heldAtEdge && bot.distanceTo(active) > 6.0) {
             bot.motor().addVelocity(swarmSeparation());
         }
+    }
+
+    /**
+     * Mid-build, the target is close but out of reach from where the bot stands (higher up on its tower, across
+     * the gap to its bridge): the bot builds on to it instead of fighting from there, where it waited at the edge
+     * with no hit and no block, or walked off a low tower. Without the A* only the climb goes on: walking straight
+     * there is no bridge, and it fell off the edge.
+     */
+    private boolean buildsOnTo(GameLiving active) {
+        return active instanceof GamePlayer player && !bot.combat().reachesFromHere(player)
+                && (towering.keepsClimbingFor(player) || (plannerEnabled() && keepsBuildingFor(player)));
     }
 
     /** Target close but behind a block: digs the block in the line of sight (as a player would). */

@@ -41,4 +41,9 @@ final class BuildRange {
     boolean keeps(UUID target, long now) {
         return target != null && target.equals(this.target) && now - lastBlockTick <= KEEP_TICKS;
     }
+
+    /** The bot was moved away from its build (teleported): a new one starts only close to the target again. */
+    void clear() {
+        target = null;
+    }
 }

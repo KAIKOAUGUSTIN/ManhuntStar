@@ -50,6 +50,15 @@ final class Towering {
 
     // ------------------------------------------------------------------ tower / bridge to a skybase
 
+    /**
+     * The tower under way keeps going up after this target: the target is more than
+     * {@link #KEEP_CLIMBING_MIN_HEIGHT} above and the build is going on ({@link BuildRange}).
+     */
+    boolean keepsClimbingFor(GamePlayer sky) {
+        return assignedToTower && bridgePhase == 0 && sky.position().y() - bot.pos().y() > KEEP_CLIMBING_MIN_HEIGHT
+                && bot.brain().keepsBuildingFor(sky);
+    }
+
     /** @return true if it took control of movement this tick. */
     boolean handle(GamePlayer sky, Navigator nav) {
         Vec3 p = bot.pos();
@@ -62,7 +71,7 @@ final class Towering {
         boolean towerCandidate = close && yDiff > 0;
         // A tower already going up keeps going while the target is above and the build is under way: a player who
         // walks off on top of their tower is followed up there, and at their height the path bridges over to them.
-        boolean keepClimbing = assignedToTower && bridgePhase == 0 && yDiff > KEEP_CLIMBING_MIN_HEIGHT && bot.brain().keepsBuildingFor(sky);
+        boolean keepClimbing = keepsClimbingFor(sky);
         boolean shouldTower = forcePillar || keepClimbing || (towerCandidate && shouldUseTowering(sky, yDiff, lookAngle, nav));
         boolean needsBridge = close && shouldUseBridgeAssist(sky, yDiff, horizontal);
         if (!bot.settings().allowTowering.on() || (!shouldTower && !needsBridge) || bot.isInWater() || bot.isInLava()) {
