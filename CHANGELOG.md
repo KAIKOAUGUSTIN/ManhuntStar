@@ -2,6 +2,28 @@
 
 Generated automatically on every merge into main.
 
+## 2.1.0 - 2026-11-14
+
+### New
+
+- Anonymous statistics on FastStats instead of bStats, now also on the Fabric and NeoForge dedicated servers (faststats.statistics: false turns them off; they start off where bStats was off for every plugin) (2e0019a)
+- Error reports on FastStats, only ManhuntStar's own errors and without IP addresses or user names (faststats.error-reports: false turns them off) (f8e3655)
+- Updating ManhuntStar keeps your config.yml values and the texts you edited in lang/, adds what's new and keeps a copy of the old file in old/ (6535eeb)
+
+### Changed
+
+- The Fabric and NeoForge mods also run in singleplayer and LAN worlds (install them on your client); players still join with a vanilla client (9a2cfd5)
+
+### Fixed
+
+- A config.yml, language file or bots.yml with a YAML error is never rewritten, so your values and saved bots aren't lost (d542c54)
+- Upgrading from 1.5, a config.yml that can't be migrated keeps its values, and respawn: nao keeps respawn off (468e730)
+- On Minecraft 26.3, a bot's horse or boat paused right after being hit no longer stays invulnerable after the hunt resumes (d451448)
+
+**Paper:** 26.2-26.3 · **Fabric and NeoForge:** 26.2, 26.3 · **Java:** 25
+
+**Full changelog since 2.0.0:** https://github.com/KAIKOAUGUSTIN/ManhuntStar/compare/v2.0.0...v2.1.0
+
 ## 2.0.0 - 2026-11-09
 
 ### New
