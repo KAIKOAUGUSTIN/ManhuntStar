@@ -343,6 +343,7 @@ final class Towering {
             case 2 -> {
                 if (speedTarget != null && WorldUtil.canBeReplaced(world(), speedTarget) && bot.placeBlock(speedTarget, Blocks.COBBLESTONE)) {
                     bridgedBlocks++;
+                    bot.brain().noteBuildBlockPlaced();
                 }
                 speedStep = 3;
                 bridgeTimer = 0;

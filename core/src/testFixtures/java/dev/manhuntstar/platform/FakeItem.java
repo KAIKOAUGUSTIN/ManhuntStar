@@ -60,6 +60,7 @@ public class FakeItem implements GameItem {
         c.customName = customName;
         c.damage = damage;
         c.maxStackSize = maxStackSize;
+        c.disablesBlockingSeconds = disablesBlockingSeconds;
         return c;
     }
 

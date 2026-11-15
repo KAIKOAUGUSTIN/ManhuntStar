@@ -99,6 +99,8 @@ public final class Bot {
     private Pos pendingPillar;
     private int pendingPillarTicks;
     private Runnable pendingPillarDone;
+    /** The target the pending pillar was queued for: its block counts as a build toward that target only. */
+    private UUID pendingPillarTarget;
 
     Bot(BotManager manager, UUID id, String name, String visualName, SkinData skin, BotDifficulty difficulty) {
         this.manager = manager;
@@ -771,6 +773,8 @@ public final class Bot {
         pendingPillar = feetBlock;
         pendingPillarTicks = 0;
         pendingPillarDone = onDone;
+        GamePlayer queuedFor = target();
+        pendingPillarTarget = queuedFor == null ? null : queuedFor.uuid();
     }
 
     public boolean hasPendingPillar() {
@@ -786,7 +790,9 @@ public final class Bot {
         boolean placed = false;
         if (pos().y() >= target.y() + 1.0 && WorldUtil.canBeReplaced(world(), target)) {
             placed = placeBlock(target, Blocks.COBBLESTONE, false);
-            if (placed && brain != null) {
+            // a pillar queued for another target (it changed meanwhile) doesn't count as a build toward the new one
+            GamePlayer current = target();
+            if (placed && brain != null && current != null && current.uuid().equals(pendingPillarTarget)) {
                 brain.noteBuildBlockPlaced();
             }
         }
@@ -794,6 +800,7 @@ public final class Bot {
             Runnable done = pendingPillarDone;
             pendingPillar = null;
             pendingPillarDone = null;
+            pendingPillarTarget = null;
             if (done != null) {
                 done.run();
             }

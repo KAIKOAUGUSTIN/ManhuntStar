@@ -53,6 +53,8 @@ public final class Brain {
     private final BoatRoutine boat;
     private final ElytraFlight elytra;
     private final BuildRange buildRange = new BuildRange();
+    /** The last {@link #dumbStarMove} held at the edge of the bot's own tower or bridge, waiting for the path. */
+    private boolean heldAtEdge;
 
     private int knockbackTicks;
     private int lavaExposureTicks;
@@ -462,7 +464,8 @@ public final class Brain {
         }
         state(hasPath ? "following-path" : "walking-straight", who, String.format(java.util.Locale.ROOT, "%.0f", dist));
         dumbStarMove(targetLoc, hasPath, active);
-        if (!stuckMiningMode && bot.distanceTo(active) > 6.0) {
+        // holding at the edge of its tower or bridge, the push away from the other bots could carry it off the edge
+        if (!stuckMiningMode && !heldAtEdge && bot.distanceTo(active) > 6.0) {
             bot.motor().addVelocity(swarmSeparation());
         }
     }
@@ -939,6 +942,7 @@ public final class Brain {
 
     /** Walks to the point avoiding obstacles, opening doors, jumping steps and swimming. */
     public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, GameLiving lookTarget) {
+        heldAtEdge = false;
         if (plannerActive) {
             // a detour from when there was no path no longer applies
             detourPos = null;
@@ -994,6 +998,7 @@ public final class Brain {
         // On top of its own tower or bridge with no path yet (the path that places the bridge is on its way): walking
         // straight ahead fell off the edge, and the bot started again from the ground under the player.
         if (cliff && !plannerActive && plannerEnabled() && bot.onGround() && keepsBuildingFor(bot.target())) {
+            heldAtEdge = true;
             bot.motor().stopWalk();
             bot.motor().setSprinting(false);
             if (lookTarget != null) {
