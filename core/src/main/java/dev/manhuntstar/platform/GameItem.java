@@ -59,6 +59,9 @@ public interface GameItem {
     /** The ticks a charge weapon (spear) takes before it hits, or -1 when it isn't one. */
     int chargeDelayTicks();
 
+    /** Seconds a hit with this weapon takes a raised shield down for (an axe: 5), or 0 (the game's {@code weapon} component). */
+    double disablesBlockingSeconds();
+
     /** The stack as bytes, read back by {@link GameServer#deserializeItem}. */
     byte[] serialize();
 }

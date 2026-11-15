@@ -7,6 +7,7 @@ import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.DamageInfo;
 import dev.manhuntstar.platform.DamageKind;
 import dev.manhuntstar.platform.EntityTrait;
+import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
@@ -89,6 +90,11 @@ public final class GameEvents {
         if (bot.combat().isBlocking() && bot.combat().canBlockDamage(src)) {
             BotBody e = bot.entity();
             e.world().playSound(e.position(), Sounds.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1f, 0.8f + (float) Math.random() * 0.4f);
+            // As for a player blocking: a hit in melee (not a projectile) with a weapon that disables shields (an axe)
+            // still blocked, but it takes the shield down for the weapon's time.
+            if (src.directEntity() instanceof GameLiving hitter) {
+                bot.combat().disableShield(hitter.item(EquipSlot.HAND).disablesBlockingSeconds());
+            }
             return DamageDecision.CANCEL;
         }
         return new DamageDecision(false, damage * bot.difficulty().damageTakenMultiplier());

@@ -49,6 +49,7 @@ public final class Combat {
 
     private boolean hasShield;
     private boolean blocking;
+    private final ShieldTiming shieldTiming = new ShieldTiming();
     private long lastAttackTime;
     private long lastSuccessfulPlayerHitTick;
     private long nextMeleeAttackTick;
@@ -138,7 +139,7 @@ public final class Combat {
     }
 
     public boolean hasUsableShield() {
-        return hasShield && bot.getItem(EquipSlot.OFF_HAND).type() == Items.SHIELD && !bot.shouldHoldTotemInOffhand();
+        return hasShield && bot.getItem(EquipSlot.OFF_HAND).type() == Items.SHIELD && !bot.shouldHoldTotemInOffhand() && !isShieldDisabled();
     }
 
     public void startBlock() {
@@ -146,7 +147,27 @@ public final class Combat {
             return;
         }
         blocking = true;
+        shieldTiming.raised(Platform.server().currentTick());
         bot.entity().startUsingItem(EquipSlot.OFF_HAND);
+    }
+
+    /** A hit took the shield down (an axe, as on a player): it stays down and can't be raised for a while. */
+    public boolean isShieldDisabled() {
+        return shieldTiming.disabled(Platform.server().currentTick());
+    }
+
+    /**
+     * A blocked hit with a weapon that disables shields for {@code seconds} (an axe: 5), as the game does to a player:
+     * the shield is lowered at once, with its sound, and can't be raised again until the time is up.
+     */
+    public void disableShield(double seconds) {
+        if (!shieldTiming.disable(Platform.server().currentTick(), seconds)) {
+            return;
+        }
+        if (blocking) {
+            stopBlock();
+        }
+        playSound(Sounds.ITEM_SHIELD_BREAK, 0.8f, 0.8f + ThreadLocalRandom.current().nextFloat() * 0.4f);
     }
 
     public void stopBlock() {
@@ -166,10 +187,14 @@ public final class Combat {
     }
 
     /**
-     * Like in the game, the shield only blocks attacks from the front, with a point of origin and that don't
-     * bypass shields. Suffocation, cactus, magma, freezing and the wither effect have no origin and go through.
+     * Like in the game, the shield only blocks once it has been up for a moment ({@link ShieldTiming}), and only
+     * attacks from the front, with a point of origin and that don't bypass shields. Suffocation, cactus, magma,
+     * freezing and the wither effect have no origin and go through.
      */
     public boolean canBlockDamage(DamageInfo src) {
+        if (!shieldTiming.blocks(Platform.server().currentTick())) {
+            return false;
+        }
         DamageKind type = src.kind();
         if (src.bypassesShield()
                 || type == DamageKind.FALL || type == DamageKind.ON_FIRE
@@ -414,8 +439,12 @@ public final class Combat {
     }
 
     private void playSound(GameSound s) {
+        playSound(s, 1.0f, 1.0f);
+    }
+
+    private void playSound(GameSound s, float volume, float pitch) {
         Vec3 p = bot.pos();
-        bot.world().playSound(p, s, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        bot.world().playSound(p, s, SoundCategory.PLAYERS, volume, pitch);
     }
 
     // ------------------------------------------------------------------ crossbow

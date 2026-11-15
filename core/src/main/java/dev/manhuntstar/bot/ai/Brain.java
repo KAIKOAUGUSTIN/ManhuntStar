@@ -712,7 +712,8 @@ public final class Brain {
             }
             return;
         }
-        boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand();
+        // with the shield taken down by an axe the bot fights without it until it can raise it again
+        boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand() && !bot.combat().isShieldDisabled();
         if (canShield) {
             if (inFluid) {
                 swimToward(target.position(), target);
