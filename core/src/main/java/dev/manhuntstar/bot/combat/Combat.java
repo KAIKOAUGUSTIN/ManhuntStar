@@ -38,7 +38,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
+ * The bot's combat. Melee follows a player's rules (reach, weapon cooldown, critical hits when falling,
  * sweep attack, sprint knockback, enchantments); the mod's humanization controls mistakes and pace.
  */
 public final class Combat {
@@ -229,8 +229,8 @@ public final class Combat {
         Settings s = bot.settings();
         double humanize = s.humanize.value();
         double rangePenalty = s.meleeReachVariance.value() * humanize * meleeRandom.nextDouble();
-        double allowedRange = Math.max(2.2, 3.2 - rangePenalty);
-        if (bot.distanceTo(target) > allowedRange) {
+        double allowedRange = Math.max(MeleeReach.PLAYER_REACH - 1.0, MeleeReach.PLAYER_REACH - rangePenalty);
+        if (!inMeleeReach(target, allowedRange)) {
             return;
         }
         prepareMainHand();
@@ -262,6 +262,17 @@ public final class Combat {
             return;
         }
         dealPlayerLikeHit(target, weapon, strength);
+    }
+
+    /** The target's hitbox is within the player's reach ({@link MeleeReach}), against a player also where they were seen. */
+    private boolean inMeleeReach(GameLiving target, double range) {
+        Vec3 eyes = bot.eyePos();
+        Box hitbox = target.boundingBox();
+        if (target instanceof GamePlayer player) {
+            Vec3 seenAt = bot.manager().playerTrail().at(player.uuid(), MeleeReach.VIEW_DELAY_TICKS, Platform.server().currentTick());
+            return MeleeReach.reachesPlayer(eyes, hitbox, player.position(), seenAt, range);
+        }
+        return MeleeReach.reaches(eyes, hitbox, range);
     }
 
     private float attackStrength(long now, int cooldownTicks) {
