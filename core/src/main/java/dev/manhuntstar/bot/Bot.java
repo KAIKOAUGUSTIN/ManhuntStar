@@ -508,11 +508,16 @@ public final class Bot {
     }
 
     public boolean isWithinToweringRange(GamePlayer target, double maxAxisDistance) {
+        return horizontalDistanceTo(target) <= maxAxisDistance;
+    }
+
+    /** Horizontal distance to the player, or infinity when it is gone, dead or in another world. */
+    public double horizontalDistanceTo(GamePlayer target) {
         if (target == null || target.isDead() || !target.world().equals(world())) {
-            return false;
+            return Double.POSITIVE_INFINITY;
         }
         Vec3 p = pos();
-        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z()) <= maxAxisDistance;
+        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z());
     }
 
     // ------------------------------------------------------------------ aim and pose
@@ -781,6 +786,9 @@ public final class Bot {
         boolean placed = false;
         if (pos().y() >= target.y() + 1.0 && WorldUtil.canBeReplaced(world(), target)) {
             placed = placeBlock(target, Blocks.COBBLESTONE, false);
+            if (placed && brain != null) {
+                brain.noteBuildBlockPlaced();
+            }
         }
         if (placed || pendingPillarTicks > 12 || (pendingPillarTicks > 2 && onGround() && pos().y() < target.y() + 0.5)) {
             Runnable done = pendingPillarDone;

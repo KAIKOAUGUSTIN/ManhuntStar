@@ -14,10 +14,14 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Tower (pillar under its own feet) and bridge to a player on a skybase/tower, and the quick crouching
- * bridge in the Nether. Only near the target (up to 3 blocks horizontally), as in the mod; how many bots
- * build depends on how many are chasing the same player.
+ * bridge in the Nether. Starts only near the target (up to 3 blocks horizontally), as in the mod, and a tower
+ * under way keeps going while the target is above ({@link BuildRange}); how many bots build depends on how
+ * many are chasing the same player.
  */
 final class Towering {
+
+    /** A tower that started keeps going up until the bot's feet are this close below the target's. */
+    static final double KEEP_CLIMBING_MIN_HEIGHT = 1.5;
 
     private final Bot bot;
     private boolean assignedToTower;
@@ -53,10 +57,13 @@ final class Towering {
         double yDiff = t.y() - p.y();
         double horizontal = Math.hypot(t.x() - p.x(), t.z() - p.z());
         double lookAngle = Math.toDegrees(Math.atan2(yDiff, horizontal));
-        boolean close = bot.isWithinToweringRange(sky, 3.0);
+        boolean close = bot.isWithinToweringRange(sky, BuildRange.START);
         boolean forcePillar = close && shouldForceCloseVerticalPillar(sky, yDiff);
         boolean towerCandidate = close && yDiff > 0;
-        boolean shouldTower = forcePillar || (towerCandidate && shouldUseTowering(sky, yDiff, lookAngle, nav));
+        // A tower already going up keeps going while the target is above and the build is under way: a player who
+        // walks off on top of their tower is followed up there, and at their height the path bridges over to them.
+        boolean keepClimbing = assignedToTower && bridgePhase == 0 && yDiff > KEEP_CLIMBING_MIN_HEIGHT && bot.brain().keepsBuildingFor(sky);
+        boolean shouldTower = forcePillar || keepClimbing || (towerCandidate && shouldUseTowering(sky, yDiff, lookAngle, nav));
         boolean needsBridge = close && shouldUseBridgeAssist(sky, yDiff, horizontal);
         if (!bot.settings().allowTowering.on() || (!shouldTower && !needsBridge) || bot.isInWater() || bot.isInLava()) {
             if (assignmentChecked || assignedToTower || bridgePhase != 0) {
@@ -112,6 +119,7 @@ final class Towering {
             if (++bridgeTimer > 2) {
                 if (WorldUtil.canBeReplaced(world(), aheadBelow) && bot.placeBlock(aheadBelow, Blocks.COBBLESTONE)) {
                     lastPlaceTick = now;
+                    bot.brain().noteBuildBlockPlaced();
                 }
                 bridgeTimer = 0;
             }

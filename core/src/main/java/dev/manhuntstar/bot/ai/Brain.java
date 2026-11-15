@@ -52,6 +52,7 @@ public final class Brain {
     private final HorseRoutine horse;
     private final BoatRoutine boat;
     private final ElytraFlight elytra;
+    private final BuildRange buildRange = new BuildRange();
 
     private int knockbackTicks;
     private int lavaExposureTicks;
@@ -139,9 +140,30 @@ public final class Brain {
         return bot.settings();
     }
 
-    /** Tower/bridge and A* blocks only within 3 blocks (horizontally) of the target, as in the mod. */
+    /**
+     * Tower/bridge and A* blocks: a build starts only within 3 blocks (horizontally) of the target, as in the mod,
+     * and one already under way toward the target keeps going however far it goes ({@link BuildRange}). Never for
+     * a target that is dead or in another world.
+     */
     public boolean canPlaceToweringBlocksNearTarget() {
-        return settings().allowTowering.on() && bot.isWithinToweringRange(bot.target(), 3.0);
+        GamePlayer target = bot.target();
+        double horizontal = bot.horizontalDistanceTo(target);
+        return settings().allowTowering.on() && horizontal < Double.POSITIVE_INFINITY
+                && buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
+    }
+
+    /** A block of the tower or bridge toward the target was placed: the build may go on ({@link BuildRange}). */
+    public void noteBuildBlockPlaced() {
+        GamePlayer target = bot.target();
+        if (target != null) {
+            buildRange.placed(target.uuid(), Platform.server().currentTick());
+        }
+    }
+
+    /** A build toward this player (alive and in this world) is under way and keeps going past the 3 blocks that start one. */
+    boolean keepsBuildingFor(GamePlayer target) {
+        return settings().allowTowering.on() && bot.horizontalDistanceTo(target) < Double.POSITIVE_INFINITY
+                && buildRange.keeps(target.uuid(), Platform.server().currentTick());
     }
 
     private boolean plannerEnabled() {
@@ -966,6 +988,16 @@ public final class Brain {
             bot.setSneaking(true);
             bot.motor().stopWalk();
             bot.motor().walk(moveDir.scale(-0.2));
+            return;
+        }
+        // On top of its own tower or bridge with no path yet (the path that places the bridge is on its way): walking
+        // straight ahead fell off the edge, and the bot started again from the ground under the player.
+        if (cliff && !plannerActive && plannerEnabled() && bot.onGround() && keepsBuildingFor(bot.target())) {
+            bot.motor().stopWalk();
+            bot.motor().setSprinting(false);
+            if (lookTarget != null) {
+                bot.lookAt(eyes(lookTarget));
+            }
             return;
         }
         bot.motor().setSprinting(true);
