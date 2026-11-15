@@ -88,7 +88,8 @@ final class Towering {
         int now = Platform.server().currentTick();
         double prev = lastProgressDist == Double.MAX_VALUE ? horizontal : lastProgressDist;
         boolean movingAway = horizontal > prev + 0.4;
-        if (now - lastPlaceTick <= 30 && movingAway) {
+        // a tower that keeps going after a target walking off on top doesn't give up when the target runs
+        if (!keepClimbing && now - lastPlaceTick <= 30 && movingAway) {
             reset();
             return false;
         }
