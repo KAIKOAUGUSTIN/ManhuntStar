@@ -443,8 +443,11 @@ public final class Combat {
     }
 
     private void playSound(GameSound s, float volume, float pitch) {
-        Vec3 p = bot.pos();
-        bot.world().playSound(p, s, SoundCategory.PLAYERS, volume, pitch);
+        // no world while the body is gone and the world it was in isn't loaded
+        GameWorld w = bot.world();
+        if (w != null) {
+            w.playSound(bot.pos(), s, SoundCategory.PLAYERS, volume, pitch);
+        }
     }
 
     // ------------------------------------------------------------------ crossbow

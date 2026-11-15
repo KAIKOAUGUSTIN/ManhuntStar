@@ -149,9 +149,11 @@ public final class Brain {
      */
     public boolean canPlaceToweringBlocksNearTarget() {
         GamePlayer target = bot.target();
+        if (target == null || !settings().allowTowering.on()) {
+            return false;
+        }
         double horizontal = bot.horizontalDistanceTo(target);
-        return settings().allowTowering.on() && horizontal < Double.POSITIVE_INFINITY
-                && buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
+        return horizontal < Double.POSITIVE_INFINITY && buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
     }
 
     /** A block of the tower or bridge toward the target was placed: the build may go on ({@link BuildRange}). */
@@ -164,7 +166,7 @@ public final class Brain {
 
     /** A build toward this player (alive and in this world) is under way and keeps going past the 3 blocks that start one. */
     boolean keepsBuildingFor(GamePlayer target) {
-        return settings().allowTowering.on() && bot.horizontalDistanceTo(target) < Double.POSITIVE_INFINITY
+        return target != null && settings().allowTowering.on() && bot.horizontalDistanceTo(target) < Double.POSITIVE_INFINITY
                 && buildRange.keeps(target.uuid(), Platform.server().currentTick());
     }
 
