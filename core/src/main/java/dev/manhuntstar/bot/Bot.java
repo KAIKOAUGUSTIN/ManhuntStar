@@ -322,6 +322,8 @@ public final class Bot {
             idle.release();
         }
         cancelPendingPillar();
+        // the boats this bot placed belong to the runtime that is replaced: they go with it
+        brain.mlg().discardBoats();
         brain.navigator().reset();
         createRuntime();
         if (entity != null) {
@@ -337,6 +339,7 @@ public final class Bot {
             inventory.restorePreferredMainHand();
         }
         setSneaking(false);
+        setSwimmingPose(false);
         endBehavior = new EndBehavior(this, botsWon);
     }
 

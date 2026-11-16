@@ -1320,6 +1320,10 @@ public final class BotManager {
 
     /** Shutdown: saves everything and takes the entities out of the world (they aren't saved with the world). */
     public void shutdown() {
+        if (!settings().persistentBots.on()) {
+            // the match isn't saved: whoever is out of it gets their game mode back now, or never would
+            match.reset();
+        }
         flush(false);
         pause.shutdown();
         releaseAllHorses();

@@ -81,9 +81,12 @@ public final class HuntPolicy {
         plugin.botManager().markDirty();
     }
 
-    /** The player takes part in the hunt going on (was online at the start or was admitted later). */
-    public boolean isParticipant(UUID id) {
-        return active && participants.contains(id);
+    /**
+     * The player takes part in the hunt going on: was online at the start or was admitted later, and the
+     * player list allows hunting them.
+     */
+    public boolean isParticipant(GamePlayer p) {
+        return active && participants.contains(p.uuid()) && listAllows(p);
     }
 
     /** Does the player list allow hunting this player (and can they trigger the ring)? */

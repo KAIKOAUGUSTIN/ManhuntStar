@@ -143,7 +143,7 @@ public final class MatchService {
 
     /** A player died; {@code killer} is who caused it (a bot's body, a player, a mob or null). */
     public void playerDied(GamePlayer victim, GameEntity killer) {
-        if (!counting() || victim == null || !policy().isParticipant(victim.uuid())) {
+        if (!counting() || victim == null || !policy().isParticipant(victim)) {
             return;
         }
         playerDeaths++;
@@ -352,7 +352,7 @@ public final class MatchService {
     private List<UUID> huntedOnline() {
         List<UUID> ids = new ArrayList<>();
         for (GamePlayer p : Platform.server().onlinePlayers()) {
-            if (policy().isParticipant(p.uuid())) {
+            if (policy().isParticipant(p)) {
                 ids.add(p.uuid());
             }
         }
@@ -364,7 +364,7 @@ public final class MatchService {
         int n = 0;
         for (GamePlayer p : Platform.server().onlinePlayers()) {
             Out o = out.get(p.uuid());
-            if (policy().isParticipant(p.uuid()) && (o == null || o.due)) {
+            if (policy().isParticipant(p) && (o == null || o.due)) {
                 n++;
             }
         }
