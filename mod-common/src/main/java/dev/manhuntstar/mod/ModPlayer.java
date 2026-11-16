@@ -56,6 +56,11 @@ public final class ModPlayer extends ModLiving implements GamePlayer {
     }
 
     @Override
+    public void setGameMode(GameMode mode) {
+        vanilla().setGameMode(net.minecraft.world.level.GameType.valueOf(mode.name()));
+    }
+
+    @Override
     public boolean hasPermission(String permission) {
         return ModPermissions.has(vanilla().createCommandSourceStack(), permission);
     }

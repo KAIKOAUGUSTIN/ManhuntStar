@@ -8,7 +8,7 @@
 #  Не меняйте «version».
 # ==============================================================================
 
-version: 3
+version: 4
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -129,6 +129,24 @@ pause:
   already-paused: "<gray>Охота уже на паузе. /manhunt resume продолжает её.</gray>"
   not-paused: "<gray>Охота не на паузе.</gray>"
   state: "на паузе"
+
+# --- end of the match ---
+match:
+  victory-title: "<gold><bold>ПОБЕДА</bold></gold>"
+  victory-subtitle: "<yellow><player></yellow> <gray>убил Эндер-дракона</gray>"
+  victory-subtitle-unknown: "<gray>Эндер-дракон мёртв</gray>"
+  defeat-title: "<dark_red><bold>ПОРАЖЕНИЕ</bold></dark_red>"
+  defeat-subtitle: "<gray>Охотники победили</gray>"
+  summary-victory: "<gold><bold>Победа!</bold></gold> <yellow><player></yellow> <gray>убил Эндер-дракона.</gray>"
+  summary-victory-unknown: "<gold><bold>Победа!</bold></gold> <gray>Эндер-дракон мёртв.</gray>"
+  summary-defeat: "<dark_red><bold>Поражение!</bold></dark_red> <gray>Охотники победили; последним пал</gray> <yellow><player></yellow><gray>.</gray>"
+  summary-stats: "<gray>Время охоты:</gray> <white><time></white> <dark_gray>·</dark_gray> <gray>смерти:</gray> <white><playerdeaths></white> <gray>игроков,</gray> <white><botdeaths></white> <gray>ботов</gray>"
+  summary-bots: "<gray>Высшая фаза ботов:</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>лучший охотник:</gray> <white><bot></white> <gray>(убийств: <kills>)</gray>"
+  summary-bots-no-kills: "<gray>Высшая фаза ботов:</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>ни один бот никого не убил.</gray>"
+  player-out: "<yellow><player></yellow> <gray>выбыл из матча.</gray> <gray>Ещё в игре:</gray> <white><left></white>"
+  spectating: "<gray>Вы выбыли из матча: смотрите как наблюдатель до его конца.</gray>"
+  returning: "<gray>Возвращение в игру через</gray> <yellow><seconds></yellow> <gray>с.</gray>"
+  back: "<green>Вы вернулись в игру.</green>"
 
 # --- update check ---
 update:
@@ -456,6 +474,9 @@ options:
   latejoin:
     name: "Опоздавшие игроки"
     description: "Кто заходит во время охоты: hunted = сразу становится целью; protected = не цель на время отсчёта (минимум 5 с); out = на него не охотятся до следующей охоты."
+  defeat:
+    name: "Поражение"
+    description: "Когда преследуемые проигрывают (смерть Эндер-дракона — всегда победа): all-died = когда каждый умер по разу (умерший смотрит как наблюдатель); first-death = при первой смерти; never = смерти не завершают матч."
   playerlistmode:
     name: "Список игроков"
     description: "off = на всех можно охотиться; allowlist = охотятся только на игроков из списка, и только они запускают круг; blocklist = на игроков из списка не охотятся, и они не запускают круг."

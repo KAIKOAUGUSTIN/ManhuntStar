@@ -6,7 +6,7 @@
 #  重命名或替换已改变的文本），并保留你修改过的文本；旧文件的副本会放到 lang/old/。请勿修改 "version"。
 # ==============================================================================
 
-version: 3
+version: 4
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -127,6 +127,24 @@ pause:
   already-paused: "<gray>追猎已经暂停。使用 /manhunt resume 继续。</gray>"
   not-paused: "<gray>追猎没有暂停。</gray>"
   state: "已暂停"
+
+# --- end of the match ---
+match:
+  victory-title: "<gold><bold>胜利</bold></gold>"
+  victory-subtitle: "<yellow><player></yellow> <gray>击杀了末影龙</gray>"
+  victory-subtitle-unknown: "<gray>末影龙已死亡</gray>"
+  defeat-title: "<dark_red><bold>失败</bold></dark_red>"
+  defeat-subtitle: "<gray>猎人获胜</gray>"
+  summary-victory: "<gold><bold>胜利！</bold></gold> <yellow><player></yellow> <gray>击杀了末影龙。</gray>"
+  summary-victory-unknown: "<gold><bold>胜利！</bold></gold> <gray>末影龙已死亡。</gray>"
+  summary-defeat: "<dark_red><bold>失败！</bold></dark_red> <gray>猎人获胜；最后倒下的是</gray> <yellow><player></yellow><gray>。</gray>"
+  summary-stats: "<gray>追猎时长：</gray> <white><time></white> <dark_gray>·</dark_gray> <gray>死亡：玩家</gray> <white><playerdeaths></white> <gray>次，机器人</gray> <white><botdeaths></white> <gray>次</gray>"
+  summary-bots: "<gray>机器人最高阶段：</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>最佳猎人：</gray> <white><bot></white> <gray>（<kills> 次击杀）</gray>"
+  summary-bots-no-kills: "<gray>机器人最高阶段：</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>没有机器人击杀任何人。</gray>"
+  player-out: "<yellow><player></yellow> <gray>已出局。</gray> <gray>仍在场的被追猎者：</gray> <white><left></white>"
+  spectating: "<gray>你已出局：在本局结束前以旁观者身份观战。</gray>"
+  returning: "<gray>将在</gray> <yellow><seconds></yellow> <gray>秒后回到游戏。</gray>"
+  back: "<green>你已回到游戏。</green>"
 
 # --- update check ---
 update:
@@ -454,6 +472,9 @@ options:
   latejoin:
     name: "中途加入者"
     description: "追猎进行中加入的人：hunted = 立即成为目标；protected = 在倒计时时间内不是目标（至少 5 秒）；out = 下一轮之前不会被追猎。"
+  defeat:
+    name: "失败条件"
+    description: "被追猎者何时失败（末影龙死亡始终算胜利）：all-died = 每人都死过一次（死亡者以旁观者身份观战）；first-death = 第一次死亡时；never = 死亡不会结束本局。"
   playerlistmode:
     name: "玩家名单"
     description: "off = 所有人都可能被追猎；allowlist = 只有名单中的玩家会被追猎并触发圆圈；blocklist = 名单中的玩家不会被追猎，也不会触发圆圈。"

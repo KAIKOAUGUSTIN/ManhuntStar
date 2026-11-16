@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.bot.Modes.Defeat;
 import dev.manhuntstar.bot.Modes.LateJoin;
 import dev.manhuntstar.bot.Modes.PearlDimension;
 import dev.manhuntstar.bot.Modes.PlayerListMode;
@@ -95,6 +96,12 @@ class SettingsTest {
         assertSame(PlayerListMode.OFF, s.playerListMode.get());
         s.lateJoin.setFromText("hunted");
         assertSame(LateJoin.HUNTED, s.lateJoin.get());
+        assertSame(Defeat.ALL_DIED, s.defeat.get());
+        assertSame(s.defeat, s.byKey("defeat"));
+        s.defeat.setFromText("first-death");
+        assertSame(Defeat.FIRST_DEATH, s.defeat.get());
+        s.defeat.setFromText("never");
+        assertSame(Defeat.NEVER, s.defeat.get());
         s.playerListMode.setFromText("blacklist");
         assertSame(PlayerListMode.BLOCKLIST, s.playerListMode.get());
         s.ringRadius.setFromText("200");

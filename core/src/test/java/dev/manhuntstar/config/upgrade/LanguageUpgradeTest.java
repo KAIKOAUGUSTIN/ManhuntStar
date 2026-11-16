@@ -95,7 +95,7 @@ class LanguageUpgradeTest {
         Messages.install(yaml, lang.toFile(), this::resource, Logger.getAnonymousLogger());
 
         ConfigNode pt = yaml.load(lang.resolve("pt-br.yml").toFile());
-        assertEquals(3, pt.getInt("version", 0));
+        assertEquals(LanguageUpgrade.VERSIONS.latest(), pt.getInt("version", 0));
         for (String gone : List.of("menu.type-name", "menu.cancel-word", "menu.cancelled")) {
             assertFalse(pt.contains(gone), gone);
         }

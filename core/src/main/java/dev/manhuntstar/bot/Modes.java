@@ -90,6 +90,35 @@ public final class Modes {
         }
     }
 
+    /**
+     * When the hunted players lose the match: ALL_DIED = once each of them died once; FIRST_DEATH = at the
+     * first death; NEVER = only the Ender Dragon's death ends it (a win).
+     */
+    public enum Defeat implements Choice {
+        ALL_DIED("all-died"), FIRST_DEATH("first-death"), NEVER("never", "off");
+
+        private final List<String> aliases;
+
+        Defeat(String... aliases) {
+            this.aliases = List.of(aliases);
+        }
+
+        @Override
+        public String configName() {
+            return aliases.getFirst();
+        }
+
+        @Override
+        public List<String> aliases() {
+            return aliases;
+        }
+
+        /** A hunted player who dies is out of the match (a spectator until it ends). */
+        public boolean eliminates() {
+            return this != NEVER;
+        }
+    }
+
     /** Player list: OFF = everyone; ALLOWLIST = only those on the list; BLOCKLIST = everyone except those on the list. */
     public enum PlayerListMode implements Choice {
         OFF("off", "false"), ALLOWLIST("allowlist", "whitelist"), BLOCKLIST("blocklist", "blacklist");

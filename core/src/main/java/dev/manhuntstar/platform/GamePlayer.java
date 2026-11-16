@@ -15,6 +15,8 @@ public interface GamePlayer extends GameLiving, ForwardingAudience.Single {
 
     GameMode gameMode();
 
+    void setGameMode(GameMode mode);
+
     boolean hasPermission(String permission);
 
     /** Plays a sound only this player hears. */

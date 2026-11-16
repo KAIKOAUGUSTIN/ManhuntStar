@@ -17,11 +17,11 @@ import java.util.UUID;
 /**
  * Who the bots may hunt: the player list (allowed or blocked) and late joiners.
  * The hunt starts when a ring releases the bots (or when bots spawn without a ring) and ends when no
- * bot is left. Whoever is online at that moment takes part; whoever joins later is hunted right away,
- * protected for the ring's countdown time (at least 5 s) or left out until the next hunt, depending
- * on the "late-join" option. A participant who leaves and comes back is still hunted. A hunt that
- * started with nobody online treats the first one to join as a participant. The protection counts on
- * the hunt clock, which stops during the pause.
+ * bot is left or when the match ends ({@link MatchService}). Whoever is online at that moment takes
+ * part; whoever joins later is hunted right away, protected for the ring's countdown time (at least
+ * 5 s) or left out until the next hunt, depending on the "late-join" option. A participant who leaves
+ * and comes back is still hunted. A hunt that started with nobody online treats the first one to join
+ * as a participant. The protection counts on the hunt clock, which stops during the pause.
  */
 public final class HuntPolicy {
 
@@ -62,6 +62,7 @@ public final class HuntPolicy {
         for (GamePlayer p : Platform.server().onlinePlayers()) {
             participants.add(p.uuid());
         }
+        plugin.botManager().match().begin();
         plugin.botManager().markDirty();
     }
 
@@ -78,6 +79,11 @@ public final class HuntPolicy {
         excluded.clear();
         protectedUntil.clear();
         plugin.botManager().markDirty();
+    }
+
+    /** The player takes part in the hunt going on (was online at the start or was admitted later). */
+    public boolean isParticipant(UUID id) {
+        return active && participants.contains(id);
     }
 
     /** Does the player list allow hunting this player (and can they trigger the ring)? */
@@ -141,6 +147,8 @@ public final class HuntPolicy {
         long now = clock();
         if (plugin.botManager().allBots().isEmpty()) {
             end();
+            // no match without bots: whoever was out of it gets back in the game
+            plugin.botManager().match().reset();
             return;
         }
         for (GamePlayer p : Platform.server().onlinePlayers()) {

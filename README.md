@@ -57,6 +57,7 @@ The mods do the same as the plugin; their files (`config.yml`, `lang/`, `skins/`
 1. Join as an operator and run `/manhunt create Hunter 3` (or open `/manhunt menu`). Three hunters appear in a ring around you.
 2. Walk out of the ring. A countdown starts, with a bar at the top of the screen and 3-2-1 titles.
 3. When it ends, the hunters come after you. Run!
+4. Kill the Ender Dragon to win. If the hunters get you, you lose (see `manhunt.defeat`). Everyone gets a victory or defeat title and a short summary in the chat, and the bots stay where they are, partying or moping, until the next hunt.
 
 Use `/manhunt pause` and `/manhunt resume` to stop and continue the hunt, and `/manhunt remove all confirm` to clear every bot.
 
@@ -118,6 +119,7 @@ Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar
 - ⏱️ **Ring and countdown before the hunt** (`manhunt.countdown-seconds`, default 20): the bots wait in the ring until a player who was inside leaves; then the head-start countdown begins, and only then do they start hunting. A ring created far from everyone waits for someone to walk in and out (or for `/manhunt start`). With `manhunt.countdown-on-ring-leave: false` the countdown starts as soon as the bots are created; `0` = the bots are released as soon as someone leaves the ring.
 - 📍 **Ring radius and center**: `manhunt.ring-radius` (`0` = automatic, grows with the number of bots) and `manhunt.ring-center` (`auto` = where the ring is created; `manual` = at the point set with `/manhunt ring point`).
 - 🛡️ **Late joiners** (`manhunt.late-join`): `protected` (default) isn't a target for the ring's countdown time, at least 5 s; `hunted` becomes a target right away; `out` isn't hunted until the next hunt. Someone who was already in the hunt, drops and comes back is still hunted.
+- 🏆 **End of the match**: the hunted players win when the Ender Dragon dies. `manhunt.defeat` says when they lose: `all-died` (default) = once each of them died once; `first-death` = at the first death; `never` = deaths don't end it. With `all-died` and `first-death`, whoever dies goes through the death screen and then watches as a spectator; 15 s after the end they're back in their game mode, where they respawned. The summary shows who decided it, the hunt time (without the pauses), the deaths on each side, the bots' highest phase and the bot that killed the most.
 - 👤 **Player list** (`manhunt.player-list-mode` and `/manhunt players`): `allowlist` = only the listed players are hunted and trigger the ring; `blocklist` = the listed players aren't hunted and don't trigger the ring. `/manhunt target` overrides it.
 - ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
 - 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).

@@ -12,6 +12,7 @@ import dev.manhuntstar.platform.GameProjectile;
 import dev.manhuntstar.util.Locations;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mannequin;
@@ -103,9 +104,17 @@ public final class BotEntityListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    /** The Ender Dragon died: the hunted players win the match. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDragonDeath(EntityDeathEvent event) {
+        if (event.getEntity() instanceof EnderDragon) {
+            events().dragonDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        events().playerDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
+        events().playerDied(PaperEntities.of(event.getPlayer()), PaperEntities.of(event.getDamageSource().getCausingEntity()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

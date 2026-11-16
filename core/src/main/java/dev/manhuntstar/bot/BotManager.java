@@ -10,6 +10,7 @@ import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
+import dev.manhuntstar.manhunt.MatchService;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.platform.BotBody;
@@ -76,6 +77,7 @@ public final class BotManager {
     private final RingService rings;
     private final HuntPolicy policy;
     private final PauseService pause;
+    private final MatchService match;
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
@@ -93,6 +95,7 @@ public final class BotManager {
         this.rings = new RingService(plugin);
         this.policy = new HuntPolicy(plugin);
         this.pause = new PauseService(plugin);
+        this.match = new MatchService(plugin);
         this.tactics = new TacticsManager(this);
         this.caveAmbush = new CaveAmbush(this);
     }
@@ -119,6 +122,22 @@ public final class BotManager {
     /** The hunt pause and the clock that stops along with it. */
     public PauseService pause() {
         return pause;
+    }
+
+    /** The end of the match (victory, defeat, the players out of it and the summary). */
+    public MatchService match() {
+        return match;
+    }
+
+    /** The match ended: the bot stops hunting and only parties (the bots won) or mopes (they lost). */
+    public void stopHunting(Bot bot, boolean botsWon) {
+        tactics.forget(bot);
+        bot.endMatch(botsWon);
+    }
+
+    /** A new hunt: the bot that was partying or moping hunts again. */
+    public void resumeHunting(Bot bot) {
+        bot.clearEndBehavior();
     }
 
     public TacticsManager tactics() {
@@ -708,6 +727,7 @@ public final class BotManager {
             }
         }
         GameEntity killer = death.source().causingEntity();
+        match.botDied(killer);
         plugin.events().botDied(bot, death.source());
         if (killer instanceof GamePlayer p) {
             plugin.events().botKilledByPlayer(bot, p);
@@ -954,6 +974,7 @@ public final class BotManager {
         rings.cancelAll();
         policy.end();
         pause.reset();
+        match.reset();
         globalMaxPhase = 0;
         dirty = true;
         flush(false);
@@ -988,6 +1009,11 @@ public final class BotManager {
 
     public void tick() {
         playerTrail.tick(plugin.server().onlinePlayers(), plugin.server().currentTick());
+        match.tick();
+        if (match.isEnded()) {
+            tickEnded();
+            return;
+        }
         if (pause.isPaused()) {
             tickPaused();
             return;
@@ -1001,12 +1027,7 @@ public final class BotManager {
             try {
                 bot.tick();
             } catch (RuntimeException ex) {
-                long now = System.currentTimeMillis();
-                Long last = tickErrorLog.get(bot.id());
-                if (last == null || now - last > 60_000) {
-                    tickErrorLog.put(bot.id(), now);
-                    plugin.logger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
-                }
+                logTickError(bot, ex);
             }
         }
         tactics.tick();
@@ -1025,6 +1046,50 @@ public final class BotManager {
         if (now % 1200 == 0) {
             blockTracker.purge();
             inaccessibleHorses.values().removeIf(t -> t <= now);
+        }
+        if (now % PERSIST_INTERVAL_TICKS == 0) {
+            flush(true);
+        }
+    }
+
+    /** At most one log line per bot per minute, so a broken bot doesn't flood the console. */
+    private void logTickError(Bot bot, RuntimeException ex) {
+        long now = System.currentTimeMillis();
+        Long last = tickErrorLog.get(bot.id());
+        if (last == null || now - last > 60_000) {
+            tickErrorLog.put(bot.id(), now);
+            plugin.logger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
+        }
+    }
+
+    /**
+     * Match over: the bots stay where they are, partying or moping, until the next hunt; nobody respawns.
+     * Bots created for the next match wait in their ring as usual (it starts the next hunt when it releases them).
+     */
+    private void tickEnded() {
+        rings.tick();
+        if (!match.isEnded()) {
+            // a ring for the next match released its bots: the hunt starts over from the next tick
+            return;
+        }
+        for (Bot bot : new ArrayList<>(bots.values())) {
+            if (!bot.isAlive()) {
+                continue;
+            }
+            try {
+                if (bot.idle() != null && bot.idle().isActive()) {
+                    bot.tick();
+                } else {
+                    bot.tickEnded();
+                }
+            } catch (RuntimeException ex) {
+                logTickError(bot, ex);
+            }
+        }
+        temporaryBlocks.tick();
+        int now = Platform.server().currentTick();
+        if (now % 10 == 0) {
+            tickControlledHorses();
         }
         if (now % PERSIST_INTERVAL_TICKS == 0) {
             flush(true);
@@ -1185,10 +1250,11 @@ public final class BotManager {
         dirty = false;
     }
 
-    /** Pause, rings waiting and the hunt in progress (participants, protected players, who was left out). */
+    /** Pause, rings waiting, the hunt in progress (participants, protected players, who was left out) and the match. */
     private void saveManhunt(ConfigNode s) {
         s.set("pausada", pause.isPaused());
         policy.save(s.createSection("cacada"));
+        match.save(s.createSection("partida"));
         rings.save(s.createSection("rodas"));
     }
 
@@ -1202,6 +1268,7 @@ public final class BotManager {
             pause.pause();
         }
         policy.load(s.section("cacada"));
+        match.load(s.section("partida"));
         rings.load(s.section("rodas"));
     }
 
