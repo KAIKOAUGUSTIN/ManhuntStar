@@ -27,6 +27,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.KineticWeapon;
+import net.minecraft.world.item.component.Weapon;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.equipment.Equippable;
 
@@ -147,6 +148,12 @@ public final class ModItem implements GameItem {
     public int chargeDelayTicks() {
         KineticWeapon kw = stack.get(DataComponents.KINETIC_WEAPON);
         return kw == null ? -1 : kw.delayTicks();
+    }
+
+    @Override
+    public double disablesBlockingSeconds() {
+        Weapon w = stack.get(DataComponents.WEAPON);
+        return w == null ? 0 : w.disableBlockingForSeconds();
     }
 
     /** The stack as compressed NBT with the game's data version, so a newer game can update it. */

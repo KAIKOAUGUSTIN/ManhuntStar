@@ -524,7 +524,9 @@ public final class Navigator {
                     return true;
                 }
             }
-            bot.placeBlock(floor, Blocks.COBBLESTONE, true);
+            if (bot.placeBlock(floor, Blocks.COBBLESTONE, true)) {
+                bot.brain().noteBuildBlockPlaced();
+            }
             placeQueue.pollFirst();
             return true;
         }

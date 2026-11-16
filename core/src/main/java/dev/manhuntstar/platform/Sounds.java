@@ -40,6 +40,7 @@ public final class Sounds {
     public static final GameSound ITEM_CROSSBOW_SHOOT = GameSound.of("item.crossbow.shoot");
     public static final GameSound ITEM_FLINTANDSTEEL_USE = GameSound.of("item.flintandsteel.use");
     public static final GameSound ITEM_SHIELD_BLOCK = GameSound.of("item.shield.block");
+    public static final GameSound ITEM_SHIELD_BREAK = GameSound.of("item.shield.break");
     public static final GameSound ITEM_TRIDENT_THROW = GameSound.of("item.trident.throw");
     public static final GameSound UI_BUTTON_CLICK = GameSound.of("ui.button.click");
 

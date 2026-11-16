@@ -99,6 +99,8 @@ public final class Bot {
     private Pos pendingPillar;
     private int pendingPillarTicks;
     private Runnable pendingPillarDone;
+    /** The target the pending pillar was queued for: its block counts as a build toward that target only. */
+    private UUID pendingPillarTarget;
 
     Bot(BotManager manager, UUID id, String name, String visualName, SkinData skin, BotDifficulty difficulty) {
         this.manager = manager;
@@ -508,11 +510,16 @@ public final class Bot {
     }
 
     public boolean isWithinToweringRange(GamePlayer target, double maxAxisDistance) {
+        return horizontalDistanceTo(target) <= maxAxisDistance;
+    }
+
+    /** Horizontal distance to the player, or infinity when it is gone, dead or in another world. */
+    public double horizontalDistanceTo(GamePlayer target) {
         if (target == null || target.isDead() || !target.world().equals(world())) {
-            return false;
+            return Double.POSITIVE_INFINITY;
         }
         Vec3 p = pos();
-        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z()) <= maxAxisDistance;
+        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z());
     }
 
     // ------------------------------------------------------------------ aim and pose
@@ -766,10 +773,22 @@ public final class Bot {
         pendingPillar = feetBlock;
         pendingPillarTicks = 0;
         pendingPillarDone = onDone;
+        GamePlayer queuedFor = target();
+        pendingPillarTarget = queuedFor == null ? null : queuedFor.uuid();
     }
 
     public boolean hasPendingPillar() {
         return pendingPillar != null;
+    }
+
+    /**
+     * Drops the queued pillar block: the bot was teleported or died, and the block is where it was before
+     * ({@link #placeBlock} checks no distance). It ends like a pillar that ran out of time: the tower stops sneaking.
+     */
+    public void cancelPendingPillar() {
+        if (pendingPillar != null) {
+            finishPendingPillar();
+        }
     }
 
     private void tickPendingPillar() {
@@ -781,14 +800,24 @@ public final class Bot {
         boolean placed = false;
         if (pos().y() >= target.y() + 1.0 && WorldUtil.canBeReplaced(world(), target)) {
             placed = placeBlock(target, Blocks.COBBLESTONE, false);
+            // a pillar queued for another target (it changed meanwhile) doesn't count as a build toward the new one
+            GamePlayer current = target();
+            if (placed && brain != null && current != null && current.uuid().equals(pendingPillarTarget)) {
+                brain.noteBuildBlockPlaced();
+            }
         }
         if (placed || pendingPillarTicks > 12 || (pendingPillarTicks > 2 && onGround() && pos().y() < target.y() + 0.5)) {
-            Runnable done = pendingPillarDone;
-            pendingPillar = null;
-            pendingPillarDone = null;
-            if (done != null) {
-                done.run();
-            }
+            finishPendingPillar();
+        }
+    }
+
+    private void finishPendingPillar() {
+        Runnable done = pendingPillarDone;
+        pendingPillar = null;
+        pendingPillarDone = null;
+        pendingPillarTarget = null;
+        if (done != null) {
+            done.run();
         }
     }
 
@@ -866,6 +895,7 @@ public final class Bot {
 
     /** Recreates the AI subsystems (same as the "new" bot the mod created on every respawn). */
     void resetRuntime() {
+        cancelPendingPillar();
         brain.navigator().reset();
         createRuntime();
         idle = null;

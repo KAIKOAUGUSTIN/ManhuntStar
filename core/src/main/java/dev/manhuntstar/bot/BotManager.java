@@ -79,6 +79,7 @@ public final class BotManager {
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
+    private final PlayerTrail playerTrail = new PlayerTrail();
     private UUID forcedTarget;
     private int globalMaxPhase;
     private boolean dirty;
@@ -134,6 +135,11 @@ public final class BotManager {
 
     public TemporaryBlocks temporaryBlocks() {
         return temporaryBlocks;
+    }
+
+    /** Where each online player was in the last ticks (the bots' melee reach against players). */
+    public PlayerTrail playerTrail() {
+        return playerTrail;
     }
 
     public Collection<Bot> allBots() {
@@ -981,6 +987,7 @@ public final class BotManager {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        playerTrail.tick(plugin.server().onlinePlayers(), plugin.server().currentTick());
         if (pause.isPaused()) {
             tickPaused();
             return;
