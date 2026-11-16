@@ -89,6 +89,11 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
 
     @Override
     public void askText(GamePlayer player, TextPrompt prompt) {
+        // PaperEntities.bukkit gives null for no player
+        Player p = PaperEntities.bukkit(player);
+        if (p == null) {
+            return;
+        }
         DialogBase base = DialogBase.builder(prompt.title())
                 .canCloseWithEscape(true)
                 .pause(false)
@@ -100,8 +105,9 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
                         .build()))
                 .build();
         // a confirmation dialog: Esc does what its second button does
-        DialogType type = DialogType.confirmation(button(prompt.confirm(), TextPrompt.SUBMIT), button(prompt.cancel(), TextPrompt.CANCEL));
-        PaperEntities.bukkit(player).showDialog(Dialog.create(factory -> factory.empty().base(base).type(type)));
+        DialogType type = DialogType.confirmation(button(prompt.confirm(), TextPrompt.SUBMIT_CLICK),
+                button(prompt.cancel(), TextPrompt.CANCEL_CLICK));
+        p.showDialog(Dialog.create(factory -> factory.empty().base(base).type(type)));
     }
 
     /** A button that sends {@code click} with the dialog's inputs. */
@@ -116,11 +122,11 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
             return;
         }
         String id = event.getIdentifier().asString();
-        if (id.equals(TextPrompt.SUBMIT)) {
+        if (id.equals(TextPrompt.SUBMIT_CLICK)) {
             DialogResponseView answer = event.getDialogResponseView();
             String text = answer == null ? null : answer.getText(TextPrompt.INPUT);
             plugin.core().menus().textEntered(PaperEntities.of(connection.getPlayer()), text);
-        } else if (id.equals(TextPrompt.CANCEL)) {
+        } else if (id.equals(TextPrompt.CANCEL_CLICK)) {
             plugin.core().menus().textCancelled(PaperEntities.of(connection.getPlayer()));
         }
     }

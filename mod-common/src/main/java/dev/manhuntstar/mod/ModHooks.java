@@ -354,10 +354,10 @@ public final class ModHooks {
         }
         String click = id.toString();
         try {
-            if (click.equals(TextPrompt.SUBMIT)) {
+            if (click.equals(TextPrompt.SUBMIT_CLICK)) {
                 String text = payload.orElse(null) instanceof CompoundTag answer ? answer.getStringOr(TextPrompt.INPUT, null) : null;
                 core.menus().textEntered(ModEntities.of(player), text);
-            } else if (click.equals(TextPrompt.CANCEL)) {
+            } else if (click.equals(TextPrompt.CANCEL_CLICK)) {
                 core.menus().textCancelled(ModEntities.of(player));
             }
         } catch (Throwable t) {

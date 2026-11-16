@@ -136,8 +136,8 @@ public final class ModMenuScreens implements MenuScreens {
         CommonDialogData common = new CommonDialogData(server.vanilla(prompt.title()), Optional.empty(), true, false, DialogAction.CLOSE,
                 List.of(), List.of(new Input(TextPrompt.INPUT, box)));
         // a confirmation dialog: Esc does what its second button does
-        ConfirmationDialog dialog = new ConfirmationDialog(common, button(server.vanilla(prompt.confirm()), TextPrompt.SUBMIT),
-                button(server.vanilla(prompt.cancel()), TextPrompt.CANCEL));
+        ConfirmationDialog dialog = new ConfirmationDialog(common, button(server.vanilla(prompt.confirm()), TextPrompt.SUBMIT_CLICK),
+                button(server.vanilla(prompt.cancel()), TextPrompt.CANCEL_CLICK));
         ModEntities.vanilla(player).openDialog(Holder.direct(dialog));
     }
 
