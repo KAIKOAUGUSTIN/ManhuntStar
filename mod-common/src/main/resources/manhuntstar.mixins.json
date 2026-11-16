@@ -23,8 +23,8 @@
     "PlayerInfoUpdatePacketAccessor",
     "PlayerListMixin",
     "ProjectileMixin",
+    "ServerCommonPacketListenerImplMixin",
     "ServerExplosionMixin",
-    "ServerGamePacketListenerImplMixin",
     "ServerPlayerGameModeMixin",
     "ServerPlayerMixin"
   ],

@@ -4,6 +4,7 @@ import dev.manhuntstar.ManhuntCore;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.GameEvents;
+import dev.manhuntstar.gui.TextPrompt;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameProjectile;
@@ -12,7 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.status.ServerStatus;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.NameAndId;
@@ -342,17 +346,22 @@ public final class ModHooks {
         }
     }
 
-    /** A chat message: true when a menu was waiting for it (it isn't shown to anyone). */
-    public static boolean chat(ServerPlayer player, String text) {
+    /** A custom click from a dialog: the answer to a text the menu asked for ({@link TextPrompt}). */
+    public static void dialog(ServerPlayer player, Identifier id, Optional<Tag> payload) {
         ManhuntCore core = core();
         if (core == null) {
-            return false;
+            return;
         }
+        String click = id.toString();
         try {
-            return core.menus().chatTyped(ModEntities.of(player), text.trim());
+            if (click.equals(TextPrompt.SUBMIT)) {
+                String text = payload.orElse(null) instanceof CompoundTag answer ? answer.getStringOr(TextPrompt.INPUT, null) : null;
+                core.menus().textEntered(ModEntities.of(player), text);
+            } else if (click.equals(TextPrompt.CANCEL)) {
+                core.menus().textCancelled(ModEntities.of(player));
+            }
         } catch (Throwable t) {
-            failed("a chat message", t);
-            return false;
+            failed("a dialog's answer", t);
         }
     }
 

@@ -8,7 +8,7 @@
 #  Не меняйте «version».
 # ==============================================================================
 
-version: 2
+version: 3
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -490,11 +490,18 @@ menu:
     config: "<dark_gray>Настройки</dark_gray>"
     options: "<dark_gray>Опции</dark_gray>"
     confirm: "<dark_red>Удалить всех ботов?</dark_red>"
-  type-name: "<yellow>Введите в чат имя ботов (% - для номера). Введите <white>отмена</white>, чтобы отказаться.</yellow>"
-  type-skin: "<yellow>Введите в чат имя игрока со скином (или <white>-</white>, чтобы взять имя бота).</yellow>"
-  type-player: "<yellow>Введите в чат имя игрока, которого нужно добавить в список. Введите <white>отмена</white>, чтобы отказаться.</yellow>"
-  cancel-word: "отмена"
-  cancelled: "<gray>Отменено.</gray>"
+  dialog:
+    name:
+      title: "Имя ботов"
+      label: "Имя (% заменяется номером бота)"
+    skin:
+      title: "Скин ботов"
+      label: "Игрок, чей скин они получат (пусто - имя самих ботов)"
+    player:
+      title: "Добавить игрока в список"
+      label: "Имя игрока"
+    confirm: "Готово"
+    cancel: "Отмена"
   back: "Назад"
   close: "Закрыть"
   main:
@@ -570,7 +577,7 @@ menu:
     "no": "Отмена"
   create:
     name: "Имя: <name>"
-    name-lore: "Нажмите и введите в чат (% - для номера)"
+    name-lore: "Нажмите, чтобы ввести имя (% - для номера)"
     skin: "Скин: <skin>"
     skin-same: "(то же имя)"
     skin-lore: "Нажмите и введите имя игрока"

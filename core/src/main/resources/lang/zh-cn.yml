@@ -6,7 +6,7 @@
 #  重命名或替换已改变的文本），并保留你修改过的文本；旧文件的副本会放到 lang/old/。请勿修改 "version"。
 # ==============================================================================
 
-version: 2
+version: 3
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -488,11 +488,18 @@ menu:
     config: "<dark_gray>设置</dark_gray>"
     options: "<dark_gray>选项</dark_gray>"
     confirm: "<dark_red>删除所有机器人？</dark_red>"
-  type-name: "<yellow>在聊天栏输入机器人的名字（用 % 表示编号）。输入 <white>取消</white> 放弃。</yellow>"
-  type-skin: "<yellow>在聊天栏输入皮肤所属玩家的名字（或输入 <white>-</white> 使用机器人的名字）。</yellow>"
-  type-player: "<yellow>在聊天栏输入要加入名单的玩家名字。输入 <white>取消</white> 放弃。</yellow>"
-  cancel-word: "取消"
-  cancelled: "<gray>已取消。</gray>"
+  dialog:
+    name:
+      title: "机器人的名字"
+      label: "名字（% 会换成每个机器人的编号）"
+    skin:
+      title: "机器人的皮肤"
+      label: "使用哪位玩家的皮肤（留空：用机器人自己的名字）"
+    player:
+      title: "把玩家加入名单"
+      label: "玩家名字"
+    confirm: "完成"
+    cancel: "取消"
   back: "返回"
   close: "关闭"
   main:
@@ -568,7 +575,7 @@ menu:
     "no": "取消"
   create:
     name: "名字：<name>"
-    name-lore: "点击后在聊天栏输入（用 % 表示编号）"
+    name-lore: "点击输入名字（用 % 表示编号）"
     skin: "皮肤：<skin>"
     skin-same: "（同名）"
     skin-lore: "点击后输入玩家名字"

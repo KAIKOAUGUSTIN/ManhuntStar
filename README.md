@@ -105,7 +105,7 @@ The group name comes before the action.
 |---|---|
 | `/manhunt settings [option] [value]` | Shows or changes options (`language`, `pathmode`, `pathnodes`, `allowtowering`, `targetmode`, `glowhunters true red`, `countdown 20`, `ringradius auto`...). |
 | `/manhunt reload` | Reloads `config.yml` and the language files. |
-| `/manhunt menu` | Chest menu in four sections: Match, Hunt rules, Bots and Settings. |
+| `/manhunt menu` | Chest menu in four sections: Match, Hunt rules, Bots and Settings. Names (bots, skin, player) are typed in a dialog box. |
 
 Difficulties: `easy`, `medium`, `hard`, `terminator`.
 
@@ -170,7 +170,6 @@ Gradle checks every dependency it downloads against the checksums in `gradle/ver
 ## ⚠️ Limitations
 
 - Other plugins and mods that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
-- Bot and group names in the menu are typed in chat.
 
 ## 🙏 Credits
 
