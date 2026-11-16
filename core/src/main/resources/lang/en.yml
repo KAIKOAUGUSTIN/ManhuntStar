@@ -7,7 +7,7 @@
 #  edited; a copy of it goes to lang/old/. Don't change "version".
 # ==============================================================================
 
-version: 2
+version: 3
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -489,11 +489,18 @@ menu:
     config: "<dark_gray>Settings</dark_gray>"
     options: "<dark_gray>Options</dark_gray>"
     confirm: "<dark_red>Delete every bot?</dark_red>"
-  type-name: "<yellow>Type the bots' name in chat (use % for the number). Type <white>cancel</white> to give up.</yellow>"
-  type-skin: "<yellow>Type the name of the skin's player in chat (or <white>-</white> to use the bot's name).</yellow>"
-  type-player: "<yellow>Type the name of the player to add to the list in chat. Type <white>cancel</white> to give up.</yellow>"
-  cancel-word: "cancel"
-  cancelled: "<gray>Cancelled.</gray>"
+  dialog:
+    name:
+      title: "Bots' name"
+      label: "Name (% becomes each bot's number)"
+    skin:
+      title: "Bots' skin"
+      label: "Player whose skin they wear (empty: the bots' own name)"
+    player:
+      title: "Add a player to the list"
+      label: "Player's name"
+    confirm: "Done"
+    cancel: "Cancel"
   back: "Back"
   close: "Close"
   main:
@@ -569,7 +576,7 @@ menu:
     "no": "Cancel"
   create:
     name: "Name: <name>"
-    name-lore: "Click and type in chat (use % for the number)"
+    name-lore: "Click to type the name (% becomes the number)"
     skin: "Skin: <skin>"
     skin-same: "(same name)"
     skin-lore: "Click and type a player name"

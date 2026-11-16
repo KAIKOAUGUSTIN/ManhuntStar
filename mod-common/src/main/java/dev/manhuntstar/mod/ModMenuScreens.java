@@ -5,11 +5,23 @@ import dev.manhuntstar.gui.Menu;
 import dev.manhuntstar.gui.MenuClick;
 import dev.manhuntstar.gui.MenuIcon;
 import dev.manhuntstar.gui.MenuScreens;
+import dev.manhuntstar.gui.TextPrompt;
 import dev.manhuntstar.platform.GamePlayer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.dialog.ActionButton;
+import net.minecraft.server.dialog.CommonButtonData;
+import net.minecraft.server.dialog.CommonDialogData;
+import net.minecraft.server.dialog.ConfirmationDialog;
+import net.minecraft.server.dialog.DialogAction;
+import net.minecraft.server.dialog.Input;
+import net.minecraft.server.dialog.action.CustomAll;
+import net.minecraft.server.dialog.input.TextInput;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -23,9 +35,10 @@ import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.component.ResolvableProfile;
 
 /**
- * Core's menus as vanilla chest screens, so players need nothing installed. No item ever moves: every
- * click is turned into a {@link MenuClick} for core (as Bukkit's click types read it) and the game sends
- * the slots back as they were.
+ * Core's menus as vanilla chest screens and the texts they ask for as vanilla dialogs, so players need
+ * nothing installed. No item ever moves: every click is turned into a {@link MenuClick} for core (as
+ * Bukkit's click types read it) and the game sends the slots back as they were. The dialogs' answers come
+ * through ServerCommonPacketListenerImplMixin.
  */
 public final class ModMenuScreens implements MenuScreens {
 
@@ -113,6 +126,25 @@ public final class ModMenuScreens implements MenuScreens {
     @Override
     public void close(GamePlayer player) {
         ModEntities.vanilla(player).closeContainer();
+    }
+
+    @Override
+    public void askText(GamePlayer player, TextPrompt prompt) {
+        ModServer server = ModServer.get();
+        TextInput box = new TextInput(TextPrompt.INPUT_WIDTH, server.vanilla(prompt.label()), true, prompt.initial(), prompt.maxLength(),
+                Optional.empty());
+        CommonDialogData common = new CommonDialogData(server.vanilla(prompt.title()), Optional.empty(), true, false, DialogAction.CLOSE,
+                List.of(), List.of(new Input(TextPrompt.INPUT, box)));
+        // a confirmation dialog: Esc does what its second button does
+        ConfirmationDialog dialog = new ConfirmationDialog(common, button(server.vanilla(prompt.confirm()), TextPrompt.SUBMIT_CLICK),
+                button(server.vanilla(prompt.cancel()), TextPrompt.CANCEL_CLICK));
+        ModEntities.vanilla(player).openDialog(Holder.direct(dialog));
+    }
+
+    /** A button that sends {@code click} with the dialog's inputs. */
+    private static ActionButton button(Component label, String click) {
+        CustomAll action = new CustomAll(Identifier.parse(click), Optional.empty());
+        return new ActionButton(new CommonButtonData(label, TextPrompt.BUTTON_WIDTH), Optional.of(action));
     }
 
     private static ItemStack stack(MenuIcon icon) {

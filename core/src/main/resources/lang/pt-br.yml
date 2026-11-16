@@ -7,7 +7,7 @@
 #  trocados) e mantém os textos que você editou; uma cópia dele vai para lang/old/. Não mude "version".
 # ==============================================================================
 
-version: 2
+version: 3
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -489,11 +489,18 @@ menu:
     config: "<dark_gray>Configurações</dark_gray>"
     options: "<dark_gray>Opções</dark_gray>"
     confirm: "<dark_red>Apagar todos os bots?</dark_red>"
-  type-name: "<yellow>Digite no chat o nome dos bots (use % para o número). Digite <white>cancelar</white> para desistir.</yellow>"
-  type-skin: "<yellow>Digite no chat o nome do jogador da skin (ou <white>-</white> para usar o nome do bot).</yellow>"
-  type-player: "<yellow>Digite no chat o nome do jogador para pôr na lista. Digite <white>cancelar</white> para desistir.</yellow>"
-  cancel-word: "cancelar"
-  cancelled: "<gray>Cancelado.</gray>"
+  dialog:
+    name:
+      title: "Nome dos bots"
+      label: "Nome (% vira o número de cada bot)"
+    skin:
+      title: "Skin dos bots"
+      label: "Jogador de quem pegam a skin (vazio: o próprio nome dos bots)"
+    player:
+      title: "Pôr um jogador na lista"
+      label: "Nome do jogador"
+    confirm: "Pronto"
+    cancel: "Cancelar"
   back: "Voltar"
   close: "Fechar"
   main:
@@ -569,7 +576,7 @@ menu:
     "no": "Cancelar"
   create:
     name: "Nome: <name>"
-    name-lore: "Clique e digite no chat (use % para o número)"
+    name-lore: "Clique para digitar o nome (% vira o número)"
     skin: "Skin: <skin>"
     skin-same: "(mesmo nome)"
     skin-lore: "Clique e digite o nome de um jogador"

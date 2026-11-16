@@ -78,6 +78,35 @@ class LanguageUpgradeTest {
     }
 
     @Test
+    void version2LosesTheChatPromptsAndGetsTheDialogTexts() throws IOException {
+        Path lang = dir.resolve("lang");
+        Files.createDirectories(lang);
+        Files.writeString(lang.resolve("pt-br.yml"), """
+                version: 2
+                menu:
+                  type-name: "<yellow>Digite no chat o nome dos bots</yellow>"
+                  cancel-word: "cancelar"
+                  cancelled: "<gray>Cancelado.</gray>"
+                  back: "Voltar!"
+                  create:
+                    name-lore: "Clique e digite no chat (use % para o número)"
+                """, StandardCharsets.UTF_8);
+
+        Messages.install(yaml, lang.toFile(), this::resource, Logger.getAnonymousLogger());
+
+        ConfigNode pt = yaml.load(lang.resolve("pt-br.yml").toFile());
+        assertEquals(3, pt.getInt("version", 0));
+        for (String gone : List.of("menu.type-name", "menu.cancel-word", "menu.cancelled")) {
+            assertFalse(pt.contains(gone), gone);
+        }
+        assertEquals("Nome dos bots", pt.getString("menu.dialog.name.title"));
+        assertEquals("Cancelar", pt.getString("menu.dialog.cancel"));
+        assertEquals("Voltar!", pt.getString("menu.back"), "an edited text is kept");
+        assertEquals("Clique para digitar o nome (% vira o número)", pt.getString("menu.create.name-lore"),
+                "the lore that said to type in the chat gets the new text");
+    }
+
+    @Test
     void aLanguageWithAYamlErrorIsLeftAlone() throws IOException {
         Path lang = dir.resolve("lang");
         Files.createDirectories(lang);
