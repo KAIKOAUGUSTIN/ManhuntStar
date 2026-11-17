@@ -31,6 +31,7 @@ public final class Sounds {
     public static final GameSound ENTITY_PLAYER_HURT = GameSound.of("entity.player.hurt");
     public static final GameSound ENTITY_PLAYER_TELEPORT = GameSound.of("entity.player.teleport");
     public static final GameSound ENTITY_SLIME_ATTACK = GameSound.of("entity.slime.attack");
+    public static final GameSound ENTITY_WITHER_DEATH = GameSound.of("entity.wither.death");
     public static final GameSound ITEM_BUCKET_EMPTY = GameSound.of("item.bucket.empty");
     public static final GameSound ITEM_BUCKET_EMPTY_LAVA = GameSound.of("item.bucket.empty_lava");
     public static final GameSound ITEM_BUCKET_FILL = GameSound.of("item.bucket.fill");
@@ -43,6 +44,7 @@ public final class Sounds {
     public static final GameSound ITEM_SHIELD_BREAK = GameSound.of("item.shield.break");
     public static final GameSound ITEM_TRIDENT_THROW = GameSound.of("item.trident.throw");
     public static final GameSound UI_BUTTON_CLICK = GameSound.of("ui.button.click");
+    public static final GameSound UI_TOAST_CHALLENGE_COMPLETE = GameSound.of("ui.toast.challenge_complete");
 
     private Sounds() {
     }

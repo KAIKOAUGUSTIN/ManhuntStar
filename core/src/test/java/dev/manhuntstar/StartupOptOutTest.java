@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.manhuntstar.config.FailingSaveYamlFiles;
 import dev.manhuntstar.config.SnakeYamlFiles;
+import dev.manhuntstar.config.upgrade.ConfigUpgrade;
 import dev.manhuntstar.host.ManhuntPlatform;
 import dev.manhuntstar.platform.FakeServer;
 import dev.manhuntstar.platform.Platform;
@@ -59,7 +60,7 @@ class StartupOptOutTest {
         startLegacy(true, false, (core, yaml) -> {
             assertTrue(Files.exists(dir.resolve("config-old.yml")), "the 1.5 file is kept as config-old.yml");
             ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
-            assertEquals(2, saved.getInt("config-version", 0));
+            assertEquals(ConfigUpgrade.VERSIONS.latest(), saved.getInt("config-version", 0));
             assertFalse(saved.getBoolean("faststats.statistics", true));
             assertFalse(saved.getBoolean("faststats.error-reports", true));
             assertFalse(saved.getBoolean("bots.respawn", true), "respawn: nao stays off");
@@ -74,7 +75,7 @@ class StartupOptOutTest {
         startLegacy(false, false, (core, yaml) -> {
             assertTrue(Files.exists(dir.resolve("config-old.yml")));
             ConfigNode saved = yaml.load(dir.resolve("config.yml").toFile());
-            assertEquals(2, saved.getInt("config-version", 0));
+            assertEquals(ConfigUpgrade.VERSIONS.latest(), saved.getInt("config-version", 0));
             assertTrue(saved.getBoolean("faststats.statistics", false));
             assertTrue(core.settings().statistics.on());
             assertTrue(core.settings().errorReports.on());
@@ -154,7 +155,7 @@ class StartupOptOutTest {
                 } else if (failUpgrade) {
                     assertEquals(1, saved.getInt("config-version", 1));
                 } else {
-                    assertEquals(2, saved.getInt("config-version", 1));
+                    assertEquals(ConfigUpgrade.VERSIONS.latest(), saved.getInt("config-version", 1));
                     assertFalse(saved.getBoolean("faststats.statistics", true));
                     assertFalse(saved.getBoolean("faststats.error-reports", true));
                 }
@@ -167,7 +168,7 @@ class StartupOptOutTest {
                     assertFalse(restarted.settings().statistics.on());
                     assertFalse(restarted.settings().errorReports.on());
                     saved = yaml.load(dir.resolve("config.yml").toFile());
-                    assertEquals(2, saved.getInt("config-version", 0));
+                    assertEquals(ConfigUpgrade.VERSIONS.latest(), saved.getInt("config-version", 0));
                     assertFalse(saved.getBoolean("faststats.statistics", true));
                     assertFalse(saved.getBoolean("faststats.error-reports", true));
                 } finally {

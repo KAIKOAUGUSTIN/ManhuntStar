@@ -34,6 +34,8 @@ public final class ConfigUpgrade {
 
     public static final FileVersions VERSIONS = new FileVersions("config-version", 1, List.of(
             // 1 -> 2: the faststats section (new options only)
+            FileVersions.nothing(),
+            // 2 -> 3: manhunt.defeat (new option only)
             FileVersions.nothing()));
 
     /** The first version with FastStats: a config.yml older than it gets bStats' choice. */

@@ -21,6 +21,8 @@ public final class LanguageUpgrade {
             FileVersions.nothing(),
             // 2 -> 3: menu.dialog.* in place of menu.type-name, type-skin, type-player, cancel-word and
             // cancelled, which the update leaves out because they no longer exist
+            FileVersions.nothing(),
+            // 3 -> 4: match.* (the end of the match) and options.defeat (new texts only)
             FileVersions.nothing()));
 
     /** For each version, the texts whose new default replaces the owner's. */

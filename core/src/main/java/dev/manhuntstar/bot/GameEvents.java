@@ -59,7 +59,8 @@ public final class GameEvents {
     public DamageDecision botDamaged(Bot bot, DamageInfo src, double damage) {
         DamageKind kind = src.kind();
         boolean bypass = kind == DamageKind.OUT_OF_WORLD || kind == DamageKind.GENERIC_KILL;
-        if (!bypass && (manager().pause().isPaused() || settings().countdownInvulnerable.on() && manager().rings().holds(bot))) {
+        if (!bypass && (manager().pause().isPaused() || manager().match().isEnded()
+                || settings().countdownInvulnerable.on() && manager().rings().holds(bot))) {
             return DamageDecision.CANCEL;
         }
         if (!bypass && settings().botInvincible.on()) {
@@ -123,11 +124,17 @@ public final class GameEvents {
     }
 
     /** A player died; {@code killer} is who caused it (may be a bot's body, or null). */
-    public void playerDied(GameEntity killer) {
+    public void playerDied(GamePlayer victim, GameEntity killer) {
         Bot bot = manager().byEntity(killer);
         if (bot != null) {
             bot.incrementKills();
         }
+        manager().match().playerDied(victim, killer);
+    }
+
+    /** The Ender Dragon died; {@code killer} is who caused it (may be null). The hunted players win the match. */
+    public void dragonDied(GameEntity killer) {
+        manager().match().dragonDied(killer);
     }
 
     /** A totem saved the bot: it goes back to its usual offhand in the next tick. */
@@ -212,6 +219,7 @@ public final class GameEvents {
     public void playerJoined(GamePlayer p) {
         // hunt in progress: hunted right away, protected or left out, depending on the option
         manager().policy().admit(p);
+        manager().match().playerJoined(p);
         host.server().runLater(() -> {
             if (p.isOnline()) {
                 host.tabList().sendAll(p);
@@ -219,9 +227,16 @@ public final class GameEvents {
         }, 2L);
     }
 
-    /** The player respawned far away: bots more than 150 blocks away reappear near them after a while. */
+    /**
+     * The player respawned: someone out of the match becomes a spectator, and bots more than 150 blocks away
+     * reappear near them after a while.
+     */
     public void playerRespawned(GamePlayer p) {
         host.server().runNextTick(() -> {
+            if (p.isOnline()) {
+                // out of the match: watches as a spectator
+                manager().match().playerRespawned(p);
+            }
             for (Bot b : manager().aliveBots()) {
                 if (b.world() != p.world()) {
                     continue;

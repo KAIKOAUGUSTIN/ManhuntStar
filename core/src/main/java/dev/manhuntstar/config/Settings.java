@@ -1,6 +1,7 @@
 package dev.manhuntstar.config;
 
 import dev.manhuntstar.bot.BotDifficulty;
+import dev.manhuntstar.bot.Modes.Defeat;
 import dev.manhuntstar.bot.Modes.GearPersistence;
 import dev.manhuntstar.bot.Modes.GlowColor;
 import dev.manhuntstar.bot.Modes.LateJoin;
@@ -142,6 +143,7 @@ public final class Settings {
     public final Setting.Dbl ringRadius = dbl("manhunt.ring-radius", "manhunt.raio-roda", "ringradius", Category.MANHUNT, 0.0, 0.0, 64.0, 1.0);
     public final Setting.Enumerated<RingCenter> ringCenter = choice("manhunt.ring-center", "manhunt.centro-roda", "ringcenter", Category.MANHUNT, RingCenter.class, RingCenter.AUTO);
     public final Setting.Enumerated<LateJoin> lateJoin = choice("manhunt.late-join", "manhunt.quem-entra-no-meio", "latejoin", Category.MANHUNT, LateJoin.class, LateJoin.PROTECTED);
+    public final Setting.Enumerated<Defeat> defeat = choice("manhunt.defeat", null, "defeat", Category.MANHUNT, Defeat.class, Defeat.ALL_DIED);
     public final Setting.Enumerated<PlayerListMode> playerListMode = choice("manhunt.player-list-mode", "manhunt.lista-modo", "playerlistmode", Category.MANHUNT, PlayerListMode.class, PlayerListMode.OFF);
 
     // --- Appearance ---

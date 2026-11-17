@@ -8,7 +8,7 @@
 #  Ne modifiez pas « version ».
 # ==============================================================================
 
-version: 3
+version: 4
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -129,6 +129,24 @@ pause:
   already-paused: "<gray>La chasse est déjà en pause. Utilisez /manhunt resume pour continuer.</gray>"
   not-paused: "<gray>La chasse n'est pas en pause.</gray>"
   state: "en pause"
+
+# --- end of the match ---
+match:
+  victory-title: "<gold><bold>VICTOIRE</bold></gold>"
+  victory-subtitle: "<yellow><player></yellow> <gray>a tué l'Ender Dragon</gray>"
+  victory-subtitle-unknown: "<gray>L'Ender Dragon est mort</gray>"
+  defeat-title: "<dark_red><bold>DÉFAITE</bold></dark_red>"
+  defeat-subtitle: "<gray>Les chasseurs ont gagné</gray>"
+  summary-victory: "<gold><bold>Victoire !</bold></gold> <yellow><player></yellow> <gray>a tué l'Ender Dragon.</gray>"
+  summary-victory-unknown: "<gold><bold>Victoire !</bold></gold> <gray>L'Ender Dragon est mort.</gray>"
+  summary-defeat: "<dark_red><bold>Défaite !</bold></dark_red> <gray>Les chasseurs ont gagné ; le dernier à tomber :</gray> <yellow><player></yellow><gray>.</gray>"
+  summary-stats: "<gray>Durée de la chasse :</gray> <white><time></white> <dark_gray>·</dark_gray> <gray>morts :</gray> <white><playerdeaths></white> <gray>joueurs,</gray> <white><botdeaths></white> <gray>bots</gray>"
+  summary-bots: "<gray>Phase la plus haute des bots :</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>meilleur chasseur :</gray> <white><bot></white> <gray>(<kills> éliminations)</gray>"
+  summary-bots-no-kills: "<gray>Phase la plus haute des bots :</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>aucun bot n'a tué personne.</gray>"
+  player-out: "<yellow><player></yellow> <gray>est éliminé de la partie.</gray> <gray>Chassés encore en jeu :</gray> <white><left></white>"
+  spectating: "<gray>Vous êtes éliminé : vous regardez en spectateur jusqu'à la fin de la partie.</gray>"
+  returning: "<gray>Retour en jeu dans</gray> <yellow><seconds></yellow> <gray>secondes.</gray>"
+  back: "<green>Vous êtes de retour en jeu.</green>"
 
 # --- update check ---
 update:
@@ -456,6 +474,9 @@ options:
   latejoin:
     name: "Arrivées en cours de chasse"
     description: "Qui arrive pendant la chasse : hunted = devient une cible tout de suite ; protected = n'est pas une cible pendant le compte à rebours (au moins 5 s) ; out = n'est pas chassé avant la prochaine chasse."
+  defeat:
+    name: "Défaite"
+    description: "Quand les chassés perdent (la mort de l'Ender Dragon est toujours une victoire) : all-died = quand chacun est mort une fois (qui meurt regarde en spectateur) ; first-death = à la première mort ; never = les morts ne terminent pas la partie."
   playerlistmode:
     name: "Liste de joueurs"
     description: "off = tout le monde peut être chassé ; allowlist = seuls les joueurs de la liste sont chassés et déclenchent le cercle ; blocklist = les joueurs de la liste ne sont pas chassés et ne déclenchent pas le cercle."

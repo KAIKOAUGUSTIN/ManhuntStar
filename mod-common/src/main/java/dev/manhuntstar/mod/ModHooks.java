@@ -26,6 +26,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
@@ -120,7 +121,7 @@ public final class ModHooks {
 
     /**
      * A living entity died and is about to drop its loot. A bot's body drops what core decides instead
-     * (true: the game's drops are skipped).
+     * (true: the game's drops are skipped); the Ender Dragon's death ends the match.
      */
     public static boolean botDrops(LivingEntity entity, ServerLevel level, DamageSource source) {
         ManhuntCore core = core();
@@ -130,6 +131,10 @@ public final class ModHooks {
         try {
             Bot bot = bot(core, entity);
             if (bot == null) {
+                if (entity instanceof EnderDragon) {
+                    // the hunted players win the match
+                    core.gameEvents().dragonDied(ModEntities.of(source.getEntity()));
+                }
                 return false;
             }
             ModBotDeath death = new ModBotDeath(source);
@@ -147,12 +152,12 @@ public final class ModHooks {
         }
     }
 
-    /** A player died (for the bots' kill count). */
+    /** A player died (for the bots' kill count and the end of the match). */
     public static void playerDied(ServerPlayer player, DamageSource source) {
         ManhuntCore core = core();
         if (core != null) {
             try {
-                core.gameEvents().playerDied(ModEntities.of(source.getEntity()));
+                core.gameEvents().playerDied(ModEntities.of(player), ModEntities.of(source.getEntity()));
             } catch (Throwable t) {
                 failed("a player's death", t);
             }

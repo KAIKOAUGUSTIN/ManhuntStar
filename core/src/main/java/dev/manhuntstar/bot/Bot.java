@@ -2,6 +2,7 @@ package dev.manhuntstar.bot;
 
 import dev.manhuntstar.bot.ability.PearlAbility;
 import dev.manhuntstar.bot.ai.Brain;
+import dev.manhuntstar.bot.ai.EndBehavior;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.combat.Combat;
 import dev.manhuntstar.bot.motor.Motor;
@@ -83,6 +84,7 @@ public final class Bot {
     private Survival survival;
     private PearlAbility ability;
     private IdleBehavior idle;
+    private EndBehavior endBehavior;
 
     private int aliveTicks;
     private Float targetYaw;
@@ -309,6 +311,44 @@ public final class Bot {
 
     public void setIdle(IdleBehavior idle) {
         this.idle = idle;
+    }
+
+    /**
+     * End of the match: the bot drops what it was doing (fight, path, ring, ride) and from now on only plays
+     * its end animations, the party when the bots won or the gloom when they lost.
+     */
+    void endMatch(boolean botsWon) {
+        if (idle != null) {
+            idle.release();
+        }
+        cancelPendingPillar();
+        // the boats this bot placed belong to the runtime that is replaced: they go with it
+        brain.mlg().discardBoats();
+        brain.navigator().reset();
+        createRuntime();
+        if (entity != null) {
+            GameEntity v = entity.vehicle();
+            if (v != null) {
+                v.removePassenger(entity);
+                if (v instanceof GameHorse h) {
+                    manager.releaseHorse(h);
+                }
+            }
+            entity.clearActiveItem();
+            entity.setGliding(false);
+            inventory.restorePreferredMainHand();
+        }
+        setSneaking(false);
+        setSwimmingPose(false);
+        endBehavior = new EndBehavior(this, botsWon);
+    }
+
+    /** A new match: the bot hunts again. */
+    void clearEndBehavior() {
+        if (endBehavior != null) {
+            endBehavior = null;
+            setSneaking(false);
+        }
     }
 
     /** A special ability (ambush, bow burst) is controlling the bot. */
@@ -899,6 +939,7 @@ public final class Bot {
         brain.navigator().reset();
         createRuntime();
         idle = null;
+        endBehavior = null;
     }
 
     /** Removes the entity without a death effect. */
@@ -1118,6 +1159,26 @@ public final class Bot {
         }
         applyAim();
         tickRegeneration();
+        motor.endTick();
+    }
+
+    /** Match over: the bot neither hunts nor fights; it only plays its end animations. */
+    void tickEnded() {
+        if (entity == null) {
+            return;
+        }
+        aliveTicks++;
+        lastKnownPos = entity.position();
+        lastKnownWorld = entity.world().name();
+        keepActive(entity);
+        updateChunkTickets(false);
+        motor.beginTick();
+        if (endBehavior == null) {
+            // respawned or restored after the end: it joins the others
+            endBehavior = new EndBehavior(this, manager.match().botsWon());
+        }
+        endBehavior.tick();
+        applyAim();
         motor.endTick();
     }
 
