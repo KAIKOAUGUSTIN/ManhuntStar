@@ -132,6 +132,8 @@ public final class BotManager {
     /** The match ended: the bot stops hunting and only parties (the bots won) or mopes (they lost). */
     public void stopHunting(Bot bot, boolean botsWon) {
         tactics.forget(bot);
+        // a silent death asked for during the hunt would happen in the next one, wherever the players are then
+        pendingSilentDeaths.remove(bot.id());
         bot.endMatch(botsWon);
     }
 
@@ -1232,7 +1234,8 @@ public final class BotManager {
     public void flush(boolean async) {
         if (!settings().persistentBots.on()) {
             if (dirty) {
-                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), null, async);
+                // without the bots, only the players who still have to get back in the game
+                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), s -> match.saveReturns(s.createSection("partida")), async);
                 dirty = false;
             }
             return;
@@ -1260,7 +1263,12 @@ public final class BotManager {
 
     /** Recreates the saved pause, rings and hunt; called after {@link #restore}. */
     public void restoreManhunt(ConfigNode s) {
-        if (s == null || !settings().persistentBots.on()) {
+        if (s == null) {
+            return;
+        }
+        if (!settings().persistentBots.on()) {
+            // no bots and no match: whoever was out of the last one gets back in the game
+            match.loadReturns(s.section("partida"));
             return;
         }
         if (s.getBoolean("pausada", false)) {
@@ -1321,7 +1329,8 @@ public final class BotManager {
     /** Shutdown: saves everything and takes the entities out of the world (they aren't saved with the world). */
     public void shutdown() {
         if (!settings().persistentBots.on()) {
-            // the match isn't saved: whoever is out of it gets their game mode back now, or never would
+            // the match isn't saved: whoever is out of it gets their game mode back now, or when they join
+            // again (bots.yml keeps that much)
             match.reset();
         }
         flush(false);

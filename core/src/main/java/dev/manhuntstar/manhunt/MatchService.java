@@ -348,11 +348,15 @@ public final class MatchService {
         return ids;
     }
 
-    /** The hunted players online now. */
+    /**
+     * The hunted players online now: those playing and those out of the match. Someone who was already a
+     * spectator (watching, not hunted) isn't one, or they would hold up the defeat.
+     */
     private List<UUID> huntedOnline() {
+        List<UUID> outNow = outOfThisMatch();
         List<UUID> ids = new ArrayList<>();
         for (GamePlayer p : Platform.server().onlinePlayers()) {
-            if (policy().isParticipant(p)) {
+            if (policy().isParticipant(p) && (p.gameMode() != GameMode.SPECTATOR || outNow.contains(p.uuid()))) {
                 ids.add(p.uuid());
             }
         }
@@ -364,7 +368,7 @@ public final class MatchService {
         int n = 0;
         for (GamePlayer p : Platform.server().onlinePlayers()) {
             Out o = out.get(p.uuid());
-            if (policy().isParticipant(p) && (o == null || o.due)) {
+            if (policy().isParticipant(p) && p.gameMode() != GameMode.SPECTATOR && (o == null || o.due)) {
                 n++;
             }
         }
@@ -442,6 +446,24 @@ public final class MatchService {
         for (Map.Entry<UUID, Integer> e : botKills.entrySet()) {
             s.set("abates." + e.getKey(), e.getValue());
         }
+        saveOut(s);
+    }
+
+    /** Only who still has to get back in the game: saved even when the bots aren't (persistent-bots off). */
+    public void saveReturns(ConfigNode s) {
+        saveOut(s);
+    }
+
+    /** Server start without saved bots: there's no match, so whoever was out of the last one gets back in the game. */
+    public void loadReturns(ConfigNode s) {
+        out.clear();
+        if (s != null) {
+            readOut(s.section("fora"));
+        }
+        sendEveryoneBack();
+    }
+
+    private void saveOut(ConfigNode s) {
         for (Map.Entry<UUID, Out> e : out.entrySet()) {
             Out o = e.getValue();
             String k = "fora." + e.getKey();
