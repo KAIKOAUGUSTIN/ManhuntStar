@@ -325,6 +325,8 @@ public final class Bot {
         // the boats this bot placed belong to the runtime that is replaced: they go with it
         brain.mlg().discardBoats();
         brain.navigator().reset();
+        // a block half broken would keep its cracks on the players' screens
+        mining.cancel();
         createRuntime();
         if (entity != null) {
             GameEntity v = entity.vehicle();
