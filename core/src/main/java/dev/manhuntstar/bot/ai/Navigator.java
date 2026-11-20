@@ -571,13 +571,18 @@ public final class Navigator {
         return false;
     }
 
-    /** Gives the current path up (a floor that can't be placed): the next tick computes a new one. */
+    /**
+     * Gives the current path up (a floor that can't be placed): the next tick computes a new one from where the
+     * bot is. A search still running for the rest of the dropped path is cancelled, or it would come back as the
+     * whole route, starting past the missing floor.
+     */
     private void dropPath() {
         current = null;
         pathIndex = 0;
         mineQueue.clear();
         placeQueue.clear();
         floorWaitTicks = 0;
+        cancelTask();
     }
 
     // ------------------------------------------------------------------ parkour
