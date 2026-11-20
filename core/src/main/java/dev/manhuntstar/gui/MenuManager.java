@@ -656,16 +656,21 @@ public final class MenuManager implements Menus {
     }
 
     /**
-     * The text a player confirmed in the dialog (on any thread; null when the answer had none). Any
-     * client can send this answer, so it only counts while the menu is waiting for one from that player,
-     * and a text the box couldn't have held goes back as a cancel.
+     * The text a player confirmed in the dialog (on any thread; null when the answer had none, which counts as
+     * a cancel). Any client can send this answer, so it only counts while the menu is waiting for one from that
+     * player, and a text the box couldn't have held goes back as a cancel.
      */
     public void textEntered(GamePlayer player, String text) {
         Prompt prompt = prompts.remove(player.uuid());
         if (prompt == null) {
             return;
         }
-        String value = text == null ? "" : text.strip();
+        if (text == null) {
+            // an answer without any text isn't an empty one: it would clear an optional value (the skin)
+            host.server().runNextTick(prompt.back());
+            return;
+        }
+        String value = text.strip();
         boolean valid = value.isEmpty() ? prompt.emptyAllowed()
                 : value.length() <= prompt.maxLength() && value.chars().noneMatch(Character::isISOControl);
         host.server().runNextTick(valid ? () -> prompt.then().accept(value) : prompt.back());
