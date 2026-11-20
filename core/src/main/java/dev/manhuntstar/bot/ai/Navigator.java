@@ -305,9 +305,11 @@ public final class Navigator {
             result = null;
         }
         if (result != null && !bot.brain().canPlaceToweringBlocksNearTarget() && !result.toPlace().isEmpty()) {
-            placeQueue.clear();
             result = null;
         }
+        // the rest of the path was added to the current one (or nothing came of it): the bot goes on along the same
+        // path, with the floor it may be waiting for still queued
+        boolean samePath = lookahead && current != null;
         if (result != null) {
             if (lookahead && current != null) {
                 List<Pos> path = new ArrayList<>(current.path());
@@ -335,8 +337,11 @@ public final class Navigator {
         }
         lookahead = false;
         task = null;
-        mineQueue.clear();
-        placeQueue.clear();
+        if (!samePath) {
+            // a new path, or none: what was queued for the old one doesn't apply
+            mineQueue.clear();
+            placeQueue.clear();
+        }
         if (bot.settings().debugPaths.on()) {
             GamePlayer p = bot.target();
             if (p != null && p.hasPermission("manhuntstar.admin")) {
