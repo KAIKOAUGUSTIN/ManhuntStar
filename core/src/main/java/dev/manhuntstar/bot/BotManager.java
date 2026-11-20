@@ -1031,6 +1031,10 @@ public final class BotManager {
             } catch (RuntimeException ex) {
                 logTickError(bot, ex);
             }
+            if (match.isEnded()) {
+                // this bot's hit ended the match: the others already stopped, and nobody respawns now
+                return;
+            }
         }
         tactics.tick();
         caveAmbush.tick();
