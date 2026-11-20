@@ -215,9 +215,14 @@ public final class MatchService {
             return;
         }
         if (o.due) {
-            // the match ended while they were on the death screen: a normal respawn
-            out.remove(p.uuid());
-            plugin.botManager().markDirty();
+            if (o.pos == null) {
+                // the match ended while they were on the death screen: a normal respawn
+                out.remove(p.uuid());
+                plugin.botManager().markDirty();
+            } else {
+                // their way back was refused before and they died since: it is tried again, the record stays until then
+                sendBack(p, o);
+            }
             return;
         }
         if (o.pos == null) {
