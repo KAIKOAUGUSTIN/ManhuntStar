@@ -257,11 +257,16 @@ public final class MatchService {
 
     // ------------------------------------------------------------------ end
 
-    /** Every tick: the countdown to send the players who were out back, and those who left the hunt. */
+    /**
+     * Every tick: the countdown to send the players who were out back (and again for those another plugin held
+     * back), and those who left the hunt.
+     */
     public void tick() {
         if (returnTicks > 0 && --returnTicks == 0) {
             returnTicks = -1;
             sendEveryoneBack();
+        } else if (Platform.server().currentTick() % 20 == 0 && !out.isEmpty()) {
+            retryReturns();
         }
         if (Platform.server().currentTick() % 20 == 0 && counting()
                 && plugin.settings().defeat.get() == Defeat.ALL_DIED && everyoneOut(huntedOnline(), outOfThisMatch())) {
@@ -363,19 +368,41 @@ public final class MatchService {
         plugin.botManager().markDirty();
     }
 
+    /**
+     * Back to the game mode they had, where they respawned. Another plugin can refuse the teleport or the game
+     * mode: then they stay out of the match, and {@link #tick} tries again every second while they're online.
+     */
     private void sendBack(GamePlayer p, Out o) {
-        out.remove(p.uuid());
         if (o.pos == null) {
+            out.remove(p.uuid());
+            plugin.botManager().markDirty();
             return;
         }
         GameWorld w = o.world == null ? null : Platform.server().world(o.world);
-        if (w != null) {
-            // a world that no longer exists: the game mode comes back where they are, not in another world
-            p.teleport(new Place(w, o.pos, o.yaw, o.pitch));
+        // a world that no longer exists: the game mode comes back where they are, not in another world
+        boolean there = w == null || w.equals(p.world()) && p.position().distanceToSqr(o.pos) < 1.0;
+        if (!there && !p.teleport(new Place(w, o.pos, o.yaw, o.pitch))) {
+            return;
         }
-        p.setGameMode(o.mode == null ? GameMode.SURVIVAL : o.mode);
+        GameMode mode = o.mode == null ? GameMode.SURVIVAL : o.mode;
+        p.setGameMode(mode);
+        if (p.gameMode() != mode) {
+            return;
+        }
+        out.remove(p.uuid());
         plugin.messages().send(p, "match.back");
         plugin.botManager().markDirty();
+    }
+
+    /** The players whose way back was refused (see {@link #sendBack}) try again. */
+    private void retryReturns() {
+        for (Map.Entry<UUID, Out> e : new ArrayList<>(out.entrySet())) {
+            Out o = e.getValue();
+            GamePlayer p = o.due && o.pos != null ? Platform.server().player(e.getKey()) : null;
+            if (p != null) {
+                sendBack(p, o);
+            }
+        }
     }
 
     /** Who is out of the match going on (not those of the last match still waiting to get back). */
