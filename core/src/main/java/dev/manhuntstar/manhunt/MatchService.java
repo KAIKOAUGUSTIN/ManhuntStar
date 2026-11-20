@@ -207,20 +207,34 @@ public final class MatchService {
             return;
         }
         if (o.place == null) {
-            o.mode = p.gameMode() == GameMode.SPECTATOR ? GameMode.SURVIVAL : p.gameMode();
-            o.place = p.place();
-            p.setGameMode(GameMode.SPECTATOR);
-            plugin.messages().send(p, "match.spectating");
-            plugin.botManager().markDirty();
+            watch(p, o);
         }
     }
 
-    /** The player joined: someone whose match ended while they were offline gets back in the game. */
+    /**
+     * The player joined: someone whose match ended while they were offline gets back in the game, and someone
+     * out of the match who left right after respawning (before becoming a spectator) becomes one now.
+     */
     public void playerJoined(GamePlayer p) {
         Out o = out.get(p.uuid());
-        if (o != null && o.due) {
-            sendBack(p, o);
+        if (o == null) {
+            return;
         }
+        if (o.due) {
+            sendBack(p, o);
+        } else if (o.place == null && !p.isDead()) {
+            // still on the death screen: the respawn does it
+            watch(p, o);
+        }
+    }
+
+    /** Out of the match and respawned: watches as a spectator, remembering the game mode and the place to return to. */
+    private void watch(GamePlayer p, Out o) {
+        o.mode = p.gameMode() == GameMode.SPECTATOR ? GameMode.SURVIVAL : p.gameMode();
+        o.place = p.place();
+        p.setGameMode(GameMode.SPECTATOR);
+        plugin.messages().send(p, "match.spectating");
+        plugin.botManager().markDirty();
     }
 
     // ------------------------------------------------------------------ end
