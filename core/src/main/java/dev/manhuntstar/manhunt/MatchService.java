@@ -246,6 +246,7 @@ public final class MatchService {
         for (Bot b : plugin.botManager().aliveBots()) {
             plugin.botManager().stopHunting(b, botsWon());
         }
+        plugin.botManager().cancelPortalArrivals();
         showTitle();
         broadcastSummary();
         if (!out.isEmpty()) {

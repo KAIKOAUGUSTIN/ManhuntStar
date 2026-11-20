@@ -137,6 +137,17 @@ public final class BotManager {
         bot.endMatch(botsWon);
     }
 
+    /**
+     * The match ended: the bots waiting to come out of a portal stay where they are. Otherwise the next hunt
+     * would bring them to where the player was in this one.
+     */
+    public void cancelPortalArrivals() {
+        for (PortalEntrance e : entrances) {
+            e.cancel();
+        }
+        entrances.clear();
+    }
+
     /** A new hunt: the bot that was partying or moping hunts again. */
     public void resumeHunting(Bot bot) {
         bot.clearEndBehavior();
