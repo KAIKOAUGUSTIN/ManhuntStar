@@ -670,9 +670,10 @@ public final class MenuManager implements Menus {
             host.server().runNextTick(prompt.back());
             return;
         }
+        // the limits apply to the text as sent (the box can't hold more, nor a line break), then the spaces go
+        boolean fits = text.length() <= prompt.maxLength() && text.chars().noneMatch(Character::isISOControl);
         String value = text.strip();
-        boolean valid = value.isEmpty() ? prompt.emptyAllowed()
-                : value.length() <= prompt.maxLength() && value.chars().noneMatch(Character::isISOControl);
+        boolean valid = fits && (!value.isEmpty() || prompt.emptyAllowed());
         host.server().runNextTick(valid ? () -> prompt.then().accept(value) : prompt.back());
     }
 
