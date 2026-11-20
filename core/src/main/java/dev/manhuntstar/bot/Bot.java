@@ -43,6 +43,7 @@ import dev.manhuntstar.util.WorldUtil;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -520,6 +521,10 @@ public final class Bot {
     }
 
     public void setTargetPlayer(UUID id) {
+        if (brain != null && !Objects.equals(targetPlayer, id)) {
+            // a build toward the old target ends, and doesn't resume if that one becomes the target again
+            brain.onTargetChanged();
+        }
         this.targetPlayer = id;
     }
 

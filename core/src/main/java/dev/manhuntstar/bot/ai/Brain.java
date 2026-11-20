@@ -161,6 +161,21 @@ public final class Brain {
         return buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
     }
 
+    /** The bot's target changed: a build toward the old one ends, and doesn't resume if it becomes the target again. */
+    public void onTargetChanged() {
+        buildRange.clear();
+    }
+
+    /**
+     * A build ends when its target is dead, in another world or no longer hunted, every tick, before anything that
+     * makes the AI stop early (eating, a knockback, an ability): a target that comes back doesn't resume it.
+     */
+    private void endBuildWithoutTarget() {
+        if (bot.horizontalDistanceTo(bot.target()) == Double.POSITIVE_INFINITY) {
+            buildRange.clear();
+        }
+    }
+
     /** A block of the tower or bridge toward the target was placed: the build may go on ({@link BuildRange}). */
     public void noteBuildBlockPlaced() {
         GamePlayer target = bot.target();
@@ -220,6 +235,7 @@ public final class Brain {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        endBuildWithoutTarget();
         bot.combat().tickTridentPickup();
         bot.combat().tickLavaCleanup();
         if (bot.capacityLocked()) {
