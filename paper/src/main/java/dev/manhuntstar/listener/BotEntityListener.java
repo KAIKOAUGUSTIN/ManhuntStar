@@ -10,6 +10,9 @@ import dev.manhuntstar.paper.PaperDamageInfo;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.platform.GameProjectile;
 import dev.manhuntstar.util.Locations;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.EnderDragon;
@@ -33,6 +36,8 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 public final class BotEntityListener implements Listener {
 
     private final ManhuntStarPlugin plugin;
+    /** Dragons whose death was already reported: their removal at the end of the death animation isn't another one. */
+    private final Set<UUID> reportedDragons = new HashSet<>();
 
     public BotEntityListener(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
@@ -109,17 +114,23 @@ public final class BotEntityListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onDragonDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof EnderDragon) {
+            reportedDragons.add(event.getEntity().getUniqueId());
             events().dragonDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
         }
     }
 
     /**
-     * /kill on the Ender Dragon removes it without a death event. A dragon that died in combat is removed this
-     * way too, at the end of its death; the match ended already then, so it isn't counted twice.
+     * /kill on the Ender Dragon removes it without a death event. A dragon that died in combat is removed this way
+     * too, about 10 s later at the end of its death animation: that one was already reported, and a hunt that
+     * started in between mustn't end with it.
      */
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDragonRemoved(EntityRemoveEvent event) {
-        if (event.getEntity() instanceof EnderDragon && event.getCause() == EntityRemoveEvent.Cause.DEATH) {
+        if (!(event.getEntity() instanceof EnderDragon)) {
+            return;
+        }
+        boolean reported = reportedDragons.remove(event.getEntity().getUniqueId());
+        if (!reported && event.getCause() == EntityRemoveEvent.Cause.DEATH) {
             events().dragonDied(null);
         }
     }
