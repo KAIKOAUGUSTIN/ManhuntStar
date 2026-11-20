@@ -53,6 +53,11 @@ public final class PaperPlayer extends PaperLiving implements GamePlayer {
     }
 
     @Override
+    public void setGameMode(GameMode mode) {
+        bukkit().setGameMode(org.bukkit.GameMode.valueOf(mode.name()));
+    }
+
+    @Override
     public boolean hasPermission(String permission) {
         return bukkit().hasPermission(permission);
     }

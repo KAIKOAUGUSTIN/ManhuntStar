@@ -461,7 +461,9 @@ public final class Motor {
         lastGapPlaceTick = now;
         repeatedGapFailures = 0;
         bot.setPitchNow(90f);
-        bot.placeBlock(placePos, Blocks.COBBLESTONE, false);
+        if (bot.placeBlock(placePos, Blocks.COBBLESTONE, false)) {
+            bot.brain().noteBuildBlockPlaced();
+        }
         velocity = velocity.scale(0.5);
     }
 

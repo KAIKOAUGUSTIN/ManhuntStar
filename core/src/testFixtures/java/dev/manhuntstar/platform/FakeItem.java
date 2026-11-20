@@ -18,6 +18,7 @@ public class FakeItem implements GameItem {
     public boolean customName;
     public int damage;
     public int maxStackSize = 64;
+    public double disablesBlockingSeconds;
 
     public FakeItem(ItemType type, int amount) {
         this.type = type;
@@ -59,6 +60,7 @@ public class FakeItem implements GameItem {
         c.customName = customName;
         c.damage = damage;
         c.maxStackSize = maxStackSize;
+        c.disablesBlockingSeconds = disablesBlockingSeconds;
         return c;
     }
 
@@ -106,6 +108,11 @@ public class FakeItem implements GameItem {
     @Override
     public int chargeDelayTicks() {
         return -1;
+    }
+
+    @Override
+    public double disablesBlockingSeconds() {
+        return disablesBlockingSeconds;
     }
 
     @Override

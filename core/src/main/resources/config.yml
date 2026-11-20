@@ -7,7 +7,7 @@
 
 # The version of this file: ManhuntStar uses it to update the file (adding new options with their
 # comments, renaming the ones that changed), keeping your values. Don't change it.
-config-version: 2
+config-version: 3
 
 general:
   # Language of the plugin's messages and menu: a file name from the lang/ folder (en, pt-br, fr, ru, zh-cn
@@ -180,6 +180,10 @@ manhunt:
   # protected = isn't a target for the ring's countdown time (at least 5 s);
   # out = isn't hunted until the next hunt. [latejoin]
   late-join: protected
+  # When the hunted players lose the match (the Ender Dragon's death is always a win):
+  # all-died = once each of them died once (whoever dies watches as a spectator until the end);
+  # first-death = at the first death; never = deaths don't end the match. [defeat]
+  defeat: all-died
   # off = everyone can be hunted; allowlist = only the listed players are hunted and trigger the ring;
   # blocklist = the listed players aren't hunted and don't trigger the ring. [playerlistmode]
   player-list-mode: "off"

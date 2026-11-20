@@ -38,7 +38,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * The bot's combat. Melee follows a player's rules (weapon cooldown, critical hits when falling,
+ * The bot's combat. Melee follows a player's rules (reach, weapon cooldown, critical hits when falling,
  * sweep attack, sprint knockback, enchantments); the mod's humanization controls mistakes and pace.
  */
 public final class Combat {
@@ -49,6 +49,7 @@ public final class Combat {
 
     private boolean hasShield;
     private boolean blocking;
+    private final ShieldTiming shieldTiming = new ShieldTiming();
     private long lastAttackTime;
     private long lastSuccessfulPlayerHitTick;
     private long nextMeleeAttackTick;
@@ -138,7 +139,7 @@ public final class Combat {
     }
 
     public boolean hasUsableShield() {
-        return hasShield && bot.getItem(EquipSlot.OFF_HAND).type() == Items.SHIELD && !bot.shouldHoldTotemInOffhand();
+        return hasShield && bot.getItem(EquipSlot.OFF_HAND).type() == Items.SHIELD && !bot.shouldHoldTotemInOffhand() && !isShieldDisabled();
     }
 
     public void startBlock() {
@@ -146,7 +147,27 @@ public final class Combat {
             return;
         }
         blocking = true;
+        shieldTiming.raised(Platform.server().currentTick());
         bot.entity().startUsingItem(EquipSlot.OFF_HAND);
+    }
+
+    /** A hit took the shield down (an axe, as on a player): it stays down and can't be raised for a while. */
+    public boolean isShieldDisabled() {
+        return shieldTiming.disabled(Platform.server().currentTick());
+    }
+
+    /**
+     * A blocked hit with a weapon that disables shields for {@code seconds} (an axe: 5), as the game does to a player:
+     * the shield is lowered at once, with its sound, and can't be raised again until the time is up.
+     */
+    public void disableShield(double seconds) {
+        if (!shieldTiming.disable(Platform.server().currentTick(), seconds)) {
+            return;
+        }
+        if (blocking) {
+            stopBlock();
+        }
+        playSound(Sounds.ITEM_SHIELD_BREAK, 0.8f, 0.8f + ThreadLocalRandom.current().nextFloat() * 0.4f);
     }
 
     public void stopBlock() {
@@ -166,10 +187,14 @@ public final class Combat {
     }
 
     /**
-     * Like in the game, the shield only blocks attacks from the front, with a point of origin and that don't
-     * bypass shields. Suffocation, cactus, magma, freezing and the wither effect have no origin and go through.
+     * Like in the game, the shield only blocks once it has been up for a moment ({@link ShieldTiming}), and only
+     * attacks from the front, with a point of origin and that don't bypass shields. Suffocation, cactus, magma,
+     * freezing and the wither effect have no origin and go through.
      */
     public boolean canBlockDamage(DamageInfo src) {
+        if (!shieldTiming.blocks(Platform.server().currentTick())) {
+            return false;
+        }
         DamageKind type = src.kind();
         if (src.bypassesShield()
                 || type == DamageKind.FALL || type == DamageKind.ON_FIRE
@@ -229,8 +254,8 @@ public final class Combat {
         Settings s = bot.settings();
         double humanize = s.humanize.value();
         double rangePenalty = s.meleeReachVariance.value() * humanize * meleeRandom.nextDouble();
-        double allowedRange = Math.max(2.2, 3.2 - rangePenalty);
-        if (bot.distanceTo(target) > allowedRange) {
+        double allowedRange = Math.max(MeleeReach.PLAYER_REACH - 1.0, MeleeReach.PLAYER_REACH - rangePenalty);
+        if (!inMeleeReach(target, allowedRange)) {
             return;
         }
         prepareMainHand();
@@ -262,6 +287,22 @@ public final class Combat {
             return;
         }
         dealPlayerLikeHit(target, weapon, strength);
+    }
+
+    /** The target's hitbox is within the player's reach from where the bot stands now, without the delay of a hit at a player. */
+    public boolean reachesFromHere(GameLiving target) {
+        return MeleeReach.reaches(bot.eyePos(), target.boundingBox(), MeleeReach.PLAYER_REACH);
+    }
+
+    /** The target's hitbox is within the player's reach ({@link MeleeReach}), against a player also where they were seen. */
+    private boolean inMeleeReach(GameLiving target, double range) {
+        Vec3 eyes = bot.eyePos();
+        Box hitbox = target.boundingBox();
+        if (target instanceof GamePlayer player) {
+            Vec3 seenAt = bot.manager().playerTrail().at(player.uuid(), MeleeReach.VIEW_DELAY_TICKS, Platform.server().currentTick());
+            return MeleeReach.reachesPlayer(eyes, hitbox, player.position(), seenAt, range);
+        }
+        return MeleeReach.reaches(eyes, hitbox, range);
     }
 
     private float attackStrength(long now, int cooldownTicks) {
@@ -403,8 +444,15 @@ public final class Combat {
     }
 
     private void playSound(GameSound s) {
-        Vec3 p = bot.pos();
-        bot.world().playSound(p, s, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        playSound(s, 1.0f, 1.0f);
+    }
+
+    private void playSound(GameSound s, float volume, float pitch) {
+        // no world while the body is gone and the world it was in isn't loaded
+        GameWorld w = bot.world();
+        if (w != null) {
+            w.playSound(bot.pos(), s, SoundCategory.PLAYERS, volume, pitch);
+        }
     }
 
     // ------------------------------------------------------------------ crossbow

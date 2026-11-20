@@ -2,6 +2,7 @@ package dev.manhuntstar.bot;
 
 import dev.manhuntstar.bot.ability.PearlAbility;
 import dev.manhuntstar.bot.ai.Brain;
+import dev.manhuntstar.bot.ai.EndBehavior;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.combat.Combat;
 import dev.manhuntstar.bot.motor.Motor;
@@ -42,6 +43,7 @@ import dev.manhuntstar.util.WorldUtil;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -83,6 +85,7 @@ public final class Bot {
     private Survival survival;
     private PearlAbility ability;
     private IdleBehavior idle;
+    private EndBehavior endBehavior;
 
     private int aliveTicks;
     private Float targetYaw;
@@ -99,6 +102,8 @@ public final class Bot {
     private Pos pendingPillar;
     private int pendingPillarTicks;
     private Runnable pendingPillarDone;
+    /** The target the pending pillar was queued for: its block counts as a build toward that target only. */
+    private UUID pendingPillarTarget;
 
     Bot(BotManager manager, UUID id, String name, String visualName, SkinData skin, BotDifficulty difficulty) {
         this.manager = manager;
@@ -309,6 +314,46 @@ public final class Bot {
         this.idle = idle;
     }
 
+    /**
+     * End of the match: the bot drops what it was doing (fight, path, ring, ride) and from now on only plays
+     * its end animations, the party when the bots won or the gloom when they lost.
+     */
+    void endMatch(boolean botsWon) {
+        if (idle != null) {
+            idle.release();
+        }
+        cancelPendingPillar();
+        // the boats this bot placed belong to the runtime that is replaced: they go with it
+        brain.mlg().discardBoats();
+        brain.navigator().reset();
+        // a block half broken would keep its cracks on the players' screens
+        mining.cancel();
+        createRuntime();
+        if (entity != null) {
+            GameEntity v = entity.vehicle();
+            if (v != null) {
+                v.removePassenger(entity);
+                if (v instanceof GameHorse h) {
+                    manager.releaseHorse(h);
+                }
+            }
+            entity.clearActiveItem();
+            entity.setGliding(false);
+            inventory.restorePreferredMainHand();
+        }
+        setSneaking(false);
+        setSwimmingPose(false);
+        endBehavior = new EndBehavior(this, botsWon);
+    }
+
+    /** A new match: the bot hunts again. */
+    void clearEndBehavior() {
+        if (endBehavior != null) {
+            endBehavior = null;
+            setSneaking(false);
+        }
+    }
+
     /** A special ability (ambush, bow burst) is controlling the bot. */
     public boolean capacityLocked() {
         return manager.tactics().isControllingBot(this);
@@ -476,6 +521,11 @@ public final class Bot {
     }
 
     public void setTargetPlayer(UUID id) {
+        if (brain != null && !Objects.equals(targetPlayer, id)) {
+            // a build toward the old target ends, and doesn't resume if that one becomes the target again
+            brain.onTargetChanged();
+            endPillarBuild();
+        }
         this.targetPlayer = id;
     }
 
@@ -508,11 +558,16 @@ public final class Bot {
     }
 
     public boolean isWithinToweringRange(GamePlayer target, double maxAxisDistance) {
+        return horizontalDistanceTo(target) <= maxAxisDistance;
+    }
+
+    /** Horizontal distance to the player, or infinity when it is gone, dead or in another world. */
+    public double horizontalDistanceTo(GamePlayer target) {
         if (target == null || target.isDead() || !target.world().equals(world())) {
-            return false;
+            return Double.POSITIVE_INFINITY;
         }
         Vec3 p = pos();
-        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z()) <= maxAxisDistance;
+        return Math.hypot(target.position().x() - p.x(), target.position().z() - p.z());
     }
 
     // ------------------------------------------------------------------ aim and pose
@@ -766,10 +821,30 @@ public final class Bot {
         pendingPillar = feetBlock;
         pendingPillarTicks = 0;
         pendingPillarDone = onDone;
+        GamePlayer queuedFor = target();
+        pendingPillarTarget = queuedFor == null ? null : queuedFor.uuid();
+    }
+
+    /**
+     * The pillar block still queued no longer counts as a build when placed: its target changed or is gone. Even if
+     * that target comes back before the block goes in, the block doesn't restart the build past the 3 blocks.
+     */
+    public void endPillarBuild() {
+        pendingPillarTarget = null;
     }
 
     public boolean hasPendingPillar() {
         return pendingPillar != null;
+    }
+
+    /**
+     * Drops the queued pillar block: the bot was teleported or died, and the block is where it was before
+     * ({@link #placeBlock} checks no distance). It ends like a pillar that ran out of time: the tower stops sneaking.
+     */
+    public void cancelPendingPillar() {
+        if (pendingPillar != null) {
+            finishPendingPillar();
+        }
     }
 
     private void tickPendingPillar() {
@@ -781,14 +856,24 @@ public final class Bot {
         boolean placed = false;
         if (pos().y() >= target.y() + 1.0 && WorldUtil.canBeReplaced(world(), target)) {
             placed = placeBlock(target, Blocks.COBBLESTONE, false);
+            // a pillar queued for another target (it changed meanwhile) doesn't count as a build toward the new one
+            GamePlayer current = target();
+            if (placed && brain != null && current != null && current.uuid().equals(pendingPillarTarget)) {
+                brain.noteBuildBlockPlaced();
+            }
         }
         if (placed || pendingPillarTicks > 12 || (pendingPillarTicks > 2 && onGround() && pos().y() < target.y() + 0.5)) {
-            Runnable done = pendingPillarDone;
-            pendingPillar = null;
-            pendingPillarDone = null;
-            if (done != null) {
-                done.run();
-            }
+            finishPendingPillar();
+        }
+    }
+
+    private void finishPendingPillar() {
+        Runnable done = pendingPillarDone;
+        pendingPillar = null;
+        pendingPillarDone = null;
+        pendingPillarTarget = null;
+        if (done != null) {
+            done.run();
         }
     }
 
@@ -866,9 +951,11 @@ public final class Bot {
 
     /** Recreates the AI subsystems (same as the "new" bot the mod created on every respawn). */
     void resetRuntime() {
+        cancelPendingPillar();
         brain.navigator().reset();
         createRuntime();
         idle = null;
+        endBehavior = null;
     }
 
     /** Removes the entity without a death effect. */
@@ -1088,6 +1175,26 @@ public final class Bot {
         }
         applyAim();
         tickRegeneration();
+        motor.endTick();
+    }
+
+    /** Match over: the bot neither hunts nor fights; it only plays its end animations. */
+    void tickEnded() {
+        if (entity == null) {
+            return;
+        }
+        aliveTicks++;
+        lastKnownPos = entity.position();
+        lastKnownWorld = entity.world().name();
+        keepActive(entity);
+        updateChunkTickets(false);
+        motor.beginTick();
+        if (endBehavior == null) {
+            // respawned or restored after the end: it joins the others
+            endBehavior = new EndBehavior(this, manager.match().botsWon());
+        }
+        endBehavior.tick();
+        applyAim();
         motor.endTick();
     }
 

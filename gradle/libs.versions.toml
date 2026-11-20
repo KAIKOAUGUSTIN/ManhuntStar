@@ -4,7 +4,7 @@
 # and stays out of [libraries], where Dependabot would move it to the newest version.
 paper-api-min = "26.2.build.135-stable"
 # Newest supported Paper API: tests and the compileAgainstLatest check. Updated by Dependabot.
-paper-api = "26.3.build.244-stable"
+paper-api = "26.3.build.249-stable"
 # Libraries that Paper already brings (the versions of paper-api-min): core compiles against them
 # without bundling them, so they stay out of [libraries], where Dependabot would move them past what
 # the oldest supported Paper has.
@@ -17,7 +17,7 @@ junit = "6.1.3"
 # Minecraft version as <this version>+mc<minecraft> (0.32.2+mc26.3).
 faststats = "0.32.2"
 shadow = "9.6.1"
-sonarqube = "7.5.0.8588"
+sonarqube = "7.6.0.18749"
 # Mods (Fabric and NeoForge), built for each Minecraft version in gradle.properties' minecraftVersions.
 # What is tied to a Minecraft version (NeoForm, Fabric API, NeoForge, adventure-platform-mod) is listed
 # per version, as mc<version without dots>-<name>, and stays out of [libraries]: Dependabot would move it

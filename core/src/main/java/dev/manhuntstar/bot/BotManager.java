@@ -10,6 +10,7 @@ import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.manhunt.HuntPolicy;
+import dev.manhuntstar.manhunt.MatchService;
 import dev.manhuntstar.manhunt.PauseService;
 import dev.manhuntstar.manhunt.RingService;
 import dev.manhuntstar.platform.BotBody;
@@ -76,9 +77,11 @@ public final class BotManager {
     private final RingService rings;
     private final HuntPolicy policy;
     private final PauseService pause;
+    private final MatchService match;
     private final TacticsManager tactics;
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
+    private final PlayerTrail playerTrail = new PlayerTrail();
     private UUID forcedTarget;
     private int globalMaxPhase;
     private boolean dirty;
@@ -92,6 +95,7 @@ public final class BotManager {
         this.rings = new RingService(plugin);
         this.policy = new HuntPolicy(plugin);
         this.pause = new PauseService(plugin);
+        this.match = new MatchService(plugin);
         this.tactics = new TacticsManager(this);
         this.caveAmbush = new CaveAmbush(this);
     }
@@ -120,6 +124,35 @@ public final class BotManager {
         return pause;
     }
 
+    /** The end of the match (victory, defeat, the players out of it and the summary). */
+    public MatchService match() {
+        return match;
+    }
+
+    /** The match ended: the bot stops hunting and only parties (the bots won) or mopes (they lost). */
+    public void stopHunting(Bot bot, boolean botsWon) {
+        tactics.forget(bot);
+        // a silent death asked for during the hunt would happen in the next one, wherever the players are then
+        pendingSilentDeaths.remove(bot.id());
+        bot.endMatch(botsWon);
+    }
+
+    /**
+     * The match ended: the bots waiting to come out of a portal stay where they are. Otherwise the next hunt
+     * would bring them to where the player was in this one.
+     */
+    public void cancelPortalArrivals() {
+        for (PortalEntrance e : entrances) {
+            e.cancel();
+        }
+        entrances.clear();
+    }
+
+    /** A new hunt: the bot that was partying or moping hunts again. */
+    public void resumeHunting(Bot bot) {
+        bot.clearEndBehavior();
+    }
+
     public TacticsManager tactics() {
         return tactics;
     }
@@ -134,6 +167,11 @@ public final class BotManager {
 
     public TemporaryBlocks temporaryBlocks() {
         return temporaryBlocks;
+    }
+
+    /** Where each online player was in the last ticks (the bots' melee reach against players). */
+    public PlayerTrail playerTrail() {
+        return playerTrail;
     }
 
     public Collection<Bot> allBots() {
@@ -702,6 +740,7 @@ public final class BotManager {
             }
         }
         GameEntity killer = death.source().causingEntity();
+        match.botDied(killer);
         plugin.events().botDied(bot, death.source());
         if (killer instanceof GamePlayer p) {
             plugin.events().botKilledByPlayer(bot, p);
@@ -948,6 +987,7 @@ public final class BotManager {
         rings.cancelAll();
         policy.end();
         pause.reset();
+        match.reset();
         globalMaxPhase = 0;
         dirty = true;
         flush(false);
@@ -981,6 +1021,12 @@ public final class BotManager {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        playerTrail.tick(plugin.server().onlinePlayers(), plugin.server().currentTick());
+        match.tick();
+        if (match.isEnded()) {
+            tickEnded();
+            return;
+        }
         if (pause.isPaused()) {
             tickPaused();
             return;
@@ -994,12 +1040,11 @@ public final class BotManager {
             try {
                 bot.tick();
             } catch (RuntimeException ex) {
-                long now = System.currentTimeMillis();
-                Long last = tickErrorLog.get(bot.id());
-                if (last == null || now - last > 60_000) {
-                    tickErrorLog.put(bot.id(), now);
-                    plugin.logger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
-                }
+                logTickError(bot, ex);
+            }
+            if (match.isEnded()) {
+                // this bot's hit ended the match: the others already stopped, and nobody respawns now
+                return;
             }
         }
         tactics.tick();
@@ -1018,6 +1063,50 @@ public final class BotManager {
         if (now % 1200 == 0) {
             blockTracker.purge();
             inaccessibleHorses.values().removeIf(t -> t <= now);
+        }
+        if (now % PERSIST_INTERVAL_TICKS == 0) {
+            flush(true);
+        }
+    }
+
+    /** At most one log line per bot per minute, so a broken bot doesn't flood the console. */
+    private void logTickError(Bot bot, RuntimeException ex) {
+        long now = System.currentTimeMillis();
+        Long last = tickErrorLog.get(bot.id());
+        if (last == null || now - last > 60_000) {
+            tickErrorLog.put(bot.id(), now);
+            plugin.logger().log(Level.WARNING, "Error in the tick of bot " + bot.name(), ex);
+        }
+    }
+
+    /**
+     * Match over: the bots stay where they are, partying or moping, until the next hunt; nobody respawns.
+     * Bots created for the next match wait in their ring as usual (it starts the next hunt when it releases them).
+     */
+    private void tickEnded() {
+        rings.tick();
+        if (!match.isEnded()) {
+            // a ring for the next match released its bots: the hunt starts over from the next tick
+            return;
+        }
+        for (Bot bot : new ArrayList<>(bots.values())) {
+            if (!bot.isAlive()) {
+                continue;
+            }
+            try {
+                if (bot.idle() != null && bot.idle().isActive()) {
+                    bot.tick();
+                } else {
+                    bot.tickEnded();
+                }
+            } catch (RuntimeException ex) {
+                logTickError(bot, ex);
+            }
+        }
+        temporaryBlocks.tick();
+        int now = Platform.server().currentTick();
+        if (now % 10 == 0) {
+            tickControlledHorses();
         }
         if (now % PERSIST_INTERVAL_TICKS == 0) {
             flush(true);
@@ -1160,7 +1249,8 @@ public final class BotManager {
     public void flush(boolean async) {
         if (!settings().persistentBots.on()) {
             if (dirty) {
-                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), null, async);
+                // without the bots, only the players who still have to get back in the game
+                plugin.storage().save(List.of(), new ArrayList<>(groups.values()), s -> match.saveReturns(s.createSection("partida")), async);
                 dirty = false;
             }
             return;
@@ -1178,16 +1268,22 @@ public final class BotManager {
         dirty = false;
     }
 
-    /** Pause, rings waiting and the hunt in progress (participants, protected players, who was left out). */
+    /** Pause, rings waiting, the hunt in progress (participants, protected players, who was left out) and the match. */
     private void saveManhunt(ConfigNode s) {
         s.set("pausada", pause.isPaused());
         policy.save(s.createSection("cacada"));
+        match.save(s.createSection("partida"));
         rings.save(s.createSection("rodas"));
     }
 
     /** Recreates the saved pause, rings and hunt; called after {@link #restore}. */
     public void restoreManhunt(ConfigNode s) {
-        if (s == null || !settings().persistentBots.on()) {
+        if (s == null) {
+            return;
+        }
+        if (!settings().persistentBots.on()) {
+            // no bots and no match: whoever was out of the last one gets back in the game
+            match.loadReturns(s.section("partida"));
             return;
         }
         if (s.getBoolean("pausada", false)) {
@@ -1195,6 +1291,7 @@ public final class BotManager {
             pause.pause();
         }
         policy.load(s.section("cacada"));
+        match.load(s.section("partida"));
         rings.load(s.section("rodas"));
     }
 
@@ -1246,6 +1343,11 @@ public final class BotManager {
 
     /** Shutdown: saves everything and takes the entities out of the world (they aren't saved with the world). */
     public void shutdown() {
+        if (!settings().persistentBots.on()) {
+            // the match isn't saved: whoever is out of it gets their game mode back now, or when they join
+            // again (bots.yml keeps that much)
+            match.reset();
+        }
         flush(false);
         pause.shutdown();
         releaseAllHorses();

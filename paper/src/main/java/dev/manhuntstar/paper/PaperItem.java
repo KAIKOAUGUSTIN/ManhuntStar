@@ -10,6 +10,7 @@ import io.papermc.paper.datacomponent.DataComponentTypes;
 import io.papermc.paper.datacomponent.item.Equippable;
 import io.papermc.paper.datacomponent.item.ItemAttributeModifiers;
 import io.papermc.paper.datacomponent.item.KineticWeapon;
+import io.papermc.paper.datacomponent.item.Weapon;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.attribute.Attribute;
@@ -123,6 +124,12 @@ final class PaperItem implements GameItem {
     public int chargeDelayTicks() {
         KineticWeapon kw = stack.getData(DataComponentTypes.KINETIC_WEAPON);
         return kw == null ? -1 : kw.delayTicks();
+    }
+
+    @Override
+    public double disablesBlockingSeconds() {
+        Weapon w = stack.getData(DataComponentTypes.WEAPON);
+        return w == null ? 0 : w.disableBlockingForSeconds();
     }
 
     @Override

@@ -4,6 +4,7 @@ import dev.manhuntstar.ManhuntCore;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.bot.GameEvents;
+import dev.manhuntstar.gui.TextPrompt;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameProjectile;
@@ -12,7 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.status.ServerStatus;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.NameAndId;
@@ -22,6 +26,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
@@ -116,7 +121,7 @@ public final class ModHooks {
 
     /**
      * A living entity died and is about to drop its loot. A bot's body drops what core decides instead
-     * (true: the game's drops are skipped).
+     * (true: the game's drops are skipped); the Ender Dragon's death ends the match.
      */
     public static boolean botDrops(LivingEntity entity, ServerLevel level, DamageSource source) {
         ManhuntCore core = core();
@@ -126,6 +131,10 @@ public final class ModHooks {
         try {
             Bot bot = bot(core, entity);
             if (bot == null) {
+                if (entity instanceof EnderDragon) {
+                    // the hunted players win the match
+                    core.gameEvents().dragonDied(ModEntities.of(source.getEntity()));
+                }
                 return false;
             }
             ModBotDeath death = new ModBotDeath(source);
@@ -143,12 +152,24 @@ public final class ModHooks {
         }
     }
 
-    /** A player died (for the bots' kill count). */
+    /** /kill on the Ender Dragon (no death of its own, so no killer): the hunted players win the match. */
+    public static void dragonKilled() {
+        ManhuntCore core = core();
+        if (core != null) {
+            try {
+                core.gameEvents().dragonDied(null);
+            } catch (Throwable t) {
+                failed("the dragon's death", t);
+            }
+        }
+    }
+
+    /** A player died (for the bots' kill count and the end of the match). */
     public static void playerDied(ServerPlayer player, DamageSource source) {
         ManhuntCore core = core();
         if (core != null) {
             try {
-                core.gameEvents().playerDied(ModEntities.of(source.getEntity()));
+                core.gameEvents().playerDied(ModEntities.of(player), ModEntities.of(source.getEntity()));
             } catch (Throwable t) {
                 failed("a player's death", t);
             }
@@ -342,17 +363,22 @@ public final class ModHooks {
         }
     }
 
-    /** A chat message: true when a menu was waiting for it (it isn't shown to anyone). */
-    public static boolean chat(ServerPlayer player, String text) {
+    /** A custom click from a dialog: the answer to a text the menu asked for ({@link TextPrompt}). */
+    public static void dialog(ServerPlayer player, Identifier id, Optional<Tag> payload) {
         ManhuntCore core = core();
         if (core == null) {
-            return false;
+            return;
         }
+        String click = id.toString();
         try {
-            return core.menus().chatTyped(ModEntities.of(player), text.trim());
+            if (click.equals(TextPrompt.SUBMIT_CLICK)) {
+                String text = payload.orElse(null) instanceof CompoundTag answer ? answer.getStringOr(TextPrompt.INPUT, null) : null;
+                core.menus().textEntered(ModEntities.of(player), text);
+            } else if (click.equals(TextPrompt.CANCEL_CLICK)) {
+                core.menus().textCancelled(ModEntities.of(player));
+            }
         } catch (Throwable t) {
-            failed("a chat message", t);
-            return false;
+            failed("a dialog's answer", t);
         }
     }
 

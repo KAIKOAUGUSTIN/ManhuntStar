@@ -101,6 +101,11 @@ public final class PortalEntrance {
         }
     }
 
+    /** The match ended: the bots that hadn't arrived stay where they are. */
+    public void cancel() {
+        abort();
+    }
+
     private void abort() {
         for (Bot b : bots) {
             b.brain().setTeleporting(false);

@@ -7,7 +7,7 @@
 #  edited; a copy of it goes to lang/old/. Don't change "version".
 # ==============================================================================
 
-version: 2
+version: 4
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -128,6 +128,24 @@ pause:
   already-paused: "<gray>The hunt is already paused. Use /manhunt resume to continue.</gray>"
   not-paused: "<gray>The hunt isn't paused.</gray>"
   state: "paused"
+
+# --- end of the match ---
+match:
+  victory-title: "<gold><bold>VICTORY</bold></gold>"
+  victory-subtitle: "<yellow><player></yellow> <gray>killed the Ender Dragon</gray>"
+  victory-subtitle-unknown: "<gray>The Ender Dragon is dead</gray>"
+  defeat-title: "<dark_red><bold>DEFEAT</bold></dark_red>"
+  defeat-subtitle: "<gray>The hunters won</gray>"
+  summary-victory: "<gold><bold>Victory!</bold></gold> <yellow><player></yellow> <gray>killed the Ender Dragon.</gray>"
+  summary-victory-unknown: "<gold><bold>Victory!</bold></gold> <gray>The Ender Dragon is dead.</gray>"
+  summary-defeat: "<dark_red><bold>Defeat!</bold></dark_red> <gray>The hunters won; the last one to fall was</gray> <yellow><player></yellow><gray>.</gray>"
+  summary-stats: "<gray>Hunt time:</gray> <white><time></white> <dark_gray>·</dark_gray> <gray>deaths:</gray> <white><playerdeaths></white> <gray>players,</gray> <white><botdeaths></white> <gray>bots</gray>"
+  summary-bots: "<gray>Highest bot phase:</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>top hunter:</gray> <white><bot></white> <gray>(<kills> kills)</gray>"
+  summary-bots-no-kills: "<gray>Highest bot phase:</gray> <white><phase></white> <dark_gray>·</dark_gray> <gray>no bot killed anyone.</gray>"
+  player-out: "<yellow><player></yellow> <gray>is out of the match.</gray> <gray>Hunted players still in:</gray> <white><left></white>"
+  spectating: "<gray>You're out of the match: you watch as a spectator until it ends.</gray>"
+  returning: "<gray>Back in the game in</gray> <yellow><seconds></yellow> <gray>seconds.</gray>"
+  back: "<green>You're back in the game.</green>"
 
 # --- update check ---
 update:
@@ -455,6 +473,9 @@ options:
   latejoin:
     name: "Late joiners"
     description: "Who joins while the hunt is running: hunted = a target right away; protected = not a target for the countdown time (at least 5 s); out = not hunted until the next hunt."
+  defeat:
+    name: "Defeat"
+    description: "When the hunted players lose (the Ender Dragon's death is always a win): all-died = once each of them died once (whoever dies watches as a spectator); first-death = at the first death; never = deaths don't end the match."
   playerlistmode:
     name: "Player list"
     description: "off = everyone can be hunted; allowlist = only the listed players are hunted and trigger the ring; blocklist = the listed players aren't hunted and don't trigger the ring."
@@ -489,11 +510,18 @@ menu:
     config: "<dark_gray>Settings</dark_gray>"
     options: "<dark_gray>Options</dark_gray>"
     confirm: "<dark_red>Delete every bot?</dark_red>"
-  type-name: "<yellow>Type the bots' name in chat (use % for the number). Type <white>cancel</white> to give up.</yellow>"
-  type-skin: "<yellow>Type the name of the skin's player in chat (or <white>-</white> to use the bot's name).</yellow>"
-  type-player: "<yellow>Type the name of the player to add to the list in chat. Type <white>cancel</white> to give up.</yellow>"
-  cancel-word: "cancel"
-  cancelled: "<gray>Cancelled.</gray>"
+  dialog:
+    name:
+      title: "Bots' name"
+      label: "Name (% becomes each bot's number)"
+    skin:
+      title: "Bots' skin"
+      label: "Player whose skin they wear (empty: the bots' own name)"
+    player:
+      title: "Add a player to the list"
+      label: "Player's name"
+    confirm: "Done"
+    cancel: "Cancel"
   back: "Back"
   close: "Close"
   main:
@@ -569,7 +597,7 @@ menu:
     "no": "Cancel"
   create:
     name: "Name: <name>"
-    name-lore: "Click and type in chat (use % for the number)"
+    name-lore: "Click to type the name (% becomes the number)"
     skin: "Skin: <skin>"
     skin-same: "(same name)"
     skin-lore: "Click and type a player name"

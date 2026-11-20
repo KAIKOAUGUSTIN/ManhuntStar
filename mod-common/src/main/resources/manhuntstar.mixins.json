@@ -10,6 +10,7 @@
     "BlockItemMixin",
     "CommandSourceStackAccessor",
     "CommandsMixin",
+    "EnderDragonMixin",
     "EntityCallbacksMixin",
     "EntityMixin",
     "FireBlockMixin",
@@ -23,8 +24,8 @@
     "PlayerInfoUpdatePacketAccessor",
     "PlayerListMixin",
     "ProjectileMixin",
+    "ServerCommonPacketListenerImplMixin",
     "ServerExplosionMixin",
-    "ServerGamePacketListenerImplMixin",
     "ServerPlayerGameModeMixin",
     "ServerPlayerMixin"
   ],
