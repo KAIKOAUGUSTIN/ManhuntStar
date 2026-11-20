@@ -72,6 +72,8 @@ public final class MatchService {
     private String lastDead;
     private String dragonKiller;
     private final Map<UUID, Integer> botKills = new HashMap<>();
+    /** The name of each bot with kills, for the summary even if the bot was removed since. */
+    private final Map<UUID, String> killerNames = new HashMap<>();
     private final Map<UUID, Out> out = new LinkedHashMap<>();
     private int returnTicks = -1;
 
@@ -122,6 +124,7 @@ public final class MatchService {
         lastDead = null;
         dragonKiller = null;
         botKills.clear();
+        killerNames.clear();
         returnTicks = -1;
         sendEveryoneBack();
         for (Bot b : plugin.botManager().allBots()) {
@@ -135,6 +138,7 @@ public final class MatchService {
         result = null;
         returnTicks = -1;
         botKills.clear();
+        killerNames.clear();
         sendEveryoneBack();
         plugin.botManager().markDirty();
     }
@@ -154,7 +158,7 @@ public final class MatchService {
         lastDead = victim.name();
         Bot killerBot = plugin.botManager().byEntity(killer);
         if (killerBot != null) {
-            botKills.merge(killerBot.id(), 1, Integer::sum);
+            countKill(killerBot);
         }
         Defeat defeat = plugin.settings().defeat.get();
         if (defeat.eliminates()) {
@@ -180,9 +184,14 @@ public final class MatchService {
         botDeaths++;
         Bot killerBot = plugin.botManager().byEntity(killer);
         if (killerBot != null) {
-            botKills.merge(killerBot.id(), 1, Integer::sum);
+            countKill(killerBot);
         }
         plugin.botManager().markDirty();
+    }
+
+    private void countKill(Bot killer) {
+        botKills.merge(killer.id(), 1, Integer::sum);
+        killerNames.put(killer.id(), killer.profileName());
     }
 
     /** The Ender Dragon died: the hunted players win, whoever (or whatever) killed it. */
@@ -314,12 +323,14 @@ public final class MatchService {
         Platform.server().broadcast(m.get("match.summary-stats", Messages.p("time", formatTime(endedTicks / 20)),
                 Messages.p("playerdeaths", playerDeaths), Messages.p("botdeaths", botDeaths)));
         UUID top = topKiller(botKills);
-        Bot topBot = top == null ? null : plugin.botManager().bot(top);
-        if (topBot == null) {
+        if (top == null) {
             Platform.server().broadcast(m.get("match.summary-bots-no-kills", Messages.p("phase", maxPhase)));
         } else {
+            // the bot's name now, or the one it had when it killed (it may have been removed since)
+            Bot topBot = plugin.botManager().bot(top);
+            String name = topBot != null ? topBot.profileName() : killerNames.getOrDefault(top, "-");
             Platform.server().broadcast(m.get("match.summary-bots", Messages.p("phase", maxPhase),
-                    Messages.p("bot", topBot.profileName()), Messages.p("kills", botKills.get(top))));
+                    Messages.p("bot", name), Messages.p("kills", botKills.get(top))));
         }
     }
 
@@ -473,6 +484,9 @@ public final class MatchService {
         for (Map.Entry<UUID, Integer> e : botKills.entrySet()) {
             s.set("abates." + e.getKey(), e.getValue());
         }
+        for (Map.Entry<UUID, String> e : killerNames.entrySet()) {
+            s.set("nomes-abates." + e.getKey(), e.getValue());
+        }
         saveOut(s);
     }
 
@@ -510,6 +524,7 @@ public final class MatchService {
     public void load(ConfigNode s) {
         result = null;
         botKills.clear();
+        killerNames.clear();
         out.clear();
         returnTicks = -1;
         if (s == null) {
@@ -532,6 +547,7 @@ public final class MatchService {
         lastDead = s.getString("ultimo-morto");
         dragonKiller = s.getString("matou-dragao");
         readKills(s.section("abates"));
+        readKillerNames(s.section("nomes-abates"));
         readOut(s.section("fora"));
     }
 
@@ -542,6 +558,19 @@ public final class MatchService {
         for (String id : k.keys(false)) {
             try {
                 botKills.put(UUID.fromString(id), k.getInt(id, 0));
+            } catch (IllegalArgumentException ignored) {
+                // broken line in bots.yml
+            }
+        }
+    }
+
+    private void readKillerNames(ConfigNode n) {
+        if (n == null) {
+            return;
+        }
+        for (String id : n.keys(false)) {
+            try {
+                killerNames.put(UUID.fromString(id), n.getString(id, "-"));
             } catch (IllegalArgumentException ignored) {
                 // broken line in bots.yml
             }
