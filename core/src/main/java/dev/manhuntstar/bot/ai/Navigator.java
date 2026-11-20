@@ -68,6 +68,11 @@ public final class Navigator {
     private static final int WATER_RESUME_AIR = 220;
     /** A 2–3 block jump takes less than 1 s; past 3 s, the bot got stuck. */
     private static final int PARKOUR_TIMEOUT_TICKS = 60;
+    /**
+     * How long the bot waits at the edge for a floor block it couldn't place (the limit of 10 blocks every 10 s, a
+     * mob standing there) before giving the path up: longer than the limit lasts.
+     */
+    private static final int FLOOR_WAIT_TICKS = 220;
     /** A stretch of water shorter than this isn't worth the boat, even if the A* went through it. */
     private static final int BOAT_MIN_RUN = 6;
     /** How much a block of swimming is worth in blocks of sprinting, when choosing where to leave the water. */
@@ -101,6 +106,9 @@ public final class Navigator {
     private boolean parkouring;
     private Pos parkourTarget;
     private int parkourTicks;
+    /** The next node's floor couldn't be placed this tick: the bot waits on the node it stands on. */
+    private boolean waitingForFloor;
+    private int floorWaitTicks;
     private WaterMode waterMode = WaterMode.NONE;
     private Pos escapeTarget;
     /** The last point returned is a node of a computed path (and not a "go straight there"). */
@@ -222,7 +230,9 @@ public final class Navigator {
         if (tickActions()) {
             onPath = true;
             updateDebug();
-            return Vec3.bottomCenter(current.path().get(pathIndex));
+            // waiting for the next node's floor: stays on the node it reached, not walking onto the air
+            int node = waitingForFloor && pathIndex > 0 ? pathIndex - 1 : pathIndex;
+            return Vec3.bottomCenter(current.path().get(node));
         }
         Vec3 wp = advanceToNextNode(finalTarget);
         onPath = current != null;
@@ -481,13 +491,20 @@ public final class Navigator {
 
     /** @return true while digging/placing the path's blocks (the bot stays at the current node). */
     private boolean tickActions() {
+        waitingForFloor = false;
         if (bot.isRiding()) {
             mineQueue.clear();
             placeQueue.clear();
             return false;
         }
         boolean canPlace = bot.brain().canPlaceToweringBlocksNearTarget();
-        if (!canPlace) {
+        if (!canPlace && !placeQueue.isEmpty()) {
+            if (floorMissing()) {
+                // the build ended with the next node's floor still missing: walking on would step into the air, so
+                // the path is given up and the next one is computed without blocks to place
+                dropPath();
+                return false;
+            }
             placeQueue.clear();
         }
         if (bot.mining().isMining()) {
@@ -512,6 +529,7 @@ public final class Navigator {
             Pos floor = placeQueue.peekFirst();
             if (!WorldUtil.canBeReplaced(w, floor)) {
                 placeQueue.pollFirst();
+                floorWaitTicks = 0;
                 continue;
             }
             Pos me = bot.blockPos();
@@ -526,11 +544,40 @@ public final class Navigator {
             }
             if (bot.placeBlock(floor, Blocks.COBBLESTONE, true)) {
                 bot.brain().noteBuildBlockPlaced();
+                placeQueue.pollFirst();
+                floorWaitTicks = 0;
+                return true;
             }
-            placeQueue.pollFirst();
+            // Not placed (the limit of 10 blocks every 10 s, a mob standing there): the floor stays queued and the
+            // bot waits where it is. If it can't be placed for longer than the limit lasts, the path is computed again.
+            if (++floorWaitTicks > FLOOR_WAIT_TICKS) {
+                dropPath();
+                return false;
+            }
+            waitingForFloor = true;
             return true;
         }
         return false;
+    }
+
+    /** A floor block of the path is still queued and missing. */
+    private boolean floorMissing() {
+        GameWorld w = world();
+        for (Pos floor : placeQueue) {
+            if (WorldUtil.canBeReplaced(w, floor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Gives the current path up (a floor that can't be placed): the next tick computes a new one. */
+    private void dropPath() {
+        current = null;
+        pathIndex = 0;
+        mineQueue.clear();
+        placeQueue.clear();
+        floorWaitTicks = 0;
     }
 
     // ------------------------------------------------------------------ parkour
@@ -660,6 +707,7 @@ public final class Navigator {
         keptStepTarget = null;
         mineQueue.clear();
         placeQueue.clear();
+        floorWaitTicks = 0;
         parkouring = false;
         lookahead = false;
         lookaheadDeadEnd = null;
