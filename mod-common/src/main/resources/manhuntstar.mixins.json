@@ -10,6 +10,7 @@
     "BlockItemMixin",
     "CommandSourceStackAccessor",
     "CommandsMixin",
+    "EnderDragonMixin",
     "EntityCallbacksMixin",
     "EntityMixin",
     "FireBlockMixin",

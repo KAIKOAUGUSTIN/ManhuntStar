@@ -22,6 +22,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityRemoveEvent;
 import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.event.entity.EntityTeleportEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -109,6 +110,17 @@ public final class BotEntityListener implements Listener {
     public void onDragonDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof EnderDragon) {
             events().dragonDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
+        }
+    }
+
+    /**
+     * /kill on the Ender Dragon removes it without a death event. A dragon that died in combat is removed this
+     * way too, at the end of its death; the match ended already then, so it isn't counted twice.
+     */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onDragonRemoved(EntityRemoveEvent event) {
+        if (event.getEntity() instanceof EnderDragon && event.getCause() == EntityRemoveEvent.Cause.DEATH) {
+            events().dragonDied(null);
         }
     }
 

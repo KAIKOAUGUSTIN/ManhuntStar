@@ -152,6 +152,18 @@ public final class ModHooks {
         }
     }
 
+    /** /kill on the Ender Dragon (no death of its own, so no killer): the hunted players win the match. */
+    public static void dragonKilled() {
+        ManhuntCore core = core();
+        if (core != null) {
+            try {
+                core.gameEvents().dragonDied(null);
+            } catch (Throwable t) {
+                failed("the dragon's death", t);
+            }
+        }
+    }
+
     /** A player died (for the bots' kill count and the end of the match). */
     public static void playerDied(ServerPlayer player, DamageSource source) {
         ManhuntCore core = core();
