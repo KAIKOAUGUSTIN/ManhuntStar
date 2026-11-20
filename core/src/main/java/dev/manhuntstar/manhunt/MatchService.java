@@ -146,6 +146,10 @@ public final class MatchService {
         if (!counting() || victim == null || !hunted(victim)) {
             return;
         }
+        if (victim.gameMode() == GameMode.SPECTATOR && !outOfThisMatch().contains(victim.uuid())) {
+            // someone watching as a spectator (a /kill, for example) isn't a hunted player dying
+            return;
+        }
         playerDeaths++;
         lastDead = victim.name();
         Bot killerBot = plugin.botManager().byEntity(killer);
