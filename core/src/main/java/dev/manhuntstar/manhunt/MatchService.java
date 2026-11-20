@@ -52,12 +52,17 @@ public final class MatchService {
     public static final int RETURN_SECONDS = 15;
 
     /**
-     * A hunted player who is out of the match. Until they respawn {@code place} is null (they are on the death
-     * screen); after that they are a spectator and {@code mode} is the game mode to give back.
+     * A hunted player who is out of the match. Until they respawn {@code pos} is null (they are on the death
+     * screen); after that they are a spectator, {@code mode} is the game mode to give back and {@code world},
+     * {@code pos}, {@code yaw} and {@code pitch} where they respawned. The world is kept by name: it is looked up
+     * again on the way back, so a world that wasn't loaded yet when the server started still counts.
      */
     private static final class Out {
         GameMode mode;
-        Place place;
+        String world;
+        Vec3 pos;
+        float yaw;
+        float pitch;
         /** The match is over: they go back as soon as they're online (or respawn normally if still dead). */
         boolean due;
     }
@@ -215,7 +220,7 @@ public final class MatchService {
             plugin.botManager().markDirty();
             return;
         }
-        if (o.place == null) {
+        if (o.pos == null) {
             watch(p, o);
         }
     }
@@ -231,7 +236,7 @@ public final class MatchService {
         }
         if (o.due) {
             sendBack(p, o);
-        } else if (o.place == null && !p.isDead()) {
+        } else if (o.pos == null && !p.isDead()) {
             // still on the death screen: the respawn does it
             watch(p, o);
         }
@@ -240,7 +245,11 @@ public final class MatchService {
     /** Out of the match and respawned: watches as a spectator, remembering the game mode and the place to return to. */
     private void watch(GamePlayer p, Out o) {
         o.mode = p.gameMode() == GameMode.SPECTATOR ? GameMode.SURVIVAL : p.gameMode();
-        o.place = p.place();
+        Place here = p.place();
+        o.world = here.world() == null ? null : here.world().name();
+        o.pos = here.pos();
+        o.yaw = here.yaw();
+        o.pitch = here.pitch();
         p.setGameMode(GameMode.SPECTATOR);
         plugin.messages().send(p, "match.spectating");
         plugin.botManager().markDirty();
@@ -343,7 +352,7 @@ public final class MatchService {
             Out o = e.getValue();
             o.due = true;
             GamePlayer p = Platform.server().player(e.getKey());
-            if (p != null && o.place != null) {
+            if (p != null && o.pos != null) {
                 now.add(() -> sendBack(p, o));
             } else if (p != null && !p.isDead()) {
                 // out, but never got as far as respawning in this match: nothing to undo
@@ -356,11 +365,13 @@ public final class MatchService {
 
     private void sendBack(GamePlayer p, Out o) {
         out.remove(p.uuid());
-        if (o.place == null) {
+        if (o.pos == null) {
             return;
         }
-        if (o.place.world() != null) {
-            p.teleport(o.place);
+        GameWorld w = o.world == null ? null : Platform.server().world(o.world);
+        if (w != null) {
+            // a world that no longer exists: the game mode comes back where they are, not in another world
+            p.teleport(new Place(w, o.pos, o.yaw, o.pitch));
         }
         p.setGameMode(o.mode == null ? GameMode.SURVIVAL : o.mode);
         plugin.messages().send(p, "match.back");
@@ -509,14 +520,14 @@ public final class MatchService {
             Out o = e.getValue();
             String k = "fora." + e.getKey();
             s.set(k + ".volta", o.due);
-            if (o.place != null) {
+            if (o.pos != null) {
                 s.set(k + ".modo", (o.mode == null ? GameMode.SURVIVAL : o.mode).name());
-                s.set(k + ".mundo", o.place.world() == null ? "" : o.place.world().name());
-                s.set(k + ".x", o.place.x());
-                s.set(k + ".y", o.place.y());
-                s.set(k + ".z", o.place.z());
-                s.set(k + ".yaw", (double) o.place.yaw());
-                s.set(k + ".pitch", (double) o.place.pitch());
+                s.set(k + ".mundo", o.world == null ? "" : o.world);
+                s.set(k + ".x", o.pos.x());
+                s.set(k + ".y", o.pos.y());
+                s.set(k + ".z", o.pos.z());
+                s.set(k + ".yaw", (double) o.yaw);
+                s.set(k + ".pitch", (double) o.pitch);
             }
         }
     }
@@ -592,12 +603,11 @@ public final class MatchService {
                 o.due = n.getBoolean("volta", false);
                 if (n.contains("modo")) {
                     o.mode = GameMode.valueOf(n.getString("modo", "SURVIVAL"));
-                    GameWorld w = Platform.server().world(n.getString("mundo", ""));
-                    if (w == null) {
-                        w = Platform.server().defaultWorld();
-                    }
-                    o.place = new Place(w, new Vec3(n.getDouble("x", 0), n.getDouble("y", 0), n.getDouble("z", 0)),
-                            (float) n.getDouble("yaw", 0), (float) n.getDouble("pitch", 0));
+                    String world = n.getString("mundo", "");
+                    o.world = world.isEmpty() ? null : world;
+                    o.pos = new Vec3(n.getDouble("x", 0), n.getDouble("y", 0), n.getDouble("z", 0));
+                    o.yaw = (float) n.getDouble("yaw", 0);
+                    o.pitch = (float) n.getDouble("pitch", 0);
                 }
                 out.put(uuid, o);
             } catch (IllegalArgumentException ignored) {
