@@ -524,6 +524,7 @@ public final class Bot {
         if (brain != null && !Objects.equals(targetPlayer, id)) {
             // a build toward the old target ends, and doesn't resume if that one becomes the target again
             brain.onTargetChanged();
+            endPillarBuild();
         }
         this.targetPlayer = id;
     }
@@ -822,6 +823,14 @@ public final class Bot {
         pendingPillarDone = onDone;
         GamePlayer queuedFor = target();
         pendingPillarTarget = queuedFor == null ? null : queuedFor.uuid();
+    }
+
+    /**
+     * The pillar block still queued no longer counts as a build when placed: its target changed or is gone. Even if
+     * that target comes back before the block goes in, the block doesn't restart the build past the 3 blocks.
+     */
+    public void endPillarBuild() {
+        pendingPillarTarget = null;
     }
 
     public boolean hasPendingPillar() {

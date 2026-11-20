@@ -173,6 +173,7 @@ public final class Brain {
     private void endBuildWithoutTarget() {
         if (bot.horizontalDistanceTo(bot.target()) == Double.POSITIVE_INFINITY) {
             buildRange.clear();
+            bot.endPillarBuild();
         }
     }
 
