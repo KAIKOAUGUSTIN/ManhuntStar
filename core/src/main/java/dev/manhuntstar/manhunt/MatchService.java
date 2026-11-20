@@ -143,7 +143,7 @@ public final class MatchService {
 
     /** A player died; {@code killer} is who caused it (a bot's body, a player, a mob or null). */
     public void playerDied(GamePlayer victim, GameEntity killer) {
-        if (!counting() || victim == null || !policy().isParticipant(victim)) {
+        if (!counting() || victim == null || !hunted(victim)) {
             return;
         }
         playerDeaths++;
@@ -357,11 +357,19 @@ public final class MatchService {
         List<UUID> outNow = outOfThisMatch();
         List<UUID> ids = new ArrayList<>();
         for (GamePlayer p : Platform.server().onlinePlayers()) {
-            if (policy().isParticipant(p) && (p.gameMode() != GameMode.SPECTATOR || outNow.contains(p.uuid()))) {
+            if (hunted(p) && (p.gameMode() != GameMode.SPECTATOR || outNow.contains(p.uuid()))) {
                 ids.add(p.uuid());
             }
         }
         return ids;
+    }
+
+    /**
+     * The player is hunted in this match: a participant the player list allows, or the target of
+     * /manhunt target, whom the bots chase whatever the list says.
+     */
+    private boolean hunted(GamePlayer p) {
+        return policy().isParticipant(p) || p.uuid().equals(plugin.botManager().forcedTarget());
     }
 
     /** Hunted players online and still in the match. */
@@ -369,7 +377,7 @@ public final class MatchService {
         int n = 0;
         for (GamePlayer p : Platform.server().onlinePlayers()) {
             Out o = out.get(p.uuid());
-            if (policy().isParticipant(p) && p.gameMode() != GameMode.SPECTATOR && (o == null || o.due)) {
+            if (hunted(p) && p.gameMode() != GameMode.SPECTATOR && (o == null || o.due)) {
                 n++;
             }
         }
