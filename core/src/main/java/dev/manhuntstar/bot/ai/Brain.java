@@ -153,7 +153,12 @@ public final class Brain {
             return false;
         }
         double horizontal = bot.horizontalDistanceTo(target);
-        return horizontal < Double.POSITIVE_INFINITY && buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
+        if (horizontal == Double.POSITIVE_INFINITY) {
+            // dead or in another world: the build ends, and doesn't resume when they respawn or come back
+            buildRange.clear();
+            return false;
+        }
+        return buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
     }
 
     /** A block of the tower or bridge toward the target was placed: the build may go on ({@link BuildRange}). */

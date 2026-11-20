@@ -53,6 +53,15 @@ class BuildRangeTest {
     }
 
     @Test
+    void aBuildEndsWithAnotherTarget() {
+        BuildRange range = new BuildRange();
+        range.placed(PLAYER, 1000);
+        assertTrue(range.allows(OTHER, 2.0, 1001), "close to the new target: its own build may start");
+        assertFalse(range.keeps(PLAYER, 1002), "back to the first target: the old build doesn't resume");
+        assertFalse(range.allows(PLAYER, 8.0, 1002), "and the first target is too far to start a new one");
+    }
+
+    @Test
     void aBuildEndsWhenTheBotIsTeleportedAway() {
         BuildRange range = new BuildRange();
         range.placed(PLAYER, 1000);

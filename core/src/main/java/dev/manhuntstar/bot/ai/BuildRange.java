@@ -32,8 +32,14 @@ final class BuildRange {
         this.lastBlockTick = now;
     }
 
-    /** Whether the bot may place blocks toward this target, at this horizontal distance from it. */
+    /**
+     * Whether the bot may place blocks toward this target (the bot's own), at this horizontal distance from it.
+     * Asked about another target, the build toward the last one ends: it doesn't resume if that one comes back.
+     */
     boolean allows(UUID target, double horizontal, long now) {
+        if (this.target != null && !this.target.equals(target)) {
+            this.target = null;
+        }
         return horizontal <= START || keeps(target, now);
     }
 
@@ -42,7 +48,10 @@ final class BuildRange {
         return target != null && target.equals(this.target) && now - lastBlockTick <= KEEP_TICKS;
     }
 
-    /** The bot was moved away from its build (teleported): a new one starts only close to the target again. */
+    /**
+     * The bot was moved away from its build (teleported), or its target died or left the world: a new one starts
+     * only close to the target again.
+     */
     void clear() {
         target = null;
     }
