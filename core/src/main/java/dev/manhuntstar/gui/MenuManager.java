@@ -37,19 +37,26 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
  * {@code /manhunt menu}: chest menus in place of the mod client's screen, in four sections.
  * Match (start, pause, forced target), Hunt rules (ring, countdown, late joiners, player list),
  * Bots (create, manage, groups, bring, delete) and Settings (the other option categories). Text
- * (bot name, skin, player) is typed in chat; the menu text comes from the language file
- * ({@code menu.*}).
+ * (bot name, skin, player) is typed in the game's dialog box; the menu text comes from the language
+ * file ({@code menu.*}).
  */
 public final class MenuManager implements Menus {
 
     private static final List<Category> CONFIG_CATEGORIES = List.of(Category.GENERAL, Category.BOTS, Category.COMBAT,
             Category.MOBILITY, Category.PATHFINDING, Category.TACTICS, Category.APPEARANCE);
+    /** A bot's name; skins and the player list take a player's name, up to 16 characters in the game. */
+    private static final int NAME_LENGTH = 32;
+    private static final int PLAYER_NAME_LENGTH = 16;
 
     private final ManhuntHost host;
     private final MenuScreens screens;
     private final Map<UUID, SpawnDraft> drafts = new HashMap<>();
-    /** Read by the chat event, which runs off the main thread. */
-    private final Map<UUID, Consumer<String>> chatInput = new ConcurrentHashMap<>();
+    /** The text each player is asked for in a dialog (the platform may answer off the main thread). */
+    private final Map<UUID, Prompt> prompts = new ConcurrentHashMap<>();
+
+    /** A text asked for in a dialog: what to do with it, and the menu to go back to without it. */
+    private record Prompt(int maxLength, boolean emptyAllowed, Consumer<String> then, Runnable back) {
+    }
 
     private static final class SpawnDraft {
         String name = "Terminator";
@@ -321,12 +328,12 @@ public final class MenuManager implements Menus {
                     openPlayerList(p);
                 });
         set(m, 51, item(MenuItems.WRITABLE_BOOK, t("menu.player-list.add-by-name", NamedTextColor.WHITE),
-                lines("menu.player-list.add-by-name-lore", NamedTextColor.GRAY)), c -> askChat(p, "menu.type-player", text -> {
+                lines("menu.player-list.add-by-name-lore", NamedTextColor.GRAY)), c -> askText(p, "player", "", PLAYER_NAME_LENGTH, false, text -> {
                     if (settings().addListedPlayer(text)) {
                         host.saveSettings();
                     }
                     openPlayerList(p);
-                }));
+                }, () -> openPlayerList(p)));
         back(m, () -> openRules(p));
         screens.open(p, m);
     }
@@ -378,16 +385,17 @@ public final class MenuManager implements Menus {
         }
         Menu m = create(3, "menu.title.create");
         set(m, 10, item(MenuItems.NAME_TAG, t("menu.create.name", NamedTextColor.WHITE, Messages.p("name", d.name)),
-                lines("menu.create.name-lore", NamedTextColor.GRAY)), c -> askChat(p, "menu.type-name", text -> {
+                lines("menu.create.name-lore", NamedTextColor.GRAY)), c -> askText(p, "name", d.name, NAME_LENGTH, false, text -> {
                     d.name = text;
                     openSpawner(p);
-                }));
+                }, () -> openSpawner(p)));
         set(m, 11, item(MenuItems.PLAYER_HEAD, t("menu.create.skin", NamedTextColor.WHITE,
                         Messages.p("skin", d.skin.isEmpty() ? msg().raw("menu.create.skin-same") : d.skin)),
-                lines("menu.create.skin-lore", NamedTextColor.GRAY)), c -> askChat(p, "menu.type-skin", text -> {
-                    d.skin = text.equals("-") ? "" : text;
+                lines("menu.create.skin-lore", NamedTextColor.GRAY)), c -> askText(p, "skin", d.skin, PLAYER_NAME_LENGTH, true, text -> {
+                    // empty: the bots get the skin of their own name
+                    d.skin = text;
                     openSpawner(p);
-                }));
+                }, () -> openSpawner(p)));
         set(m, 12, item(MenuItems.SLIME_BALL, t("menu.create.amount", NamedTextColor.WHITE, Messages.p("amount", d.amount)),
                 lines("menu.create.amount-lore", NamedTextColor.GRAY)), c -> {
                     int step = c.shift() ? 5 : 1;
@@ -634,29 +642,47 @@ public final class MenuManager implements Menus {
 
     // ------------------------------------------------------------------ events
 
-    private void askChat(GamePlayer p, String key, Consumer<String> then) {
+    /**
+     * Asks for a text in a dialog, with the texts of {@code menu.dialog.<key>} and the box starting at
+     * {@code initial}. Confirming gives the text to {@code then}; cancelling, Esc or an empty box (unless
+     * {@code emptyAllowed}) goes {@code back}.
+     */
+    private void askText(GamePlayer p, String key, String initial, int maxLength, boolean emptyAllowed, Consumer<String> then,
+            Runnable back) {
         screens.close(p);
-        chatInput.put(p.uuid(), then);
-        msg().send(p, key);
+        prompts.put(p.uuid(), new Prompt(maxLength, emptyAllowed, then, back));
+        screens.askText(p, new TextPrompt(msg().get("menu.dialog." + key + ".title"), msg().get("menu.dialog." + key + ".label"), initial,
+                maxLength, msg().get("menu.dialog.confirm"), msg().get("menu.dialog.cancel")));
     }
 
     /**
-     * What a player typed in chat (on any thread, already as plain text without the spaces around it).
-     * True when a menu was waiting for it: the message then doesn't go to the chat.
+     * The text a player confirmed in the dialog (on any thread; null when the answer had none, which counts as
+     * a cancel). Any client can send this answer, so it only counts while the menu is waiting for one from that
+     * player, and a text the box couldn't have held goes back as a cancel.
      */
-    public boolean chatTyped(GamePlayer player, String text) {
-        Consumer<String> handler = chatInput.remove(player.uuid());
-        if (handler == null) {
-            return false;
+    public void textEntered(GamePlayer player, String text) {
+        Prompt prompt = prompts.remove(player.uuid());
+        if (prompt == null) {
+            return;
         }
-        host.server().runNextTick(() -> {
-            if (!text.isEmpty() && !text.equalsIgnoreCase("cancel") && !text.equalsIgnoreCase(msg().raw("menu.cancel-word"))) {
-                handler.accept(text);
-            } else {
-                msg().send(player, "menu.cancelled");
-            }
-        });
-        return true;
+        if (text == null) {
+            // an answer without any text isn't an empty one: it would clear an optional value (the skin)
+            host.server().runNextTick(prompt.back());
+            return;
+        }
+        // the limits apply to the text as sent (the box can't hold more, nor a line break), then the spaces go
+        boolean fits = text.length() <= prompt.maxLength() && text.chars().noneMatch(Character::isISOControl);
+        String value = text.strip();
+        boolean valid = fits && (!value.isEmpty() || prompt.emptyAllowed());
+        host.server().runNextTick(valid ? () -> prompt.then().accept(value) : prompt.back());
+    }
+
+    /** The player cancelled the dialog (its button or Esc): back to the menu that asked. */
+    public void textCancelled(GamePlayer player) {
+        Prompt prompt = prompts.remove(player.uuid());
+        if (prompt != null) {
+            host.server().runNextTick(prompt.back());
+        }
     }
 
     /** A player clicked a slot of an open menu. */
@@ -668,9 +694,9 @@ public final class MenuManager implements Menus {
         }
     }
 
-    /** The player left: forgets what they were typing and their bot draft. */
+    /** The player left: forgets the text the menu was asking for and their bot draft. */
     public void forget(UUID player) {
-        chatInput.remove(player);
+        prompts.remove(player);
         drafts.remove(player);
     }
 }

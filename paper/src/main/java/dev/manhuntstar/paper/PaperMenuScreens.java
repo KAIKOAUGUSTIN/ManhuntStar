@@ -5,13 +5,23 @@ import dev.manhuntstar.gui.Menu;
 import dev.manhuntstar.gui.MenuClick;
 import dev.manhuntstar.gui.MenuIcon;
 import dev.manhuntstar.gui.MenuScreens;
+import dev.manhuntstar.gui.TextPrompt;
 import dev.manhuntstar.platform.GamePlayer;
-import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import io.papermc.paper.connection.PlayerGameConnection;
+import io.papermc.paper.dialog.Dialog;
+import io.papermc.paper.dialog.DialogResponseView;
+import io.papermc.paper.event.player.PlayerCustomClickEvent;
+import io.papermc.paper.registry.data.dialog.ActionButton;
+import io.papermc.paper.registry.data.dialog.DialogBase;
+import io.papermc.paper.registry.data.dialog.action.DialogAction;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.type.DialogType;
+import java.util.List;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -23,7 +33,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-/** Core's menus as Bukkit chest inventories; clicks, chat typed for the menus and quits go back to core. */
+/**
+ * Core's menus as Bukkit chest inventories and the texts they ask for as the game's dialogs; clicks,
+ * dialog answers and quits go back to core.
+ */
 public final class PaperMenuScreens implements MenuScreens, Listener {
 
     private final ManhuntStarPlugin plugin;
@@ -74,11 +87,47 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
         return s;
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
-    public void onChat(AsyncChatEvent event) {
-        String text = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
-        if (plugin.core().menus().chatTyped(PaperEntities.of(event.getPlayer()), text)) {
-            event.setCancelled(true);
+    @Override
+    public void askText(GamePlayer player, TextPrompt prompt) {
+        // PaperEntities.bukkit gives null for no player
+        Player p = PaperEntities.bukkit(player);
+        if (p == null) {
+            return;
+        }
+        DialogBase base = DialogBase.builder(prompt.title())
+                .canCloseWithEscape(true)
+                .pause(false)
+                .afterAction(DialogBase.DialogAfterAction.CLOSE)
+                .inputs(List.of(DialogInput.text(TextPrompt.INPUT, prompt.label())
+                        .width(TextPrompt.INPUT_WIDTH)
+                        .initial(prompt.initial())
+                        .maxLength(prompt.maxLength())
+                        .build()))
+                .build();
+        // a confirmation dialog: Esc does what its second button does
+        DialogType type = DialogType.confirmation(button(prompt.confirm(), TextPrompt.SUBMIT_CLICK),
+                button(prompt.cancel(), TextPrompt.CANCEL_CLICK));
+        p.showDialog(Dialog.create(factory -> factory.empty().base(base).type(type)));
+    }
+
+    /** A button that sends {@code click} with the dialog's inputs. */
+    private static ActionButton button(Component label, String click) {
+        return ActionButton.create(label, null, TextPrompt.BUTTON_WIDTH, DialogAction.customClick(Key.key(click), null));
+    }
+
+    /** The answer to a dialog of {@link #askText}: the confirmed text or the cancel. */
+    @EventHandler
+    public void onDialog(PlayerCustomClickEvent event) {
+        if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) {
+            return;
+        }
+        String id = event.getIdentifier().asString();
+        if (id.equals(TextPrompt.SUBMIT_CLICK)) {
+            DialogResponseView answer = event.getDialogResponseView();
+            String text = answer == null ? null : answer.getText(TextPrompt.INPUT);
+            plugin.core().menus().textEntered(PaperEntities.of(connection.getPlayer()), text);
+        } else if (id.equals(TextPrompt.CANCEL_CLICK)) {
+            plugin.core().menus().textCancelled(PaperEntities.of(connection.getPlayer()));
         }
     }
 

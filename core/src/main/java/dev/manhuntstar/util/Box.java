@@ -14,6 +14,19 @@ public record Box(double minX, double minY, double minZ, double maxX, double max
         return new Box(minX - x, minY - y, minZ - z, maxX + x, maxY + y, maxZ + z);
     }
 
+    /** The same box moved by this offset. */
+    public Box move(Vec3 offset) {
+        return new Box(minX + offset.x(), minY + offset.y(), minZ + offset.z(), maxX + offset.x(), maxY + offset.y(), maxZ + offset.z());
+    }
+
+    /** Distance from the point to the nearest point of the box, 0 inside (as the game's {@code AABB.distanceToSqr}). */
+    public double distanceTo(Vec3 p) {
+        double dx = Math.max(Math.max(minX - p.x(), 0), p.x() - maxX);
+        double dy = Math.max(Math.max(minY - p.y(), 0), p.y() - maxY);
+        double dz = Math.max(Math.max(minZ - p.z(), 0), p.z() - maxZ);
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
     /** The boxes share some volume (touching faces don't count). */
     public boolean overlaps(Box o) {
         return minX < o.maxX && maxX > o.minX && minY < o.maxY && maxY > o.minY && minZ < o.maxZ && maxZ > o.minZ;

@@ -52,6 +52,9 @@ public final class Brain {
     private final HorseRoutine horse;
     private final BoatRoutine boat;
     private final ElytraFlight elytra;
+    private final BuildRange buildRange = new BuildRange();
+    /** The last {@link #dumbStarMove} held at the edge of the bot's own tower or bridge, waiting for the path. */
+    private boolean heldAtEdge;
 
     private int knockbackTicks;
     private int lavaExposureTicks;
@@ -139,9 +142,53 @@ public final class Brain {
         return bot.settings();
     }
 
-    /** Tower/bridge and A* blocks only within 3 blocks (horizontally) of the target, as in the mod. */
+    /**
+     * Tower/bridge and A* blocks: a build starts only within 3 blocks (horizontally) of the target, as in the mod,
+     * and one already under way toward the target keeps going however far it goes ({@link BuildRange}). Never for
+     * a target that is dead or in another world.
+     */
     public boolean canPlaceToweringBlocksNearTarget() {
-        return settings().allowTowering.on() && bot.isWithinToweringRange(bot.target(), 3.0);
+        GamePlayer target = bot.target();
+        if (target == null || !settings().allowTowering.on()) {
+            return false;
+        }
+        double horizontal = bot.horizontalDistanceTo(target);
+        if (horizontal == Double.POSITIVE_INFINITY) {
+            // dead or in another world: the build ends, and doesn't resume when they respawn or come back
+            buildRange.clear();
+            return false;
+        }
+        return buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
+    }
+
+    /** The bot's target changed: a build toward the old one ends, and doesn't resume if it becomes the target again. */
+    public void onTargetChanged() {
+        buildRange.clear();
+    }
+
+    /**
+     * A build ends when its target is dead, in another world or no longer hunted, every tick, before anything that
+     * makes the AI stop early (eating, a knockback, an ability): a target that comes back doesn't resume it.
+     */
+    private void endBuildWithoutTarget() {
+        if (bot.horizontalDistanceTo(bot.target()) == Double.POSITIVE_INFINITY) {
+            buildRange.clear();
+            bot.endPillarBuild();
+        }
+    }
+
+    /** A block of the tower or bridge toward the target was placed: the build may go on ({@link BuildRange}). */
+    public void noteBuildBlockPlaced() {
+        GamePlayer target = bot.target();
+        if (target != null) {
+            buildRange.placed(target.uuid(), Platform.server().currentTick());
+        }
+    }
+
+    /** A build toward this player (alive and in this world) is under way and keeps going past the 3 blocks that start one. */
+    boolean keepsBuildingFor(GamePlayer target) {
+        return target != null && settings().allowTowering.on() && bot.horizontalDistanceTo(target) < Double.POSITIVE_INFINITY
+                && buildRange.keeps(target.uuid(), Platform.server().currentTick());
     }
 
     private boolean plannerEnabled() {
@@ -171,8 +218,14 @@ public final class Brain {
         redistributionCooldown = ticks;
     }
 
-    /** After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". */
+    /**
+     * After a teleport the bot stays still for 15 ticks, with no velocity, until the ground "settles". The build it
+     * was on stays behind, with the pillar block it was jumping to place: from where it landed a new one starts
+     * only close to the target.
+     */
     public void startPostTeleportStabilization() {
+        buildRange.clear();
+        bot.cancelPendingPillar();
         stabilizeTicks = Math.max(stabilizeTicks, 15);
         bot.motor().stopWalk();
         bot.motor().setSprinting(false);
@@ -183,6 +236,7 @@ public final class Brain {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        endBuildWithoutTarget();
         bot.combat().tickTridentPickup();
         bot.combat().tickLavaCleanup();
         if (bot.capacityLocked()) {
@@ -373,7 +427,7 @@ public final class Brain {
             state("breaking-through", who, "");
             return;
         }
-        if (dist < 4.5) {
+        if (dist < 4.5 && !buildsOnTo(active)) {
             state("fighting", who, "");
             melee(active, dist);
             return;
@@ -440,9 +494,21 @@ public final class Brain {
         }
         state(hasPath ? "following-path" : "walking-straight", who, String.format(java.util.Locale.ROOT, "%.0f", dist));
         dumbStarMove(targetLoc, hasPath, active);
-        if (!stuckMiningMode && bot.distanceTo(active) > 6.0) {
+        // holding at the edge of its tower or bridge, the push away from the other bots could carry it off the edge
+        if (!stuckMiningMode && !heldAtEdge && bot.distanceTo(active) > 6.0) {
             bot.motor().addVelocity(swarmSeparation());
         }
+    }
+
+    /**
+     * Mid-build, the target is close but out of reach from where the bot stands (higher up on its tower, across
+     * the gap to its bridge): the bot builds on to it instead of fighting from there, where it waited at the edge
+     * with no hit and no block, or walked off a low tower. Without the A* only the climb goes on: walking straight
+     * there is no bridge, and it fell off the edge.
+     */
+    private boolean buildsOnTo(GameLiving active) {
+        return active instanceof GamePlayer player && !bot.combat().reachesFromHere(player)
+                && (towering.keepsClimbingFor(player) || (plannerEnabled() && keepsBuildingFor(player)));
     }
 
     /** Target close but behind a block: digs the block in the line of sight (as a player would). */
@@ -690,7 +756,8 @@ public final class Brain {
             }
             return;
         }
-        boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand();
+        // with the shield taken down by an axe the bot fights without it until it can raise it again
+        boolean canShield = bot.progression().canUseShield() && !bot.shouldHoldTotemInOffhand() && !bot.combat().isShieldDisabled();
         if (canShield) {
             if (inFluid) {
                 swimToward(target.position(), target);
@@ -916,6 +983,7 @@ public final class Brain {
 
     /** Walks to the point avoiding obstacles, opening doors, jumping steps and swimming. */
     public void dumbStarMove(Vec3 finalTarget, boolean plannerActive, GameLiving lookTarget) {
+        heldAtEdge = false;
         if (plannerActive) {
             // a detour from when there was no path no longer applies
             detourPos = null;
@@ -966,6 +1034,17 @@ public final class Brain {
             bot.setSneaking(true);
             bot.motor().stopWalk();
             bot.motor().walk(moveDir.scale(-0.2));
+            return;
+        }
+        // On top of its own tower or bridge with no path yet (the path that places the bridge is on its way): walking
+        // straight ahead fell off the edge, and the bot started again from the ground under the player.
+        if (cliff && !plannerActive && plannerEnabled() && bot.onGround() && keepsBuildingFor(bot.target())) {
+            heldAtEdge = true;
+            bot.motor().stopWalk();
+            bot.motor().setSprinting(false);
+            if (lookTarget != null) {
+                bot.lookAt(eyes(lookTarget));
+            }
             return;
         }
         bot.motor().setSprinting(true);
