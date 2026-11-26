@@ -73,11 +73,11 @@ dependencies {
 }
 
 // What the loaders' modules take: the sources and resources, to compile and pack them themselves
-val commonJava by configurations.creating {
+val commonJava = configurations.create("commonJava") {
     isCanBeResolved = false
     isCanBeConsumed = true
 }
-val commonResources by configurations.creating {
+val commonResources = configurations.create("commonResources") {
     isCanBeResolved = false
     isCanBeConsumed = true
 }

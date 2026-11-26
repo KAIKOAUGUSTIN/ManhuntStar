@@ -38,16 +38,16 @@ neoForge {
     }
 }
 
-val commonJava by configurations.creating {
+val commonJava = configurations.create("commonJava") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
-val commonResources by configurations.creating {
+val commonResources = configurations.create("commonResources") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
 // core goes into the mod jar as classes (it is part of the mod, not a library of its own)
-val bundled by configurations.creating {
+val bundled = configurations.create("bundled") {
     isTransitive = false
 }
 

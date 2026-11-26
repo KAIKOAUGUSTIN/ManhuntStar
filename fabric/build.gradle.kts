@@ -24,16 +24,16 @@ sourceSets.main {
     resources.srcDir(parent!!.file("src/main/resources"))
 }
 
-val commonJava by configurations.creating {
+val commonJava = configurations.create("commonJava") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
-val commonResources by configurations.creating {
+val commonResources = configurations.create("commonResources") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
 // core goes into the mod jar as classes (it is part of the mod, not a library of its own)
-val bundled by configurations.creating {
+val bundled = configurations.create("bundled") {
     isTransitive = false
 }
 
@@ -91,7 +91,7 @@ tasks.jar {
 loom {
     runs {
         named("server") {
-            runDir("run/server")
+            runDirectory.set(layout.projectDirectory.dir("run/server"))
         }
     }
 }
