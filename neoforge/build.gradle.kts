@@ -38,16 +38,16 @@ neoForge {
     }
 }
 
-val commonJava by configurations.creating {
+val commonJava = configurations.create("commonJava") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
-val commonResources by configurations.creating {
+val commonResources = configurations.create("commonResources") {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
 // core goes into the mod jar as classes (it is part of the mod, not a library of its own)
-val bundled by configurations.creating {
+val bundled = configurations.create("bundled") {
     isTransitive = false
 }
 
@@ -75,7 +75,8 @@ tasks.processResources {
     val props = mapOf(
         "version" to project.version.toString(),
         "minecraft" to minecraft,
-        "neoforge" to forMinecraft("neoforge"),
+        // the oldest NeoForge the mod accepts, not the one it is built against
+        "neoforge" to forMinecraft("neoforge-min"),
         "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
     )
     inputs.properties(props)
