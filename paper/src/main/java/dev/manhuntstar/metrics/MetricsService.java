@@ -40,6 +40,12 @@ public final class MetricsService {
         if (token.isEmpty() || (!metrics && !errorReports)) {
             return;
         }
+        if (FirstRun.inThisJvm(plugin.fastStatsConfig())) {
+            // FastStats was set up for the first time on this server during this run (by another plugin, or by
+            // Manhunt* itself before a reload): nothing is sent until the next restart
+            plugin.getLogger().info("FastStats runs for the first time on this server: Manhunt* sends nothing until the next restart.");
+            return;
+        }
         // before the builder: it writes plugins/faststats/config.properties on FastStats' first run
         ErrorReports.Mode mode = ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig());
         AtomicBoolean ready = new AtomicBoolean();
