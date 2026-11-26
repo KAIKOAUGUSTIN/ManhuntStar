@@ -1,10 +1,12 @@
 package dev.manhuntstar.metrics;
 
 import dev.faststats.ErrorTracker;
-import dev.faststats.bukkit.BukkitContext;
+import dev.faststats.FastStatsContext;
+import dev.faststats.bukkit.FastStatsBukkit;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.ManhuntStarPlugin;
 import dev.manhuntstar.config.Settings;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 /**
@@ -15,19 +17,21 @@ import java.util.logging.Level;
  * FastStats first runs on a server (no such file yet, from any plugin) the file is created and nothing is
  * sent until the next restart. Builds without a project token (FASTSTATS_TOKEN) send nothing.
  *
- * <p>Custom metrics (each one has to be created on the FastStats project with the same ID):
- * {@code bots} (number), {@code language} and {@code default_difficulty} (strings). No feature flags.
+ * <p>Custom metrics (each one has to be a data source on the FastStats project, with the same Reference ID):
+ * {@code bots} (number), {@code plugin_language} and {@code default_difficulty} (strings), the IDs in
+ * {@link UsageStats}. No feature flags.
  */
 public final class MetricsService {
 
     private final ManhuntStarPlugin plugin;
-    private BukkitContext context;
+    private FastStatsContext context;
     private ErrorReports errors;
 
     public MetricsService(ManhuntStarPlugin plugin) {
         this.plugin = plugin;
     }
 
+    /** In onEnable: FastStats' context has to be made ready once the plugin is enabled. */
     public void start() {
         String token = UsageStats.token();
         Settings settings = plugin.core().settings();
@@ -36,28 +40,32 @@ public final class MetricsService {
         if (token.isEmpty() || (!metrics && !errorReports)) {
             return;
         }
-        BukkitContext.Factory factory = new BukkitContext.Factory(plugin, token);
-        if (metrics) {
-            // FastStats reads the values off the main thread (every 30 minutes): it gets core's copies
-            UsageStats usage = plugin.core().usage();
-            factory.metrics(f -> f
-                    .addMetric(Metric.number("bots", usage::bots))
-                    .addMetric(Metric.string("language", usage::language))
-                    .addMetric(Metric.string("default_difficulty", usage::defaultDifficulty))
-                    .create());
-        }
-        switch (ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig())) {
-            case TRACK -> {
-                errors = new ErrorReports(plugin.getLogger());
-                factory.errorTrackerService(errors.tracker());
-            }
-            case IDLE -> factory.errorTrackerService(ErrorTracker.contextUnaware());
-            case NONE -> {
-                // no error reports from this start
-            }
-        }
+        // before the builder: it writes plugins/faststats/config.properties on FastStats' first run
+        ErrorReports.Mode mode = ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig());
+        AtomicBoolean ready = new AtomicBoolean();
         try {
-            context = factory.create();
+            FastStatsContext.Builder builder = FastStatsBukkit.builder(plugin).token(token);
+            if (metrics) {
+                // FastStats reads the values off the main thread (every 30 minutes): it gets core's copies
+                UsageStats usage = plugin.core().usage();
+                builder.metrics(f -> f
+                        .addMetric(Metric.number(UsageStats.BOTS, usage::bots))
+                        .addMetric(Metric.string(UsageStats.LANGUAGE, usage::language))
+                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, usage::defaultDifficulty))
+                        .create());
+            }
+            switch (mode) {
+                case TRACK -> {
+                    errors = new ErrorReports(plugin.getLogger());
+                    builder.errorTrackerService(errors.tracker()).onReady(errors::closeUnlessSent);
+                }
+                case IDLE -> builder.errorTrackerService(ErrorTracker.contextUnaware());
+                case NONE -> {
+                    // no error reports from this start
+                }
+            }
+            // the last hook, so it only runs if every one before it (the SDK's own first) did
+            context = builder.onReady(c -> ready.set(true)).build();
             context.ready();
         } catch (RuntimeException e) {
             // e.g. plugins/faststats/config.properties can't be written: Manhunt* runs without FastStats
@@ -65,8 +73,9 @@ public final class MetricsService {
             shutdown();
             return;
         }
-        if (errors != null && !errors.closeUnlessSentBy(context)) {
-            errors = null;
+        if (!ready.get()) {
+            // the SDK has logged why: Manhunt* runs without FastStats
+            shutdown();
         }
     }
 

@@ -1,6 +1,6 @@
 package dev.manhuntstar.neoforge;
 
-import dev.faststats.neoforge.NeoForgeContext;
+import dev.faststats.neoforge.FastStatsNeoForge;
 import dev.manhuntstar.mod.ModLogging;
 import dev.manhuntstar.mod.ModPermissions;
 import dev.manhuntstar.mod.ModPlatform;
@@ -56,16 +56,13 @@ public final class ManhuntStarNeoForge {
 
     /**
      * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
-     * only. Made now, before the server exists: the SDK starts sending when the server has started and
-     * stops with it.
+     * only. Made now, before the server exists: the SDK makes it ready when the server has started and
+     * shuts it down when it stops.
      */
     private static void startStatistics(ModPlatform platform) {
         if (FMLEnvironment.getDist() != Dist.DEDICATED_SERVER) {
             return;
         }
-        String token = ModStatistics.token(platform);
-        if (!token.isEmpty()) {
-            ModStatistics.start(new NeoForgeContext.Factory("manhuntstar", token), platform);
-        }
+        ModStatistics.start(() -> FastStatsNeoForge.builder("manhuntstar"), platform);
     }
 }
