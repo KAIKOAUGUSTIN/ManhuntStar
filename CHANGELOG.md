@@ -2,6 +2,30 @@
 
 Generated automatically on every merge into main.
 
+## 2.1.1 - 2026-11-25
+
+### New
+
+- The menu asks for names in a dialog text box instead of the chat (203195d)
+- The match ends: victory when the Ender Dragon dies, defeat by manhunt.defeat, titles, the bots' party or gloom and a summary in the chat (cb8c6db)
+
+### Fixed
+
+- The mods' menu keeps the cursor where it was when a click opens the next screen (8754394)
+- A player who walks off on top of their tower is followed up there, instead of the bot climbing down (af4db3f)
+- The bots' melee reach follows the player's rule, and a player running at a bot is no longer hit before they can see it in reach (b7a22d1)
+- A bot's shield blocks only once raised for a moment, and an axe takes it down, as a player's (5ad762a)
+
+### Updated
+
+- Bump io.papermc.paper:paper-api (f57baf1)
+- Bump gradle-wrapper from 9.8.2 to 9.9.1 (3bd4c4c)
+- Bump org.sonarqube from 7.5.0.8588 to 7.6.0.18749 (3c444e1)
+
+**Paper:** 26.2-26.3 · **Fabric and NeoForge:** 26.2, 26.3 · **Java:** 25
+
+**Full changelog since 2.1.0:** https://github.com/KAIKOAUGUSTIN/ManhuntStar/compare/v2.1.0...v2.1.1
+
 ## 2.1.0 - 2026-11-14
 
 ### New

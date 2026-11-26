@@ -65,6 +65,8 @@ public final class MatchService {
         float pitch;
         /** The match is over: they go back as soon as they're online (or respawn normally if still dead). */
         boolean due;
+        /** The switch to Spectator went through (another plugin can refuse it; then it is tried again). */
+        boolean watching;
     }
 
     private final ManhuntHost plugin;
@@ -225,7 +227,7 @@ public final class MatchService {
             }
             return;
         }
-        if (o.pos == null) {
+        if (!o.watching) {
             watch(p, o);
         }
     }
@@ -241,30 +243,52 @@ public final class MatchService {
         }
         if (o.due) {
             sendBack(p, o);
-        } else if (o.pos == null && !p.isDead()) {
+        } else if (!o.watching && !p.isDead()) {
             // still on the death screen: the respawn does it
             watch(p, o);
         }
     }
 
-    /** Out of the match and respawned: watches as a spectator, remembering the game mode and the place to return to. */
+    /**
+     * Out of the match and respawned: watches as a spectator. The game mode and the place to return to are kept the
+     * first time; another plugin can refuse Spectator, and then {@link #tick} tries again every second.
+     */
     private void watch(GamePlayer p, Out o) {
-        o.mode = p.gameMode() == GameMode.SPECTATOR ? GameMode.SURVIVAL : p.gameMode();
-        Place here = p.place();
-        o.world = here.world() == null ? null : here.world().name();
-        o.pos = here.pos();
-        o.yaw = here.yaw();
-        o.pitch = here.pitch();
-        p.setGameMode(GameMode.SPECTATOR);
-        plugin.messages().send(p, "match.spectating");
-        plugin.botManager().markDirty();
+        if (o.pos == null) {
+            o.mode = p.gameMode() == GameMode.SPECTATOR ? GameMode.SURVIVAL : p.gameMode();
+            Place here = p.place();
+            o.world = here.world() == null ? null : here.world().name();
+            o.pos = here.pos();
+            o.yaw = here.yaw();
+            o.pitch = here.pitch();
+            plugin.botManager().markDirty();
+        }
+        if (p.gameMode() != GameMode.SPECTATOR) {
+            p.setGameMode(GameMode.SPECTATOR);
+            if (p.gameMode() != GameMode.SPECTATOR) {
+                return;
+            }
+            plugin.messages().send(p, "match.spectating");
+        }
+        o.watching = true;
+    }
+
+    /** The players out of the match whose switch to Spectator was refused (see {@link #watch}) try again. */
+    private void retrySpectators() {
+        for (Map.Entry<UUID, Out> e : new ArrayList<>(out.entrySet())) {
+            Out o = e.getValue();
+            GamePlayer p = !o.due && o.pos != null && !o.watching ? Platform.server().player(e.getKey()) : null;
+            if (p != null && !p.isDead()) {
+                watch(p, o);
+            }
+        }
     }
 
     // ------------------------------------------------------------------ end
 
     /**
-     * Every tick: the countdown to send the players who were out back (and again for those another plugin held
-     * back), and those who left the hunt.
+     * Every tick: the countdown to send the players who were out back, again every second what another plugin
+     * refused (the way back, the switch to Spectator), and those who left the hunt.
      */
     public void tick() {
         if (returnTicks > 0 && --returnTicks == 0) {
@@ -272,6 +296,7 @@ public final class MatchService {
             sendEveryoneBack();
         } else if (Platform.server().currentTick() % 20 == 0 && !out.isEmpty()) {
             retryReturns();
+            retrySpectators();
         }
         if (Platform.server().currentTick() % 20 == 0 && counting()
                 && plugin.settings().defeat.get() == Defeat.ALL_DIED && everyoneOut(huntedOnline(), outOfThisMatch())) {
