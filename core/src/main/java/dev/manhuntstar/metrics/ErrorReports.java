@@ -138,12 +138,19 @@ public final class ErrorReports {
 
     /**
      * For the context's builder, after the platform's own setup: {@code builder.onReady(reports::closeUnlessSent)}.
-     * The SDK runs it when the context is made ready (onEnable on Paper, once the server has started on the
-     * mods), right after its own hook has started sending or not, and it keeps tracking only if the reports
-     * are sent. They aren't on FastStats' first run on the server (its notice sets {@code faststats.first-run}
-     * and nothing is sent until the next restart) or when FastStats is off for every plugin
-     * (faststats/config.properties: enabled or submitErrors false); then nothing would send or clear what the
-     * tracker collects, so it stops.
+     * The SDK runs it when the context is made ready (onEnable on Paper, once the server has started on a
+     * mod's dedicated server), right after its own hook has started sending or not, and it keeps tracking
+     * only if the reports are sent. They aren't on FastStats' first run on the server (its notice sets
+     * {@code faststats.first-run} and nothing is sent until the next restart) or when FastStats is off for
+     * every plugin (faststats/config.properties: enabled or submitErrors false); then nothing would send or
+     * clear what the tracker collects, so it stops.
+     *
+     * <p>On the client the context is made ready inside {@code build()}, just before the SDK starts sending:
+     * the answer is the same, since tracking only starts when config.properties was already there (not
+     * FastStats' first run there) and another mod's first run has set {@code faststats.first-run}. If the
+     * player turns the errors off in the game (Options, Telemetry Data, FastStats), the tracker keeps
+     * collecting ManhuntStar's distinct errors in memory, without sending them, until the game closes (the
+     * SDK doesn't say when its config changes); the next start doesn't track.
      */
     public void closeUnlessSent(FastStatsContext context) {
         boolean sent = !Boolean.getBoolean(FIRST_RUN) && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();

@@ -13,9 +13,11 @@ import java.util.logging.Level;
 
 /**
  * The mods' FastStats (https://faststats.dev), shared by the loaders: anonymous statistics and error
- * reports. Each loader calls {@link #start} with its own builder (FastStatsFabric, FastStatsNeoForge) when
- * the mod loads, on a dedicated server only; the SDK then makes the context ready once the server has
- * started and shuts it down when the server stops.
+ * reports, on a dedicated server and on the client (singleplayer and LAN), on by default and without the
+ * SDK's consent screen (the builder isn't asked for it). Each loader calls {@link #start} with its own
+ * builder (FastStatsFabric, FastStatsNeoForge) when the mod loads. On a dedicated server the SDK makes the
+ * context ready once the server has started and shuts it down when the server stops; on the client it is
+ * ready right away. Players turn it off in Options, Telemetry Data, FastStats, or in config.yml.
  *
  * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code plugin_language} and
  * {@code default_difficulty}. The error reports are {@link ErrorReports}. No feature flags.

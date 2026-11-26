@@ -7,12 +7,10 @@ import dev.manhuntstar.mod.ModPlatform;
 import dev.manhuntstar.mod.ModStatistics;
 import java.util.logging.Logger;
 import net.minecraft.server.permissions.Permissions;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -55,14 +53,12 @@ public final class ManhuntStarNeoForge {
     }
 
     /**
-     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
-     * only. Made now, before the server exists: the SDK makes it ready when the server has started and
-     * shuts it down when it stops.
+     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server and on
+     * the client (singleplayer and LAN). Made now, when the mod loads: on a dedicated server the SDK makes it
+     * ready when the server has started and shuts it down when it stops; on the client it is ready right
+     * away.
      */
     private static void startStatistics(ModPlatform platform) {
-        if (FMLEnvironment.getDist() != Dist.DEDICATED_SERVER) {
-            return;
-        }
         ModStatistics.start(() -> FastStatsNeoForge.builder("manhuntstar"), platform);
     }
 }
