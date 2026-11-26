@@ -37,8 +37,8 @@ mc263-neoforge = "26.3.0.118"
 mc263-neoforge-min = "26.3.0.101"
 mc263-adventure-platform-mod = "7.2.0"
 # Mixin and MixinExtras come with both loaders: the shared mod code compiles against them only.
-sponge-mixin = "0.17.3+mixin.0.8.7"
-mixinextras = "0.5.3"
+sponge-mixin = "0.17.5+mixin.0.8.7"
+mixinextras = "0.5.5"
 fabric-loom = "1.19.4"
 moddev = "2.0.148"
 
