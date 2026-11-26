@@ -45,11 +45,15 @@ final class MinecraftCompat {
     }
 
     /** Whether the block stops movement (Bukkit's Material.isSolid). */
+    // blocksMotion() is deprecated, but 26.2 has nothing else for it (26.3 has the blocks_motion tag)
+    @SuppressWarnings("deprecation")
     static boolean blocksMotion(BlockState state) {
         return state.blocksMotion();
     }
 
     /** Whether ice broken on top of this block turns into water (liquids too, which the caller checks). */
+    // what the game's own IceBlock checks on 26.2 (26.3 has the ice_melts_when_destroyed_above tag)
+    @SuppressWarnings("deprecation")
     static boolean meltsIceAbove(BlockState state) {
         return state.blocksMotion();
     }
