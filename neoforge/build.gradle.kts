@@ -75,7 +75,8 @@ tasks.processResources {
     val props = mapOf(
         "version" to project.version.toString(),
         "minecraft" to minecraft,
-        "neoforge" to forMinecraft("neoforge"),
+        // the oldest NeoForge the mod accepts, not the one it is built against
+        "neoforge" to forMinecraft("neoforge-min"),
         "faststatsToken" to rootProject.extra["faststatsToken"].toString(),
     )
     inputs.properties(props)
