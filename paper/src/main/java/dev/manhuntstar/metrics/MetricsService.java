@@ -15,8 +15,9 @@ import java.util.logging.Level;
  * FastStats first runs on a server (no such file yet, from any plugin) the file is created and nothing is
  * sent until the next restart. Builds without a project token (FASTSTATS_TOKEN) send nothing.
  *
- * <p>Custom metrics (each one has to be created on the FastStats project with the same ID):
- * {@code bots} (number), {@code language} and {@code default_difficulty} (strings). No feature flags.
+ * <p>Custom metrics (each one has to be a data source on the FastStats project, with the same Reference ID):
+ * {@code bots} (number), {@code plugin_language} and {@code default_difficulty} (strings), the IDs in
+ * {@link UsageStats}. No feature flags.
  */
 public final class MetricsService {
 
@@ -41,9 +42,9 @@ public final class MetricsService {
             // FastStats reads the values off the main thread (every 30 minutes): it gets core's copies
             UsageStats usage = plugin.core().usage();
             factory.metrics(f -> f
-                    .addMetric(Metric.number("bots", usage::bots))
-                    .addMetric(Metric.string("language", usage::language))
-                    .addMetric(Metric.string("default_difficulty", usage::defaultDifficulty))
+                    .addMetric(Metric.number(UsageStats.BOTS, usage::bots))
+                    .addMetric(Metric.string(UsageStats.LANGUAGE, usage::language))
+                    .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, usage::defaultDifficulty))
                     .create());
         }
         switch (ErrorReports.mode(errorReports, metrics, plugin.fastStatsConfig())) {

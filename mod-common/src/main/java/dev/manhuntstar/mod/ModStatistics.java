@@ -16,7 +16,7 @@ import java.util.logging.Level;
  * dedicated server only, with {@link #token} and {@link #start}; the SDK then starts and stops with the
  * server.
  *
- * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code language} and
+ * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code plugin_language} and
  * {@code default_difficulty}. The error reports are {@link ErrorReports}. No feature flags.
  */
 public final class ModStatistics {
@@ -46,9 +46,9 @@ public final class ModStatistics {
         try {
             if (statisticsEnabled(platform)) {
                 factory.metrics(f -> f
-                        .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
-                        .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
-                        .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
+                        .addMetric(Metric.number(UsageStats.BOTS, () -> read(platform, UsageStats::bots)))
+                        .addMetric(Metric.string(UsageStats.LANGUAGE, () -> read(platform, UsageStats::language)))
+                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, () -> read(platform, UsageStats::defaultDifficulty)))
                         .create());
             }
             switch (ErrorReports.mode(errorReportsEnabled(platform), statisticsEnabled(platform), platform.fastStatsConfig())) {
