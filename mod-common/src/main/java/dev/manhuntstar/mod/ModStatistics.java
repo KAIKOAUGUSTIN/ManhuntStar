@@ -5,6 +5,7 @@ import dev.faststats.FastStatsContext;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.metrics.ErrorReports;
+import dev.manhuntstar.metrics.FirstRun;
 import dev.manhuntstar.metrics.UsageStats;
 import java.io.File;
 import java.util.function.Function;
@@ -42,6 +43,12 @@ public final class ModStatistics {
         boolean statistics = statisticsEnabled(platform);
         boolean errorReports = errorReportsEnabled(platform);
         if (token.isEmpty() || (!statistics && !errorReports)) {
+            return;
+        }
+        if (FirstRun.inThisJvm(platform.fastStatsConfig())) {
+            // another mod set FastStats up for the first time on this server or computer during this run:
+            // nothing is sent until the next restart
+            platform.logger().info("FastStats runs for the first time here: Manhunt* sends nothing until the next restart.");
             return;
         }
         // before the builder, which writes the file this reads

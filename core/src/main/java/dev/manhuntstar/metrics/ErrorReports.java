@@ -39,11 +39,6 @@ public final class ErrorReports {
     /** Libraries moved into ManhuntStar's package in the plugin jar (FastStats itself): not our code. */
     private static final String OUR_LIBRARIES = "dev.manhuntstar.libs.";
     private static final String YAML_PACKAGE = "org.yaml.snakeyaml.";
-    /**
-     * Set by the SDK (of any plugin or mod in this JVM) on FastStats' first run on the server, when it shows
-     * its notice: from then on no context sends anything until the next restart.
-     */
-    private static final String FIRST_RUN = "faststats.first-run";
 
     private final ErrorTracker tracker;
     private final Logger logger;
@@ -113,7 +108,7 @@ public final class ErrorReports {
      * before making an {@code ErrorReports}, so that nothing is tracked when nothing will be sent.
      */
     public static boolean sentBy(File fastStatsConfig) {
-        if (!Boolean.parseBoolean(System.getProperty("faststats.enabled", "true")) || Boolean.getBoolean(FIRST_RUN)
+        if (!Boolean.parseBoolean(System.getProperty("faststats.enabled", "true")) || Boolean.getBoolean(FirstRun.PROPERTY)
                 || !fastStatsConfig.isFile()) {
             return false;
         }
@@ -153,7 +148,7 @@ public final class ErrorReports {
      * SDK doesn't say when its config changes); the next start doesn't track.
      */
     public void closeUnlessSent(FastStatsContext context) {
-        boolean sent = !Boolean.getBoolean(FIRST_RUN) && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();
+        boolean sent = !Boolean.getBoolean(FirstRun.PROPERTY) && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();
         if (!sent) {
             close();
         }
