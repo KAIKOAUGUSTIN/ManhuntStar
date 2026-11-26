@@ -6,14 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import dev.faststats.Config;
+import dev.faststats.FastStatsContext;
+import dev.faststats.SimpleContext;
+import dev.faststats.internal.PlatformLoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.yaml.snakeyaml.error.YAMLException;
@@ -21,8 +27,16 @@ import org.yaml.snakeyaml.error.YAMLException;
 /** Which errors ErrorReports sends: only ManhuntStar's, and not the server's config typos. */
 class ErrorReportsTest {
 
+    /** What the SDK sets on FastStats' first run on the server (see ErrorReports.FIRST_RUN). */
+    private static final String FIRST_RUN = "faststats.first-run";
+
     @TempDir
     Path dir;
+
+    @AfterEach
+    void forgetFirstRun() {
+        System.clearProperty(FIRST_RUN);
+    }
 
     private File fastStatsConfig(String text) throws IOException {
         Path file = dir.resolve("config.properties");
@@ -97,6 +111,113 @@ class ErrorReportsTest {
     void notSentWhenFastStatsIsOffOrErrorsAre() throws IOException {
         assertFalse(ErrorReports.sentBy(fastStatsConfig("enabled=false\nsubmitErrors=true\n")));
         assertFalse(ErrorReports.sentBy(fastStatsConfig("enabled=true\nsubmitErrors=false\n")));
+    }
+
+    @Test
+    void notSentWhenAnotherPluginHadFastStatsFirstRunInThisJvm() throws IOException {
+        File sends = fastStatsConfig("enabled=true\nsubmitErrors=true\n");
+        System.setProperty(FIRST_RUN, "true");
+        assertFalse(ErrorReports.sentBy(sends));
+        assertEquals(ErrorReports.Mode.NONE, ErrorReports.mode(true, true, sends));
+    }
+
+    /** A FastStats context as the plugin and the mods make it, without a platform: nothing is ever sent. */
+    private static FastStatsContext context(ErrorReports reports, boolean errorTracking) {
+        Config config = new Config() {
+            private final UUID id = UUID.randomUUID();
+
+            @Override
+            public UUID serverId() {
+                return id;
+            }
+
+            @Override
+            public boolean enabled() {
+                return true;
+            }
+
+            @Override
+            public boolean submitMetrics() {
+                return false;
+            }
+
+            @Override
+            public boolean errorTracking() {
+                return errorTracking;
+            }
+
+            @Override
+            public boolean additionalMetrics() {
+                return false;
+            }
+
+            @Override
+            public boolean debug() {
+                return false;
+            }
+        };
+        return new SimpleContext.Builder("test")
+                .loggerFactory(new PlatformLoggerFactory((level, error, message) -> {
+                }))
+                .config(config)
+                .projectName("manhuntstar")
+                .token("0123456789abcdef0123456789abcdef")
+                .errorTrackerService(reports.tracker())
+                .onReady(reports::closeUnlessSent)
+                .build();
+    }
+
+    private static Logger quietLogger() {
+        Logger logger = Logger.getAnonymousLogger();
+        logger.setUseParentHandlers(false);
+        return logger;
+    }
+
+    @Test
+    void trackingGoesOnWhenTheContextSendsTheReports() {
+        Logger logger = quietLogger();
+        ErrorReports reports = new ErrorReports(logger);
+        FastStatsContext context = context(reports, true);
+        try {
+            context.ready();
+            assertTrue(reports.tracker().isContextAttached());
+            assertEquals(1, logger.getHandlers().length);
+        } finally {
+            context.shutdown();
+            reports.close();
+        }
+    }
+
+    @Test
+    void trackingStopsOnFastStatsFirstRun() {
+        Logger logger = quietLogger();
+        ErrorReports reports = new ErrorReports(logger);
+        FastStatsContext context = context(reports, true);
+        try {
+            // what the SDK's own hook does just before, when it shows its first-run notice
+            System.setProperty(FIRST_RUN, "true");
+            context.ready();
+            assertFalse(reports.tracker().isContextAttached());
+            assertEquals(0, logger.getHandlers().length);
+        } finally {
+            context.shutdown();
+            reports.close();
+        }
+    }
+
+    @Test
+    void trackingStopsWhenFastStatsDoesntSendErrors() {
+        Logger logger = quietLogger();
+        ErrorReports reports = new ErrorReports(logger);
+        FastStatsContext context = context(reports, false);
+        try {
+            context.ready();
+            assertFalse(reports.tracker().isContextAttached());
+            assertEquals(0, logger.getHandlers().length);
+        } finally {
+            context.shutdown();
+            reports.close();
+        }
     }
 
     private static Throwable thrownAt(String className, Throwable cause) {

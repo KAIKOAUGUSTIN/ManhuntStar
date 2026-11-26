@@ -1,6 +1,6 @@
 package dev.manhuntstar.fabric;
 
-import dev.faststats.fabric.FabricContext;
+import dev.faststats.fabric.FastStatsFabric;
 import dev.manhuntstar.mod.ModLogging;
 import dev.manhuntstar.mod.ModPermissions;
 import dev.manhuntstar.mod.ModPlatform;
@@ -47,17 +47,14 @@ public final class ManhuntStarFabric implements ModInitializer {
 
     /**
      * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
-     * only. Made now, before the server exists: the SDK starts sending when the server has started and
-     * stops with it.
+     * only. Made now, before the server exists: the SDK makes it ready when the server has started and
+     * shuts it down when it stops.
      */
     private static void startStatistics(FabricLoader fabric, ModPlatform platform) {
         if (fabric.getEnvironmentType() != EnvType.SERVER) {
             return;
         }
-        String token = ModStatistics.token(platform);
-        if (!token.isEmpty()) {
-            ModStatistics.start(new FabricContext.Factory("manhuntstar", token), platform);
-        }
+        ModStatistics.start(() -> FastStatsFabric.builder("manhuntstar"), platform);
     }
 
     /**
