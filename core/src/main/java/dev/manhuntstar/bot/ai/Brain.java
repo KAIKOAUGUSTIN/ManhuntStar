@@ -596,6 +596,18 @@ public final class Brain {
                         bot.motor().stopWalk();
                         return;
                     }
+                    Vec3 aim = goal.pos().add(0, 1.0, 0);
+                    if (WorldUtil.clearLine(bot.world(), bot.eyePos(), aim)) {
+                        // nothing in the way: right there but not seen (the particles of an invisible player): it
+                        // swings where it noticed them (the hit only lands if they really are in reach)
+                        state("fighting", who, "");
+                        bot.lookAt(aim);
+                        bot.motor().stopWalk();
+                        if (Platform.server().currentTick() - bot.combat().lastAttackTime() > 10) {
+                            bot.combat().attack(target);
+                        }
+                        return;
+                    }
                     // heard or glimpsed right here just now and not seen: behind the blocks, the bot digs to them
                     state("tunneling");
                     bot.mining().executeHardcodedMining(goal.pos());
