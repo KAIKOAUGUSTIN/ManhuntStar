@@ -36,6 +36,18 @@ class CompassFlipTest {
     }
 
     @Test
+    void aTargetMovingPastABotStandingStillIsNot() {
+        CompassFlip flip = new CompassFlip();
+        Vec3 pos = new Vec3(5, 64, 0);
+        // the target was west of the bot, then teleported (or ran) to the east
+        for (int tick = 0; tick <= 30; tick += 10) {
+            assertNull(flip.read(pos, new Vec3(-1, 0, 0), tick));
+        }
+        assertNull(flip.read(pos, new Vec3(1, 0, 0), 40));
+        assertNull(flip.read(pos.add(0.5, 0, 0), new Vec3(1, 0, 0), 50), "moved, but not toward where it pointed");
+    }
+
+    @Test
     void rightAboveIsRightThere() {
         CompassFlip flip = new CompassFlip();
         Vec3 pos = new Vec3(5, 64, 5);

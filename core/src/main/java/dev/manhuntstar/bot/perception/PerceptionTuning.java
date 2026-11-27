@@ -58,6 +58,8 @@ public final class PerceptionTuning {
     public static final double FLIP_DEGREES = 120.0;
     /** ...while the bot moved at most this many blocks: it just passed over the player. */
     public static final double FLIP_MAX_TRAVEL = 8.0;
+    /** And at least this many, toward where the compass pointed (standing still, a turning compass is the player moving). */
+    public static final double FLIP_MIN_TRAVEL = 1.5;
     /** Ticks between the compass readings compared for that. */
     public static final int FLIP_SAMPLE_TICKS = 10;
     /** A passing point farther than this behind the bot, with nothing found there, is forgotten. */

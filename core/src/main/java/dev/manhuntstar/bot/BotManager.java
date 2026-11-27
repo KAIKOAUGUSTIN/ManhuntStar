@@ -236,6 +236,9 @@ public final class BotManager {
         intel.clear();
         travel.clear();
         noise.clear();
+        for (Bot b : bots.values()) {
+            b.perception().reset();
+        }
     }
 
     /**

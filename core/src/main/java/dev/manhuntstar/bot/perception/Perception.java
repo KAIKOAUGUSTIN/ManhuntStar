@@ -75,6 +75,16 @@ public final class Perception {
         tower = null;
     }
 
+    /** A new hunt: what the bot noticed in the last one doesn't count. */
+    public void reset() {
+        flip.clear();
+        noise.clear();
+        bearing = null;
+        passedOver = null;
+        tower = null;
+        knowledgeTick = Long.MIN_VALUE;
+    }
+
     /** Called every tick with the bot's target (null without one). */
     public void tick(GamePlayer target) {
         GameWorld w = bot.world();
