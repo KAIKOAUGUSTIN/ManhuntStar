@@ -94,7 +94,7 @@ public final class CaveAmbush {
      * otherwise (the ambush only goes after a player the team knows to be in that cave).
      */
     private Vec3 clueInCave(Bot b, GamePlayer target) {
-        Sighting s = manager.intel().best(b.groupName(), manager::alliedGroups, target.uuid(), Platform.server().currentTick(),
+        Sighting s = manager.intel().last(b.groupName(), manager::alliedGroups, target.uuid(), Platform.server().currentTick(),
                 PerceptionTuning.MEMORY_TICKS);
         return s != null && s.world().equals(b.world().id()) && isInCave(b.world(), s.pos().toPos()) ? s.pos() : null;
     }

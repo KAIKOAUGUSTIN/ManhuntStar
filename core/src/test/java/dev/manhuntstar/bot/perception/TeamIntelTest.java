@@ -66,6 +66,9 @@ class TeamIntelTest {
         intel.dismiss("skeletons", ALLIES, PLAYER, 100);
         assertNull(intel.best("zombies", ALLIES, PLAYER, 100, 100));
         assertNotNull(intel.best("rivals", ALLIES, PLAYER, 100, 100), "the enemies still believe it");
+        assertNotNull(intel.last("zombies", ALLIES, PLAYER, 100, 100), "still where the team last noticed them");
+        intel.report("zombies", seen(Kind.SOUND, 200));
+        assertNotNull(intel.best("zombies", ALLIES, PLAYER, 200, 200), "a newer clue is followed up again");
     }
 
     @Test

@@ -227,7 +227,7 @@ public final class BotManager {
      * silent deaths): never the real position. Null when the team knows nothing about them.
      */
     public Sighting anchor(Bot bot, GamePlayer target) {
-        return target == null ? null : intel.best(bot.groupName(), this::alliedGroups, target.uuid(),
+        return target == null ? null : intel.last(bot.groupName(), this::alliedGroups, target.uuid(),
                 Platform.server().currentTick(), PerceptionTuning.ANCHOR_MEMORY_TICKS);
     }
 
