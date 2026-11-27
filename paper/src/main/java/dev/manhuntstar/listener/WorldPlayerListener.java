@@ -28,6 +28,7 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -40,7 +41,7 @@ import org.bukkit.event.world.WorldUnloadEvent;
  * World and player events: blocks placed by players (towers/skybases), block changes
  * for pathfinding, broken ambush bed, crafting table, TAB and the hunt rule for players who
  * join, count in the server list and in /list, redistribution when the player respawns far
- * from the bots, and the players' vibrations the bots hear.
+ * from the bots, the players' vibrations the bots hear and the advancements they're told of.
  */
 public final class WorldPlayerListener implements Listener {
 
@@ -130,6 +131,17 @@ public final class WorldPlayerListener implements Listener {
         }
         Location at = event.getLocation();
         plugin.core().gameEvents().playerVibration(PaperEntities.of(p), new Vec3(at.getX(), at.getY(), at.getZ()));
+    }
+
+    /** Entering the Nether or the End is announced: the bots learn of it too. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onAdvancement(PlayerAdvancementDoneEvent event) {
+        plugin.core().gameEvents().playerAdvancement(PaperEntities.of(event.getPlayer()), event.getAdvancement().getKey().toString());
+    }
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        plugin.core().gameEvents().playerJoined(PaperEntities.of(event.getPlayer()));
     }
 
     /** The player respawned far away: bots more than 150 blocks away reappear near them after a while. */

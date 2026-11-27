@@ -271,7 +271,7 @@ public final class ModHooks {
         }
     }
 
-    // ------------------------------------------------------------------ what the bots hear
+    // ------------------------------------------------------------------ what the bots hear and are told
 
     /**
      * A game event: a vibration of a player, as a sculk sensor would pick it up (only the game's vibrations, not the
@@ -292,6 +292,18 @@ public final class ModHooks {
             core.gameEvents().playerVibration(ModEntities.of(p), new dev.manhuntstar.util.Vec3(pos.x, pos.y, pos.z));
         } catch (Throwable t) {
             failed("a vibration", t);
+        }
+    }
+
+    /** The player completed an advancement (entering the Nether or the End is what the bots care about). */
+    public static void advancementDone(ServerPlayer player, String key) {
+        ManhuntCore core = core();
+        if (core != null && player != null) {
+            try {
+                core.gameEvents().playerAdvancement(ModEntities.of(player), key);
+            } catch (Throwable t) {
+                failed("an advancement", t);
+            }
         }
     }
 

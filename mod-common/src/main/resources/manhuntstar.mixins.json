@@ -21,6 +21,7 @@
     "MinecraftServerMixin",
     "MobAccessor",
     "MobMixin",
+    "PlayerAdvancementsMixin",
     "PlayerInfoUpdatePacketAccessor",
     "PlayerListMixin",
     "ProjectileMixin",
