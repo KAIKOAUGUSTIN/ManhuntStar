@@ -2,6 +2,8 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.bot.perception.PerceptionTuning;
+import dev.manhuntstar.bot.perception.Sighting;
 import dev.manhuntstar.platform.BedPart;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
@@ -27,8 +29,9 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Cave ambush: when the player is in a cave (Y &lt; 60, no skylight), a bot chasing them is taken to a
- * hidden spot in the same cave 50–130 blocks away and places a red bed. While the bed exists and the
+ * Cave ambush: when the player is in a cave (Y &lt; 60, no skylight) and a bot chasing them has a recent clue
+ * of them there (its team saw or heard them in that cave), the bot is taken to a hidden spot in the same cave
+ * 50–130 blocks from that clue and places a red bed. While the bed exists and the
  * player stays in that cave, the bot respawns next to it (back to phase 1 and regaining a phase every
  * 5 s). If the player leaves the cave or the bed is broken, the ambush ends and the cave's bots die.
  */
@@ -86,11 +89,22 @@ public final class CaveAmbush {
         }
     }
 
+    /**
+     * Where the bot's team last saw or heard the target, if that was in a cave of the bot's world recently; null
+     * otherwise (the ambush only goes after a player the team knows to be in that cave).
+     */
+    private Vec3 clueInCave(Bot b, GamePlayer target) {
+        Sighting s = manager.intel().best(b.groupName(), manager::alliedGroups, target.uuid(), Platform.server().currentTick(),
+                PerceptionTuning.MEMORY_TICKS);
+        return s != null && s.world().equals(b.world().id()) && isInCave(b.world(), s.pos().toPos()) ? s.pos() : null;
+    }
+
     private boolean tryStartOne(GamePlayer target) {
         List<Bot> candidates = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
             if (b.world().equals(target.world()) && target.uuid().equals(b.targetPlayerId())
-                    && !beds.containsKey(b.id()) && !botTargets.containsKey(b.id()) && b.idle() == null) {
+                    && !beds.containsKey(b.id()) && !botTargets.containsKey(b.id()) && b.idle() == null
+                    && clueInCave(b, target) != null) {
                 candidates.add(b);
             }
         }
@@ -99,12 +113,13 @@ public final class CaveAmbush {
         }
         Bot chosen = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
         GameWorld w = target.world();
-        // the player's cave is scanned only once; hiding spot and bed only look up the result
-        Set<Long> cave = caveRegion(w, target.blockPos());
+        Vec3 clue = clueInCave(chosen, target);
+        // the cave is scanned only once, from where the team knows the player to be; hiding spot and bed only look up the result
+        Set<Long> cave = caveRegion(w, clue.toPos());
         if (cave == null) {
             return false;
         }
-        Pos ambush = findHiddenFarPos(w, target, cave);
+        Pos ambush = findHiddenFarPos(w, clue, target, cave);
         if (ambush == null) {
             return false;
         }
@@ -120,13 +135,14 @@ public final class CaveAmbush {
         return true;
     }
 
-    private Pos findHiddenFarPos(GameWorld w, GamePlayer target, Set<Long> cave) {
+    /** A spot of the cave 50–130 blocks from {@code around} that the player doesn't see (their real eyes, only for that). */
+    private Pos findHiddenFarPos(GameWorld w, Vec3 around, GamePlayer target, Set<Long> cave) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int attempt = 0; attempt < 64; attempt++) {
             double angle = r.nextDouble() * Math.PI * 2;
             double distance = 50 + r.nextDouble() * 80;
-            int x = (int) Math.floor(target.position().x() + Math.cos(angle) * distance);
-            int z = (int) Math.floor(target.position().z() + Math.sin(angle) * distance);
+            int x = (int) Math.floor(around.x() + Math.cos(angle) * distance);
+            int z = (int) Math.floor(around.z() + Math.sin(angle) * distance);
             if (!w.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }

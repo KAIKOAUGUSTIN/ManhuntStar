@@ -1519,12 +1519,20 @@ public final class Brain {
 
     // ------------------------------------------------------------------ redistribution and pearls
 
-    /** A bot that is too far (> redistribution distance) reappears hidden 50–100 blocks from the target. */
+    /**
+     * A bot too far (> redistribution distance) from where its team last knew the target to be reappears hidden
+     * 50–100 blocks from that point. With nothing known it keeps looking on its own.
+     */
     private void handleAutoRedistribution(GamePlayer target) {
         if (!settings().allowRedistribution.on()) {
             return;
         }
-        double horizontal = Math.hypot(bot.pos().x() - target.position().x(), bot.pos().z() - target.position().z());
+        Sighting known = bot.manager().anchor(bot, target);
+        if (known == null || !known.world().equals(bot.world().id())) {
+            return;
+        }
+        Vec3 around = known.pos();
+        double horizontal = Math.hypot(bot.pos().x() - around.x(), bot.pos().z() - around.z());
         if (horizontal <= settings().redistDistance.value()) {
             return;
         }
@@ -1537,8 +1545,8 @@ public final class Brain {
         for (int i = 0; i < 15; i++) {
             double distance = 50 + r.nextDouble() * 50;
             double angle = r.nextDouble() * Math.PI * 2;
-            int x = (int) (target.position().x() + Math.cos(angle) * distance);
-            int z = (int) (target.position().z() + Math.sin(angle) * distance);
+            int x = (int) (around.x() + Math.cos(angle) * distance);
+            int z = (int) (around.z() + Math.sin(angle) * distance);
             if (!gw.isChunkLoaded(x >> 4, z >> 4)) {
                 continue;
             }
@@ -1561,6 +1569,7 @@ public final class Brain {
                 continue;
             }
             Vec3 spawnVec = Vec3.center(spawn);
+            // the player mustn't see the bot appear: their real eyes, only for that
             Vec3 eye = eyes(target);
             Vec3 look = target.direction();
             double dot = look.dot(spawnVec.subtract(eye).normalize());
@@ -1574,7 +1583,8 @@ public final class Brain {
             bot.manager().teleportBot(bot, dest);
             bot.mining().cancel();
             stuckMiningMode = false;
-            bot.lookAt(target.position());
+            bot.lookAt(around);
+            search.reset();
             gw.playSound(dest.pos(), Sounds.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1f, 1f);
             return;
         }

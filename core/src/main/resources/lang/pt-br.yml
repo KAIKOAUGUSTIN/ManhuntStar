@@ -406,7 +406,7 @@ options:
     description: "Elytra para alcançar alvos longe."
   allowredistribution:
     name: "Trazer bots que ficaram longe"
-    description: "Bots muito longe do alvo reaparecem escondidos perto dele."
+    description: "Bots muito longe de onde o time viu ou ouviu o alvo pela última vez reaparecem escondidos perto desse ponto."
   redistdistance:
     name: "Distância para trazer bots"
     description: "Distância (blocos) a partir da qual o bot é redistribuído."
@@ -454,7 +454,7 @@ options:
     description: "Rajada de arco quando o bot fica muito tempo sem acertar o jogador. Ele só atira se a flecha alcança o jogador."
   silentdeaths:
     name: "Mortes silenciosas"
-    description: "O bot mais longe de cada jogador (200+ blocos) some e renasce mais perto."
+    description: "O bot mais longe de onde o time sabia que cada jogador estava (200+ blocos) some e renasce mais perto."
   portalentrance:
     name: "Chegar por portal"
     description: "Bots sem portal para seguir o jogador até outra dimensão (ele morreu ou foi teleportado) saem de um portal perto de onde o jogador chegou."

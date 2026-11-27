@@ -241,8 +241,8 @@ public final class GameEvents {
     }
 
     /**
-     * The player respawned: someone out of the match becomes a spectator, and bots more than 150 blocks away
-     * reappear near them after a while.
+     * The player respawned: someone out of the match becomes a spectator, and bots more than 150 blocks from where
+     * their team last knew the player to be reappear nearer that after a while.
      */
     public void playerRespawned(GamePlayer p) {
         host.server().runNextTick(() -> {
@@ -251,10 +251,11 @@ public final class GameEvents {
                 manager().match().playerRespawned(p);
             }
             for (Bot b : manager().aliveBots()) {
-                if (b.world() != p.world()) {
+                dev.manhuntstar.bot.perception.Sighting known = manager().anchor(b, p);
+                if (known == null || !known.world().equals(b.world().id())) {
                     continue;
                 }
-                double d = Math.hypot(b.pos().x() - p.position().x(), b.pos().z() - p.position().z());
+                double d = Math.hypot(b.pos().x() - known.pos().x(), b.pos().z() - known.pos().z());
                 if (d > 150.0) {
                     b.brain().forceRedistributeWithDelay((int) (d / 10.0 * 20.0));
                 }

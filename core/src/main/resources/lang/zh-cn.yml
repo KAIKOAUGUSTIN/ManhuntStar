@@ -405,7 +405,7 @@ options:
     description: "用鞘翅追上远处的目标。"
   allowredistribution:
     name: "召回远处的机器人"
-    description: "离目标太远的机器人会隐蔽地出现在目标附近。"
+    description: "离队伍上次看到或听到目标的地方太远的机器人，会隐蔽地出现在那个地方附近。"
   redistdistance:
     name: "召回距离"
     description: "机器人超过这个距离（格）就会被重新分配。"
@@ -453,7 +453,7 @@ options:
     description: "机器人长时间打不中玩家时连续射箭。只有箭能射到玩家时才会射击。"
   silentdeaths:
     name: "无声死亡"
-    description: "离每名玩家最远的机器人（200 格以上）会消失并在更近处重生。"
+    description: "离队伍上次掌握的每名玩家位置最远的机器人（200 格以上）会消失并在更近处重生。"
   portalentrance:
     name: "通过传送门到达"
     description: "没有传送门可以跟着玩家去另一个维度的机器人（玩家死亡或被传送）会从玩家到达处附近的传送门出来。"

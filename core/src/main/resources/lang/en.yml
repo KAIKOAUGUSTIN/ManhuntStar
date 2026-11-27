@@ -406,7 +406,7 @@ options:
     description: "Elytra to reach far targets."
   allowredistribution:
     name: "Bring back far bots"
-    description: "Bots very far from the target reappear hidden near it."
+    description: "Bots very far from where their team last saw or heard the target reappear hidden near that spot."
   redistdistance:
     name: "Distance to bring bots back"
     description: "Distance (blocks) from which a bot gets redistributed."
@@ -454,7 +454,7 @@ options:
     description: "Bow burst when the bot goes too long without hitting the player. It only shoots if the arrow reaches the player."
   silentdeaths:
     name: "Silent deaths"
-    description: "The bot farthest from each player (200+ blocks) vanishes and respawns closer."
+    description: "The bot farthest from where its team last knew each player to be (200+ blocks) vanishes and respawns closer."
   portalentrance:
     name: "Arrive through a portal"
     description: "Bots with no portal to follow the player to another dimension (the player died or was teleported) come out of a portal near where the player arrived."
