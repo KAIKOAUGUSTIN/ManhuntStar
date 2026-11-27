@@ -6,6 +6,14 @@ import dev.manhuntstar.bot.Modes.SpawnMode;
 import dev.manhuntstar.bot.Modes.TargetMode;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.mobility.PortalEntrance;
+import dev.manhuntstar.bot.perception.Hearing;
+import dev.manhuntstar.bot.perception.Perception;
+import dev.manhuntstar.bot.perception.PerceptionTuning;
+import dev.manhuntstar.bot.perception.PlayerTravel;
+import dev.manhuntstar.bot.perception.PlayerView;
+import dev.manhuntstar.bot.perception.Sighting;
+import dev.manhuntstar.bot.perception.TeamIntel;
+import dev.manhuntstar.bot.perception.Vision;
 import dev.manhuntstar.bot.world.PlayerBlockTracker;
 import dev.manhuntstar.bot.world.TemporaryBlocks;
 import dev.manhuntstar.config.Settings;
@@ -26,6 +34,8 @@ import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.Place;
 import dev.manhuntstar.platform.Platform;
+import dev.manhuntstar.platform.SoundCategory;
+import dev.manhuntstar.platform.Sounds;
 import dev.manhuntstar.tactics.CaveAmbush;
 import dev.manhuntstar.tactics.TacticsManager;
 import dev.manhuntstar.util.Pos;
@@ -40,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -82,6 +93,11 @@ public final class BotManager {
     private final CaveAmbush caveAmbush;
     private final Map<UUID, Long> tickErrorLog = new HashMap<>();
     private final PlayerTrail playerTrail = new PlayerTrail();
+    private final PlayerTravel travel = new PlayerTravel();
+    private final TeamIntel intel = new TeamIntel();
+    private final Map<UUID, PlayerView> views = new HashMap<>();
+    private long viewsTick = Long.MIN_VALUE;
+    private final Hearing.Throttle noise = new Hearing.Throttle();
     private UUID forcedTarget;
     private int globalMaxPhase;
     private boolean dirty;
@@ -172,6 +188,140 @@ public final class BotManager {
     /** Where each online player was in the last ticks (the bots' melee reach against players). */
     public PlayerTrail playerTrail() {
         return playerTrail;
+    }
+
+    /** The players' trips between worlds (the portal the bots' compass points at). */
+    public PlayerTravel travel() {
+        return travel;
+    }
+
+    /** What the hunters' teams know about where the players are (their "call"). */
+    public TeamIntel intel() {
+        return intel;
+    }
+
+    /** What the bots can notice about the player on this tick (worked out once per tick for all of them). */
+    public PlayerView playerView(GamePlayer p) {
+        long now = Platform.server().currentTick();
+        if (viewsTick != now) {
+            views.clear();
+            viewsTick = now;
+        }
+        return views.computeIfAbsent(p.uuid(), id -> PlayerView.of(p));
+    }
+
+    /** Two groups (by name, null for no group) share what they see and hear: neither has the other as an enemy. */
+    public boolean alliedGroups(String a, String b) {
+        String ka = a == null ? "" : a.toLowerCase(Locale.ROOT);
+        String kb = b == null ? "" : b.toLowerCase(Locale.ROOT);
+        if (ka.equals(kb)) {
+            return true;
+        }
+        BotGroup ga = group(a);
+        BotGroup gb = group(b);
+        return !(ga != null && ga.isEnemy(kb)) && !(gb != null && gb.isEnemy(ka));
+    }
+
+    /**
+     * Where the bot's team last saw or heard the player, for the teleports near them (respawn, redistribution,
+     * silent deaths): never the real position. Null when the team knows nothing about them.
+     */
+    public Sighting anchor(Bot bot, GamePlayer target) {
+        return target == null ? null : intel.best(bot.groupName(), this::alliedGroups, target.uuid(),
+                Platform.server().currentTick(), PerceptionTuning.ANCHOR_MEMORY_TICKS);
+    }
+
+    /** A new hunt: the bots know nothing about where the players are. */
+    public void newHunt() {
+        intel.clear();
+        travel.clear();
+        noise.clear();
+    }
+
+    /**
+     * The player made a vibration at {@code at} (the platform already left out what the sculk wouldn't pick up):
+     * the bots close enough hear it and tell their team.
+     */
+    public void playerVibration(GamePlayer p, Vec3 at) {
+        if (!isEligibleTarget(p)) {
+            return;
+        }
+        long now = Platform.server().currentTick();
+        if (!noise.allow(p.uuid(), now)) {
+            return;
+        }
+        GameWorld w = p.world();
+        boolean sprinting = p.isSprinting();
+        Set<String> told = new java.util.HashSet<>();
+        for (Bot b : bots.values()) {
+            if (!b.isAlive() || b.world() != w) {
+                continue;
+            }
+            String key = b.groupName() == null ? "" : b.groupName().toLowerCase(Locale.ROOT);
+            if (told.contains(key) || !Hearing.hears(w, b.eyePos(), at, sprinting)) {
+                continue;
+            }
+            told.add(key);
+            Vec3 guess = Vision.estimate(b.eyePos(), at, Sighting.Kind.SOUND, Perception.randomNoise());
+            intel.report(b.groupName(), new Sighting(p.uuid(), w.id(), guess, Sighting.Kind.SOUND, now));
+        }
+    }
+
+    /** The player got an advancement: entering the Nether or the End is announced to everyone, the bots too. */
+    public void playerAdvancement(GamePlayer p, String key) {
+        if ((ENTER_NETHER.equals(key) || ENTER_END.equals(key)) && isEligibleTarget(p)) {
+            intel.announce(p.uuid(), Platform.server().currentTick());
+        }
+    }
+
+    private static final String ENTER_NETHER = "minecraft:story/enter_the_nether";
+    private static final String ENTER_END = "minecraft:story/enter_the_end";
+
+    /**
+     * A player went to another world. When the server doesn't have the advancement that would announce it, the
+     * first trip of the match to the Nether or the End is announced in its place.
+     */
+    private void playerTraveled(PlayerTravel.Departure d) {
+        if (!d.viaPortal()) {
+            return;
+        }
+        Dimension dim = d.to().dimension();
+        String key = dim == Dimension.NETHER ? ENTER_NETHER : dim == Dimension.THE_END ? ENTER_END : null;
+        GamePlayer p = Platform.server().player(d.player());
+        if (key == null || p == null || !isEligibleTarget(p) || Platform.server().hasAdvancement(key)) {
+            return;
+        }
+        if (match.firstTrip(d.player(), dim)) {
+            intel.announce(d.player(), d.tick());
+        }
+    }
+
+    /**
+     * The bot went through the portal the player (or itself, on the way here) took: it comes out where they did,
+     * on the other side, and remembers the way back.
+     */
+    public void sendThroughPortal(Bot bot, GameWorld to, Vec3 toPos, Vec3 portalHere) {
+        if (!bot.isAlive() || to == null) {
+            return;
+        }
+        GameWorld from = bot.world();
+        Place dest = arrivalSpot(new Place(to, toPos, bot.yaw(), 0f));
+        teleportBot(bot, dest);
+        bot.brain().setTeleporting(false);
+        Pos back = PlayerTravel.findPortal(to, toPos);
+        if (back != null && from != null) {
+            bot.rememberWayBack(to, Vec3.bottomCenter(back), from, portalHere);
+        }
+        to.playSound(dest.pos(), Sounds.BLOCK_PORTAL_TRAVEL, SoundCategory.PLAYERS, 0.6f, 1f);
+    }
+
+    /** Where the bot stands when it comes out: the point itself if there's room, else safe ground near it. */
+    private static Place arrivalSpot(Place at) {
+        Pos feet = at.blockPos();
+        if (WorldUtil.hasBodySpace(at.world(), feet) && WorldUtil.blocksMotion(at.world(), feet.below())) {
+            return at;
+        }
+        return resolveSurface(at);
     }
 
     public Collection<Bot> allBots() {
@@ -702,7 +852,10 @@ public final class BotManager {
         return target.place().add(r.nextDouble(-2, 2), 0, r.nextDouble(-2, 2));
     }
 
-    /** The target went to another dimension: opens a portal entrance for the bots following them. */
+    /**
+     * The target went to another dimension and these bots have no portal to follow (the player died and came back
+     * in another world, or was teleported): a portal entrance brings them over, near where the player arrived.
+     */
     public void requestDimensionChange(GamePlayer target, GameWorld from) {
         for (PortalEntrance e : entrances) {
             if (e.playerId().equals(target.uuid()) && e.worldId().equals(target.world().id())) {
@@ -712,13 +865,15 @@ public final class BotManager {
         List<Bot> stuck = new ArrayList<>();
         for (Bot b : aliveBots()) {
             // bots waiting in a ring stay there until the start
-            if (b.world() == from && target.uuid().equals(b.targetPlayerId()) && b.idle() == null) {
+            if (b.world() == from && target.uuid().equals(b.targetPlayerId()) && b.idle() == null && b.brain().strandedFrom(target)) {
                 stuck.add(b);
                 b.brain().setTeleporting(true);
             }
         }
         if (!stuck.isEmpty()) {
-            entrances.add(new PortalEntrance(this, target, stuck));
+            PlayerTravel.Departure arrival = travel.arrivalIn(target.uuid(), target.world().id());
+            Vec3 anchor = arrival != null ? arrival.toPos() : target.world().spawnPosition();
+            entrances.add(new PortalEntrance(this, target, anchor, stuck));
         }
     }
 
@@ -1022,6 +1177,9 @@ public final class BotManager {
 
     public void tick() {
         playerTrail.tick(plugin.server().onlinePlayers(), plugin.server().currentTick());
+        for (PlayerTravel.Departure d : travel.tick(plugin.server().onlinePlayers(), plugin.server().currentTick())) {
+            playerTraveled(d);
+        }
         match.tick();
         if (match.isEnded()) {
             tickEnded();
@@ -1057,10 +1215,8 @@ public final class BotManager {
         if (now % 10 == 0) {
             tickControlledHorses();
         }
-        if (now % 20 == 0) {
-            checkStrandedBots();
-        }
         if (now % 1200 == 0) {
+            intel.purge(now, PerceptionTuning.ANCHOR_MEMORY_TICKS);
             blockTracker.purge();
             inaccessibleHorses.values().removeIf(t -> t <= now);
         }
@@ -1144,15 +1300,6 @@ public final class BotManager {
             e.tick();
         }
         entrances.removeIf(PortalEntrance::isFinished);
-    }
-
-    private void checkStrandedBots() {
-        for (Bot b : aliveBots()) {
-            GamePlayer t = b.target();
-            if (t != null && isEligibleTarget(t) && !t.world().equals(b.world()) && b.idle() == null) {
-                requestDimensionChange(t, b.world());
-            }
-        }
     }
 
     /** Silent deaths: the farthest bot from each player (≥ 200 blocks) disappears and respawns closer. */

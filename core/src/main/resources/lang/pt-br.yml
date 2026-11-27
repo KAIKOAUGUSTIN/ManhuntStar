@@ -7,7 +7,7 @@
 #  trocados) e mantém os textos que você editou; uma cópia dele vai para lang/old/. Não mude "version".
 # ==============================================================================
 
-version: 4
+version: 5
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -256,6 +256,12 @@ state:
   parkour: "parkour"
   following-path: "seguindo caminho até <target> (<detail> blocos)"
   walking-straight: "indo direto até <target> (<detail> blocos)"
+  compass: "seguindo a bússola até <target>"
+  investigating: "indo até onde <target> foi notado (há <detail> s)"
+  tower: "subindo a torre de <target>"
+  digging-down: "cavando atrás de <target>"
+  to-portal: "indo até o portal que <target> usou"
+  in-portal: "atravessando o portal"
 
 category:
   general: "Geral"
@@ -451,7 +457,7 @@ options:
     description: "O bot mais longe de cada jogador (200+ blocos) some e renasce mais perto."
   portalentrance:
     name: "Chegar por portal"
-    description: "Bots chegam em outra dimensão saindo de um portal que o jogador vê."
+    description: "Bots sem portal para seguir o jogador até outra dimensão (ele morreu ou foi teleportado) saem de um portal perto de onde o jogador chegou."
   spawnmode:
     name: "Modo de spawn"
     description: "NORMAL: nasce no ponto. MANHUNT: nasce em roda e espera a caçada começar."

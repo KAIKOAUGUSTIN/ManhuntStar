@@ -22,7 +22,9 @@ public enum BlockTrait {
     MINEABLE_PICKAXE,
     MINEABLE_AXE,
     MINEABLE_SHOVEL,
-    MINEABLE_HOE;
+    MINEABLE_HOE,
+    /** Stops vibrations going through it, as wool does for the sculk (the game's occludes_vibration_signals tag). */
+    OCCLUDES_VIBRATIONS;
 
     final long bit() {
         return 1L << ordinal();

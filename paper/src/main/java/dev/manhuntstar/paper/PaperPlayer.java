@@ -48,6 +48,16 @@ public final class PaperPlayer extends PaperLiving implements GamePlayer {
     }
 
     @Override
+    public boolean isSneaking() {
+        return bukkit().isSneaking();
+    }
+
+    @Override
+    public boolean isSprinting() {
+        return bukkit().isSprinting();
+    }
+
+    @Override
     public GameMode gameMode() {
         return GameMode.valueOf(bukkit().getGameMode().name());
     }

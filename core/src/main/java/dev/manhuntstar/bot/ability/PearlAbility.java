@@ -5,6 +5,7 @@ import dev.manhuntstar.bot.BotDifficulty;
 import dev.manhuntstar.bot.BotGroup;
 import dev.manhuntstar.bot.Modes.BotRole;
 import dev.manhuntstar.bot.Modes.PearlDimension;
+import dev.manhuntstar.bot.perception.Knowledge;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.BlockType;
 import dev.manhuntstar.platform.Blocks;
@@ -53,9 +54,11 @@ public final class PearlAbility {
         }
         if (diff == BotDifficulty.TERMINATOR && isChasing()) {
             GamePlayer t = bot.target();
-            if (t != null && t.world().equals(bot.world()) && bot.distanceTo(t) > 15.0) {
-                Vec3 dir = t.position().subtract(bot.pos()).normalize();
-                double throwDist = Math.max(5.0, bot.distanceTo(t) - 7.0);
+            // only toward where the target is known (or believed) to be, never with just the compass
+            Knowledge know = t == null || !t.world().equals(bot.world()) ? Knowledge.NOTHING : bot.perception().about(t);
+            if (know.knowsPosition() && bot.distanceTo(know.pos()) > 15.0) {
+                Vec3 dir = know.pos().subtract(bot.pos()).normalize();
+                double throwDist = Math.max(5.0, bot.distanceTo(know.pos()) - 7.0);
                 throwPearl(bot, Vec3.center(bot.pos().add(dir.scale(throwDist)).toPos()));
                 setCooldown(diff, false);
             }

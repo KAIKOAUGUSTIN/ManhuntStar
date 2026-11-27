@@ -8,6 +8,10 @@ import dev.manhuntstar.bot.mobility.BoatRoutine;
 import dev.manhuntstar.bot.mobility.ElytraFlight;
 import dev.manhuntstar.bot.mobility.HorseRoutine;
 import dev.manhuntstar.bot.mobility.MlgClutch;
+import dev.manhuntstar.bot.perception.Knowledge;
+import dev.manhuntstar.bot.perception.PerceptionTuning;
+import dev.manhuntstar.bot.perception.Sighting;
+import dev.manhuntstar.bot.perception.Vision;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.pathfinding.AStar;
 import dev.manhuntstar.platform.BlockTrait;
@@ -53,6 +57,13 @@ public final class Brain {
     private final BoatRoutine boat;
     private final ElytraFlight elytra;
     private final BuildRange buildRange = new BuildRange();
+    private final Search search;
+    /** Where the target is known (or believed) to be on this tick, for the 3 blocks that start a build; null when unknown. */
+    private Vec3 buildGoal;
+    /** The last {@link #chooseTarget} picked the player, whom nobody on the team sees. */
+    private boolean pursuePlayer;
+    private int portalTicks;
+    private int digTicks;
     /** The last {@link #dumbStarMove} held at the edge of the bot's own tower or bridge, waiting for the path. */
     private boolean heldAtEdge;
 
@@ -94,6 +105,7 @@ public final class Brain {
         this.horse = new HorseRoutine(bot);
         this.boat = new BoatRoutine(bot);
         this.elytra = new ElytraFlight(bot);
+        this.search = new Search(bot);
     }
 
     /**
@@ -143,21 +155,25 @@ public final class Brain {
     }
 
     /**
-     * Tower/bridge and A* blocks: a build starts only within 3 blocks (horizontally) of the target, as in the mod,
-     * and one already under way toward the target keeps going however far it goes ({@link BuildRange}). Never for
-     * a target that is dead or in another world.
+     * Tower/bridge and A* blocks: a build starts only within 3 blocks (horizontally) of where the target is known
+     * to be, as in the mod, and one already under way toward the target keeps going however far it goes
+     * ({@link BuildRange}). Never for a target that is dead or in another world, nor with nothing known about where
+     * they are (only the compass).
      */
     public boolean canPlaceToweringBlocksNearTarget() {
         GamePlayer target = bot.target();
         if (target == null || !settings().allowTowering.on()) {
             return false;
         }
-        double horizontal = bot.horizontalDistanceTo(target);
-        if (horizontal == Double.POSITIVE_INFINITY) {
+        if (bot.horizontalDistanceTo(target) == Double.POSITIVE_INFINITY) {
             // dead or in another world: the build ends, and doesn't resume when they respawn or come back
             buildRange.clear();
             return false;
         }
+        if (buildGoal == null) {
+            return false;
+        }
+        double horizontal = Math.hypot(buildGoal.x() - bot.pos().x(), buildGoal.z() - bot.pos().z());
         return buildRange.allows(target.uuid(), horizontal, Platform.server().currentTick());
     }
 
@@ -207,6 +223,20 @@ public final class Brain {
         return teleporting;
     }
 
+    /**
+     * The target is in another world and the bot has no way there: the compass spins (they left without a portal:
+     * they died and came back over there, or were teleported) and it didn't come through a portal it could go back
+     * through.
+     */
+    public boolean strandedFrom(GamePlayer target) {
+        GameWorld w = bot.world();
+        if (target == null || w == null || target.world().id().equals(w.id())) {
+            return false;
+        }
+        var d = bot.manager().travel().departureFrom(target.uuid(), w.id());
+        return (d == null || !d.viaPortal()) && bot.wayBack(w) == null;
+    }
+
     public void setTeleporting(boolean v) {
         teleporting = v;
         if (!v) {
@@ -225,6 +255,7 @@ public final class Brain {
      */
     public void startPostTeleportStabilization() {
         buildRange.clear();
+        search.reset();
         bot.cancelPendingPillar();
         stabilizeTicks = Math.max(stabilizeTicks, 15);
         bot.motor().stopWalk();
@@ -295,6 +326,14 @@ public final class Brain {
         if (playerTarget != null) {
             bot.setTargetPlayer(playerTarget.uuid());
         }
+        GamePlayer chosenTarget = playerTarget;
+        if (playerTarget == null || playerTarget.isDead()) {
+            playerTarget = bot.manager().isTrackingPlayers(bot) ? bot.fallbackTarget() : null;
+        }
+        // what the bot sees, hears and reads on the compass: from here on the target's position comes only from it
+        bot.perception().tick(playerTarget);
+        Knowledge know = bot.perception().about(playerTarget);
+        buildGoal = playerTarget != null && know.knowsPosition() ? know.pos() : null;
         if (stabilizeTicks > 0) {
             stabilizeTicks--;
             state("stabilizing");
@@ -315,10 +354,6 @@ public final class Brain {
             state("suffocating");
             return;
         }
-        GamePlayer chosenTarget = playerTarget;
-        if (playerTarget == null || playerTarget.isDead()) {
-            playerTarget = bot.manager().isTrackingPlayers(bot) ? bot.fallbackTarget() : null;
-        }
         IdleBehavior idle = bot.idle();
         if (idle != null && idle.tick()) {
             state(bot.manager().rings().isCounting(bot) ? "countdown" : "waiting-in-ring");
@@ -327,16 +362,13 @@ public final class Brain {
         BotGroup group = bot.group();
         boolean escaping = group != null && group.role() == BotRole.ESCAPE;
         // in the ring the bot doesn't take off, and an escaper doesn't fly toward the target
-        elytra.tick(escaping ? null : chosenTarget);
+        Knowledge flyFor = escaping || chosenTarget == null ? null : bot.perception().about(chosenTarget);
+        elytra.tick(flyFor == null ? null : chosenTarget, flyFor == null ? null : flyFor.pos(), bot.perception().bearing());
+        GamePlayer seenPlayer = playerTarget != null && know.visible() ? playerTarget : null;
         if (playerTarget != null) {
             if (!playerTarget.world().equals(bot.world())) {
-                state("target-in-other-dimension");
-                dimensionStuckTimer++;
-                if (dimensionStuckTimer > 20 && !teleporting) {
-                    bot.manager().requestDimensionChange(playerTarget, bot.world());
-                    teleporting = true;
-                }
-                bot.motor().stopWalk();
+                // the target is in another world: the bot goes to the portal they took (or back the way it came)
+                pursueUnseen(playerTarget, know, escaping);
                 return;
             }
             dimensionStuckTimer = 0;
@@ -345,21 +377,26 @@ public final class Brain {
             if (!bot.isAlive()) {
                 return;
             }
-            if (handleSneakyPlay(playerTarget)) {
+            if (handleSneakyPlay(know)) {
                 state("sneaky");
                 return;
             }
-            if (!escaping && bot.distanceTo(playerTarget) > 75.0 && pearlCooldown <= 0 && PearlAbility.canUsePearl(bot)) {
-                handleOffensivePearl(playerTarget);
+            if (!escaping && know.knowsPosition() && bot.distanceTo(know.pos()) > 75.0 && pearlCooldown <= 0 && PearlAbility.canUsePearl(bot)) {
+                handleOffensivePearl(know.pos());
             }
         }
 
         GameLiving mobTarget = updateMobTarget();
         Bot enemyBot = updateEnemyBot();
         GameLiving enemyBotEntity = enemyBot == null ? null : enemyBot.entity();
-        GameLiving active = chooseTarget(playerTarget, mobTarget, enemyBotEntity);
+        GameLiving active = chooseTarget(playerTarget, know, mobTarget, enemyBotEntity);
         if (active == null) {
-            horse.handle(null);
+            if (pursuePlayer) {
+                // the player is the target, but nobody on the team sees them: the compass, the clues, the call
+                pursueUnseen(playerTarget, know, escaping);
+                return;
+            }
+            horse.handle(null, null);
             state("no-target");
             // without this the bot stood still holding the crossbow "loading" until it found another target
             bot.combat().cancelChargeWithoutTarget();
@@ -372,18 +409,18 @@ public final class Brain {
                 ? bot.manager().byEntity(active).name() : active.kind().name().toLowerCase(java.util.Locale.ROOT);
         if (escaping) {
             state("fleeing", who, "");
-            flee(active, plannerEnabled());
+            flee(active.position(), plannerEnabled(), active);
             return;
         }
         if (boat.handle()) {
             state(boat.isCrossing() ? "boat-crossing" : "boat");
             return;
         }
-        GameLiving horseTarget = playerTarget;
+        GameLiving horseTarget = seenPlayer;
         if (horseTarget == null && HORSE_ANY_TARGET) {
             horseTarget = enemyBotEntity;
         }
-        if (horse.handle(horseTarget)) {
+        if (horse.handle(horseTarget, horseTarget == null ? null : horseTarget.position())) {
             state(bot.isRiding() ? "riding" : "getting-horse", who, bot.isRiding() ? horse.detail() : "");
             return;
         }
@@ -406,7 +443,7 @@ public final class Brain {
         if (bot.health() <= 6f) {
             state("fleeing-low-health");
             bot.combat().stopBlock();
-            flee(active, plannerEnabled());
+            flee(active.position(), plannerEnabled(), active);
             return;
         }
         if (active instanceof GamePlayer p && forceTunnelForLineOfSight(p, dist, los)) {
@@ -417,8 +454,8 @@ public final class Brain {
             state("speed-bridging");
             return;
         }
-        if (playerTarget != null) {
-            bot.combat().handleRiskyHitBoost(playerTarget);
+        if (seenPlayer != null) {
+            bot.combat().handleRiskyHitBoost(seenPlayer);
         }
         // In the water the eyes are at the height of the bank and it blocks the view: digging the bank opens a
         // channel of flowing water that traps the bot. It gets out by swimming and jumping (melee does that).
@@ -437,7 +474,7 @@ public final class Brain {
         }
         if (stuckMiningMode && active instanceof GamePlayer p) {
             state("stuck-digging");
-            bot.mining().executeHardcodedMining(p);
+            bot.mining().executeHardcodedMining(p.position());
             if (bot.isInWater()) {
                 bot.motor().setShouldBeSwimming(true);
                 bot.setSwimmingPose(true);
@@ -449,7 +486,7 @@ public final class Brain {
             }
             return;
         }
-        if (active instanceof GamePlayer sky && towering.handle(sky, navigator)) {
+        if (active instanceof GamePlayer sky && towering.handle(sky, sky.position(), navigator)) {
             state("towering", who, "");
             return;
         }
@@ -457,12 +494,7 @@ public final class Brain {
             if (active instanceof GamePlayer wp && handleWaterBuilding(wp)) {
                 return;
             }
-            boolean deep = WorldUtil.isWater(bot.world(), bot.blockPos().above());
-            bot.motor().setShouldBeSwimming(deep);
-            if (deep) {
-                bot.motor().setSprinting(true);
-            }
-            bot.setSwimmingPose(deep);
+            swimIfDeep();
         } else {
             bot.motor().setShouldBeSwimming(false);
             bot.setSwimmingPose(false);
@@ -489,7 +521,7 @@ public final class Brain {
             Pos crossing = navigator.boatCrossingGoal(false);
             if (crossing != null) {
                 // the A* chose to cross the water by boat: boards when it reaches the edge
-                boat.requestCrossing(crossing, active);
+                boat.requestCrossing(crossing, active, null);
             }
         }
         state(hasPath ? "following-path" : "walking-straight", who, String.format(java.util.Locale.ROOT, "%.0f", dist));
@@ -500,6 +532,241 @@ public final class Brain {
         }
     }
 
+    private void swimIfDeep() {
+        boolean deep = WorldUtil.isWater(bot.world(), bot.blockPos().above());
+        bot.motor().setShouldBeSwimming(deep);
+        if (deep) {
+            bot.motor().setSprinting(true);
+        }
+        bot.setSwimmingPose(deep);
+    }
+
+    // ------------------------------------------------------------------ the target nobody sees
+
+    /**
+     * The target is out of sight of the whole team: the bot goes where {@link Search} says (the portal they took,
+     * the last clue, the tower, the spot to dig, the compass), with the same moves as when it sees them but no fight.
+     */
+    private void pursueUnseen(GamePlayer target, Knowledge know, boolean escaping) {
+        Search.Goal goal = search.choose(target, know);
+        boolean elsewhere = !target.world().equals(bot.world());
+        if (goal == null) {
+            bot.motor().stopWalk();
+            if (elsewhere) {
+                // no portal to follow and no way back: after a while the bots come out of a portal over there
+                state("target-in-other-dimension");
+                dimensionStuckTimer++;
+                if (dimensionStuckTimer > 20 && !teleporting) {
+                    bot.manager().requestDimensionChange(target, bot.world());
+                    teleporting = true;
+                }
+            } else {
+                state("no-target");
+            }
+            return;
+        }
+        dimensionStuckTimer = 0;
+        String who = target.name();
+        if (escaping) {
+            state("fleeing", who, "");
+            flee(goal.pos(), plannerEnabled(), null);
+            return;
+        }
+        bot.combat().cancelChargeWithoutTarget();
+        if (bot.combat().isBlocking()) {
+            bot.combat().stopBlock();
+        }
+        if (goal.kind() != Search.Kind.PORTAL && goal.kind() != Search.Kind.WAY_BACK) {
+            portalTicks = 0;
+        }
+        if (goal.kind() != Search.Kind.DIG) {
+            digTicks = 0;
+        }
+        switch (goal.kind()) {
+            case PORTAL, WAY_BACK -> {
+                if (goThroughPortal(goal)) {
+                    return;
+                }
+            }
+            case CLUE -> {
+                if (clueReached(goal.pos()) && know.sighting() != null) {
+                    if (know.state() == Knowledge.State.LAST) {
+                        // the target wasn't there: the team forgets this clue, and the bot goes on with what's left
+                        bot.perception().dismiss(target, know.sighting());
+                        bot.motor().stopWalk();
+                        return;
+                    }
+                    // heard or glimpsed right here just now and not seen: behind the blocks, the bot digs to them
+                    state("tunneling");
+                    bot.mining().executeHardcodedMining(goal.pos());
+                    return;
+                }
+            }
+            case TOWER -> {
+                // up there is where the target is believed to be: the build next to the tower may start
+                buildGoal = goal.pos();
+                if (pearlUpTower(goal.pos())) {
+                    state("tower", who, "");
+                    return;
+                }
+            }
+            case DIG -> {
+                // once it started digging it goes on down the staircase, even as it moves off the spot
+                if (digTicks > 0 || bot.pos().horizontalDistance(goal.pos()) <= 2.0) {
+                    digDown(target);
+                    return;
+                }
+            }
+            default -> {
+                // compass: just walk
+            }
+        }
+        if (boat.handle()) {
+            state(boat.isCrossing() ? "boat-crossing" : "boat");
+            return;
+        }
+        if (horse.handle(null, goal.pos())) {
+            state(bot.isRiding() ? "riding" : "getting-horse", who, bot.isRiding() ? horse.detail() : "");
+            return;
+        }
+        double dist = bot.distanceTo(goal.pos());
+        updateStuckCheck(dist, false);
+        if (dist < 4.0) {
+            stuckMiningMode = false;
+        }
+        if (stuckMiningMode) {
+            state("stuck-digging");
+            bot.mining().executeHardcodedMining(goal.pos());
+            return;
+        }
+        boolean upThere = goal.kind() == Search.Kind.TOWER || goal.kind() == Search.Kind.CLUE;
+        if (upThere && towering.handle(target, goal.pos(), navigator)) {
+            state("towering", who, "");
+            return;
+        }
+        if (bot.isInWater()) {
+            swimIfDeep();
+        } else {
+            bot.motor().setShouldBeSwimming(false);
+            bot.setSwimmingPose(false);
+        }
+        Vec3 targetLoc = goal.pos();
+        boolean hasPath = false;
+        if (plannerEnabled()) {
+            if (navigator.isParkouring()) {
+                state("parkour");
+                navigator.executeParkourTick();
+                return;
+            }
+            Vec3 wp = navigator.waypoint(targetLoc);
+            if (wp != null) {
+                targetLoc = wp;
+                hasPath = navigator.onPath();
+            }
+            Pos crossing = navigator.boatCrossingGoal(false);
+            if (crossing != null) {
+                boat.requestCrossing(crossing, null, goal.pos());
+            }
+        }
+        searchState(goal, who, know);
+        dumbStarMove(targetLoc, hasPath, null);
+        if (!stuckMiningMode && !heldAtEdge) {
+            bot.motor().addVelocity(swarmSeparation());
+        }
+    }
+
+    private void searchState(Search.Goal goal, String who, Knowledge know) {
+        switch (goal.kind()) {
+            case PORTAL, WAY_BACK -> state("to-portal", who, "");
+            case CLUE -> state("investigating", who, String.valueOf(Math.max(0, know.age() / 20)));
+            case TOWER -> state("tower", who, "");
+            case DIG -> state("digging-down", who, "");
+            default -> state("compass", who, "");
+        }
+    }
+
+    /** The bot is at the clue: close enough to have seen the target if they were still there. */
+    private boolean clueReached(Vec3 clue) {
+        return bot.pos().distanceTo(clue) <= PerceptionTuning.CLUE_REACHED;
+    }
+
+    /**
+     * At the portal: a Nether portal takes the bot after it stands in it for 4 s, like a player; an End portal
+     * right away. It comes out where the player (or itself, going back) came out.
+     *
+     * @return true while it took control of the bot
+     */
+    private boolean goThroughPortal(Search.Goal goal) {
+        Vec3 portal = goal.pos();
+        Vec3 p = bot.pos();
+        boolean atPortal = Math.hypot(portal.x() - p.x(), portal.z() - p.z()) <= 1.2 && Math.abs(portal.y() - p.y()) <= 2.0;
+        if (!atPortal) {
+            portalTicks = 0;
+            return false;
+        }
+        bot.motor().setSprinting(false);
+        Vec3 toCenter = portal.subtract(p).horizontal();
+        if (toCenter.lengthSqr() > 0.04) {
+            bot.motor().walk(toCenter.normalize().scale(0.3));
+        } else {
+            bot.motor().stopWalk();
+        }
+        boolean endPortal = isEndPortal(portal);
+        state("in-portal");
+        if (!endPortal && ++portalTicks < PerceptionTuning.NETHER_PORTAL_TICKS) {
+            return true;
+        }
+        portalTicks = 0;
+        search.reset();
+        bot.manager().sendThroughPortal(bot, goal.destWorld(), goal.destPos(), portal);
+        return true;
+    }
+
+    private boolean isEndPortal(Vec3 portal) {
+        GameWorld w = bot.world();
+        Pos c = portal.toPos();
+        for (int dy = -1; dy <= 1; dy++) {
+            if (w.block(c.above(dy)).type() == Blocks.END_PORTAL) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The compass turned around here: the target is underground below the bot. It digs down a staircase, toward the
+     * compass, until it sees or hears them (or gives up after a minute with nothing).
+     */
+    private void digDown(GamePlayer target) {
+        state("digging-down", target.name(), "");
+        if (++digTicks > 1200) {
+            digTicks = 0;
+            bot.perception().forgetPassedOver();
+            return;
+        }
+        Vec3 bearing = bot.perception().bearing();
+        Vec3 ahead = bearing == null ? Vec3.ZERO : bearing.scale(3);
+        bot.mining().executeHardcodedMining(bot.pos().add(ahead).add(0, -12, 0));
+    }
+
+    /**
+     * At the foot of the tower the target is on: a pearl to the top when it can be thrown there; otherwise the path
+     * up (if there is one) or a pillar next to it does the climbing.
+     *
+     * @return true if it threw the pearl
+     */
+    private boolean pearlUpTower(Vec3 top) {
+        if (bot.pos().horizontalDistance(top) > BuildRange.START + 1 || top.y() - bot.pos().y() < 4.0 || pearlCooldown > 0
+                || !PearlAbility.canUsePearl(bot) || bot.eyePos().distanceTo(top) > 40.0
+                || !WorldUtil.clearLine(bot.world(), bot.eyePos(), top.add(0, 0.5, 0))) {
+            return false;
+        }
+        PearlAbility.throwPearlArc(bot, top.add(0, 0.5, 0));
+        setOffensivePearlCooldown();
+        bot.perception().forgetTower();
+        return true;
+    }
+
     /**
      * Mid-build, the target is close but out of reach from where the bot stands (higher up on its tower, across
      * the gap to its bridge): the bot builds on to it instead of fighting from there, where it waited at the edge
@@ -508,7 +775,7 @@ public final class Brain {
      */
     private boolean buildsOnTo(GameLiving active) {
         return active instanceof GamePlayer player && !bot.combat().reachesFromHere(player)
-                && (towering.keepsClimbingFor(player) || (plannerEnabled() && keepsBuildingFor(player)));
+                && (towering.keepsClimbingFor(player, player.position()) || (plannerEnabled() && keepsBuildingFor(player)));
     }
 
     /** Target close but behind a block: digs the block in the line of sight (as a player would). */
@@ -611,8 +878,14 @@ public final class Brain {
         return cachedEnemyBot;
     }
 
-    /** The mod's weights: player and enemy bot weigh (5 - priority), mob weighs (5 + priority); lowest score wins. */
-    private GameLiving chooseTarget(GamePlayer player, GameLiving mob, GameLiving enemyBot) {
+    /**
+     * The mod's weights: player and enemy bot weigh (5 - priority), mob weighs (5 + priority); lowest score wins. The
+     * player counts at the distance the bot knows (with only the compass, farther than anything in sight). When the
+     * player wins but nobody on the team sees them, returns null with {@link #pursuePlayer} set.
+     */
+    private GameLiving chooseTarget(GamePlayer player, Knowledge know, GameLiving mob, GameLiving enemyBot) {
+        pursuePlayer = false;
+        boolean seen = player != null && know.visible();
         double priority = settings().targetPriority.value();
         GameLiving active;
         if (priority >= 5.0) {
@@ -625,7 +898,8 @@ public final class Brain {
             GameLiving best = null;
             double bestScore = Double.MAX_VALUE;
             if (player != null) {
-                double s = bot.distanceTo(player) * wMob;
+                double known = seen ? bot.distanceTo(player) : know.knowsPosition() ? bot.distanceTo(know.pos()) : 1.0E9;
+                double s = known * wMob;
                 if (s < bestScore) {
                     bestScore = s;
                     best = player;
@@ -652,13 +926,17 @@ public final class Brain {
         if (active != null && active.is(EntityTrait.ENDER_DRAGON)) {
             active = player;
         }
+        if (active != null && active == player && !seen) {
+            pursuePlayer = true;
+            return null;
+        }
         return active;
     }
 
     // ------------------------------------------------------------------ fleeing
 
-    private void flee(GameLiving threat, boolean usePlanner) {
-        Vec3 threatPos = threat.position();
+    /** Runs from the threat at {@code threatPos} ({@code threat} is the one seen, or null for a guess). */
+    private void flee(Vec3 threatPos, boolean usePlanner, GameLiving threat) {
         if (usePlanner) {
             if (navigator.isParkouring()) {
                 navigator.executeParkourTick();
@@ -893,13 +1171,14 @@ public final class Brain {
         return playerSupport || rising || high;
     }
 
+    /** This bot's own line of sight to the target's feet, chest and eyes (the same rule as {@link Vision}). */
     private boolean hasFullLineOfSight(GameLiving target) {
-        if (target == null || target.isDead()) {
+        if (target == null || target.isDead() || bot.world() == null) {
             return false;
         }
         Vec3 feet = target.position();
         Vec3 chest = feet.add(0, Math.max(0.7, target.height() * 0.5), 0);
-        return bot.canSee(feet) && bot.canSee(chest) && bot.canSee(eyes(target));
+        return Vision.seesBody(bot.world(), bot.eyePos(), feet, chest, eyes(target));
     }
 
     private boolean forceTunnelForLineOfSight(GamePlayer target, double dist, boolean los) {
@@ -916,7 +1195,7 @@ public final class Brain {
             return false;
         }
         stuckMiningMode = true;
-        bot.mining().executeHardcodedMining(target);
+        bot.mining().executeHardcodedMining(target.position());
         return true;
     }
 
@@ -1156,13 +1435,23 @@ public final class Brain {
 
     // ------------------------------------------------------------------ sneaky play
 
-    private boolean handleSneakyPlay(GamePlayer player) {
+    /** With the player coming its way unseen (only their name or their steps give them away), the bot may sneak. */
+    private boolean handleSneakyPlay(Knowledge know) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         if (--sneakyWindowTimer <= 0) {
             sneakyWindowTimer = 600;
             sneakyChance = r.nextBoolean();
         }
-        Vec3 playerPos = player.position();
+        if (!know.knowsPosition()) {
+            lastTargetPos = null;
+            if (sneakyMode) {
+                sneakyMode = false;
+                sneakyBehavior = -1;
+                bot.setSneaking(false);
+            }
+            return false;
+        }
+        Vec3 playerPos = know.pos();
         Vec3 playerVel = lastTargetPos == null ? Vec3.ZERO : playerPos.subtract(lastTargetPos);
         lastTargetPos = playerPos;
         if (!sneakyChance) {
@@ -1172,10 +1461,10 @@ public final class Brain {
             }
             return false;
         }
-        boolean canSeePlayer = bot.canSee(eyes(player));
+        boolean canSeePlayer = know.visible();
         Vec3 toBot = bot.pos().subtract(playerPos).normalize();
         boolean movingTowards = playerVel.dot(toBot) > 0.01;
-        double dist = bot.distanceTo(player);
+        double dist = bot.distanceTo(playerPos);
         if (movingTowards && !canSeePlayer && dist < 35.0) {
             if (!sneakyMode) {
                 if (r.nextDouble() < 0.5) {
@@ -1311,18 +1600,18 @@ public final class Brain {
         return null;
     }
 
-    /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
-    private void handleOffensivePearl(GameLiving target) {
+    /** Throws a pearl to land 15–30 blocks from where the target is known to be (only if that's closer than it is now). */
+    private void handleOffensivePearl(Vec3 target) {
         ThreadLocalRandom r = ThreadLocalRandom.current();
         GameWorld w = bot.world();
         double currentDist = bot.distanceTo(target);
         double angle = r.nextDouble() * Math.PI * 2;
         double fromPlayer = 15 + r.nextDouble() * 15;
-        double tx = target.position().x() + Math.cos(angle) * fromPlayer;
-        double tz = target.position().z() + Math.sin(angle) * fromPlayer;
-        double ty = target.position().y();
+        double tx = target.x() + Math.cos(angle) * fromPlayer;
+        double tz = target.z() + Math.sin(angle) * fromPlayer;
+        double ty = target.y();
         Vec3 landing = new Vec3(tx, ty, tz);
-        if (landing.distanceTo(target.position()) >= currentDist) {
+        if (landing.distanceTo(target) >= currentDist) {
             return;
         }
         Pos base = new Pos((int) Math.floor(tx), (int) Math.floor(ty), (int) Math.floor(tz));

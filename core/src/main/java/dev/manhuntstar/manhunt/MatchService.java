@@ -3,6 +3,7 @@ package dev.manhuntstar.manhunt;
 import dev.manhuntstar.ManhuntHost;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.Modes.Defeat;
+import dev.manhuntstar.bot.perception.FirstTrips;
 import dev.manhuntstar.config.Messages;
 import dev.manhuntstar.platform.ConfigNode;
 import dev.manhuntstar.platform.GameEntity;
@@ -83,6 +84,8 @@ public final class MatchService {
     private final Map<UUID, String> killerNames = new HashMap<>();
     private final Map<UUID, Out> out = new LinkedHashMap<>();
     private int returnTicks = -1;
+    /** Who already went to the Nether or the End in this match (in place of the advancement, when the server has none). */
+    private final FirstTrips firstTrips = new FirstTrips();
 
     public MatchService(ManhuntHost plugin) {
         this.plugin = plugin;
@@ -132,8 +135,10 @@ public final class MatchService {
         dragonKiller = null;
         botKills.clear();
         killerNames.clear();
+        firstTrips.clear();
         returnTicks = -1;
         sendEveryoneBack();
+        plugin.botManager().newHunt();
         for (Bot b : plugin.botManager().allBots()) {
             plugin.botManager().resumeHunting(b);
         }
@@ -146,6 +151,7 @@ public final class MatchService {
         returnTicks = -1;
         botKills.clear();
         killerNames.clear();
+        firstTrips.clear();
         sendEveryoneBack();
         plugin.botManager().markDirty();
     }
@@ -530,6 +536,18 @@ public final class MatchService {
         return best;
     }
 
+    /**
+     * The player's first trip to this dimension in the match: true once, then false (stands in for the advancement
+     * when the server doesn't have it).
+     */
+    public boolean firstTrip(UUID player, dev.manhuntstar.platform.Dimension dimension) {
+        boolean first = firstTrips.first(player, dimension);
+        if (first) {
+            plugin.botManager().markDirty();
+        }
+        return first;
+    }
+
     // ------------------------------------------------------------------ saving
 
     public void save(ConfigNode s) {
@@ -554,6 +572,9 @@ public final class MatchService {
         }
         for (Map.Entry<UUID, String> e : killerNames.entrySet()) {
             s.set("nomes-abates." + e.getKey(), e.getValue());
+        }
+        if (!firstTrips.isEmpty()) {
+            s.set("viagens", firstTrips.save());
         }
         saveOut(s);
     }
@@ -593,6 +614,7 @@ public final class MatchService {
         result = null;
         botKills.clear();
         killerNames.clear();
+        firstTrips.clear();
         out.clear();
         returnTicks = -1;
         if (s == null) {
@@ -616,6 +638,7 @@ public final class MatchService {
         dragonKiller = s.getString("matou-dragao");
         readKills(s.section("abates"));
         readKillerNames(s.section("nomes-abates"));
+        firstTrips.load(s.getStringList("viagens"));
         readOut(s.section("fora"));
     }
 

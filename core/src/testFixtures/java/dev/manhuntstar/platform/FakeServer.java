@@ -10,6 +10,8 @@ import net.kyori.adventure.text.Component;
 public class FakeServer implements GameServer {
 
     public int tick;
+    /** The advancements this server has (all of them while this is null). */
+    public java.util.Set<String> advancements;
     public final List<GameWorld> worlds = new ArrayList<>();
 
     @Override
@@ -139,5 +141,10 @@ public class FakeServer implements GameServer {
     @Override
     public GameItem deserializeItem(byte[] data) {
         throw new UnsupportedOperationException("the fake server doesn't store items");
+    }
+
+    @Override
+    public boolean hasAdvancement(String key) {
+        return advancements == null || advancements.contains(key);
     }
 }

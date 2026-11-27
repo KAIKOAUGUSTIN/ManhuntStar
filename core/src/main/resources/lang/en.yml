@@ -7,7 +7,7 @@
 #  edited; a copy of it goes to lang/old/. Don't change "version".
 # ==============================================================================
 
-version: 4
+version: 5
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -256,6 +256,12 @@ state:
   parkour: "parkour"
   following-path: "following a path to <target> (<detail> blocks)"
   walking-straight: "walking straight to <target> (<detail> blocks)"
+  compass: "following the compass after <target>"
+  investigating: "going to where <target> was noticed (<detail> s ago)"
+  tower: "going up <target>'s tower"
+  digging-down: "digging down after <target>"
+  to-portal: "going to the portal <target> took"
+  in-portal: "going through the portal"
 
 category:
   general: "General"
@@ -451,7 +457,7 @@ options:
     description: "The bot farthest from each player (200+ blocks) vanishes and respawns closer."
   portalentrance:
     name: "Arrive through a portal"
-    description: "Bots arrive in another dimension through a portal the player can see."
+    description: "Bots with no portal to follow the player to another dimension (the player died or was teleported) come out of a portal near where the player arrived."
   spawnmode:
     name: "Spawn mode"
     description: "NORMAL: spawns at the point. MANHUNT: spawns in a ring and waits for the hunt to start."

@@ -236,15 +236,16 @@ public final class TacticsManager {
             if (playerCooldown.getOrDefault(p.uuid(), Long.MIN_VALUE) > now) {
                 continue;
             }
+            // only a bot whose team sees the player now goes for them (it knows they are in that cave)
             if (CaveAmbush.isInCave(p.world(), p.blockPos()) && isVulnerable(p, now)) {
-                Bot bot = selectBot(p, now, false, 1);
+                Bot bot = selectBot(p, now, false, 1, b -> b.perception().about(p).visible());
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
                     continue;
                 }
             }
             if (manager.plugin().settings().fireworkCrossbow.on()) {
-                Bot bot = selectBot(p, now, false, 5, b -> fireworkReaches(b, p, Vec3.ZERO));
+                Bot bot = selectBot(p, now, false, 5, b -> b.perception().about(p).visible() && fireworkReaches(b, p, Vec3.ZERO));
                 if (bot != null) {
                     double chance = (0.2 + (bot.progression().phase() - 5) * 0.2 + (Math.max(1, bot.aggression()) - 1) * 0.1) * (CHECK_INTERVAL / 20.0);
                     if (bot.aggression() > 0 && r.nextDouble() < chance) {
@@ -351,7 +352,8 @@ public final class TacticsManager {
         if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.world()) || bot.progression().phase() < 4) {
             return false;
         }
-        if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)) {
+        if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)
+                || !bot.perception().about(player).visible()) {
             return false;
         }
         // not even with the bow fully drawn does the arrow get there (too far for the height difference, or a block in the way)

@@ -88,6 +88,9 @@ public final class PaperBlocks {
         if (Tag.MINEABLE_HOE.isTagged(m)) {
             out.add(BlockTrait.MINEABLE_HOE);
         }
+        if (Tag.OCCLUDES_VIBRATION_SIGNALS.isTagged(m)) {
+            out.add(BlockTrait.OCCLUDES_VIBRATIONS);
+        }
         return out.toArray(BlockTrait[]::new);
     }
 

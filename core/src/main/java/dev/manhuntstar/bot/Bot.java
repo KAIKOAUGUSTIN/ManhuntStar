@@ -6,6 +6,7 @@ import dev.manhuntstar.bot.ai.EndBehavior;
 import dev.manhuntstar.bot.ai.IdleBehavior;
 import dev.manhuntstar.bot.combat.Combat;
 import dev.manhuntstar.bot.motor.Motor;
+import dev.manhuntstar.bot.perception.Perception;
 import dev.manhuntstar.bot.survival.Survival;
 import dev.manhuntstar.bot.world.Mining;
 import dev.manhuntstar.config.Settings;
@@ -84,6 +85,7 @@ public final class Bot {
     private Brain brain;
     private Survival survival;
     private PearlAbility ability;
+    private Perception perception;
     private IdleBehavior idle;
     private EndBehavior endBehavior;
 
@@ -104,6 +106,12 @@ public final class Bot {
     private Runnable pendingPillarDone;
     /** The target the pending pillar was queued for: its block counts as a build toward that target only. */
     private UUID pendingPillarTarget;
+    /** For each world (by id), the portal the bot came out of there and where going back through it leads. */
+    private final Map<UUID, WayBack> waysBack = new java.util.HashMap<>();
+
+    /** The portal the bot came out of in a world ({@code portal}), and where it leads back to. */
+    public record WayBack(Vec3 portal, UUID backWorld, Vec3 backPos) {
+    }
 
     Bot(BotManager manager, UUID id, String name, String visualName, SkinData skin, BotDifficulty difficulty) {
         this.manager = manager;
@@ -124,6 +132,7 @@ public final class Bot {
         brain = new Brain(this);
         survival = new Survival(this);
         ability = new PearlAbility(this);
+        perception = new Perception(this);
     }
 
     // ------------------------------------------------------------------ identity
@@ -304,6 +313,21 @@ public final class Bot {
 
     public PearlAbility ability() {
         return ability;
+    }
+
+    /** What the bot sees, hears and reads on the compass. */
+    public Perception perception() {
+        return perception;
+    }
+
+    /** The bot came out of the portal at {@code portal} in {@code here}; going back through it leads to {@code backPos} in {@code back}. */
+    public void rememberWayBack(GameWorld here, Vec3 portal, GameWorld back, Vec3 backPos) {
+        waysBack.put(here.id(), new WayBack(portal, back.id(), backPos));
+    }
+
+    /** The way back out of this world (the portal the bot came out of), or null. */
+    public WayBack wayBack(GameWorld here) {
+        return here == null ? null : waysBack.get(here.id());
     }
 
     public IdleBehavior idle() {

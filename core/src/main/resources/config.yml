@@ -158,7 +158,8 @@ tactics:
   bow-pressure: true
   # The bot farthest from each player (200+ blocks) vanishes and respawns closer. [silentdeaths]
   silent-deaths: true
-  # Bots arrive in another dimension through a portal the player can see. [portalentrance]
+  # Bots with no portal to follow the player to another dimension (the player died or was teleported) come out of
+  # a portal near where the player arrived. [portalentrance]
   portal-entrance: true
 
 manhunt:

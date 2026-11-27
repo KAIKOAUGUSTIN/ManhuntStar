@@ -8,7 +8,7 @@
 #  Не меняйте «version».
 # ==============================================================================
 
-version: 4
+version: 5
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -257,6 +257,12 @@ state:
   parkour: "паркур"
   following-path: "идёт по пути к <target> (<detail> блоков)"
   walking-straight: "идёт напрямую к <target> (<detail> блоков)"
+  compass: "идёт по компасу к <target>"
+  investigating: "идёт туда, где заметил <target> (<detail> с назад)"
+  tower: "лезет на башню <target>"
+  digging-down: "копает вниз за <target>"
+  to-portal: "идёт к порталу, через который ушёл <target>"
+  in-portal: "проходит через портал"
 
 category:
   general: "Общие"
@@ -452,7 +458,7 @@ options:
     description: "Самый далёкий от каждого игрока бот (200+ блоков) исчезает и возрождается ближе."
   portalentrance:
     name: "Прибытие через портал"
-    description: "Боты прибывают в другое измерение через портал, который видит игрок."
+    description: "Боты без портала, по которому можно пойти за игроком в другое измерение (он умер или был телепортирован), выходят из портала рядом с местом, куда прибыл игрок."
   spawnmode:
     name: "Режим появления"
     description: "NORMAL: появляется в точке. MANHUNT: появляется в круге и ждёт начала охоты."

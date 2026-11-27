@@ -168,6 +168,11 @@ public class PaperEntity implements GameEntity {
     }
 
     @Override
+    public boolean isInvisible() {
+        return entity.isInvisible();
+    }
+
+    @Override
     public int fireTicks() {
         return entity.getFireTicks();
     }

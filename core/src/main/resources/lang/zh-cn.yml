@@ -6,7 +6,7 @@
 #  重命名或替换已改变的文本），并保留你修改过的文本；旧文件的副本会放到 lang/old/。请勿修改 "version"。
 # ==============================================================================
 
-version: 4
+version: 5
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -255,6 +255,12 @@ state:
   parkour: "跑酷"
   following-path: "沿路径前往 <target>（<detail> 格）"
   walking-straight: "直接走向 <target>（<detail> 格）"
+  compass: "跟着指南针追 <target>"
+  investigating: "前往发现 <target> 的地方（<detail> 秒前）"
+  tower: "爬上 <target> 的塔"
+  digging-down: "向下挖去找 <target>"
+  to-portal: "前往 <target> 走过的传送门"
+  in-portal: "正在穿过传送门"
 
 category:
   general: "常规"
@@ -450,7 +456,7 @@ options:
     description: "离每名玩家最远的机器人（200 格以上）会消失并在更近处重生。"
   portalentrance:
     name: "通过传送门到达"
-    description: "机器人从玩家能看到的传送门进入另一个维度。"
+    description: "没有传送门可以跟着玩家去另一个维度的机器人（玩家死亡或被传送）会从玩家到达处附近的传送门出来。"
   spawnmode:
     name: "生成模式"
     description: "NORMAL：在该点生成。MANHUNT：围成圆圈生成并等待追猎开始。"

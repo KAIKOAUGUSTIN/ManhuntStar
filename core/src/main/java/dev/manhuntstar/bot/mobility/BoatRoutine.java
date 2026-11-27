@@ -63,6 +63,8 @@ public final class BoatRoutine {
     /** Crossing requested by the path: where to get off, who is being followed and the deadline. */
     private Pos crossingGoal;
     private GameLiving crossingFollow;
+    /** Where the crossing goes when the target isn't seen (where the bot believes it is). */
+    private Vec3 crossingPoint;
     private int crossingRequestTick;
     private int crossingTicks;
     private int crossingBudget;
@@ -74,8 +76,10 @@ public final class BoatRoutine {
     /**
      * The path has ahead a stretch of water that the A* decided to cross by boat, ending at
      * {@code goal}. The request holds while it's repeated; the bot boards when it reaches the edge.
+     * It follows {@code follow} (seen), or goes toward {@code point} (where the target is believed to be,
+     * when nobody sees them).
      */
-    public void requestCrossing(Pos goal, GameLiving follow) {
+    public void requestCrossing(Pos goal, GameLiving follow, Vec3 point) {
         if (!bot.settings().allowBoat.on()) {
             return;
         }
@@ -85,6 +89,7 @@ public final class BoatRoutine {
         }
         crossingGoal = goal;
         crossingFollow = follow;
+        crossingPoint = point;
         crossingRequestTick = Platform.server().currentTick();
     }
 
@@ -201,13 +206,14 @@ public final class BoatRoutine {
 
     private boolean handleCrossing(GameEntity vehicle) {
         GameLiving follow = crossingFollow;
-        boolean followGone = follow == null || follow.isDead() || !follow.world().equals(bot.world());
+        Vec3 point = follow != null ? follow.position() : crossingPoint;
+        boolean followGone = follow != null ? follow.isDead() || !follow.world().equals(bot.world()) : point == null;
         if (vehicle instanceof GameBoat mounted && isRiderBoat(mounted)) {
             crossingTicks++;
             if (!followGone && bot.tickDelay(10)) {
                 // the path is recomputed from the boat; the end of the water stretch may have changed
                 Navigator nav = bot.brain().navigator();
-                nav.waypoint(follow.position());
+                nav.waypoint(point);
                 Pos next = nav.boatCrossingGoal(true);
                 if (next != null && !next.equals(crossingGoal)) {
                     crossingGoal = next;
@@ -217,7 +223,7 @@ public final class BoatRoutine {
             Place bl = mounted.place();
             Vec3 goal = Vec3.bottomCenter(crossingGoal);
             boolean arrived = Math.hypot(goal.x() - bl.x(), goal.z() - bl.z()) < 2.5;
-            boolean close = !followGone && bl.distance(follow.place()) < 4.0;
+            boolean close = !followGone && bl.pos().distanceTo(point) < 4.0;
             boolean stuck = noMoveTicks >= 40;
             boolean late = crossingTicks > crossingBudget;
             if (followGone || close || stuck || late || shouldDismountNearShore(mounted) || (arrived && isBoatCloseToLand(mounted))) {
@@ -261,6 +267,7 @@ public final class BoatRoutine {
     private void clearCrossing() {
         crossingGoal = null;
         crossingFollow = null;
+        crossingPoint = null;
     }
 
     private boolean handleForeignBoat(GameBoat mounted, GamePlayer chase) {
@@ -670,7 +677,8 @@ public final class BoatRoutine {
         GamePlayer best = null;
         double bestDist = Double.MAX_VALUE;
         for (GamePlayer p : bot.world().players()) {
-            if (p.isDead() || !(p.vehicle() instanceof GameBoat) || !bot.manager().isEligibleTarget(p)) {
+            if (p.isDead() || !(p.vehicle() instanceof GameBoat) || !bot.manager().isEligibleTarget(p)
+                    || !bot.perception().about(p).visible()) {
                 continue;
             }
             double d = bot.pos().distanceToSqr(p.position());
@@ -682,13 +690,13 @@ public final class BoatRoutine {
         return best;
     }
 
+    /** The target to chase on the water, only while someone on the team sees them (the boat follows nobody unseen). */
     private GamePlayer primaryChaseTarget() {
         GamePlayer t = bot.target();
-        if (t != null && !t.isDead()) {
-            return t;
+        if (t == null || t.isDead()) {
+            t = bot.fallbackTarget();
         }
-        t = bot.fallbackTarget();
-        return t != null && !t.isDead() ? t : null;
+        return t != null && !t.isDead() && bot.perception().about(t).visible() ? t : null;
     }
 
     private boolean shouldDeferToVerticalChase(GamePlayer target) {

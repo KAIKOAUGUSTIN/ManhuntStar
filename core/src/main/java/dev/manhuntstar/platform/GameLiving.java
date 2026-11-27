@@ -41,6 +41,9 @@ public interface GameLiving extends GameEntity {
 
     boolean hasEffect(Effect effect);
 
+    /** The effect is active and shows its particles around the entity (an effect can be given without them). */
+    boolean effectParticles(Effect effect);
+
     /** The amplifier of an active effect (0 = level I), or -1 when the effect isn't active. */
     int effectAmplifier(Effect effect);
 

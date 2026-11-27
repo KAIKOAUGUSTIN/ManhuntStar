@@ -33,6 +33,9 @@ public interface GameServer {
     /** An online player by exact name (any case), or null. */
     GamePlayer player(String name);
 
+    /** The server has this advancement ({@code minecraft:story/enter_the_nether}...): a datapack or the server's settings can take one out. */
+    boolean hasAdvancement(String key);
+
     /** A loaded entity in any world, or null. */
     GameEntity entity(UUID id);
 

@@ -101,6 +101,12 @@ public final class PaperServer implements GameServer {
     }
 
     @Override
+    public boolean hasAdvancement(String key) {
+        org.bukkit.NamespacedKey k = org.bukkit.NamespacedKey.fromString(key);
+        return k != null && Bukkit.getAdvancement(k) != null;
+    }
+
+    @Override
     public GameItem newItem(ItemType type, int amount) {
         return PaperItems.of(new ItemStack(PaperItems.material(type), amount));
     }

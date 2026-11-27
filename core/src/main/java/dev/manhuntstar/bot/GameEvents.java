@@ -228,6 +228,19 @@ public final class GameEvents {
     }
 
     /**
+     * The player made a vibration at {@code at} that a sculk sensor would pick up (the platform leaves out what the
+     * game ignores, such as steps while sneaking): the bots close enough hear it.
+     */
+    public void playerVibration(GamePlayer p, Vec3 at) {
+        manager().playerVibration(p, at);
+    }
+
+    /** The player got an advancement ({@code minecraft:story/enter_the_nether}...). */
+    public void playerAdvancement(GamePlayer p, String key) {
+        manager().playerAdvancement(p, key);
+    }
+
+    /**
      * The player respawned: someone out of the match becomes a spectator, and bots more than 150 blocks away
      * reappear near them after a while.
      */

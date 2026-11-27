@@ -6,6 +6,7 @@ public enum Effect {
     BLINDNESS("blindness"),
     DOLPHINS_GRACE("dolphins_grace"),
     FIRE_RESISTANCE("fire_resistance"),
+    INVISIBILITY("invisibility"),
     JUMP_BOOST("jump_boost"),
     REGENERATION("regeneration"),
     SLOWNESS("slowness"),
