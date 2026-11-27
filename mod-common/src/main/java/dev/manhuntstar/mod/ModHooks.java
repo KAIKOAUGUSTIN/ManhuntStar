@@ -271,6 +271,30 @@ public final class ModHooks {
         }
     }
 
+    // ------------------------------------------------------------------ what the bots hear
+
+    /**
+     * A game event: a vibration of a player, as a sculk sensor would pick it up (only the game's vibrations, not the
+     * ones it ignores from a sneaking player, nor a block that muffles them, such as wool), goes to the bots.
+     */
+    public static void gameEvent(net.minecraft.core.Holder<net.minecraft.world.level.gameevent.GameEvent> event,
+                                 net.minecraft.world.phys.Vec3 pos, net.minecraft.world.level.gameevent.GameEvent.Context context) {
+        if (!(context.sourceEntity() instanceof ServerPlayer p)) {
+            return;
+        }
+        ManhuntCore core = core();
+        if (core == null || !event.is(net.minecraft.tags.GameEventTags.VIBRATIONS)
+                || (p.isSteppingCarefully() && event.is(net.minecraft.tags.GameEventTags.IGNORE_VIBRATIONS_SNEAKING))
+                || (context.affectedState() != null && context.affectedState().is(net.minecraft.tags.BlockTags.DAMPENS_VIBRATIONS))) {
+            return;
+        }
+        try {
+            core.gameEvents().playerVibration(ModEntities.of(p), new dev.manhuntstar.util.Vec3(pos.x, pos.y, pos.z));
+        } catch (Throwable t) {
+            failed("a vibration", t);
+        }
+    }
+
     // ------------------------------------------------------------------ blocks
 
     public static void playerPlacedBlock(Level level, BlockPos pos) {
