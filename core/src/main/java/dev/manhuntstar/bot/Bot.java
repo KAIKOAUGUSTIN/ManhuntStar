@@ -944,6 +944,9 @@ public final class Bot {
         Settings s = settings();
         entity = safe.world().spawnBotBody(safe, new BodySpec(bodyProfile(), Component.text(visualName), s.showNameTag.on(),
                 s.botHealth.value(), BotManager.BOT_MARK, id.toString()));
+        // right away, before its first tick: a bot that comes out of a portal (where the player came out) would
+        // otherwise be taken back through it by the game at once
+        keepActive(entity);
         aliveTicks = 0;
         targetYaw = null;
         targetPitch = null;
