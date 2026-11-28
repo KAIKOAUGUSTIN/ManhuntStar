@@ -272,6 +272,8 @@ public final class Brain {
         bot.combat().tickLavaCleanup();
         if (bot.capacityLocked()) {
             state("ability");
+            // the bot keeps looking and telling its team: the ability goes on only while the team sees the player
+            bot.perception().tick(bot.target());
             bot.manager().tactics().tickControlled(bot);
             return;
         }
