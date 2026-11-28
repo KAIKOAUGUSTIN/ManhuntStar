@@ -120,7 +120,9 @@ public final class CaveAmbush {
             return false;
         }
         Pos ambush = findHiddenFarPos(w, clue, target, cave);
-        if (ambush == null) {
+        // the same test that ends the ambush: if the player has since gone to another cave, the bed would be taken
+        // away at once and the hunters down there killed with it
+        if (ambush == null || !isSameCave(w, target.blockPos(), ambush)) {
             return false;
         }
         int restorePhase = chosen.progression().phase();
