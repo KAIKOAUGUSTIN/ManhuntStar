@@ -1,6 +1,7 @@
 package dev.manhuntstar.bot.perception;
 
 import dev.manhuntstar.util.Vec3;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -22,14 +23,18 @@ public record Sighting(UUID player, UUID world, Vec3 pos, Kind kind, long tick) 
     }
 
     /**
-     * This sighting replaces {@code old} as what is known: the newer one wins, unless the two are close in time and
-     * the older one is more precise (a sound right after the body was seen doesn't blur it).
+     * This sighting replaces {@code old} as what is known: the newer one wins, unless the two are close in time, in
+     * the same world, and the older one is more precise (a sound right after the body was seen doesn't blur it). In
+     * another world the newer one always wins: the player went there.
      */
     public boolean replaces(Sighting old) {
         if (old == null) {
             return true;
         }
         long dt = tick - old.tick;
+        if (!Objects.equals(world, old.world)) {
+            return dt >= 0;
+        }
         if (dt > PerceptionTuning.PRECISION_WINDOW_TICKS) {
             return true;
         }

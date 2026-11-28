@@ -49,6 +49,17 @@ class TeamIntelTest {
     }
 
     @Test
+    void aClueFromAnotherWorldRightAfterIsNewerNews() {
+        TeamIntel intel = new TeamIntel();
+        intel.report("zombies", seen(Kind.BODY, 100));
+        UUID nether = UUID.randomUUID();
+        intel.report("zombies", new Sighting(PLAYER, nether, new Vec3(0, 40, 0), Kind.SOUND, 101));
+        assertEquals(nether, intel.best("zombies", ALLIES, PLAYER, 101, 100).world(), "the player went through the portal");
+        intel.report("zombies", seen(Kind.BODY, 100));
+        assertEquals(nether, intel.best("zombies", ALLIES, PLAYER, 101, 100).world(), "an older one from the world they left doesn't come back");
+    }
+
+    @Test
     void aClueIsWorthItOnlyForAWhile() {
         TeamIntel intel = new TeamIntel();
         intel.report("zombies", seen(Kind.NAMETAG, 100));
