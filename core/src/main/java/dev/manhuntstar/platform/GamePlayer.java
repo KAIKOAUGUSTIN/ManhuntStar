@@ -15,6 +15,11 @@ public interface GamePlayer extends GameLiving, ForwardingAudience.Single {
 
     GameMode gameMode();
 
+    /** Holding the sneak key: the name over the head doesn't show through blocks and steps make no vibration. */
+    boolean isSneaking();
+
+    boolean isSprinting();
+
     void setGameMode(GameMode mode);
 
     boolean hasPermission(String permission);

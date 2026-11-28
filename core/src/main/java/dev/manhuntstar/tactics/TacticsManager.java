@@ -2,6 +2,8 @@ package dev.manhuntstar.tactics;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
+import dev.manhuntstar.bot.perception.Knowledge;
+import dev.manhuntstar.bot.perception.PerceptionTuning;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.EquipSlot;
@@ -85,17 +87,20 @@ public final class TacticsManager {
         final UUID player;
         final Pos stand;
         final long started;
+        /** Started by /manhunt test: it goes for the player without the team having to see them. */
+        final boolean test;
         Pos tntPos;
         boolean placed;
         boolean ignited;
         long igniteAt;
         long ignitedAt;
 
-        TntAmbush(UUID bot, UUID player, Pos stand, long started) {
+        TntAmbush(UUID bot, UUID player, Pos stand, long started, boolean test) {
             this.bot = bot;
             this.player = player;
             this.stand = stand;
             this.started = started;
+            this.test = test;
         }
     }
 
@@ -104,17 +109,20 @@ public final class TacticsManager {
         final UUID player;
         final GameItem oldMain;
         final MotionTracker aim = new MotionTracker();
+        /** Started by /manhunt test: it aims at the player without the team having to see them. */
+        final boolean test;
         int shots;
         int step;
         long nextAction;
         long drawStart;
 
-        BowBurst(UUID bot, UUID player, GameItem oldMain, int shots, long now) {
+        BowBurst(UUID bot, UUID player, GameItem oldMain, int shots, long now, boolean test) {
             this.bot = bot;
             this.player = player;
             this.oldMain = oldMain;
             this.shots = shots;
             this.nextAction = now;
+            this.test = test;
         }
     }
 
@@ -124,15 +132,18 @@ public final class TacticsManager {
         final GameItem oldMain;
         final GameItem oldOff;
         final MotionTracker aim = new MotionTracker();
+        /** Started by /manhunt test: it aims at the player without the team having to see them. */
+        final boolean test;
         int step;
         long nextAction;
 
-        FireworkShot(UUID bot, UUID player, GameItem oldMain, GameItem oldOff, long now) {
+        FireworkShot(UUID bot, UUID player, GameItem oldMain, GameItem oldOff, long now, boolean test) {
             this.bot = bot;
             this.player = player;
             this.oldMain = oldMain;
             this.oldOff = oldOff;
             this.nextAction = now;
+            this.test = test;
         }
     }
 
@@ -236,19 +247,20 @@ public final class TacticsManager {
             if (playerCooldown.getOrDefault(p.uuid(), Long.MIN_VALUE) > now) {
                 continue;
             }
+            // only a bot whose team sees the player now goes for them (it knows they are in that cave)
             if (CaveAmbush.isInCave(p.world(), p.blockPos()) && isVulnerable(p, now)) {
-                Bot bot = selectBot(p, now, false, 1);
+                Bot bot = selectBot(p, now, false, 1, b -> b.perception().about(p).visible());
                 if (bot != null && r.nextDouble() < 0.015 * bot.aggression()) {
                     startTntAmbush(p, bot, now, false);
                     continue;
                 }
             }
             if (manager.plugin().settings().fireworkCrossbow.on()) {
-                Bot bot = selectBot(p, now, false, 5, b -> fireworkReaches(b, p, Vec3.ZERO));
+                Bot bot = selectBot(p, now, false, 5, b -> b.perception().about(p).visible() && fireworkReaches(b, p, Vec3.ZERO));
                 if (bot != null) {
                     double chance = (0.2 + (bot.progression().phase() - 5) * 0.2 + (Math.max(1, bot.aggression()) - 1) * 0.1) * (CHECK_INTERVAL / 20.0);
                     if (bot.aggression() > 0 && r.nextDouble() < chance) {
-                        startFirework(p, bot, now);
+                        startFirework(p, bot, now, false);
                     }
                 }
             }
@@ -324,7 +336,7 @@ public final class TacticsManager {
                 if (bot == null) {
                     return "arrow-out-of-range";
                 }
-                startBowBurst(bot, player, now);
+                startBowBurst(bot, player, now, true);
                 return null;
             }
             case "firework-crossbow" -> {
@@ -335,7 +347,7 @@ public final class TacticsManager {
                 if (bot == null) {
                     return "firework-out-of-range";
                 }
-                startFirework(player, bot, now);
+                startFirework(player, bot, now, true);
                 return null;
             }
             default -> {
@@ -351,28 +363,29 @@ public final class TacticsManager {
         if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.world()) || bot.progression().phase() < 4) {
             return false;
         }
-        if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)) {
+        if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)
+                || !bot.perception().about(player).visible()) {
             return false;
         }
         // not even with the bow fully drawn does the arrow get there (too far for the height difference, or a block in the way)
         if (bowDraw(bot, player, Vec3.ZERO) < 0) {
             return false;
         }
-        startBowBurst(bot, player, now);
+        startBowBurst(bot, player, now, false);
         return true;
     }
 
-    private void startBowBurst(Bot bot, GamePlayer player, long now) {
+    private void startBowBurst(Bot bot, GamePlayer player, long now, boolean test) {
         prepare(bot);
         int shots = 2 + Math.round((Math.max(1, Math.min(10, Math.max(1, bot.aggression()))) - 1) * 0.44444445f);
         activeBotByPlayer.put(player.uuid(), bot.id());
-        bows.put(bot.id(), new BowBurst(bot.id(), player.uuid(), bot.getItem(EquipSlot.HAND).copy(), shots, now));
+        bows.put(bot.id(), new BowBurst(bot.id(), player.uuid(), bot.getItem(EquipSlot.HAND).copy(), shots, now, test));
     }
 
     /** @return false when the burst is over (and already cleaned up). */
     private boolean stepBow(BowBurst s, Bot bot, long now) {
         GamePlayer p = Platform.server().player(s.player);
-        if (!validContext(bot, p)) {
+        if (!validContext(bot, p) || !teamSees(bot, p, s.test)) {
             cleanupBow(s, bot);
             return false;
         }
@@ -527,16 +540,16 @@ public final class TacticsManager {
 
     // ------------------------------------------------------------------ firework crossbow
 
-    private void startFirework(GamePlayer player, Bot bot, long now) {
+    private void startFirework(GamePlayer player, Bot bot, long now, boolean test) {
         prepare(bot);
         activeBotByPlayer.put(player.uuid(), bot.id());
         fireworks.put(bot.id(), new FireworkShot(bot.id(), player.uuid(), bot.getItem(EquipSlot.HAND).copy(),
-                bot.getItem(EquipSlot.OFF_HAND).copy(), now));
+                bot.getItem(EquipSlot.OFF_HAND).copy(), now, test));
     }
 
     private boolean stepFirework(FireworkShot s, Bot bot, long now) {
         GamePlayer p = Platform.server().player(s.player);
-        if (!validContext(bot, p)) {
+        if (!validContext(bot, p) || !teamSees(bot, p, s.test)) {
             cleanupFirework(s, bot);
             return false;
         }
@@ -632,13 +645,14 @@ public final class TacticsManager {
 
     // ------------------------------------------------------------------ TNT ambush
 
-    private boolean startTntAmbush(GamePlayer player, Bot bot, long now, boolean ignoreCooldown) {
+    /** {@code test}: started by /manhunt test, with no cooldown, and it goes for the player even unseen. */
+    private boolean startTntAmbush(GamePlayer player, Bot bot, long now, boolean test) {
         GameWorld w = player.world();
         Pos stand = findAmbushStart(w, player);
         if (stand == null) {
             return false;
         }
-        if (!ignoreCooldown) {
+        if (!test) {
             long until = now + 2400;
             playerCooldown.put(player.uuid(), until);
             botCooldown.put(bot.id(), until);
@@ -649,7 +663,7 @@ public final class TacticsManager {
         bot.lookAt(player.eyePosition());
         bot.setSneaking(true);
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.TNT));
-        tnt.put(bot.id(), new TntAmbush(bot.id(), player.uuid(), stand, now));
+        tnt.put(bot.id(), new TntAmbush(bot.id(), player.uuid(), stand, now, test));
         return true;
     }
 
@@ -662,16 +676,25 @@ public final class TacticsManager {
         }
         GameWorld w = p.world();
         if (!a.placed) {
-            bot.lookAt(p.eyePosition());
+            // the player while the team sees them; otherwise where it last saw or heard them, and the TNT waits
+            Knowledge k = bot.perception().about(p);
+            boolean seen = a.test || k.visible();
+            Vec3 there = seen ? p.position() : k.pos();
+            if (there == null || (!seen && bot.pos().distanceTo(there) <= PerceptionTuning.CLUE_REACHED)) {
+                // lost: nothing to go by, or they weren't there anymore
+                cancelTnt(a, bot);
+                return false;
+            }
+            bot.lookAt(seen ? p.eyePosition() : there.add(0, 1.5, 0));
             bot.setSneaking(true);
-            Vec3 dir = p.position().subtract(bot.pos()).horizontal();
+            Vec3 dir = there.subtract(bot.pos()).horizontal();
             if (dir.lengthSqr() > 1.0E-6) {
                 bot.motor().walk(dir.normalize());
                 if (bot.horizontalCollision() && bot.onGround()) {
                     bot.motor().jump();
                 }
             }
-            if (bot.distanceTo(p) <= TNT_TRIGGER_DISTANCE) {
+            if (seen && bot.distanceTo(p) <= TNT_TRIGGER_DISTANCE) {
                 Pos tntPos = findTntPos(w, p, bot.blockPos());
                 if (tntPos == null) {
                     cancelTnt(a, bot);
@@ -708,7 +731,9 @@ public final class TacticsManager {
             a.ignitedAt = now;
             return true;
         }
-        Vec3 away = bot.pos().subtract(p.position()).horizontal();
+        // away from the lit TNT, which lies next to the player
+        Vec3 from = a.tntPos != null ? Vec3.center(a.tntPos) : bot.pos();
+        Vec3 away = bot.pos().subtract(from).horizontal();
         away = away.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : away.normalize();
         bot.setSneaking(false);
         bot.motor().setSprinting(true);
@@ -801,6 +826,11 @@ public final class TacticsManager {
 
     private static boolean validContext(Bot bot, GamePlayer p) {
         return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.world().equals(p.world());
+    }
+
+    /** The bot's team sees the player now (an ability started by /manhunt test doesn't need it). */
+    private static boolean teamSees(Bot bot, GamePlayer p, boolean test) {
+        return test || bot.perception().about(p).visible();
     }
 
     public void clear() {

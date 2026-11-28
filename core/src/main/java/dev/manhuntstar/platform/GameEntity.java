@@ -65,6 +65,9 @@ public interface GameEntity {
 
     boolean isUnderWater();
 
+    /** Invisible (the flag the invisibility effect sets): the body and the name don't show, the armor still does. */
+    boolean isInvisible();
+
     int fireTicks();
 
     void setFireTicks(int ticks);

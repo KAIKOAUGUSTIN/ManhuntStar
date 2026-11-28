@@ -56,6 +56,16 @@ public final class ModPlayer extends ModLiving implements GamePlayer {
     }
 
     @Override
+    public boolean isSneaking() {
+        return vanilla().isShiftKeyDown();
+    }
+
+    @Override
+    public boolean isSprinting() {
+        return vanilla().isSprinting();
+    }
+
+    @Override
     public void setGameMode(GameMode mode) {
         vanilla().setGameMode(net.minecraft.world.level.GameType.valueOf(mode.name()));
     }

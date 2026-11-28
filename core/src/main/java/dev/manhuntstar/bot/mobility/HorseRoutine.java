@@ -134,8 +134,13 @@ public final class HorseRoutine {
         }
     }
 
-    /** @return true if the horse controlled the bot this tick. */
-    public boolean handle(GameLiving target) {
+    /**
+     * Rides to {@code goal}: where the target is ({@code target}, seen) or where the bot believes it is ({@code target}
+     * null); the spear charge only against a target seen. A null goal: no target.
+     *
+     * @return true if the horse controlled the bot this tick.
+     */
+    public boolean handle(GameLiving target, Vec3 goal) {
         GameEntity vehicle = bot.vehicle();
         if (bot.isHorseRidingBlocked()) {
             if (vehicle instanceof GameHorse h && h.isHorse()) {
@@ -144,7 +149,7 @@ public final class HorseRoutine {
             resetTarget();
             return false;
         }
-        if (!bot.settings().allowHorse.on() || bot.progression().phase() < 4 || target == null || target.isDead()) {
+        if (!bot.settings().allowHorse.on() || bot.progression().phase() < 4 || goal == null || (target != null && target.isDead())) {
             if (vehicle instanceof GameHorse h && h.isHorse()) {
                 // no target to chase: gets off (mounted the bot neither walks nor fights properly)
                 dismount(h);
@@ -153,14 +158,14 @@ public final class HorseRoutine {
             return false;
         }
         if (vehicle instanceof GameHorse mounted && mounted.isHorse()) {
-            return handleMounted(mounted, target);
+            return handleMounted(mounted, target, goal);
         }
         Vec3 p = bot.pos();
-        if (Math.hypot(p.x() - target.position().x(), p.z() - target.position().z()) <= MOUNT_START_DISTANCE) {
+        if (Math.hypot(p.x() - goal.x(), p.z() - goal.z()) <= MOUNT_START_DISTANCE) {
             resetTarget();
             return false;
         }
-        GameHorse horse = findCandidate(target);
+        GameHorse horse = findCandidate(goal);
         if (horse == null) {
             resetTarget();
             return false;
@@ -190,9 +195,9 @@ public final class HorseRoutine {
         return true;
     }
 
-    private boolean handleMounted(GameHorse horse, GameLiving target) {
-        boolean lanceOn = useLance(horse, target);
-        if (!lanceOn && bot.distanceTo(target) <= DISMOUNT_DISTANCE) {
+    private boolean handleMounted(GameHorse horse, GameLiving target, Vec3 goal) {
+        boolean lanceOn = target != null && useLance(horse, target);
+        if (!lanceOn && bot.distanceTo(goal) <= DISMOUNT_DISTANCE) {
             dismount(horse);
             bot.blockHorseRidingForSeconds(60);
             resetTarget();
@@ -217,7 +222,7 @@ public final class HorseRoutine {
             joust(horse, target);
         } else {
             stowLance();
-            steer(horse, target.position(), true);
+            steer(horse, goal, true);
         }
         if (noMoveTicks >= 60) {
             bot.manager().markHorseInaccessible(horse, 600);
@@ -552,13 +557,12 @@ public final class HorseRoutine {
         return horse.attribute(Attr.MOVEMENT_SPEED, 0.225);
     }
 
-    /** The horse with the smallest detour on the way to the target; none if they all need going back too far. */
-    private GameHorse findCandidate(GameLiving target) {
+    /** The horse with the smallest detour on the way to the goal; none if they all need going back too far. */
+    private GameHorse findCandidate(Vec3 goal) {
         if (targetHorse != null && lockTicks > 0 && Platform.server().entity(targetHorse) instanceof GameHorse locked && locked.isHorse() && eligible(locked)) {
             return locked;
         }
         Vec3 me = bot.pos();
-        Vec3 goal = target.position();
         double direct = me.distanceTo(goal);
         GameHorse best = null;
         double bestDetour = MAX_DETOUR;

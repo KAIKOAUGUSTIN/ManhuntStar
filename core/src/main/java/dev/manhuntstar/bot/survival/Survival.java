@@ -108,10 +108,14 @@ public final class Survival {
         return gappleCooldown <= 0 && bot.progression().phase() >= 5 && bot.health() <= 14f && isInCombat();
     }
 
+    /** The target is (or is believed to be) within 16 blocks, or a mob that attacked it within 12. */
     private boolean isInCombat() {
         GamePlayer t = bot.target();
-        if (t != null && !t.isDead() && t.world().equals(bot.world()) && bot.distanceTo(t) < 16) {
-            return true;
+        if (t != null && !t.isDead() && t.world().equals(bot.world())) {
+            dev.manhuntstar.bot.perception.Knowledge know = bot.perception().about(t);
+            if (know.knowsPosition() && bot.distanceTo(know.pos()) < 16) {
+                return true;
+            }
         }
         GameLiving mob = bot.combat().mobAttacker();
         return mob != null && !mob.isDead() && mob.world().equals(bot.world()) && bot.distanceTo(mob) < 12;

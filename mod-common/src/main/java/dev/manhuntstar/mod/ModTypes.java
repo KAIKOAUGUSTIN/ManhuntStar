@@ -153,6 +153,9 @@ public final class ModTypes {
         if (s.is(BlockTags.MINEABLE_WITH_HOE)) {
             out.add(BlockTrait.MINEABLE_HOE);
         }
+        if (s.is(BlockTags.OCCLUDES_VIBRATION_SIGNALS)) {
+            out.add(BlockTrait.OCCLUDES_VIBRATIONS);
+        }
         return out.toArray(BlockTrait[]::new);
     }
 

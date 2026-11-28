@@ -51,29 +51,34 @@ final class Towering {
     // ------------------------------------------------------------------ tower / bridge to a skybase
 
     /**
-     * The tower under way keeps going up after this target: the target is more than
-     * {@link #KEEP_CLIMBING_MIN_HEIGHT} above and the build is going on ({@link BuildRange}).
+     * The tower under way keeps going up after this target, who is (or is believed to be) at {@code goal}: more than
+     * {@link #KEEP_CLIMBING_MIN_HEIGHT} above, and the build is going on ({@link BuildRange}).
      */
-    boolean keepsClimbingFor(GamePlayer sky) {
-        return assignedToTower && bridgePhase == 0 && sky.position().y() - bot.pos().y() > KEEP_CLIMBING_MIN_HEIGHT
+    boolean keepsClimbingFor(GamePlayer sky, Vec3 goal) {
+        return assignedToTower && bridgePhase == 0 && goal.y() - bot.pos().y() > KEEP_CLIMBING_MIN_HEIGHT
                 && bot.brain().keepsBuildingFor(sky);
     }
 
-    /** @return true if it took control of movement this tick. */
-    boolean handle(GamePlayer sky, Navigator nav) {
+    /**
+     * Tower or bridge up to the target at {@code goal}: where they are when seen, or where the bot believes they are
+     * (on top of a tower spotted from afar).
+     *
+     * @return true if it took control of movement this tick.
+     */
+    boolean handle(GamePlayer sky, Vec3 goal, Navigator nav) {
         Vec3 p = bot.pos();
-        Vec3 t = sky.position();
+        Vec3 t = goal;
         double yDiff = t.y() - p.y();
         double horizontal = Math.hypot(t.x() - p.x(), t.z() - p.z());
         double lookAngle = Math.toDegrees(Math.atan2(yDiff, horizontal));
-        boolean close = bot.isWithinToweringRange(sky, BuildRange.START);
-        boolean forcePillar = close && shouldForceCloseVerticalPillar(sky, yDiff);
+        boolean close = horizontal <= BuildRange.START;
+        boolean forcePillar = close && shouldForceCloseVerticalPillar(goal, yDiff);
         boolean towerCandidate = close && yDiff > 0;
         // A tower already going up keeps going while the target is above and the build is under way: a player who
         // walks off on top of their tower is followed up there, and at their height the path bridges over to them.
-        boolean keepClimbing = keepsClimbingFor(sky);
-        boolean shouldTower = forcePillar || keepClimbing || (towerCandidate && shouldUseTowering(sky, yDiff, lookAngle, nav));
-        boolean needsBridge = close && shouldUseBridgeAssist(sky, yDiff, horizontal);
+        boolean keepClimbing = keepsClimbingFor(sky, goal);
+        boolean shouldTower = forcePillar || keepClimbing || (towerCandidate && shouldUseTowering(goal, yDiff, lookAngle, nav));
+        boolean needsBridge = close && shouldUseBridgeAssist(goal, yDiff, horizontal);
         if (!bot.settings().allowTowering.on() || (!shouldTower && !needsBridge) || bot.isInWater() || bot.isInLava()) {
             if (assignmentChecked || assignedToTower || bridgePhase != 0) {
                 reset();
@@ -112,7 +117,7 @@ final class Towering {
                     lastPlaceTick = Platform.server().currentTick();
                     bot.setSneaking(false);
                     if (sky.isValid()) {
-                        bot.lookAt(sky.position());
+                        bot.lookAt(goal);
                     }
                 });
             }
@@ -183,8 +188,8 @@ final class Towering {
         bot.setSneaking(false);
     }
 
-    private boolean shouldUseTowering(GamePlayer target, double yDiff, double lookAngle, Navigator nav) {
-        if (yDiff < 8.0 || target.position().y() <= bot.pos().y() + 1.5) {
+    private boolean shouldUseTowering(Vec3 target, double yDiff, double lookAngle, Navigator nav) {
+        if (yDiff < 8.0 || target.y() <= bot.pos().y() + 1.5) {
             return false;
         }
         if (lookAngle < 20.0 && yDiff < 12.0) {
@@ -200,15 +205,15 @@ final class Towering {
         return isDirectChaseUnsupported(target) || isTargetOnIsolatedSupport(target) || yDiff >= 12.0;
     }
 
-    private boolean shouldForceCloseVerticalPillar(GamePlayer target, double yDiff) {
+    private boolean shouldForceCloseVerticalPillar(Vec3 target, double yDiff) {
         if (yDiff < 3.0 || bot.isInWater() || bot.isInLava() || bot.isRiding()) {
             return false;
         }
         Vec3 p = bot.pos();
-        return Math.abs(target.position().x() - p.x()) <= 0.6 && Math.abs(target.position().z() - p.z()) <= 0.6;
+        return Math.abs(target.x() - p.x()) <= 0.6 && Math.abs(target.z() - p.z()) <= 0.6;
     }
 
-    private boolean shouldUseBridgeAssist(GamePlayer target, double yDiff, double horizontal) {
+    private boolean shouldUseBridgeAssist(Vec3 target, double yDiff, double horizontal) {
         if (yDiff < -2.0 || yDiff > 6.0 || horizontal <= 3.0) {
             return false;
         }
@@ -218,8 +223,8 @@ final class Towering {
         return bridgePhase == 1 || isDirectChaseUnsupported(target);
     }
 
-    private boolean hasStairLikeRouteAhead(GamePlayer target) {
-        Vec3 flat = target.position().subtract(bot.pos()).horizontal();
+    private boolean hasStairLikeRouteAhead(Vec3 target) {
+        Vec3 flat = target.subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -254,8 +259,8 @@ final class Towering {
         return Integer.MIN_VALUE;
     }
 
-    private boolean hasAStarAscendingRoute(GamePlayer target, Navigator nav) {
-        if (target.position().y() <= bot.pos().y()) {
+    private boolean hasAStarAscendingRoute(Vec3 target, Navigator nav) {
+        if (target.y() <= bot.pos().y()) {
             return false;
         }
         List<Pos> path = nav.currentPath();
@@ -267,7 +272,7 @@ final class Towering {
             return false;
         }
         int botY = bot.blockPos().y();
-        int required = Math.max(1, Math.min(6, target.blockPos().y() - botY));
+        int required = Math.max(1, Math.min(6, target.toPos().y() - botY));
         int max = Math.min(path.size() - 1, idx + 14);
         int highest = 0;
         for (int i = idx; i <= max; i++) {
@@ -276,8 +281,8 @@ final class Towering {
         return highest >= required;
     }
 
-    private boolean isDirectChaseUnsupported(GamePlayer target) {
-        Vec3 flat = target.position().subtract(bot.pos()).horizontal();
+    private boolean isDirectChaseUnsupported(Vec3 target) {
+        Vec3 flat = target.subtract(bot.pos()).horizontal();
         if (flat.lengthSqr() < 1.0E-6) {
             return false;
         }
@@ -287,8 +292,8 @@ final class Towering {
         return missingSupport || wall;
     }
 
-    private boolean isTargetOnIsolatedSupport(GamePlayer target) {
-        Pos support = target.blockPos().below();
+    private boolean isTargetOnIsolatedSupport(Vec3 target) {
+        Pos support = target.toPos().below();
         if (!solid(support)) {
             return true;
         }

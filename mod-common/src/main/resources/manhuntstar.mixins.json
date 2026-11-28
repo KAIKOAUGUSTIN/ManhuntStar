@@ -21,11 +21,13 @@
     "MinecraftServerMixin",
     "MobAccessor",
     "MobMixin",
+    "PlayerAdvancementsMixin",
     "PlayerInfoUpdatePacketAccessor",
     "PlayerListMixin",
     "ProjectileMixin",
     "ServerCommonPacketListenerImplMixin",
     "ServerExplosionMixin",
+    "ServerLevelMixin",
     "ServerPlayerGameModeMixin",
     "ServerPlayerMixin"
   ],

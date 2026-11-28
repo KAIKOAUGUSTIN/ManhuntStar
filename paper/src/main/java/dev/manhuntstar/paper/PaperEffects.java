@@ -15,6 +15,7 @@ public final class PaperEffects {
             case BLINDNESS -> PotionEffectType.BLINDNESS;
             case DOLPHINS_GRACE -> PotionEffectType.DOLPHINS_GRACE;
             case FIRE_RESISTANCE -> PotionEffectType.FIRE_RESISTANCE;
+            case INVISIBILITY -> PotionEffectType.INVISIBILITY;
             case JUMP_BOOST -> PotionEffectType.JUMP_BOOST;
             case REGENERATION -> PotionEffectType.REGENERATION;
             case SLOWNESS -> PotionEffectType.SLOWNESS;

@@ -145,6 +145,12 @@ public final class ModServer implements GameServer {
     }
 
     @Override
+    public boolean hasAdvancement(String key) {
+        net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(key);
+        return id != null && server.getAdvancements().get(id) != null;
+    }
+
+    @Override
     public GameEntity entity(UUID id) {
         for (ServerLevel level : server.getAllLevels()) {
             Entity e = level.getEntity(id);

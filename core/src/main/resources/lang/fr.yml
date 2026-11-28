@@ -8,7 +8,7 @@
 #  Ne modifiez pas « version ».
 # ==============================================================================
 
-version: 4
+version: 5
 
 prefix: "<dark_red><bold>Manhunt*</bold></dark_red> <dark_gray>»</dark_gray> "
 
@@ -257,6 +257,12 @@ state:
   parkour: "parkour"
   following-path: "suit un chemin vers <target> (<detail> blocs)"
   walking-straight: "va tout droit vers <target> (<detail> blocs)"
+  compass: "suit la boussole vers <target>"
+  investigating: "va là où <target> a été repéré (il y a <detail> s)"
+  tower: "monte sur la tour de <target>"
+  digging-down: "creuse vers le bas après <target>"
+  to-portal: "va au portail pris par <target>"
+  in-portal: "traverse le portail"
 
 category:
   general: "Général"
@@ -401,7 +407,7 @@ options:
     description: "Élytres pour atteindre les cibles lointaines."
   allowredistribution:
     name: "Ramener les bots éloignés"
-    description: "Les bots très loin de la cible réapparaissent cachés près d'elle."
+    description: "Les bots très loin de l'endroit où leur équipe a vu ou entendu la cible pour la dernière fois réapparaissent cachés près de cet endroit."
   redistdistance:
     name: "Distance pour ramener les bots"
     description: "Distance (blocs) à partir de laquelle un bot est redistribué."
@@ -449,10 +455,10 @@ options:
     description: "Rafale d'arc quand le bot passe trop de temps sans toucher le joueur. Il ne tire que si la flèche atteint le joueur."
   silentdeaths:
     name: "Morts silencieuses"
-    description: "Le bot le plus loin de chaque joueur (200+ blocs) disparaît et réapparaît plus près."
+    description: "Le bot le plus loin de l'endroit où son équipe savait chaque joueur (200+ blocs) disparaît et réapparaît plus près."
   portalentrance:
     name: "Arriver par un portail"
-    description: "Les bots arrivent dans une autre dimension par un portail que le joueur voit."
+    description: "Les bots sans portail pour suivre le joueur dans une autre dimension (il est mort ou a été téléporté) sortent d'un portail près de l'endroit où le joueur est arrivé."
   spawnmode:
     name: "Mode d'apparition"
     description: "NORMAL : apparaît au point. MANHUNT : apparaît en cercle et attend le début de la chasse."

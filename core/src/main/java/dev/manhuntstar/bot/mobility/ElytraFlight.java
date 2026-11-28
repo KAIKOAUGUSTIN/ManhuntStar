@@ -38,7 +38,11 @@ public final class ElytraFlight {
         return bot.entity() != null && bot.entity().isGliding();
     }
 
-    public void tick(GamePlayer target) {
+    /**
+     * Flies toward {@code known} (where the target is known or believed to be) when it's far, or along the compass
+     * ({@code bearing}) with nothing known.
+     */
+    public void tick(GamePlayer target, Vec3 known, Vec3 bearing) {
         if (target == null || !bot.settings().useElytra.on() || !target.world().equals(bot.world())) {
             forceLand();
             return;
@@ -47,15 +51,15 @@ public final class ElytraFlight {
             fireworkCooldown--;
         }
         tickBoost();
-        double dist = bot.distanceTo(target);
+        double dist = known == null ? Double.POSITIVE_INFINITY : bot.distanceTo(known);
         if (isFlying()) {
-            tickFlight(target, dist);
+            tickFlight(dist);
         } else {
-            tickGround(target, dist);
+            tickGround(known, bearing, dist);
         }
     }
 
-    private void tickGround(GamePlayer target, double dist) {
+    private void tickGround(Vec3 known, Vec3 bearing, double dist) {
         if (bot.getItem(EquipSlot.CHEST).type() == Items.ELYTRA && !pathing) {
             restoreChest();
             return;
@@ -72,12 +76,16 @@ public final class ElytraFlight {
         }
         if (!pathing) {
             ThreadLocalRandom r = ThreadLocalRandom.current();
-            Vec3 dir = target.position().subtract(bot.pos()).horizontal().normalize();
+            Vec3 dir = known != null ? known.subtract(bot.pos()).horizontal().normalize() : bearing;
+            if (dir == null || dir.lengthSqr() < 1.0E-6) {
+                return;
+            }
             Vec3 perp = new Vec3(-dir.z(), 0, dir.x()).normalize();
             double forward = 45 + r.nextDouble() * 35;
             double lateral = (10 + r.nextDouble() * 40) * (r.nextBoolean() ? 1 : -1);
             Vec3 base = bot.pos().add(dir.scale(forward)).add(perp.scale(lateral));
-            flightTarget = new Vec3(base.x(), target.position().y() + 10 + r.nextDouble() * 140, base.z());
+            double height = known != null ? known.y() + 10 + r.nextDouble() * 140 : bot.pos().y() + 10 + r.nextDouble() * 60;
+            flightTarget = new Vec3(base.x(), height, base.z());
             pathing = true;
             launchDelay = 3;
             GameItem chest = bot.getItem(EquipSlot.CHEST);
@@ -101,7 +109,7 @@ public final class ElytraFlight {
         }
     }
 
-    private void tickFlight(GamePlayer target, double dist) {
+    private void tickFlight(double dist) {
         if (!pathing || flightTarget == null) {
             land();
             return;

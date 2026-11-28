@@ -7,8 +7,12 @@ import dev.manhuntstar.paper.PaperBlocks;
 import dev.manhuntstar.paper.PaperEntities;
 import dev.manhuntstar.paper.PaperWorld;
 import dev.manhuntstar.util.Locations;
+import dev.manhuntstar.util.Vec3;
 import java.util.List;
+import org.bukkit.GameEvent;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -24,18 +28,20 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.event.world.GenericGameEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 
 /**
  * World and player events: blocks placed by players (towers/skybases), block changes
  * for pathfinding, broken ambush bed, crafting table, TAB and the hunt rule for players who
- * join, count in the server list and in /list, and redistribution when the player respawns far
- * from the bots.
+ * join, count in the server list and in /list, redistribution when the player respawns far
+ * from the bots, the players' vibrations the bots hear and the advancements they're told of.
  */
 public final class WorldPlayerListener implements Listener {
 
@@ -109,6 +115,29 @@ public final class WorldPlayerListener implements Listener {
     }
 
     // ------------------------------------------------------------------ players
+
+    /**
+     * A vibration made by a player, as a sculk sensor would pick it up: only the game's vibrations, and not the
+     * ones it ignores from a sneaking player (steps, landing...).
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onGameEvent(GenericGameEvent event) {
+        if (!(event.getEntity() instanceof Player p)) {
+            return;
+        }
+        GameEvent ge = event.getEvent();
+        if (!Tag.GAME_EVENT_VIBRATIONS.isTagged(ge) || (p.isSneaking() && Tag.GAME_EVENT_IGNORE_VIBRATIONS_SNEAKING.isTagged(ge))) {
+            return;
+        }
+        Location at = event.getLocation();
+        plugin.core().gameEvents().playerVibration(PaperEntities.of(p), new Vec3(at.getX(), at.getY(), at.getZ()));
+    }
+
+    /** Entering the Nether or the End is announced: the bots learn of it too. */
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onAdvancement(PlayerAdvancementDoneEvent event) {
+        plugin.core().gameEvents().playerAdvancement(PaperEntities.of(event.getPlayer()), event.getAdvancement().getKey().toString());
+    }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {

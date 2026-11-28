@@ -124,6 +124,12 @@ public class PaperLiving extends PaperEntity implements GameLiving {
     }
 
     @Override
+    public boolean effectParticles(Effect effect) {
+        PotionEffect e = living().getPotionEffect(PaperEffects.type(effect));
+        return e != null && e.hasParticles();
+    }
+
+    @Override
     public int effectAmplifier(Effect effect) {
         PotionEffect e = living().getPotionEffect(PaperEffects.type(effect));
         return e == null ? -1 : e.getAmplifier();

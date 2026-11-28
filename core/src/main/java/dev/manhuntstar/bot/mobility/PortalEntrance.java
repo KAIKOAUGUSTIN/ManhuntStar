@@ -23,9 +23,10 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Bots following the target to another dimension: after 30–60 s (a tenth of that in the End), a Nether
- * portal appears somewhere the player can see and the bots come out of it one by one. With
- * {@code tactics.portal-entrance} off, they arrive hidden near the player, without a portal.
+ * Bots with no portal to follow the target to another dimension (the player died and came back in another
+ * world, or was teleported): after 30–60 s (a tenth of that in the End), a Nether portal appears near where the
+ * player arrived in that world (not where they are now: the bots don't know that) and the bots come out of it
+ * one by one. With {@code tactics.portal-entrance} off, they arrive hidden near that point, without a portal.
  */
 public final class PortalEntrance {
 
@@ -34,6 +35,8 @@ public final class PortalEntrance {
     private final BotManager manager;
     private final UUID playerId;
     private final UUID worldId;
+    /** Where the player arrived in the world the bots go to. */
+    private final Vec3 anchor;
     private final List<Bot> bots;
     private int timer;
     private boolean portalSpawned;
@@ -42,10 +45,11 @@ public final class PortalEntrance {
     private int index;
     private boolean finished;
 
-    public PortalEntrance(BotManager manager, GamePlayer player, List<Bot> bots) {
+    public PortalEntrance(BotManager manager, GamePlayer player, Vec3 anchor, List<Bot> bots) {
         this.manager = manager;
         this.playerId = player.uuid();
         this.worldId = player.world().id();
+        this.anchor = anchor;
         this.bots = new ArrayList<>(bots);
         int min = manager.plugin().settings().minNetherDelay.value() * 20;
         int max = manager.plugin().settings().maxNetherDelay.value() * 20;
@@ -81,7 +85,7 @@ public final class PortalEntrance {
         if (!portalSpawned) {
             portalSpawned = true;
             if (manager.plugin().settings().portalEntrance.on()) {
-                spawnPortal(player);
+                spawnPortal(player.world());
             }
             nextDelay = 6 + ThreadLocalRandom.current().nextInt(27);
             return;
@@ -118,22 +122,20 @@ public final class PortalEntrance {
             return;
         }
         GameWorld w = player.world();
-        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, player.blockPos());
+        Pos spot = portalPos != null ? exitSpot(w, portalPos) : hiddenSpot(w, anchor.toPos());
         Place dest = new Place(w, spot.x() + 0.5, spot.y() + 0.1, spot.z() + 0.5, ThreadLocalRandom.current().nextFloat() * 360f, 0f);
         manager.teleportBot(bot, dest);
         bot.brain().setTeleporting(false);
-        bot.lookAt(player.position());
         w.playSound(dest.pos(), portalPos != null ? Sounds.BLOCK_PORTAL_TRAVEL : Sounds.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.6f, 1f);
     }
 
     // ------------------------------------------------------------------ portal
 
-    private void spawnPortal(GamePlayer player) {
-        GameWorld w = player.world();
-        portalPos = findPortalLocation(player);
+    private void spawnPortal(GameWorld w) {
+        portalPos = findPortalLocation(w);
         boolean end = w.dimension() == Dimension.THE_END;
         if (portalPos == null) {
-            portalPos = player.blockPos().relative(Face.fromYaw(player.yaw()), 15);
+            portalPos = anchor.toPos().relative(Face.fromYaw(ThreadLocalRandom.current().nextFloat() * 360f), 15);
         }
         if (end) {
             if (!WorldUtil.blocksMotion(w, portalPos.below())) {
@@ -177,12 +179,12 @@ public final class PortalEntrance {
         }
     }
 
-    private Pos findPortalLocation(GamePlayer player) {
-        GameWorld w = player.world();
-        Vec3 pp = player.position();
+    /** Ground 10–30 blocks from where the player arrived (in loaded chunks). */
+    private Pos findPortalLocation(GameWorld w) {
+        Vec3 pp = anchor;
         boolean nether = w.dimension() == Dimension.NETHER;
         boolean end = w.dimension() == Dimension.THE_END;
-        for (int dist = 100; dist >= 10; dist -= 5) {
+        for (int dist = 30; dist >= 10; dist -= 5) {
             for (int i = 0; i < 12; i++) {
                 double angle = Math.toRadians(i * 30);
                 int tx = (int) (pp.x() + Math.cos(angle) * dist);
@@ -213,22 +215,10 @@ public final class PortalEntrance {
                         || !WorldUtil.blocksMotion(w, candidate.below())) {
                     continue;
                 }
-                if (visibleTo(player, candidate)) {
-                    return candidate;
-                }
+                return candidate;
             }
         }
         return end ? new Pos((int) pp.x() + 5, (int) pp.y(), (int) pp.z() + 5) : null;
-    }
-
-    private static boolean visibleTo(GamePlayer player, Pos pos) {
-        Vec3 eye = player.eyePosition();
-        Vec3 center = Vec3.center(pos);
-        Vec3 look = player.direction();
-        if (look.dot(center.subtract(eye).normalize()) < 0.5) {
-            return false;
-        }
-        return WorldUtil.clearLine(player.world(), eye, center.add(0, 1, 0));
     }
 
     private static Pos exitSpot(GameWorld w, Pos base) {

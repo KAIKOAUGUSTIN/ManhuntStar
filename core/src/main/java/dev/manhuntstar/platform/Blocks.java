@@ -11,6 +11,7 @@ public final class Blocks {
     public static final BlockType TNT = BlockType.of("TNT");
     public static final BlockType OBSIDIAN = BlockType.of("OBSIDIAN");
     public static final BlockType NETHER_PORTAL = BlockType.of("NETHER_PORTAL");
+    public static final BlockType END_PORTAL = BlockType.of("END_PORTAL");
     public static final BlockType OAK_LEAVES = BlockType.of("OAK_LEAVES");
     public static final BlockType RED_BED = BlockType.of("RED_BED");
     public static final BlockType IRON_DOOR = BlockType.of("IRON_DOOR");

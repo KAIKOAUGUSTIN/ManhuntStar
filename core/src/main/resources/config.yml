@@ -119,7 +119,7 @@ mobility:
   boats: true
   # Elytra to reach far targets. [allowelytra]
   elytra: false
-  # Bots very far from the target reappear hidden near it. [allowredistribution]
+  # Bots very far from where their team last saw or heard the target reappear hidden near that spot. [allowredistribution]
   redistribute: true
   # Distance (blocks) from which a bot gets redistributed. [redistdistance]
   redistribute-distance: 200
@@ -157,9 +157,10 @@ tactics:
   # Bow burst when the bot goes too long without hitting the player. It draws the bow as much as it needs and
   # only shoots if the arrow reaches the player (height difference counts). [bowpressure]
   bow-pressure: true
-  # The bot farthest from each player (200+ blocks) vanishes and respawns closer. [silentdeaths]
+  # The bot farthest from where its team last knew each player to be (200+ blocks) vanishes and respawns closer. [silentdeaths]
   silent-deaths: true
-  # Bots arrive in another dimension through a portal the player can see. [portalentrance]
+  # Bots with no portal to follow the player to another dimension (the player died or was teleported) come out of
+  # a portal near where the player arrived. [portalentrance]
   portal-entrance: true
 
 manhunt:

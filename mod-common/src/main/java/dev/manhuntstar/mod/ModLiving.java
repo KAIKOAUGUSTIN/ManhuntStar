@@ -145,6 +145,12 @@ public class ModLiving extends ModEntity implements GameLiving {
     }
 
     @Override
+    public boolean effectParticles(Effect effect) {
+        MobEffectInstance e = vanilla().getEffect(ModRegistry.effect(effect));
+        return e != null && e.isVisible();
+    }
+
+    @Override
     public int effectAmplifier(Effect effect) {
         MobEffectInstance e = vanilla().getEffect(ModRegistry.effect(effect));
         return e == null ? -1 : e.getAmplifier();

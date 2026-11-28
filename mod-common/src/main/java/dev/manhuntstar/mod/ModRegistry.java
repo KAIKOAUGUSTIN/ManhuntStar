@@ -68,6 +68,7 @@ public final class ModRegistry {
             case BLINDNESS -> MobEffects.BLINDNESS;
             case DOLPHINS_GRACE -> MobEffects.DOLPHINS_GRACE;
             case FIRE_RESISTANCE -> MobEffects.FIRE_RESISTANCE;
+            case INVISIBILITY -> MobEffects.INVISIBILITY;
             case JUMP_BOOST -> MobEffects.JUMP_BOOST;
             case REGENERATION -> MobEffects.REGENERATION;
             case SLOWNESS -> MobEffects.SLOWNESS;

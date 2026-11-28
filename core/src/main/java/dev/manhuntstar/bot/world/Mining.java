@@ -169,14 +169,14 @@ public final class Mining {
         return false;
     }
 
-    /** "Stuck" mode: digs toward the target (staircase down, up or zigzag). */
-    public void executeHardcodedMining(GamePlayer target) {
+    /** "Stuck" mode: digs toward the point (staircase down, up or zigzag): the target seen, or where the bot believes it is. */
+    public void executeHardcodedMining(Vec3 goal) {
         // The breaking itself advances in tick(), called once per tick by Bot.
         if (miningPos != null) {
             return;
         }
         Pos botPos = bot.blockPos();
-        Pos targetPos = target.blockPos();
+        Pos targetPos = goal.toPos();
         double yDiff = targetPos.y() - botPos.y();
         int dx = targetPos.x() - botPos.x();
         int dz = targetPos.z() - botPos.z();
@@ -184,7 +184,7 @@ public final class Mining {
         int sz = Integer.signum(dz);
         double horizontalDist = Math.hypot(dx, dz);
         bot.inventory().restorePreferredPickaxe();
-        bot.lookAt(target.position());
+        bot.lookAt(goal);
         if (yDiff < -1.5) {
             Pos toward = offsetToward(botPos, sx, sz);
             Pos downPrimary = Math.abs(dx) >= Math.abs(dz) ? botPos.offset(sx, -1, 0) : botPos.offset(0, -1, sz);
@@ -216,7 +216,7 @@ public final class Mining {
             if (horizontalDist > 5.0) {
                 Vec3 towardVec = new Vec3(dx, 0, dz);
                 if (towardVec.lengthSqr() > 1.0E-4) {
-                    bot.lookAt(target.position());
+                    bot.lookAt(goal);
                     bot.motor().walk(towardVec.normalize());
                     bot.motor().setSprinting(true);
                     if (bot.horizontalCollision() && bot.onGround()) {
