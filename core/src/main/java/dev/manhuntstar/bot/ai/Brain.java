@@ -704,7 +704,8 @@ public final class Brain {
 
     /**
      * At the portal: a Nether portal takes the bot after it stands in it for 4 s, like a player; an End portal
-     * right away. It comes out where the player (or itself, going back) came out.
+     * right away. It comes out where the player (or itself, going back) came out. A portal broken in the meantime
+     * takes it nowhere: the search picks another way on the next tick.
      *
      * @return true while it took control of the bot
      */
@@ -712,7 +713,9 @@ public final class Brain {
         Vec3 portal = goal.pos();
         Vec3 p = bot.pos();
         boolean atPortal = Math.hypot(portal.x() - p.x(), portal.z() - p.z()) <= 1.2 && Math.abs(portal.y() - p.y()) <= 2.0;
-        if (!atPortal) {
+        GameWorld w = bot.world();
+        BlockType portalBlock = atPortal && w != null ? Search.portalAt(w, portal) : null;
+        if (portalBlock == null) {
             portalTicks = 0;
             return false;
         }
@@ -723,7 +726,7 @@ public final class Brain {
         } else {
             bot.motor().stopWalk();
         }
-        boolean endPortal = isEndPortal(portal);
+        boolean endPortal = portalBlock == Blocks.END_PORTAL;
         state("in-portal");
         if (!endPortal && ++portalTicks < PerceptionTuning.NETHER_PORTAL_TICKS) {
             return true;
@@ -732,17 +735,6 @@ public final class Brain {
         search.reset();
         bot.manager().sendThroughPortal(bot, goal.destWorld(), goal.destPos(), portal);
         return true;
-    }
-
-    private boolean isEndPortal(Vec3 portal) {
-        GameWorld w = bot.world();
-        Pos c = portal.toPos();
-        for (int dy = -1; dy <= 1; dy++) {
-            if (w.block(c.above(dy)).type() == Blocks.END_PORTAL) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

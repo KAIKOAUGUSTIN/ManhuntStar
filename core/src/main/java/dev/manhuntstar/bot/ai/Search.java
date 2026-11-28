@@ -10,6 +10,8 @@ import dev.manhuntstar.bot.perception.Knowledge;
 import dev.manhuntstar.bot.perception.Perception;
 import dev.manhuntstar.bot.perception.PlayerTravel;
 import dev.manhuntstar.bot.perception.TowerSpotter;
+import dev.manhuntstar.platform.BlockType;
+import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Platform;
@@ -65,8 +67,12 @@ final class Search {
         Perception per = bot.perception();
         boolean elsewhere = !target.world().id().equals(w.id());
         PlayerTravel.Departure d = elsewhere ? bot.manager().travel().departureFrom(target.uuid(), w.id()) : null;
-        boolean viaPortal = d != null && d.viaPortal();
+        // a portal broken since is no way to follow them: the bot goes on as if they had left without one
+        boolean viaPortal = d != null && d.viaPortal() && portalStands(w, Vec3.bottomCenter(d.portal()));
         Bot.WayBack back = elsewhere && !viaPortal ? bot.wayBack(w) : null;
+        if (back != null && !portalStands(w, back.portal())) {
+            back = null;
+        }
         GameWorld backWorld = back == null ? null : Platform.server().world(back.backWorld());
         Vec3 bearing = per.bearing();
         Kind kind = pick(elsewhere, viaPortal, viaPortal && per.knowsDeparture(target, d), backWorld != null,
@@ -107,6 +113,24 @@ final class Search {
             return Kind.DIG;
         }
         return bearing ? Kind.COMPASS : null;
+    }
+
+    /** The Nether or End portal block at {@code at} (or just above or below it), or null when there's none. */
+    static BlockType portalAt(GameWorld w, Vec3 at) {
+        Pos c = at.toPos();
+        for (int dy = -1; dy <= 1; dy++) {
+            BlockType t = w.type(c.x(), c.y() + dy, c.z());
+            if (t == Blocks.NETHER_PORTAL || t == Blocks.END_PORTAL) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    /** The portal at {@code at} is still there, as far as the bot can tell (an unloaded chunk counts as yes). */
+    private static boolean portalStands(GameWorld w, Vec3 at) {
+        Pos c = at.toPos();
+        return !w.isChunkLoaded(c.x() >> 4, c.z() >> 4) || portalAt(w, at) != null;
     }
 
     /** A point {@link dev.manhuntstar.bot.perception.PerceptionTuning#COMPASS_STEP} blocks ahead along the compass, on the ground. */
