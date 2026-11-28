@@ -90,9 +90,13 @@ public final class PlayerTravel {
         return best;
     }
 
-    /** A new hunt: the old trips don't count. */
+    /**
+     * A new hunt: the old trips don't count, and the positions of the last one aren't where a player was the tick
+     * before (the first sample of the hunt is where a trip can start from).
+     */
     public void clear() {
         departures.clear();
+        last.clear();
     }
 
     /** The Nether or End portal block the player was standing in (or falling into) at {@code at}, or null. */

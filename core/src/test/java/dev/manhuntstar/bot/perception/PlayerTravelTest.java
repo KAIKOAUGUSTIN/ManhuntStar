@@ -45,6 +45,17 @@ class PlayerTravelTest {
     }
 
     @Test
+    void aNewHuntStartsWithoutThePositionsOfTheLastOne() {
+        FakeWorld overworld = Terrain.flat();
+        FakeWorld nether = Terrain.flat();
+        overworld.set(new Pos(10, 64, 3), Terrain.NETHER_PORTAL);
+        PlayerTravel travel = new PlayerTravel();
+        travel.record(PLAYER, overworld, new Vec3(10.5, 64, 3.5), 1);
+        travel.clear();
+        assertNull(travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), 2), "sent to the new hunt's world");
+    }
+
+    @Test
     void aGapInTheTicksIsNoTrip() {
         FakeWorld overworld = Terrain.flat();
         FakeWorld nether = Terrain.flat();
