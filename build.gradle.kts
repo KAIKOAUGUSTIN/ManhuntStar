@@ -28,7 +28,8 @@ subprojects {
     version = rootProject.version
 
     repositories {
-        mavenCentral()
+        // Google's mirror of Maven Central (Maven Central itself often answers 429 to CI runners)
+        maven("https://maven-central.storage-download.googleapis.com/maven2/") { name = "MavenCentralGoogle" }
         // the FastStats SDK (Paper plugin and mods) is only on FastStats' repository
         exclusiveContent {
             forRepository {

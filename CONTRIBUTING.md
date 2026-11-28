@@ -1,8 +1,8 @@
 # Contributing to ManhuntStar
 
-Thanks for wanting to help! Bug reports, ideas, translations and code are all welcome.
+Thanks for helping! This page has what you need to build ManhuntStar, use it from your own plugin and send changes or translations. How to install and play is in the [README](README.md).
 
-## Before you start
+## 🧭 Before you start
 
 - **Bugs and ideas**: open an issue with the **Bug report** or **Feature request** form. Search the
   existing issues first.
@@ -11,27 +11,16 @@ Thanks for wanting to help! Bug reports, ideas, translations and code are all we
 - **Bigger changes** (a new feature, a new option, a change in how the bots play): open an issue or ask
   on Discord first, so the idea is agreed on before you spend time on it.
 
-## Branches
+## 🌿 Branches
 
-- `dev` is where the work happens. `main` only receives from `dev`, and every merge into `main` makes a
-  release (new version, changelog, Modrinth, Hangar, CurseForge and Discord). **Pull requests go to
-  `dev`**, never to `main`.
-- Start from an up-to-date `dev`, with one branch per feature or fix, named in kebab-case:
-  `fix-<description>` for a fix (for example `fix-menu-tower-reach-shield`) and `<description>` for a
-  feature (for example `match-end`).
+- `dev` is where the work happens. Start from an up-to-date `dev`, with one branch per feature or fix,
+  named in kebab-case: `fix-<description>` for a fix (for example `fix-menu-tower-reach-shield`) and
+  `<description>` for a feature (for example `match-end`).
 - From a fork it's the same: a branch on your fork, and the pull request into `dev` here.
 
-## Building and testing
+## 🏗️ Building
 
-You need JDK 25. Run:
-
-```bash
-./gradlew build
-```
-
-It compiles everything, runs the tests and puts the jars in `build/libs/`: the Paper plugin
-(`ManhuntStar-<version>.jar`) and the Fabric and NeoForge mods, one per Minecraft version
-(`ManhuntStar-fabric-<version>+26.3.jar` and the like).
+Needs JDK 25. Run `./gradlew build`; the jars end up in `build/libs/`: the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version (the versions are in `gradle.properties`).
 
 Then try the change in game, on every platform it touches:
 
@@ -42,7 +31,9 @@ Then try the change in game, on every platform it touches:
 Local builds have no FastStats token, so they send no statistics and no error reports. There's nothing
 to set up for that.
 
-## Where the code goes
+Dependency versions live in `gradle/libs.versions.toml`. Gradle checks every dependency it downloads against the checksums in `gradle/verification-metadata.xml`. After adding or updating a dependency (or a Gradle plugin), write them again with `./gradlew --write-verification-metadata sha256 build` and commit the file. Writing the file doesn't check anything: it records the checksums of whatever the repositories (or Gradle's local cache) served, so before committing, compare the new checksums with an independent source where there is one (for example the checksums the project publishes with its release).
+
+## 📁 Where the code goes
 
 | Module | What's in it |
 |---|---|
@@ -57,7 +48,11 @@ What changes between Minecraft versions goes in `<module>/versions/<version>/src
 
 Tests that every platform runs against its own implementation are in `core/src/testFixtures/`.
 
-## Code
+## 🔌 API for other plugins
+
+On Paper, `dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot behind an entity. Events: `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
+
+## 🧹 Code
 
 - Follow the style of the file you're editing.
 - Comments, Javadoc, log messages and test failure messages are in English.
@@ -69,7 +64,7 @@ Tests that every platform runs against its own implementation are in `core/src/t
 - Follow [ACCESSIBILITY.md](ACCESSIBILITY.md): nothing the player needs to know is shown only by a
   color or only by a sound.
 
-## New options and texts
+## ⚙️ New options and texts
 
 `config.yml` and the language files have a version, so servers that update ManhuntStar get the new
 options and texts and keep their own values.
@@ -95,30 +90,15 @@ New or changed texts:
    `LanguageUpgrade.VERSIONS`. A text whose meaning changed so much that the owner's edited copy no
    longer fits goes in `LanguageUpgrade.RESET`.
 
-## Translations
+## 🌍 Translations
 
-- **Fixing a translation**: edit its file in `core/src/main/resources/lang/`.
-- **A new language**: copy `en.yml` to a file named after the language (for example `es.yml`) and
-  translate the texts between quotes. Keep the tags in `<...>`: the placeholders are filled in by the
-  plugin, and the colors follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html)
-  format. Add the language to `Messages.BUNDLED_LANGUAGES`
-  (`core/src/main/java/dev/manhuntstar/config/Messages.java`) and to the list in the README.
+To add a language to ManhuntStar, open a pull request adding its file to `core/src/main/resources/lang/` (how to write one is in the README, under Translating). Keep the tags in `<...>`: `<bot>`, `<player>`, `<amount>` and the like are filled in by the plugin, and color tags such as `<red>` or `<bold>` follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format.
 
-## Dependencies
+In the same pull request, add the language to `Messages.BUNDLED_LANGUAGES`
+(`core/src/main/java/dev/manhuntstar/config/Messages.java`) and to the list in the README. To fix a
+translation that's already there, edit its file in the same folder.
 
-Versions live in `gradle/libs.versions.toml`, and Gradle checks every download against the checksums
-in `gradle/verification-metadata.xml`. After adding or updating a dependency or a Gradle plugin, write
-them again and commit the file:
-
-```bash
-./gradlew --write-verification-metadata sha256 build
-```
-
-Writing the file doesn't check anything: it records whatever the repositories served. Before
-committing, compare the new checksums with an independent source where there is one, such as the
-checksums the project publishes with its release.
-
-## Commit messages
+## 📝 Commit messages
 
 The release notes and `CHANGELOG.md` are built from the first line of each commit, by its prefix:
 
@@ -142,9 +122,11 @@ Fixes to something that isn't released yet use `Internal:`, so the release lists
 
 Don't change `version` in `gradle.properties` or edit `CHANGELOG.md`: the Release workflow writes both.
 
-## Pull requests
+## 🔀 Pull requests
 
-- Open it into `dev` and fill in the template.
+Pull requests go to the `dev` branch; `main` only receives from `dev`, and every merge into `main` becomes a release.
+
+- Fill in the template.
 - One feature or fix per pull request.
 - The **Build** workflow has to pass: it compiles, runs the tests and also compiles against the newest
   Paper API. SonarQube Cloud analyzes it too (pull requests from forks skip that), and CodeRabbit
@@ -153,7 +135,7 @@ Don't change `version` in `gradle.properties` or edit `CHANGELOG.md`: the Releas
 - The `minor`, `major` and `skip-release` labels are for the pull requests from `dev` into `main`; the
   maintainer sets them.
 
-## License
+## 📜 License
 
 ManhuntStar is under the [GNU General Public License v3](LICENSE.md). By contributing, you agree that
 your contribution is released under the same license.

@@ -1,6 +1,6 @@
 package dev.manhuntstar.fabric;
 
-import dev.faststats.fabric.FabricContext;
+import dev.faststats.fabric.FastStatsFabric;
 import dev.manhuntstar.mod.ModLogging;
 import dev.manhuntstar.mod.ModPermissions;
 import dev.manhuntstar.mod.ModPlatform;
@@ -9,7 +9,6 @@ import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -42,22 +41,17 @@ public final class ManhuntStarFabric implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> ModPlatform.registerCommands(dispatcher, context));
         ServerLifecycleEvents.SERVER_STARTED.register(platform::serverStarted);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> platform.serverStopping());
-        startStatistics(fabric, platform);
+        startStatistics(platform);
     }
 
     /**
-     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server
-     * only. Made now, before the server exists: the SDK starts sending when the server has started and
-     * stops with it.
+     * FastStats ({@link ModStatistics}): anonymous statistics and error reports, on a dedicated server and on
+     * the client (singleplayer and LAN). Made now, when the mod loads: on a dedicated server the SDK makes it
+     * ready when the server has started and shuts it down when it stops; on the client it is ready right
+     * away and shut down when the game closes.
      */
-    private static void startStatistics(FabricLoader fabric, ModPlatform platform) {
-        if (fabric.getEnvironmentType() != EnvType.SERVER) {
-            return;
-        }
-        String token = ModStatistics.token(platform);
-        if (!token.isEmpty()) {
-            ModStatistics.start(new FabricContext.Factory("manhuntstar", token), platform);
-        }
+    private static void startStatistics(ModPlatform platform) {
+        ModStatistics.start(() -> FastStatsFabric.builder("manhuntstar"), platform);
     }
 
     /**

@@ -272,7 +272,6 @@ public final class PaperWorld implements GameWorld {
             m.setProfile(PaperBotBody.profile(spec.profile()));
             m.customName(spec.name());
             m.setCustomNameVisible(spec.nameVisible());
-            m.setRemoveWhenFarAway(false);
             m.setCanPickupItems(false);
             m.setImmovable(false);
             AttributeInstance hp = m.getAttribute(Attribute.MAX_HEALTH);

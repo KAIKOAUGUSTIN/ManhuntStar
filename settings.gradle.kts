@@ -1,7 +1,9 @@
 pluginManagement {
     repositories {
+        // Google's mirror of Maven Central, ahead of the Plugin Portal: the Portal sends the plugins'
+        // dependencies to Maven Central, which often answers 429 (Too Many Requests) to CI runners
+        maven("https://maven-central.storage-download.googleapis.com/maven2/") { name = "MavenCentralGoogle" }
         gradlePluginPortal()
-        mavenCentral()
         // Loom (the Fabric build plugin) is only on Fabric's repository
         exclusiveContent {
             forRepository {
