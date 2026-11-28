@@ -40,6 +40,9 @@ public final class PlayerBlockTracker {
     }
 
     public void markPlaced(GameWorld world, Pos pos) {
+        if (world == null) {
+            return;
+        }
         WorldBlocks wb = placed.computeIfAbsent(world.id(), k -> new WorldBlocks());
         if (wb.expiry.size() >= MAX_PER_WORLD) {
             purge();
@@ -62,14 +65,14 @@ public final class PlayerBlockTracker {
     }
 
     public void unmark(GameWorld world, Pos pos) {
-        WorldBlocks wb = placed.get(world.id());
+        WorldBlocks wb = world == null ? null : placed.get(world.id());
         if (wb != null && wb.expiry.remove(pos.asLong()) != null) {
             removeFromColumn(wb, pos);
         }
     }
 
     public boolean isPlayerPlaced(GameWorld world, Pos pos) {
-        WorldBlocks wb = placed.get(world.id());
+        WorldBlocks wb = world == null ? null : placed.get(world.id());
         if (wb == null) {
             return false;
         }

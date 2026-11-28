@@ -64,6 +64,9 @@ final class Search {
     /** Where to go after the target that the team doesn't see now; null when there is nowhere (the compass spins). */
     Goal choose(GamePlayer target, Knowledge know) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         Perception per = bot.perception();
         boolean elsewhere = !target.world().id().equals(w.id());
         PlayerTravel.Departure d = elsewhere ? bot.manager().travel().departureFrom(target.uuid(), w.id()) : null;
@@ -153,7 +156,7 @@ final class Search {
         GameWorld w = bot.world();
         int x = (int) Math.floor(p.x());
         int z = (int) Math.floor(p.z());
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+        if (w == null || !w.isChunkLoaded(x >> 4, z >> 4)) {
             return p;
         }
         Pos here = bot.blockPos();
