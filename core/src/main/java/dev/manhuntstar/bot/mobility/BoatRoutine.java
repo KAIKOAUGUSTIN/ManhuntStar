@@ -667,9 +667,13 @@ public final class BoatRoutine {
     // ------------------------------------------------------------------ queries
 
     private GamePlayer findNearbyBoatingPlayer() {
+        GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         GamePlayer best = null;
         double bestDist = Double.MAX_VALUE;
-        for (GamePlayer p : bot.world().players()) {
+        for (GamePlayer p : w.players()) {
             if (p.isDead() || !(p.vehicle() instanceof GameBoat) || !bot.manager().isEligibleTarget(p)) {
                 continue;
             }
