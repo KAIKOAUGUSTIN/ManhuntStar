@@ -2,6 +2,8 @@ package dev.manhuntstar.bot.mobility;
 
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.ai.Navigator;
+import dev.manhuntstar.bot.perception.Knowledge;
+import dev.manhuntstar.bot.perception.PerceptionTuning;
 import dev.manhuntstar.platform.BlockTrait;
 import dev.manhuntstar.platform.Blocks;
 import dev.manhuntstar.platform.EquipSlot;
@@ -205,6 +207,11 @@ public final class BoatRoutine {
     // ------------------------------------------------------------------ crossing requested by the path
 
     private boolean handleCrossing(GameEntity vehicle) {
+        if (crossingFollow instanceof GamePlayer p && !bot.perception().about(p).visible()) {
+            // the team lost sight of the player it followed: the crossing goes on toward where it believes they are
+            crossingPoint = believedPosition(p);
+            crossingFollow = null;
+        }
         GameLiving follow = crossingFollow;
         Vec3 point = follow != null ? follow.position() : crossingPoint;
         boolean followGone = follow != null ? follow.isDead() || !follow.world().equals(bot.world()) : point == null;
@@ -329,6 +336,17 @@ public final class BoatRoutine {
         }
         if (steer == null && chase != null && !chase.isDead()) {
             steer = chase.position();
+        }
+        GamePlayer unseen = steer == null ? huntedTarget() : null;
+        if (unseen != null) {
+            // nobody on the team sees the target: the boat heads where the team believes they are (or along the
+            // compass); once there, or with nowhere to go, the bot gets off and the search goes on from there
+            steer = believedPosition(unseen);
+            if (steer == null || Math.hypot(steer.x() - mounted.position().x(), steer.z() - mounted.position().z()) < 4.0) {
+                cleanup(true);
+                bot.inventory().restorePreferredMainHand();
+                return false;
+            }
         }
         if (steer == null) {
             deltaRotation = 0;
@@ -692,11 +710,30 @@ public final class BoatRoutine {
 
     /** The target to chase on the water, only while someone on the team sees them (the boat follows nobody unseen). */
     private GamePlayer primaryChaseTarget() {
+        GamePlayer t = huntedTarget();
+        return t != null && bot.perception().about(t).visible() ? t : null;
+    }
+
+    /** The player the bot is after (its target, or the fallback one), seen or not; null without one alive. */
+    private GamePlayer huntedTarget() {
         GamePlayer t = bot.target();
         if (t == null || t.isDead()) {
             t = bot.fallbackTarget();
         }
-        return t != null && !t.isDead() && bot.perception().about(t).visible() ? t : null;
+        return t != null && !t.isDead() ? t : null;
+    }
+
+    /**
+     * Where to head for a player nobody on the team sees: where the team believes they are, or else a point ahead
+     * along the compass; null with neither.
+     */
+    private Vec3 believedPosition(GamePlayer target) {
+        Knowledge k = bot.perception().about(target);
+        if (k.knowsPosition()) {
+            return k.pos();
+        }
+        Vec3 bearing = bot.perception().bearing();
+        return bearing == null || bearing.equals(Vec3.ZERO) ? null : bot.pos().add(bearing.scale(PerceptionTuning.COMPASS_STEP));
     }
 
     private boolean shouldDeferToVerticalChase(GamePlayer target) {
