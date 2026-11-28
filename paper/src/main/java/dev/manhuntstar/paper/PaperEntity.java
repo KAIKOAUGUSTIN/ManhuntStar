@@ -198,7 +198,7 @@ public class PaperEntity implements GameEntity {
 
     @Override
     public GameEntity vehicle() {
-        return PaperEntities.of(entity.getVehicle());
+        return PaperEntities.ofNullable(entity.getVehicle());
     }
 
     @Override

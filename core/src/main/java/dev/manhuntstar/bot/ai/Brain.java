@@ -517,6 +517,9 @@ public final class Brain {
             return true;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         RayHit hit = WorldUtil.rayBlocks(w, bot.eyePos(), eyes(target), false);
         if (hit == null) {
             hit = WorldUtil.rayBlocks(w, bot.eyePos(), target.position().add(0, 0.5, 0), false);
@@ -1105,7 +1108,7 @@ public final class Brain {
 
     private boolean isPathBlocked(Pos pos) {
         GameWorld w = bot.world();
-        if (!WorldUtil.isLoaded(w, pos)) {
+        if (w == null || !WorldUtil.isLoaded(w, pos)) {
             return true;
         }
         BlockType legs = w.block(pos).type();
@@ -1133,6 +1136,9 @@ public final class Brain {
 
     private boolean isLavaBelow(Vec3 from) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         RayHit r = w.rayTraceBlocks(from, new Vec3(0, -1, 0), 100, true, true);
         return r != null && w.block(r.block()).type() == Blocks.LAVA;
     }
@@ -1293,6 +1299,9 @@ public final class Brain {
 
     private Pos findSafeNetherSpot() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         Pos base = bot.blockPos();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 50; i++) {
@@ -1313,8 +1322,11 @@ public final class Brain {
 
     /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
     private void handleOffensivePearl(GameLiving target) {
-        ThreadLocalRandom r = ThreadLocalRandom.current();
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
+        ThreadLocalRandom r = ThreadLocalRandom.current();
         double currentDist = bot.distanceTo(target);
         double angle = r.nextDouble() * Math.PI * 2;
         double fromPlayer = 15 + r.nextDouble() * 15;

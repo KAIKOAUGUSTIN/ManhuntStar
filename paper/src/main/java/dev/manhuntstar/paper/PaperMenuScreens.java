@@ -72,7 +72,10 @@ public final class PaperMenuScreens implements MenuScreens, Listener {
 
     @Override
     public void close(GamePlayer player) {
-        PaperEntities.bukkit(player).closeInventory();
+        Player p = PaperEntities.bukkit(player);
+        if (p != null) {
+            p.closeInventory();
+        }
     }
 
     private static ItemStack stack(MenuIcon icon) {

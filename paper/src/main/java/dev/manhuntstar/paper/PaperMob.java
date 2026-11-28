@@ -2,6 +2,7 @@ package dev.manhuntstar.paper;
 
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GameMob;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 
 /** A Bukkit {@link Mob} as a core {@link GameMob}: every call is the Bukkit one. */
@@ -18,7 +19,8 @@ public class PaperMob extends PaperLiving implements GameMob {
 
     @Override
     public GameLiving target() {
-        return PaperEntities.of(bukkit().getTarget());
+        LivingEntity target = bukkit().getTarget();
+        return target == null ? null : PaperEntities.of(target);
     }
 
     @Override

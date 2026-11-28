@@ -34,10 +34,10 @@ public final class ManhuntStarAPI {
 
     /** The bot that owns this entity (Mannequin), or null if it is not a bot. */
     public static Bot getBot(Entity entity) {
-        return plugin().core().botManager().byEntity(PaperEntities.of(entity));
+        return plugin().core().botManager().byEntity(PaperEntities.ofNullable(entity));
     }
 
     public static boolean isBot(Entity entity) {
-        return plugin().core().botManager().isBotEntity(PaperEntities.of(entity));
+        return plugin().core().botManager().isBotEntity(PaperEntities.ofNullable(entity));
     }
 }

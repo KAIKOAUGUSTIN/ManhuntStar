@@ -87,6 +87,9 @@ public final class PearlAbility {
 
     private boolean shouldRescue() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         if (bot.pos().y() < w.minHeight() + 10) {
             return true;
         }
@@ -98,6 +101,9 @@ public final class PearlAbility {
 
     private Pos findSafeSpot() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         Pos origin = bot.blockPos();
         for (int r = 2; r < 10; r++) {
             for (int x = -r; x <= r; x++) {

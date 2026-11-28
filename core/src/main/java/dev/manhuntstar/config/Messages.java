@@ -96,11 +96,15 @@ public final class Messages {
     private static void update(YamlFiles yaml, File file, ConfigNode own, int current, Function<String, InputStream> resources,
             String lang, Logger logger) throws IOException {
         LanguageUpgrade.VERSIONS.upgrade(own);
-        File old = new File(file.getParentFile(), "old");
+        File folder = file.getAbsoluteFile().getParentFile();
+        if (folder == null) {
+            throw new IOException("no folder holds " + file);
+        }
+        File old = new File(folder, "old");
         Files.createDirectories(old.toPath());
         File backup = new File(old, lang + "-v" + current + ".yml");
         Files.copy(file.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        File temporary = Files.createTempFile(file.getParentFile().toPath(), lang + "-", ".tmp").toFile();
+        File temporary = Files.createTempFile(folder.toPath(), lang + "-", ".tmp").toFile();
         try {
             copyBundled(resources, lang, temporary);
             ConfigNode merged = yaml.load(temporary);

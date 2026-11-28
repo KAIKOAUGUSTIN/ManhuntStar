@@ -63,10 +63,8 @@ public final class PaperWorld implements GameWorld {
         this.world = world;
     }
 
+    /** The core world over a Bukkit world; for one that may be missing, {@link #ofNullable}. */
     public static PaperWorld of(World world) {
-        if (world == null) {
-            return null;
-        }
         PaperWorld cached = CACHE.get(world.getUID());
         if (cached != null && cached.world == world) {
             return cached;
@@ -74,6 +72,11 @@ public final class PaperWorld implements GameWorld {
         PaperWorld fresh = new PaperWorld(world);
         CACHE.put(world.getUID(), fresh);
         return fresh;
+    }
+
+    /** {@link #of}, for a world that may be missing (a lookup by name or id, a location without a world): null stays null. */
+    public static PaperWorld ofNullable(World world) {
+        return world == null ? null : of(world);
     }
 
     /** Forgets an unloaded world, so the cache doesn't keep it in memory. */

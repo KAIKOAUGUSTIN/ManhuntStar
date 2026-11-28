@@ -784,7 +784,7 @@ public final class Bot {
 
     public boolean canPlaceLeafAt(Pos pos) {
         GameWorld w = world();
-        if (!WorldUtil.canBeReplaced(w, pos) || WorldUtil.hasFluid(w, pos)) {
+        if (w == null || !WorldUtil.canBeReplaced(w, pos) || WorldUtil.hasFluid(w, pos)) {
             return false;
         }
         for (Pos check : new Pos[]{pos.below(), pos.relative(Face.NORTH), pos.relative(Face.SOUTH), pos.relative(Face.EAST), pos.relative(Face.WEST)}) {
@@ -880,6 +880,9 @@ public final class Bot {
     /** Opens closed doors, gates and trapdoors like a player right-clicking. */
     public boolean tryOpen(Pos pos) {
         GameWorld w = world();
+        if (w == null) {
+            return false;
+        }
         GameBlock b = w.block(pos);
         BlockType m = b.type();
         boolean openable = m.is(BlockTrait.DOOR) || m.is(BlockTrait.FENCE_GATE) || m.is(BlockTrait.TRAPDOOR);
@@ -1170,6 +1173,11 @@ public final class Bot {
         brain.tick();
         mining.tick();
         ability.tick();
+        finishTick();
+    }
+
+    /** The end of the tick, unless the brain, the mining or the ability took the body away (despawned, killed or moved it). */
+    private void finishTick() {
         if (entity == null) {
             return;
         }

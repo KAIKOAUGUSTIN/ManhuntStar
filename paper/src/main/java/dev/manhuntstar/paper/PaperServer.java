@@ -49,12 +49,12 @@ public final class PaperServer implements GameServer {
 
     @Override
     public GameWorld world(UUID id) {
-        return PaperWorld.of(Bukkit.getWorld(id));
+        return PaperWorld.ofNullable(Bukkit.getWorld(id));
     }
 
     @Override
     public GameWorld world(String name) {
-        return PaperWorld.of(Bukkit.getWorld(name));
+        return PaperWorld.ofNullable(Bukkit.getWorld(name));
     }
 
     @Override
@@ -87,17 +87,17 @@ public final class PaperServer implements GameServer {
 
     @Override
     public GamePlayer player(UUID id) {
-        return PaperEntities.of(Bukkit.getPlayer(id));
+        return PaperEntities.ofNullable(Bukkit.getPlayer(id));
     }
 
     @Override
     public GamePlayer player(String name) {
-        return PaperEntities.of(Bukkit.getPlayerExact(name));
+        return PaperEntities.ofNullable(Bukkit.getPlayerExact(name));
     }
 
     @Override
     public GameEntity entity(UUID id) {
-        return PaperEntities.of(Bukkit.getEntity(id));
+        return PaperEntities.ofNullable(Bukkit.getEntity(id));
     }
 
     @Override

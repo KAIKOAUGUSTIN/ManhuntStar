@@ -517,7 +517,7 @@ public final class BoatRoutine {
 
     private Pos surfaceWaterInColumn(int x, int z, int anchorY, int yRange) {
         GameWorld w = bot.world();
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+        if (w == null || !w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
         Pos best = null;
@@ -711,6 +711,9 @@ public final class BoatRoutine {
         Pos best = null;
         double bestDist = Double.MAX_VALUE;
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -773,7 +776,8 @@ public final class BoatRoutine {
     }
 
     private boolean isBoatCloseToLand(GameBoat boat) {
-        return hasLandAround(bot.world(), boat.blockPos(), 0);
+        GameWorld w = bot.world();
+        return w != null && hasLandAround(w, boat.blockPos(), 0);
     }
 
     private static boolean hasLandAround(GameWorld w, Pos center, int maxDy) {

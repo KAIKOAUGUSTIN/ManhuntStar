@@ -129,8 +129,13 @@ public final class Navigator {
         this.personality = new Personality(bot.id());
     }
 
+    /** The bot's world: the navigator only runs while the bot is in one. */
     private GameWorld world() {
-        return bot.world();
+        GameWorld w = bot.world();
+        if (w == null) {
+            throw new IllegalStateException("navigating a bot that isn't in any world");
+        }
+        return w;
     }
 
     // ------------------------------------------------------------------ main entry

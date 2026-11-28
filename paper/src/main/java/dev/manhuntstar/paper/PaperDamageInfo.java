@@ -34,11 +34,11 @@ public record PaperDamageInfo(DamageSource bukkit) implements DamageInfo {
 
     @Override
     public GameEntity causingEntity() {
-        return PaperEntities.of(bukkit.getCausingEntity());
+        return PaperEntities.ofNullable(bukkit.getCausingEntity());
     }
 
     @Override
     public GameEntity directEntity() {
-        return PaperEntities.of(bukkit.getDirectEntity());
+        return PaperEntities.ofNullable(bukkit.getDirectEntity());
     }
 }

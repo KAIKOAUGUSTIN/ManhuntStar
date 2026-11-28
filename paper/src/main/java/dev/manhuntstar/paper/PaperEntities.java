@@ -10,6 +10,7 @@ import dev.manhuntstar.platform.GamePlayer;
 import dev.manhuntstar.platform.GameProjectile;
 import java.lang.ref.WeakReference;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.AbstractHorse;
@@ -35,10 +36,9 @@ public final class PaperEntities {
     private PaperEntities() {
     }
 
+    /** The core entity over a Bukkit entity; for one that may be missing, {@link #ofNullable}. */
     public static synchronized GameEntity of(Entity entity) {
-        if (entity == null) {
-            return null;
-        }
+        Objects.requireNonNull(entity, "entity");
         WeakReference<PaperEntity> ref = CACHE.get(entity);
         PaperEntity cached = ref == null ? null : ref.get();
         if (cached != null && cached.entity == entity) {
@@ -72,6 +72,16 @@ public final class PaperEntities {
         }
         CACHE.put(entity, new WeakReference<>(fresh));
         return fresh;
+    }
+
+    /** {@link #of}, for an entity that may be missing (who caused a damage, a mob's target, a lookup by id): null stays null. */
+    public static GameEntity ofNullable(Entity entity) {
+        return entity == null ? null : of(entity);
+    }
+
+    /** {@link #of}, for a player who may be offline: null stays null. */
+    public static GamePlayer ofNullable(Player player) {
+        return player == null ? null : of(player);
     }
 
     public static GameLiving of(LivingEntity entity) {
