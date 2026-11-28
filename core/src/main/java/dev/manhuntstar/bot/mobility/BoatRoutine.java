@@ -65,6 +65,8 @@ public final class BoatRoutine {
     /** Crossing requested by the path: where to get off, who is being followed and the deadline. */
     private Pos crossingGoal;
     private GameLiving crossingFollow;
+    /** The player the crossing goes after: it heads where the team believes they are, made again every tick. */
+    private UUID crossingPlayer;
     /** Where the crossing goes when the target isn't seen (where the bot believes it is). */
     private Vec3 crossingPoint;
     private int crossingRequestTick;
@@ -90,7 +92,9 @@ public final class BoatRoutine {
             crossingBudget = budgetFor(bot.pos(), goal);
         }
         crossingGoal = goal;
-        crossingFollow = follow;
+        // a player is followed by what the team knows (their real position only while it sees them)
+        crossingPlayer = follow instanceof GamePlayer p ? p.uuid() : null;
+        crossingFollow = follow instanceof GamePlayer ? null : follow;
         crossingPoint = point;
         crossingRequestTick = Platform.server().currentTick();
     }
@@ -207,10 +211,9 @@ public final class BoatRoutine {
     // ------------------------------------------------------------------ crossing requested by the path
 
     private boolean handleCrossing(GameEntity vehicle) {
-        if (crossingFollow instanceof GamePlayer p && !bot.perception().about(p).visible()) {
-            // the team lost sight of the player it followed: the crossing goes on toward where it believes they are
-            crossingPoint = believedPosition(p);
-            crossingFollow = null;
+        if (crossingPlayer != null) {
+            GamePlayer p = Platform.server().player(crossingPlayer);
+            crossingPoint = p == null || p.isDead() ? null : believedPosition(p);
         }
         GameLiving follow = crossingFollow;
         Vec3 point = follow != null ? follow.position() : crossingPoint;
@@ -274,6 +277,7 @@ public final class BoatRoutine {
     private void clearCrossing() {
         crossingGoal = null;
         crossingFollow = null;
+        crossingPlayer = null;
         crossingPoint = null;
     }
 
