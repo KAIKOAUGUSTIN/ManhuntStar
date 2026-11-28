@@ -283,7 +283,7 @@ public final class Brain {
 
     private boolean deepInLava() {
         GameWorld w = bot.world();
-        return WorldUtil.isLava(w, bot.blockPos()) || WorldUtil.isLava(w, bot.eyePos().toPos());
+        return w != null && (WorldUtil.isLava(w, bot.blockPos()) || WorldUtil.isLava(w, bot.eyePos().toPos()));
     }
 
     private double pearlMultiplier() {
@@ -457,7 +457,8 @@ public final class Brain {
             if (active instanceof GamePlayer wp && handleWaterBuilding(wp)) {
                 return;
             }
-            boolean deep = WorldUtil.isWater(bot.world(), bot.blockPos().above());
+            GameWorld here = bot.world();
+            boolean deep = here != null && WorldUtil.isWater(here, bot.blockPos().above());
             bot.motor().setShouldBeSwimming(deep);
             if (deep) {
                 bot.motor().setSprinting(true);
@@ -517,6 +518,9 @@ public final class Brain {
             return true;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         RayHit hit = WorldUtil.rayBlocks(w, bot.eyePos(), eyes(target), false);
         if (hit == null) {
             hit = WorldUtil.rayBlocks(w, bot.eyePos(), target.position().add(0, 0.5, 0), false);
@@ -535,6 +539,9 @@ public final class Brain {
      */
     private boolean escapeSuffocation() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Pos feet = bot.blockPos();
         Pos head = bot.eyePos().toPos();
         for (Pos p : new Pos[]{head, feet}) {
@@ -559,14 +566,15 @@ public final class Brain {
     private GameLiving updateMobTarget() {
         GameLiving m = bot.combat().mobAttacker();
         double priority = settings().targetPriority.value();
-        if (priority < 5.0 && (m == null || m.isDead() || !m.isValid()) && bot.tickDelay(10)) {
+        GameWorld w = bot.world();
+        Place loc = bot.location();
+        if (priority < 5.0 && w != null && loc != null && (m == null || m.isDead() || !m.isValid()) && bot.tickDelay(10)) {
             GameLiving closest = null;
             double closestDist = Double.MAX_VALUE;
-            Place loc = bot.location();
-            boolean end = bot.world().dimension() == Dimension.THE_END;
+            boolean end = w.dimension() == Dimension.THE_END;
             BotGroup group = bot.group();
             Set<EntityKind> allowed = group == null ? null : group.allowedMobTargets();
-            for (GameEntity nearby : bot.world().nearbyEntities(loc.pos(), 30.0, 30.0, 30.0)) {
+            for (GameEntity nearby : w.nearbyEntities(loc.pos(), 30.0, 30.0, 30.0)) {
                 if (!(nearby instanceof GameMob mob)) {
                     continue;
                 }
@@ -820,6 +828,9 @@ public final class Brain {
             return false;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         // already in the air over the gap (jumping a hole), stopping would only make it fall in
         if (!bot.onGround() && isDrop(w, bot.blockPos())) {
             return false;
@@ -927,7 +938,11 @@ public final class Brain {
             return false;
         }
         Pos current = bot.blockPos();
-        if (WorldUtil.hasFluid(bot.world(), current.above())) {
+        GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
+        if (WorldUtil.hasFluid(w, current.above())) {
             bot.motor().addVelocity(new Vec3(0, 0.05, 0));
             return false;
         }
@@ -970,6 +985,9 @@ public final class Brain {
 
     private boolean hasShorelineExitAhead() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Pos ahead = bot.blockPos().relative(bot.facing());
         Pos below = ahead.below();
         boolean clearFeet = !WorldUtil.hasCollision(w, ahead) && !WorldUtil.hasFluid(w, ahead);
@@ -995,6 +1013,9 @@ public final class Brain {
             }
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         double distToFinal = bot.pos().distanceTo(finalTarget);
         if (bot.horizontalCollision()) {
             Pos front = bot.blockPos().relative(bot.facing());
@@ -1088,6 +1109,9 @@ public final class Brain {
         int[] angles = {45, -45, 65, -65, 90, -90, 145, -145};
         double[] radii = {5.5, 8.5};
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         for (double radius : radii) {
             for (int angle : angles) {
                 Vec3 trial = dir.horizontal().rotateY(Math.toRadians(angle)).normalize().scale(radius);
@@ -1105,7 +1129,7 @@ public final class Brain {
 
     private boolean isPathBlocked(Pos pos) {
         GameWorld w = bot.world();
-        if (!WorldUtil.isLoaded(w, pos)) {
+        if (w == null || !WorldUtil.isLoaded(w, pos)) {
             return true;
         }
         BlockType legs = w.block(pos).type();
@@ -1133,6 +1157,9 @@ public final class Brain {
 
     private boolean isLavaBelow(Vec3 from) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         RayHit r = w.rayTraceBlocks(from, new Vec3(0, -1, 0), 100, true, true);
         return r != null && w.block(r.block()).type() == Blocks.LAVA;
     }
@@ -1293,6 +1320,9 @@ public final class Brain {
 
     private Pos findSafeNetherSpot() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         Pos base = bot.blockPos();
         ThreadLocalRandom r = ThreadLocalRandom.current();
         for (int i = 0; i < 50; i++) {
@@ -1313,8 +1343,11 @@ public final class Brain {
 
     /** Throws a pearl to land 15–30 blocks from the target (only if that's closer than it is now). */
     private void handleOffensivePearl(GameLiving target) {
-        ThreadLocalRandom r = ThreadLocalRandom.current();
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
+        ThreadLocalRandom r = ThreadLocalRandom.current();
         double currentDist = bot.distanceTo(target);
         double angle = r.nextDouble() * Math.PI * 2;
         double fromPlayer = 15 + r.nextDouble() * 15;

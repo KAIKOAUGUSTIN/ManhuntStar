@@ -4,7 +4,9 @@ import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.platform.GameServer;
 import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Pos;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -30,10 +32,12 @@ public final class PathService {
     private final Logger logger;
     private final ExecutorService pool;
     private final ChunkSnapshotCache snapshots;
+    /** Searches to reuse (their node arrays are large): at most one per search running at the same time. */
+    private final Queue<AStar> idleSearches = new ConcurrentLinkedQueue<>();
     private final AtomicInteger activeTasks = new AtomicInteger();
     private final AtomicInteger samples = new AtomicInteger();
     private final AtomicLong totalMs = new AtomicLong();
-    private volatile int effectiveNodeCap;
+    private final AtomicInteger effectiveNodeCap = new AtomicInteger();
     private long lastCaptureMs;
     private boolean closed;
 
@@ -43,7 +47,7 @@ public final class PathService {
         this.snapshots = new ChunkSnapshotCache(server);
         this.settings = settings;
         this.logger = logger;
-        this.effectiveNodeCap = settings.nodeCap.value();
+        this.effectiveNodeCap.set(settings.nodeCap.value());
         int threads = Math.max(1, Math.min(4, Runtime.getRuntime().availableProcessors() - 2));
         AtomicInteger n = new AtomicInteger();
         this.pool = Executors.newFixedThreadPool(threads, r -> {
@@ -68,7 +72,7 @@ public final class PathService {
         long t0 = System.nanoTime();
         SnapshotGrid grid = snapshots.capture(world, start.x(), start.z(), ASTAR_REGION_RADIUS);
         lastCaptureMs = (System.nanoTime() - t0) / 1_000_000L;
-        int cap = settings.dynamicNodes.on() ? effectiveNodeCap : settings.nodeCap.value();
+        int cap = effectiveNodeCap();
         double greed = settings.greediness.value();
         long submitted = System.currentTimeMillis();
         if (!settings.asyncPaths.on()) {
@@ -88,11 +92,17 @@ public final class PathService {
     }
 
     private PathResult safeFind(CostProvider grid, Pos start, Pos target, int cap, long budget, double greed, boolean place, boolean boat) {
+        AStar search = idleSearches.poll();
+        if (search == null) {
+            search = new AStar();
+        }
         try {
-            return AStar.get().findPath(grid, start, target, cap, budget, greed, place, boat);
+            return search.findPath(grid, start, target, cap, budget, greed, place, boat);
         } catch (RuntimeException e) {
             logger.log(Level.WARNING, "A* error", e);
             return null;
+        } finally {
+            idleSearches.offer(search);
         }
     }
 
@@ -132,19 +142,19 @@ public final class PathService {
         }
         long avg = total / n;
         if (avg > 500) {
-            effectiveNodeCap = Math.max(50, (int) (effectiveNodeCap * 0.8));
-        } else if (avg < 125 && effectiveNodeCap < 5000) {
-            effectiveNodeCap = Math.min(5000, (int) Math.ceil(effectiveNodeCap * 1.1));
+            effectiveNodeCap.updateAndGet(c -> Math.max(50, (int) (c * 0.8)));
+        } else if (avg < 125) {
+            effectiveNodeCap.updateAndGet(c -> c < 5000 ? Math.min(5000, (int) Math.ceil(c * 1.1)) : c);
         }
     }
 
     public int effectiveNodeCap() {
-        return settings.dynamicNodes.on() ? effectiveNodeCap : settings.nodeCap.value();
+        return settings.dynamicNodes.on() ? effectiveNodeCap.get() : settings.nodeCap.value();
     }
 
     /** Brings the effective limit back to the configured value (when the admin changes the limit). */
     public void resetNodeCap() {
-        effectiveNodeCap = settings.nodeCap.value();
+        effectiveNodeCap.set(settings.nodeCap.value());
     }
 
     public int activeTasks() {
@@ -164,5 +174,6 @@ public final class PathService {
             Thread.currentThread().interrupt();
         }
         snapshots.clear();
+        idleSearches.clear();
     }
 }

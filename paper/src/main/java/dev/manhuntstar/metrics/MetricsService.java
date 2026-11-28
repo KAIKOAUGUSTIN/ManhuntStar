@@ -55,9 +55,9 @@ public final class MetricsService {
                 // FastStats reads the values off the main thread (every 30 minutes): it gets core's copies
                 UsageStats usage = plugin.core().usage();
                 builder.metrics(f -> f
-                        .addMetric(Metric.number(UsageStats.BOTS, usage::bots))
-                        .addMetric(Metric.string(UsageStats.LANGUAGE, usage::language))
-                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, usage::defaultDifficulty))
+                        .addMetric(Metric.number(UsageStats.BOTS_ID, usage::bots))
+                        .addMetric(Metric.string(UsageStats.LANGUAGE_ID, usage::language))
+                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY_ID, usage::defaultDifficulty))
                         .create());
             }
             switch (mode) {

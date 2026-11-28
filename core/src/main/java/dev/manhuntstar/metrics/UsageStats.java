@@ -13,21 +13,21 @@ import java.util.regex.Pattern;
  * <p>FastStats reads the values off the server thread, where the bots can't be read, so core copies them
  * on the server thread once a minute ({@link #update}) and FastStats reads the copies.
  *
- * <p>Each value is sent under its ID ({@link #BOTS}, {@link #LANGUAGE}, {@link #DEFAULT_DIFFICULTY}), and
+ * <p>Each value is sent under its ID ({@link #BOTS_ID}, {@link #LANGUAGE_ID}, {@link #DEFAULT_DIFFICULTY_ID}), and
  * FastStats only keeps it when the project has a data source with that same Reference ID.
  */
 public final class UsageStats {
 
     /** The number of bots alive (a number). */
-    public static final String BOTS = "bots";
+    public static final String BOTS_ID = "bots";
     /**
      * The language of the messages (a string: en, pt-br... or the name of the server's own file in lang/).
      * Not "language": FastStats has a field of its own by that name (the browser's language, for websites),
      * and doesn't take a data source with the name of one of its fields.
      */
-    public static final String LANGUAGE = "plugin_language";
+    public static final String LANGUAGE_ID = "plugin_language";
     /** The bots' default difficulty (a string: easy, medium, hard or terminator). */
-    public static final String DEFAULT_DIFFICULTY = "default_difficulty";
+    public static final String DEFAULT_DIFFICULTY_ID = "default_difficulty";
 
     /** How often the values are copied, in ticks (1 minute). */
     public static final int UPDATE_TICKS = 20 * 60;

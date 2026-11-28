@@ -271,7 +271,7 @@ public final class TacticsManager {
         List<Bot> eligible = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
             // bots waiting in the ring don't leave it to ambush
-            if (!b.world().equals(p.world()) || !p.uuid().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
+            if (!p.world().equals(b.world()) || !p.uuid().equals(b.targetPlayerId()) || b.progression().phase() < minPhase || isBusy(b)
                     || b.idle() != null) {
                 continue;
             }
@@ -348,7 +348,7 @@ public final class TacticsManager {
 
     /** Called by the AI when the player goes too long without being hit (bow pressure). */
     public boolean tryStartBowBurst(Bot bot, GamePlayer player, long now) {
-        if (!bot.isAlive() || player.isDead() || !bot.world().equals(player.world()) || bot.progression().phase() < 4) {
+        if (!bot.isAlive() || player.isDead() || !player.world().equals(bot.world()) || bot.progression().phase() < 4) {
             return false;
         }
         if (!player.uuid().equals(bot.targetPlayerId()) || activeBotByPlayer.containsKey(player.uuid()) || isBusy(bot)) {
@@ -504,6 +504,9 @@ public final class TacticsManager {
 
     /** Follows the arrow's trajectory tick by tick (moves, loses 1% and drops 0.05) up to the flight time, without hitting a block. */
     private static boolean arrowPathClear(GameWorld w, Vec3 from, Vec3 velocity, double ticks) {
+        if (w == null) {
+            return false;
+        }
         Vec3 p = from;
         Vec3 v = velocity;
         for (int t = 0; t < ticks; t++) {
@@ -627,7 +630,8 @@ public final class TacticsManager {
         Vec3 from = fireworkOrigin(bot);
         Vec3 target = chest(player);
         double ticks = Ballistics.straightTicks(from, target, playerVelocity, FIREWORK_SPEED);
-        return ticks <= FIREWORK_MIN_LIFETIME && WorldUtil.clearLine(bot.world(), from, target.add(playerVelocity.scale(ticks)));
+        GameWorld w = bot.world();
+        return ticks <= FIREWORK_MIN_LIFETIME && w != null && WorldUtil.clearLine(w, from, target.add(playerVelocity.scale(ticks)));
     }
 
     // ------------------------------------------------------------------ TNT ambush
@@ -728,7 +732,7 @@ public final class TacticsManager {
     }
 
     private boolean tntStillValid(TntAmbush a, Bot bot, GamePlayer p) {
-        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !bot.world().equals(p.world())) {
+        if (bot == null || p == null || !bot.isAlive() || p.isDead() || !p.world().equals(bot.world())) {
             return false;
         }
         Pos pp = p.blockPos();
@@ -800,7 +804,7 @@ public final class TacticsManager {
     }
 
     private static boolean validContext(Bot bot, GamePlayer p) {
-        return bot != null && p != null && bot.isAlive() && !p.isDead() && bot.world().equals(p.world());
+        return bot != null && p != null && bot.isAlive() && !p.isDead() && p.world().equals(bot.world());
     }
 
     public void clear() {

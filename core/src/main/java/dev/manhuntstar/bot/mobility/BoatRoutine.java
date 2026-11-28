@@ -182,6 +182,9 @@ public final class BoatRoutine {
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.OAK_BOAT));
         bot.lookAt(Vec3.center(water));
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Place loc = new Place(w, water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
         if (!(w.spawnBoat(loc) instanceof GameBoat boat)) {
             return false;
@@ -470,6 +473,9 @@ public final class BoatRoutine {
             return known;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         boolean result = false;
         for (int[] d : CARDINALS) {
             Pos side = p.offset(d[0], 0, d[1]);
@@ -517,7 +523,7 @@ public final class BoatRoutine {
 
     private Pos surfaceWaterInColumn(int x, int z, int anchorY, int yRange) {
         GameWorld w = bot.world();
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+        if (w == null || !w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
         Pos best = null;
@@ -667,9 +673,13 @@ public final class BoatRoutine {
     // ------------------------------------------------------------------ queries
 
     private GamePlayer findNearbyBoatingPlayer() {
+        GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         GamePlayer best = null;
         double bestDist = Double.MAX_VALUE;
-        for (GamePlayer p : bot.world().players()) {
+        for (GamePlayer p : w.players()) {
             if (p.isDead() || !(p.vehicle() instanceof GameBoat) || !bot.manager().isEligibleTarget(p)) {
                 continue;
             }
@@ -711,6 +721,9 @@ public final class BoatRoutine {
         Pos best = null;
         double bestDist = Double.MAX_VALUE;
         GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
@@ -765,6 +778,9 @@ public final class BoatRoutine {
 
     private boolean shouldDismountNearShore(GameBoat boat) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Pos center = boat.blockPos();
         if (WorldUtil.isWater(w, center) || WorldUtil.isWater(w, center.below())) {
             return false;
@@ -773,7 +789,8 @@ public final class BoatRoutine {
     }
 
     private boolean isBoatCloseToLand(GameBoat boat) {
-        return hasLandAround(bot.world(), boat.blockPos(), 0);
+        GameWorld w = bot.world();
+        return w != null && hasLandAround(w, boat.blockPos(), 0);
     }
 
     private static boolean hasLandAround(GameWorld w, Pos center, int maxDy) {

@@ -85,7 +85,7 @@ public final class BukkitConfigNode implements ConfigNode {
 
     @Override
     public ConfigNode createSection(String path) {
-        return wrap(section.createSection(path));
+        return new BukkitConfigNode(section.createSection(path));
     }
 
     @Override

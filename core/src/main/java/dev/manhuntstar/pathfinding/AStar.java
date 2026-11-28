@@ -12,7 +12,8 @@ import java.util.Set;
  * A* with the mod's movement model: walking/sprinting (with a ceiling), stepping up 1 block, falling up to 3,
  * jumping 2-3 block gaps, pillaring up/digging down, diagonals, digging blocks in the way,
  * placing blocks to cross gaps and crossing water by boat. Nodes live in arrays (no object allocation) and
- * each thread has its own instance, so it can safely run in parallel.
+ * an instance runs one search at a time: searches in parallel each take their own ({@link PathService} keeps
+ * them to reuse).
  *
  * <p>Going down never relies on a placed block: while falling, the bot can't put a block under where it
  * will land. Digging the floor with a gap below (the ceiling of a room or of the target's box), it falls to
@@ -40,12 +41,6 @@ public final class AStar {
     private static final double HEURISTIC_UNIT = 2.22;
     private static final int[][] CARDINALS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     private static final int[][] DIAGONALS = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-
-    private static final ThreadLocal<AStar> LOCAL = ThreadLocal.withInitial(AStar::new);
-
-    public static AStar get() {
-        return LOCAL.get();
-    }
 
     // Node storage (struct-of-arrays).
     private int capacity = 4096;

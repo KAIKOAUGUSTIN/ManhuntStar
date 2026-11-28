@@ -6,6 +6,7 @@ import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameEntity;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameItemEntity;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.SoundCategory;
 import dev.manhuntstar.platform.Sounds;
@@ -474,11 +475,12 @@ public final class BotInventory {
 
     /** Drops an item into the world as a player would. */
     public static void dropAt(Bot bot, GameItem stack) {
-        if (GearScoring.isEmpty(stack) || bot.world() == null) {
+        GameWorld w = bot.world();
+        if (GearScoring.isEmpty(stack) || w == null) {
             return;
         }
         Vec3 p = bot.pos();
-        GameItemEntity item = bot.world().dropItemNaturally(p.add(0, 1.0, 0), stack);
+        GameItemEntity item = w.dropItemNaturally(p.add(0, 1.0, 0), stack);
         item.setPickupDelay(40);
     }
 }

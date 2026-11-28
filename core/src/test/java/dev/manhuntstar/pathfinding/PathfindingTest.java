@@ -46,7 +46,7 @@ class PathfindingTest {
     }
 
     private static PathResult find(CostProvider g, Pos from, Pos to, boolean place, boolean boat) {
-        return AStar.get().findPath(g, from, to, 20_000, 2_000, 1.5, place, boat);
+        return new AStar().findPath(g, from, to, 20_000, 2_000, 1.5, place, boat);
     }
 
     /** Lake 2 blocks deep, with the surface at y=63. */

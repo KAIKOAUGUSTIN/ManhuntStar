@@ -45,7 +45,7 @@ public final class Locations {
 
     /** A Bukkit location as a core place (null stays null). */
     public static Place place(Location l) {
-        return l == null ? null : new Place(PaperWorld.of(l.getWorld()), l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch());
+        return l == null ? null : new Place(PaperWorld.ofNullable(l.getWorld()), l.getX(), l.getY(), l.getZ(), l.getYaw(), l.getPitch());
     }
 
     /** A core place as a Bukkit location (null stays null). */
@@ -66,7 +66,7 @@ public final class Locations {
     }
 
     public static Block block(Pos p, GameWorld world) {
-        return block(p, PaperWorld.bukkit(world));
+        return block(p, ((PaperWorld) world).bukkit());
     }
 
     public static Location location(Pos p, World world) {

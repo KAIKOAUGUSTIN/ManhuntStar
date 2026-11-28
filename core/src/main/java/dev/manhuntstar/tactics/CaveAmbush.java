@@ -89,7 +89,7 @@ public final class CaveAmbush {
     private boolean tryStartOne(GamePlayer target) {
         List<Bot> candidates = new ArrayList<>();
         for (Bot b : manager.aliveBots()) {
-            if (b.world().equals(target.world()) && target.uuid().equals(b.targetPlayerId())
+            if (target.world().equals(b.world()) && target.uuid().equals(b.targetPlayerId())
                     && !beds.containsKey(b.id()) && !botTargets.containsKey(b.id()) && b.idle() == null) {
                 candidates.add(b);
             }

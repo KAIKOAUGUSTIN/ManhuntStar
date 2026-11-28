@@ -335,6 +335,9 @@ public final class Motor {
         }
         boolean headInWater = bot.isEyeInWater();
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         Vec3 p = bot.pos();
         boolean nearSurface = headInWater || WorldUtil.hasFluid(w, new Vec3(p.x(), p.y() + 0.15, p.z()).toPos());
         if (nearSurface) {
@@ -383,6 +386,9 @@ public final class Motor {
     /** 1-block step ahead with room above: jumps. */
     public void handleObstacles() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         Pos front = bot.blockPos().relative(bot.facing());
         if (WorldUtil.isTrulySolid(w, front) && !WorldUtil.isTrulySolid(w, front.above()) && onGround) {
             sprinting = true;
@@ -392,6 +398,9 @@ public final class Motor {
 
     public boolean shouldHandleGapAhead() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Pos ahead = bot.blockPos().relative(bot.facing());
         if (WorldUtil.isTrulySolid(w, ahead) && !WorldUtil.isTrulySolid(w, ahead.above())) {
             return false;
@@ -402,6 +411,9 @@ public final class Motor {
     /** Hole ahead: jumps if there is ground within 5 blocks, otherwise places a block (only near the target). */
     public void handleGaps() {
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         int now = Platform.server().currentTick();
         Pos current = bot.blockPos();
         Face facing = bot.facing();
@@ -492,7 +504,8 @@ public final class Motor {
     public void avoidFalls() {
         Vec3 fwd = bot.forwardVector().scale(1.1);
         Pos below = bot.pos().add(fwd).add(0, -1, 0).toPos();
-        if (!WorldUtil.isTrulySolid(bot.world(), below)) {
+        GameWorld w = bot.world();
+        if (w != null && !WorldUtil.isTrulySolid(w, below)) {
             stopWalk();
         }
     }

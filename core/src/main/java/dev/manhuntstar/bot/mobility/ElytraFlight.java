@@ -5,6 +5,7 @@ import dev.manhuntstar.platform.BotBody;
 import dev.manhuntstar.platform.EquipSlot;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
 import dev.manhuntstar.platform.SoundCategory;
@@ -60,7 +61,8 @@ public final class ElytraFlight {
             restoreChest();
             return;
         }
-        if (dist <= 80.0 || WorldUtil.skyLight(bot.world(), bot.blockPos()) < 15) {
+        GameWorld w = bot.world();
+        if (dist <= 80.0 || w == null || WorldUtil.skyLight(w, bot.blockPos()) < 15) {
             if (!pathing) {
                 launchDelay = -1;
             }
@@ -111,7 +113,8 @@ public final class ElytraFlight {
             return;
         }
         Vec3 to = flightTarget.subtract(bot.pos()).normalize();
-        if (!WorldUtil.clearLine(bot.world(), bot.eyePos(), bot.eyePos().add(to.scale(12)))) {
+        GameWorld w = bot.world();
+        if (w != null && !WorldUtil.clearLine(w, bot.eyePos(), bot.eyePos().add(to.scale(12)))) {
             to = new Vec3(to.x(), 1.2, to.z()).normalize();
         }
         bot.lookAt(bot.eyePos().add(to));
@@ -138,9 +141,9 @@ public final class ElytraFlight {
         bot.motor().setVelocity(v.add(look.x() * 0.1 + (look.x() * 1.5 - v.x()) * 0.5,
                 look.y() * 0.1 + (look.y() * 1.5 - v.y()) * 0.5,
                 look.z() * 0.1 + (look.z() * 1.5 - v.z()) * 0.5));
-        if ((boostTicks & 1) == 0) {
-            Vec3 p = bot.pos();
-            bot.world().spawnParticle(Particle.FIREWORK, p, 1, 0, 0, 0, 0.02);
+        GameWorld w = bot.world();
+        if ((boostTicks & 1) == 0 && w != null) {
+            w.spawnParticle(Particle.FIREWORK, bot.pos(), 1, 0, 0, 0, 0.02);
         }
     }
 
@@ -148,7 +151,10 @@ public final class ElytraFlight {
         GameItem previous = bot.getItem(EquipSlot.HAND).copy();
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.FIREWORK_ROCKET));
         bot.swing();
-        bot.world().playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3f, 1f);
+        GameWorld w = bot.world();
+        if (w != null) {
+            w.playSound(bot.pos(), Sounds.ENTITY_FIREWORK_ROCKET_LAUNCH, SoundCategory.AMBIENT, 3f, 1f);
+        }
         boostTicks = BOOST_TICKS;
         fireworkCooldown = 60;
         bot.setItem(EquipSlot.HAND, previous);

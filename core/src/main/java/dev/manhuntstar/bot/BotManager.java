@@ -283,13 +283,14 @@ public final class BotManager {
 
     public Bot nearestEnemyBot(Bot self) {
         BotGroup g = self.group();
-        if (g == null || g.enemies().isEmpty()) {
+        GameWorld here = self.world();
+        if (g == null || g.enemies().isEmpty() || here == null) {
             return null;
         }
         Bot nearest = null;
         double best = Double.MAX_VALUE;
         for (Bot o : bots.values()) {
-            if (o == self || !o.isAlive() || o.groupName() == null || !g.isEnemy(o.groupName()) || !o.world().equals(self.world())) {
+            if (o == self || !o.isAlive() || o.groupName() == null || !g.isEnemy(o.groupName()) || !here.equals(o.world())) {
                 continue;
             }
             double d = self.pos().distanceToSqr(o.pos());
@@ -1185,7 +1186,7 @@ public final class BotManager {
             Bot farthest = null;
             double max = 0;
             for (Bot b : bots.values()) {
-                if (!b.isAlive() || !b.world().equals(p.world()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
+                if (!b.isAlive() || !p.world().equals(b.world()) || pendingSilentDeaths.containsKey(b.id()) || b.idle() != null) {
                     continue;
                 }
                 double d = b.distanceTo(p);

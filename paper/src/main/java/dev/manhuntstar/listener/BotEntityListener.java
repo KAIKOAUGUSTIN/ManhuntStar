@@ -71,7 +71,7 @@ public final class BotEntityListener implements Listener {
         if (!src.getDamageType().equals(DamageType.SPEAR)) {
             return;
         }
-        Bot bot = manager().byEntity(PaperEntities.of(src.getCausingEntity()));
+        Bot bot = manager().byEntity(PaperEntities.ofNullable(src.getCausingEntity()));
         if (bot == null) {
             return;
         }
@@ -87,7 +87,7 @@ public final class BotEntityListener implements Listener {
     public void onBotSpearHit(EntityDamageEvent event) {
         DamageSource src = event.getDamageSource();
         if (src.getDamageType().equals(DamageType.SPEAR)) {
-            Bot bot = manager().byEntity(PaperEntities.of(src.getCausingEntity()));
+            Bot bot = manager().byEntity(PaperEntities.ofNullable(src.getCausingEntity()));
             if (bot != null) {
                 events().botSpearLanded(bot);
             }
@@ -115,7 +115,7 @@ public final class BotEntityListener implements Listener {
     public void onDragonDeath(EntityDeathEvent event) {
         if (event.getEntity() instanceof EnderDragon) {
             reportedDragons.add(event.getEntity().getUniqueId());
-            events().dragonDied(PaperEntities.of(event.getDamageSource().getCausingEntity()));
+            events().dragonDied(PaperEntities.ofNullable(event.getDamageSource().getCausingEntity()));
         }
     }
 
@@ -137,7 +137,7 @@ public final class BotEntityListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
-        events().playerDied(PaperEntities.of(event.getPlayer()), PaperEntities.of(event.getDamageSource().getCausingEntity()));
+        events().playerDied(PaperEntities.of(event.getPlayer()), PaperEntities.ofNullable(event.getDamageSource().getCausingEntity()));
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

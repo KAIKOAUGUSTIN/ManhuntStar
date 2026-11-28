@@ -478,7 +478,7 @@ public final class Combat {
         swimWhileCharging(target);
         crossbowChargeTicks++;
         if (crossbowChargeTicks == 1 || crossbowChargeTicks == 10 || crossbowChargeTicks == 20) {
-            bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_MIDDLE, SoundCategory.PLAYERS, 1.0f, 1.0f);
+            playSound(Sounds.ITEM_CROSSBOW_LOADING_MIDDLE, 1.0f, 1.0f);
         }
         if (crossbowChargeTicks >= 25) {
             performCrossbowShot(target);
@@ -503,7 +503,7 @@ public final class Combat {
         aimTracker.reset();
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.CROSSBOW));
         bot.entity().startUsingItem(EquipSlot.HAND);
-        bot.world().playSound(bot.pos(), Sounds.ITEM_CROSSBOW_LOADING_START, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        playSound(Sounds.ITEM_CROSSBOW_LOADING_START, 1.0f, 1.0f);
     }
 
     /**
@@ -583,7 +583,7 @@ public final class Combat {
             booster.lookAt(me);
             Vec3 boost = toPlayer.scale(0.8);
             bot.motor().setVelocity(new Vec3(boost.x(), 0.35, boost.z()));
-            bot.world().playSound(bot.pos(), Sounds.ENTITY_PLAYER_HURT, SoundCategory.PLAYERS, 0.5f, 1.5f);
+            playSound(Sounds.ENTITY_PLAYER_HURT, 0.5f, 1.5f);
             return;
         }
     }
@@ -611,7 +611,7 @@ public final class Combat {
         swimWhileCharging(target);
         tridentChargeTicks++;
         if (tridentChargeTicks == 1 || tridentChargeTicks == 10) {
-            bot.world().playSound(bot.pos(), Sounds.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 0.5f, 0.8f);
+            playSound(Sounds.ITEM_TRIDENT_THROW, 0.5f, 0.8f);
         }
         if (tridentChargeTicks >= 20) {
             performTridentThrow(target);
@@ -697,8 +697,8 @@ public final class Combat {
         if (thrownTrident == null) {
             return;
         }
-        if (sound && bot.world() != null) {
-            bot.world().playSound(bot.pos(), Sounds.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.5f, 1.0f);
+        if (sound) {
+            playSound(Sounds.ENTITY_ITEM_PICKUP, 0.5f, 1.0f);
         }
         thrownTrident.remove();
         thrownTrident = null;
@@ -733,6 +733,9 @@ public final class Combat {
 
     private boolean attemptLavaPlace(GameLiving target) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Vec3 eye = bot.eyePos();
         Vec3 dir = target.position().subtract(eye).normalize();
         RayHit hit = WorldUtil.rayBlocks(w, eye, eye.add(dir.scale(4.0)), true);
