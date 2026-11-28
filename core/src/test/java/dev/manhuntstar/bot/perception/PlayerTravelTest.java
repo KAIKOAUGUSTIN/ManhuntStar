@@ -24,8 +24,8 @@ class PlayerTravelTest {
         FakeWorld nether = Terrain.flat();
         overworld.set(new Pos(10, 64, 3), Terrain.NETHER_PORTAL);
         PlayerTravel travel = new PlayerTravel();
-        assertNull(travel.record(PLAYER, overworld, new Vec3(10.4, 64, 3.6), 1));
-        PlayerTravel.Departure d = travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), 2);
+        assertNull(travel.record(PLAYER, overworld, new Vec3(10.4, 64, 3.6), false, 1));
+        PlayerTravel.Departure d = travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), false, 2);
         assertNotNull(d);
         assertTrue(d.viaPortal());
         assertEquals(new Pos(10, 64, 3), d.portal());
@@ -39,9 +39,31 @@ class PlayerTravelTest {
         FakeWorld overworld = Terrain.flat();
         FakeWorld nether = Terrain.flat();
         PlayerTravel travel = new PlayerTravel();
-        travel.record(PLAYER, nether, new Vec3(0.5, 40, 0.5), 1);
-        PlayerTravel.Departure d = travel.record(PLAYER, overworld, new Vec3(100.5, 70, 0.5), 2);
+        travel.record(PLAYER, nether, new Vec3(0.5, 40, 0.5), false, 1);
+        PlayerTravel.Departure d = travel.record(PLAYER, overworld, new Vec3(100.5, 70, 0.5), false, 2);
         assertFalse(d.viaPortal(), "died in the Nether and came back at their bed");
+    }
+
+    @Test
+    void aPortalBesideThePlayerIsNotTheirWay() {
+        FakeWorld overworld = Terrain.flat();
+        FakeWorld nether = Terrain.flat();
+        overworld.set(new Pos(10, 64, 3), Terrain.NETHER_PORTAL);
+        PlayerTravel travel = new PlayerTravel();
+        travel.record(PLAYER, overworld, new Vec3(11.5, 64, 3.5), false, 1);
+        PlayerTravel.Departure d = travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), false, 2);
+        assertFalse(d.viaPortal(), "teleported by a command next to the portal");
+    }
+
+    @Test
+    void dyingNextToAPortalIsNoTripThroughIt() {
+        FakeWorld overworld = Terrain.flat();
+        FakeWorld nether = Terrain.flat();
+        nether.set(new Pos(0, 40, 0), Terrain.NETHER_PORTAL);
+        PlayerTravel travel = new PlayerTravel();
+        travel.record(PLAYER, nether, new Vec3(0.5, 40, 0.5), true, 1);
+        PlayerTravel.Departure d = travel.record(PLAYER, overworld, new Vec3(100.5, 70, 0.5), false, 2);
+        assertFalse(d.viaPortal(), "died in the portal and came back at their bed");
     }
 
     @Test
@@ -50,9 +72,9 @@ class PlayerTravelTest {
         FakeWorld nether = Terrain.flat();
         overworld.set(new Pos(10, 64, 3), Terrain.NETHER_PORTAL);
         PlayerTravel travel = new PlayerTravel();
-        travel.record(PLAYER, overworld, new Vec3(10.5, 64, 3.5), 1);
+        travel.record(PLAYER, overworld, new Vec3(10.5, 64, 3.5), false, 1);
         travel.clear();
-        assertNull(travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), 2), "sent to the new hunt's world");
+        assertNull(travel.record(PLAYER, nether, new Vec3(1.5, 70, 0.5), false, 2), "sent to the new hunt's world");
     }
 
     @Test
@@ -60,8 +82,8 @@ class PlayerTravelTest {
         FakeWorld overworld = Terrain.flat();
         FakeWorld nether = Terrain.flat();
         PlayerTravel travel = new PlayerTravel();
-        travel.record(PLAYER, overworld, new Vec3(0.5, 64, 0.5), 1);
-        assertNull(travel.record(PLAYER, nether, new Vec3(0.5, 64, 0.5), 5), "left and joined again elsewhere");
+        travel.record(PLAYER, overworld, new Vec3(0.5, 64, 0.5), false, 1);
+        assertNull(travel.record(PLAYER, nether, new Vec3(0.5, 64, 0.5), false, 5), "left and joined again elsewhere");
     }
 
     @Test

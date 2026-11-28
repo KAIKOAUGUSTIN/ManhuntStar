@@ -30,8 +30,8 @@ class CompassTest {
         FakeWorld nether = Terrain.flat();
         overworld.set(new Pos(30, 64, 0), Terrain.NETHER_PORTAL);
         PlayerTravel travel = new PlayerTravel();
-        travel.record(PLAYER, overworld, new Vec3(30.5, 64, 0.5), 10);
-        travel.record(PLAYER, nether, new Vec3(4.5, 70, 0.5), 11);
+        travel.record(PLAYER, overworld, new Vec3(30.5, 64, 0.5), false, 10);
+        travel.record(PLAYER, nether, new Vec3(4.5, 70, 0.5), false, 11);
 
         Vec3 here = Compass.pointsAt(nether.id(), PLAYER, nether.id(), new Vec3(4.5, 70, 0.5), travel);
         assertEquals(new Vec3(4.5, 70, 0.5), here, "same world: the player");
@@ -45,8 +45,8 @@ class CompassTest {
         FakeWorld nether = Terrain.flat();
         PlayerTravel travel = new PlayerTravel();
         // died in the overworld and came back in the Nether (no portal there)
-        travel.record(PLAYER, overworld, new Vec3(30.5, 64, 0.5), 10);
-        travel.record(PLAYER, nether, new Vec3(4.5, 70, 0.5), 11);
+        travel.record(PLAYER, overworld, new Vec3(30.5, 64, 0.5), false, 10);
+        travel.record(PLAYER, nether, new Vec3(4.5, 70, 0.5), false, 11);
         assertNull(Compass.pointsAt(overworld.id(), PLAYER, nether.id(), new Vec3(4.5, 70, 0.5), travel));
         assertNull(Compass.pointsAt(UUID.randomUUID(), PLAYER, nether.id(), new Vec3(4.5, 70, 0.5), travel), "never was there");
     }
