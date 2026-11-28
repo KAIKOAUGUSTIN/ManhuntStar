@@ -14,14 +14,14 @@ import java.util.UUID;
 public record PlayerView(UUID id, GameWorld world, Vec3 feet, double height, double eyeHeight, boolean sneaking,
                          boolean sprinting, boolean invisible, boolean armor, boolean particles) {
 
-    private static final EquipSlot[] ARMOR = {EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET};
+    private static final EquipSlot[] ARMOR_SLOTS = {EquipSlot.HEAD, EquipSlot.CHEST, EquipSlot.LEGS, EquipSlot.FEET};
 
     public static PlayerView of(GamePlayer p) {
         boolean invisible = p.isInvisible();
         boolean armor = false;
         boolean particles = false;
         if (invisible) {
-            for (EquipSlot slot : ARMOR) {
+            for (EquipSlot slot : ARMOR_SLOTS) {
                 if (!p.item(slot).isEmpty()) {
                     armor = true;
                     break;
