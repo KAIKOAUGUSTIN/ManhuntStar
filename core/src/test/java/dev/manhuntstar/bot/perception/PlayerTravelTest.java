@@ -45,6 +45,20 @@ class PlayerTravelTest {
     }
 
     @Test
+    void walkingIntoAnEndPortalFindsIt() {
+        FakeWorld overworld = Terrain.flat();
+        FakeWorld end = Terrain.flat();
+        overworld.set(new Pos(10, 63, 0), Terrain.END_PORTAL);
+        PlayerTravel travel = new PlayerTravel();
+        // it takes the player at the first touch: the last sample is still beside it, walking toward it
+        travel.record(PLAYER, overworld, new Vec3(9.1, 64, 0.5), false, 1);
+        travel.record(PLAYER, overworld, new Vec3(9.4, 64, 0.5), false, 2);
+        PlayerTravel.Departure d = travel.record(PLAYER, end, new Vec3(100.5, 49, 0.5), false, 3);
+        assertTrue(d.viaPortal());
+        assertEquals(new Pos(10, 63, 0), d.portal());
+    }
+
+    @Test
     void aPortalBesideThePlayerIsNotTheirWay() {
         FakeWorld overworld = Terrain.flat();
         FakeWorld nether = Terrain.flat();

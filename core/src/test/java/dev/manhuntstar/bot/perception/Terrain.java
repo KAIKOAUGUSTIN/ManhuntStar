@@ -11,6 +11,7 @@ final class Terrain {
     static final BlockType STONE = BlockType.register(1, "STONE", 1.5f, BlockTrait.SOLID);
     static final BlockType WOOL = BlockType.register(100, "WHITE_WOOL", 0.8f, BlockTrait.SOLID, BlockTrait.OCCLUDES_VIBRATIONS);
     static final BlockType NETHER_PORTAL = BlockType.register(101, "NETHER_PORTAL", -1);
+    static final BlockType END_PORTAL = BlockType.register(102, "END_PORTAL", -1);
 
     private Terrain() {
     }
