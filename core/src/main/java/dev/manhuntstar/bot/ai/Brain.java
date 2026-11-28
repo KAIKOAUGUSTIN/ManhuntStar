@@ -233,8 +233,11 @@ public final class Brain {
         if (target == null || w == null || target.world().id().equals(w.id())) {
             return false;
         }
+        // the same as the search: a portal broken since is no way to follow them or to go back
         var d = bot.manager().travel().departureFrom(target.uuid(), w.id());
-        return (d == null || !d.viaPortal()) && bot.wayBack(w) == null;
+        boolean followable = d != null && d.viaPortal() && Search.portalStands(w, Vec3.bottomCenter(d.portal()));
+        Bot.WayBack back = bot.wayBack(w);
+        return !followable && (back == null || !Search.portalStands(w, back.portal()) || Platform.server().world(back.backWorld()) == null);
     }
 
     public void setTeleporting(boolean v) {
@@ -559,8 +562,9 @@ public final class Brain {
                 state("target-in-other-dimension");
                 dimensionStuckTimer++;
                 if (dimensionStuckTimer > 20 && !teleporting) {
+                    // the bots it takes are marked as teleporting; one it doesn't take asks again in a second
+                    dimensionStuckTimer = 0;
                     bot.manager().requestDimensionChange(target, bot.world());
-                    teleporting = true;
                 }
             } else {
                 state("no-target");

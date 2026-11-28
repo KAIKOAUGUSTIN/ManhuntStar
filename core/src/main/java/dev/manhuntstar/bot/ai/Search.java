@@ -78,8 +78,10 @@ final class Search {
         }
         GameWorld backWorld = back == null ? null : Platform.server().world(back.backWorld());
         Vec3 bearing = per.bearing();
+        // with the target in another world the compass points at their portal: a broken one leads nowhere
+        boolean followBearing = bearing != null && !bearing.equals(Vec3.ZERO) && (!elsewhere || viaPortal);
         Kind kind = pick(elsewhere, viaPortal, viaPortal && per.knowsDeparture(target, d), backWorld != null,
-                know.knowsPosition(), per.tower() != null, per.passedOver() != null, bearing != null && !bearing.equals(Vec3.ZERO));
+                know.knowsPosition(), per.tower() != null, per.passedOver() != null, followBearing);
         if (kind == null) {
             return null;
         }
@@ -131,7 +133,7 @@ final class Search {
     }
 
     /** The portal at {@code at} is still there, as far as the bot can tell (an unloaded chunk counts as yes). */
-    private static boolean portalStands(GameWorld w, Vec3 at) {
+    static boolean portalStands(GameWorld w, Vec3 at) {
         Pos c = at.toPos();
         return !w.isChunkLoaded(c.x() >> 4, c.z() >> 4) || portalAt(w, at) != null;
     }
