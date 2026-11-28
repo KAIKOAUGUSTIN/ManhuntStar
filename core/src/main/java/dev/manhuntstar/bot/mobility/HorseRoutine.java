@@ -14,6 +14,7 @@ import dev.manhuntstar.platform.GameHorse;
 import dev.manhuntstar.platform.GameItem;
 import dev.manhuntstar.platform.GameLiving;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.platform.ItemType;
 import dev.manhuntstar.platform.Items;
 import dev.manhuntstar.platform.Particle;
@@ -557,12 +558,16 @@ public final class HorseRoutine {
         if (targetHorse != null && lockTicks > 0 && Platform.server().entity(targetHorse) instanceof GameHorse locked && locked.isHorse() && eligible(locked)) {
             return locked;
         }
+        GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         Vec3 me = bot.pos();
         Vec3 goal = target.position();
         double direct = me.distanceTo(goal);
         GameHorse best = null;
         double bestDetour = MAX_DETOUR;
-        for (GameEntity nearby : bot.world().nearbyEntities(bot.pos(), SEARCH_RADIUS, SEARCH_RADIUS, SEARCH_RADIUS)) {
+        for (GameEntity nearby : w.nearbyEntities(bot.pos(), SEARCH_RADIUS, SEARCH_RADIUS, SEARCH_RADIUS)) {
             if (!(nearby instanceof GameHorse h) || !h.isHorse() || !eligible(h)) {
                 continue;
             }

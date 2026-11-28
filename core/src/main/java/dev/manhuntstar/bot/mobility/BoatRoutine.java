@@ -182,6 +182,9 @@ public final class BoatRoutine {
         bot.setItem(EquipSlot.HAND, GameItem.of(Items.OAK_BOAT));
         bot.lookAt(Vec3.center(water));
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Place loc = new Place(w, water.x() + 0.5, water.y() + 1.0, water.z() + 0.5, bot.yaw(), 0);
         if (!(w.spawnBoat(loc) instanceof GameBoat boat)) {
             return false;
@@ -470,6 +473,9 @@ public final class BoatRoutine {
             return known;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         boolean result = false;
         for (int[] d : CARDINALS) {
             Pos side = p.offset(d[0], 0, d[1]);
@@ -772,6 +778,9 @@ public final class BoatRoutine {
 
     private boolean shouldDismountNearShore(GameBoat boat) {
         GameWorld w = bot.world();
+        if (w == null) {
+            return false;
+        }
         Pos center = boat.blockPos();
         if (WorldUtil.isWater(w, center) || WorldUtil.isWater(w, center.below())) {
             return false;

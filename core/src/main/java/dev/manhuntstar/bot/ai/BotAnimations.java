@@ -3,6 +3,7 @@ package dev.manhuntstar.bot.ai;
 import dev.manhuntstar.bot.Bot;
 import dev.manhuntstar.bot.BotManager;
 import dev.manhuntstar.platform.GamePlayer;
+import dev.manhuntstar.platform.GameWorld;
 import dev.manhuntstar.util.Vec3;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -150,10 +151,14 @@ public final class BotAnimations {
 
     /** The closest active player (online, alive, not a spectator) within range, or null. */
     static GamePlayer nearestPlayer(Bot bot) {
+        GameWorld w = bot.world();
+        if (w == null) {
+            return null;
+        }
         GamePlayer best = null;
         double bestDist = WATCH_RANGE * WATCH_RANGE;
         Vec3 p = bot.pos();
-        for (GamePlayer pl : bot.world().players()) {
+        for (GamePlayer pl : w.players()) {
             if (!BotManager.isActivePlayer(pl)) {
                 continue;
             }

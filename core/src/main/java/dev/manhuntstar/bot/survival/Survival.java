@@ -136,7 +136,7 @@ public final class Survival {
             return false;
         }
         GameWorld w = bot.world();
-        if (w.dimension() == Dimension.NETHER || bot.isInLava() || bot.isInWater()) {
+        if (w == null || w.dimension() == Dimension.NETHER || bot.isInLava() || bot.isInWater()) {
             return false;
         }
         BotBody e = bot.entity();
@@ -172,6 +172,9 @@ public final class Survival {
             return;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         Pos waterPos = bot.blockPos();
         if (!WorldUtil.canBeReplaced(w, waterPos)) {
             if (!WorldUtil.canBeReplaced(w, waterPos.above())) {

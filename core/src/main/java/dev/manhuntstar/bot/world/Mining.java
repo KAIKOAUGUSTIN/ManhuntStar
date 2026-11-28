@@ -42,6 +42,9 @@ public final class Mining {
             return;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         GameBlock b = w.block(miningPos);
         if (b.type().is(BlockTrait.AIR)) {
             clear(false);
@@ -87,16 +90,18 @@ public final class Mining {
 
     /** Stops breaking (for example when taking knockback or when controlled by an ability). */
     public void cancel() {
-        if (miningPos != null && bot.world() != null) {
-            sendCrack(bot.world(), miningPos, 0f);
+        GameWorld w = bot.world();
+        if (miningPos != null && w != null) {
+            sendCrack(w, miningPos, 0f);
         }
         miningPos = null;
         ticksRemaining = 0;
     }
 
     private void clear(boolean resetCrack) {
-        if (resetCrack && miningPos != null) {
-            sendCrack(bot.world(), miningPos, 0f);
+        GameWorld w = bot.world();
+        if (resetCrack && miningPos != null && w != null) {
+            sendCrack(w, miningPos, 0f);
         }
         miningPos = null;
         ticksRemaining = 0;
@@ -147,8 +152,10 @@ public final class Mining {
         }
     }
 
+    /** Not air nor fluid; with the bot in no world, solid (like an unloaded chunk). */
     private boolean solid(Pos p) {
-        return WorldUtil.isTrulySolid(bot.world(), p);
+        GameWorld w = bot.world();
+        return w == null || WorldUtil.isTrulySolid(w, p);
     }
 
     private Pos offsetToward(Pos origin, int sx, int sz) {
@@ -259,7 +266,8 @@ public final class Mining {
             bot.motor().walk(bot.lookVector().normalize());
             bot.motor().setSprinting(true);
         }
-        if (bot.onGround() && WorldUtil.blocksMotion(bot.world(), botPos.above(2))) {
+        GameWorld w = bot.world();
+        if (bot.onGround() && w != null && WorldUtil.blocksMotion(w, botPos.above(2))) {
             bot.motor().jump();
         } else if (bot.horizontalCollision() && bot.onGround()) {
             bot.motor().jump();
@@ -321,7 +329,8 @@ public final class Mining {
         if (!bot.brain().canPlaceToweringBlocksNearTarget() || bot.hasPendingPillar()) {
             return;
         }
-        if (WorldUtil.canBeReplaced(bot.world(), feet) && solid(feet.below())) {
+        GameWorld w = bot.world();
+        if (w != null && WorldUtil.canBeReplaced(w, feet) && solid(feet.below())) {
             bot.queuePillarBlock(feet, null);
         }
     }

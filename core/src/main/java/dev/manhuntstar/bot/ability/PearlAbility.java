@@ -73,11 +73,12 @@ public final class PearlAbility {
 
     /** Respects the {@code mobility.ender-pearls} and {@code mobility.pearl-dimension} options. */
     public static boolean canUsePearl(Bot bot) {
-        if (!bot.settings().allowPearl.on() || bot.world() == null) {
+        GameWorld w = bot.world();
+        if (!bot.settings().allowPearl.on() || w == null) {
             return false;
         }
         PearlDimension d = bot.settings().pearlDimension.get();
-        Dimension env = bot.world().dimension();
+        Dimension env = w.dimension();
         return switch (d) {
             case NETHER_ONLY -> env == Dimension.NETHER;
             case OVERWORLD_ONLY -> env == Dimension.NORMAL;

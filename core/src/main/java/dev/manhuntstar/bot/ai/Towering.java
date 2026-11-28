@@ -40,8 +40,13 @@ final class Towering {
         this.bot = bot;
     }
 
+    /** The bot's world: building only runs while the bot is in one. */
     private GameWorld world() {
-        return bot.world();
+        GameWorld w = bot.world();
+        if (w == null) {
+            throw new IllegalStateException("building with a bot that isn't in any world");
+        }
+        return w;
     }
 
     private boolean solid(Pos p) {

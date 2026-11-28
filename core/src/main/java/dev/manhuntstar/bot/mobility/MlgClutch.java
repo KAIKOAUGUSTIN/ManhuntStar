@@ -164,6 +164,9 @@ public final class MlgClutch {
             return;
         }
         GameWorld w = bot.world();
+        if (w == null) {
+            return;
+        }
         Vec3 p = bot.pos();
         RayHit r = w.rayTraceBlocks(p, new Vec3(0, -1, 0), 10, false, true);
         if (r == null) {
