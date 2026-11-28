@@ -38,6 +38,8 @@ public final class Perception {
     private Vec3 bearing;
     private Vec3 passedOver;
     private Pos tower;
+    /** The target the compass readings, the passing point and the tower are about. */
+    private UUID compassFor;
     private UUID knowledgeFor;
     private long knowledgeTick = Long.MIN_VALUE;
     private Knowledge knowledge = Knowledge.NOTHING;
@@ -82,6 +84,7 @@ public final class Perception {
         bearing = null;
         passedOver = null;
         tower = null;
+        compassFor = null;
         knowledgeTick = Long.MIN_VALUE;
     }
 
@@ -101,6 +104,13 @@ public final class Perception {
             tower = null;
             flip.clear();
             return;
+        }
+        if (!target.uuid().equals(compassFor)) {
+            // another target: the compass turning from the last one's direction to this one's isn't passing over anyone
+            compassFor = target.uuid();
+            flip.clear();
+            passedOver = null;
+            tower = null;
         }
         boolean sameWorld = target.world().id().equals(w.id());
         Vec3 at = Compass.pointsAt(w.id(), target, manager().travel());
