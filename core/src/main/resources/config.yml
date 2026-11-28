@@ -32,10 +32,11 @@ general:
   # logged to the console and shown to admins (manhuntstar.admin) when they join. [updatecheck]
   update-check: true
 
-# FastStats (https://faststats.dev), on Paper and on the mods' dedicated servers (singleplayer sends
-# nothing). Both are read when the server starts. When bStats was off for every plugin
-# (plugins/bStats/config.yml), both start off. To turn FastStats off for every plugin and mod at once,
-# use faststats/config.properties (in plugins/ on Paper, config/ on the mods).
+# FastStats (https://faststats.dev), on Paper, on the mods' dedicated servers and on the client with the
+# mods (singleplayer and LAN); on by default. Both are read when the server starts (on the mods, when the
+# game or the server starts). When bStats was off for every plugin (plugins/bStats/config.yml), both start
+# off. To turn FastStats off for every plugin and mod at once, use faststats/config.properties (in plugins/
+# on Paper, config/ on the mods); on a client also Options, Telemetry Data, FastStats.
 faststats:
   # Anonymous statistics: server count, versions, number of bots, language and default difficulty.
   # [statistics]

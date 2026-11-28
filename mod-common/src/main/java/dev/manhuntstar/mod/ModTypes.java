@@ -161,7 +161,7 @@ public final class ModTypes {
 
     private static ItemTrait[] traits(Item i) {
         List<ItemTrait> out = new ArrayList<>();
-        var holder = i.builtInRegistryHolder();
+        var holder = BuiltInRegistries.ITEM.wrapAsHolder(i);
         if (holder.is(ItemTags.SWORDS)) {
             out.add(ItemTrait.SWORD);
         }
@@ -234,10 +234,11 @@ public final class ModTypes {
                 add(out, sample, ArmorStand.class, EntityTrait.ARMOR_STAND);
             }
         }
-        if (type.builtInRegistryHolder().is(EntityTypeTags.SENSITIVE_TO_SMITE)) {
+        var holder = BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(type);
+        if (holder.is(EntityTypeTags.SENSITIVE_TO_SMITE)) {
             out.add(EntityTrait.SENSITIVE_TO_SMITE);
         }
-        if (type.builtInRegistryHolder().is(EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS)) {
+        if (holder.is(EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS)) {
             out.add(EntityTrait.SENSITIVE_TO_BANE);
         }
         return out.toArray(EntityTrait[]::new);

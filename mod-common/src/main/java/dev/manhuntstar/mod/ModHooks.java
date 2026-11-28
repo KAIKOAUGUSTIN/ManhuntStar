@@ -457,10 +457,19 @@ public final class ModHooks {
                 sample.add(new NameAndId(b.id(), b.profileName()));
             }
             ServerStatus.Players more = new ServerStatus.Players(players.max(), players.online() + bots.size(), sample);
-            return new ServerStatus(status.description(), Optional.of(more), status.version(), status.favicon(), status.enforcesSecureChat());
+            return withPlayers(status, more);
         } catch (Throwable t) {
             failed("the server list", t);
             return status;
         }
+    }
+
+    /**
+     * The same status with other players. This constructor is deprecated only on NeoForge, whose own one also
+     * takes its "modded" flag, which Fabric doesn't have; this code is the same for both.
+     */
+    @SuppressWarnings("deprecation")
+    private static ServerStatus withPlayers(ServerStatus status, ServerStatus.Players players) {
+        return new ServerStatus(status.description(), Optional.of(players), status.version(), status.favicon(), status.enforcesSecureChat());
     }
 }

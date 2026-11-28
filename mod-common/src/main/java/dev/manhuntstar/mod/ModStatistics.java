@@ -1,22 +1,26 @@
 package dev.manhuntstar.mod;
 
 import dev.faststats.ErrorTracker;
-import dev.faststats.SimpleContext;
+import dev.faststats.FastStatsContext;
 import dev.faststats.data.Metric;
 import dev.manhuntstar.config.Settings;
 import dev.manhuntstar.metrics.ErrorReports;
+import dev.manhuntstar.metrics.FirstRun;
 import dev.manhuntstar.metrics.UsageStats;
 import java.io.File;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 /**
  * The mods' FastStats (https://faststats.dev), shared by the loaders: anonymous statistics and error
- * reports. Each loader makes its own context (FabricContext, NeoForgeContext) when the mod loads, on a
- * dedicated server only, with {@link #token} and {@link #start}; the SDK then starts and stops with the
- * server.
+ * reports, on a dedicated server and on the client (singleplayer and LAN), on by default and without the
+ * SDK's consent screen (the builder isn't asked for it). Each loader calls {@link #start} with its own
+ * builder (FastStatsFabric, FastStatsNeoForge) when the mod loads. On a dedicated server the SDK makes the
+ * context ready once the server has started and shuts it down when the server stops; on the client it is
+ * ready right away. Players turn it off in Options, Telemetry Data, FastStats, or in config.yml.
  *
- * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code language} and
+ * <p>The custom metrics are the Paper plugin's ({@link UsageStats}): {@code bots}, {@code plugin_language} and
  * {@code default_difficulty}. The error reports are {@link ErrorReports}. No feature flags.
  */
 public final class ModStatistics {
@@ -25,47 +29,53 @@ public final class ModStatistics {
     }
 
     /**
-     * The project token when this server sends anything, or an empty string: a build without a token
-     * (FASTSTATS_TOKEN), or both {@code faststats.statistics} and {@code faststats.error-reports} off in config.yml.
-     * config.yml is read here, before core starts, since FastStats has to be set up when the mod loads.
+     * Makes the context with the metrics and the error tracker that config.yml leaves on, unless this server
+     * sends nothing: a build without a token (FASTSTATS_TOKEN), or both {@code faststats.statistics} and
+     * {@code faststats.error-reports} off. config.yml is read here, before core starts, since FastStats has to
+     * be set up when the mod loads. If FastStats can't start (its config.properties can't be written...), the
+     * mod loads anyway, without it.
+     *
+     * @param builder the loader's {@code builder("manhuntstar")}, asked for only when there is something to
+     *                send: it writes config/faststats/config.properties on FastStats' first run
      */
-    public static String token(ModPlatform platform) {
+    public static void start(Supplier<? extends FastStatsContext.Builder> builder, ModPlatform platform) {
         String token = UsageStats.token();
-        if (token.isEmpty() || (!statisticsEnabled(platform) && !errorReportsEnabled(platform))) {
-            return "";
+        boolean statistics = statisticsEnabled(platform);
+        boolean errorReports = errorReportsEnabled(platform);
+        if (token.isEmpty() || (!statistics && !errorReports)) {
+            return;
         }
-        return token;
-    }
-
-    /**
-     * Makes the context with the metrics and the error tracker that config.yml leaves on. If FastStats
-     * can't start (its config.properties can't be written...), the mod loads anyway, without it.
-     */
-    public static <C extends SimpleContext, F extends SimpleContext.Factory<C, F>> void start(F factory, ModPlatform platform) {
+        if (FirstRun.inThisJvm(platform.fastStatsConfig())) {
+            // another mod set FastStats up for the first time on this server or computer during this run:
+            // nothing is sent until the next restart
+            platform.logger().info("FastStats runs for the first time here: Manhunt* sends nothing until the next restart.");
+            return;
+        }
+        // before the builder, which writes the file this reads
+        ErrorReports.Mode mode = ErrorReports.mode(errorReports, statistics, platform.fastStatsConfig());
         ErrorReports errors = null;
         try {
-            if (statisticsEnabled(platform)) {
-                factory.metrics(f -> f
-                        .addMetric(Metric.number("bots", () -> read(platform, UsageStats::bots)))
-                        .addMetric(Metric.string("language", () -> read(platform, UsageStats::language)))
-                        .addMetric(Metric.string("default_difficulty", () -> read(platform, UsageStats::defaultDifficulty)))
+            FastStatsContext.Builder fastStats = builder.get().token(token);
+            if (statistics) {
+                fastStats.metrics(f -> f
+                        .addMetric(Metric.number(UsageStats.BOTS, () -> read(platform, UsageStats::bots)))
+                        .addMetric(Metric.string(UsageStats.LANGUAGE, () -> read(platform, UsageStats::language)))
+                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, () -> read(platform, UsageStats::defaultDifficulty)))
                         .create());
             }
-            switch (ErrorReports.mode(errorReportsEnabled(platform), statisticsEnabled(platform), platform.fastStatsConfig())) {
+            switch (mode) {
                 case TRACK -> {
-                    // kept until the JVM exits when the reports are sent: a dedicated server doesn't start twice
+                    // kept until the JVM exits when the reports are sent (a dedicated server doesn't start
+                    // twice); closed once the server has started if they aren't
                     errors = new ErrorReports(platform.logger());
-                    factory.errorTrackerService(errors.tracker());
+                    fastStats.errorTrackerService(errors.tracker()).onReady(errors::closeUnlessSent);
                 }
-                case IDLE -> factory.errorTrackerService(ErrorTracker.contextUnaware());
+                case IDLE -> fastStats.errorTrackerService(ErrorTracker.contextUnaware());
                 case NONE -> {
                     // no error reports from this start
                 }
             }
-            C context = factory.create();
-            if (errors != null) {
-                errors.closeUnlessSentBy(context);
-            }
+            fastStats.build();
         } catch (RuntimeException e) {
             if (errors != null) {
                 errors.close();

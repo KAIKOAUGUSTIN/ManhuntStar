@@ -149,6 +149,8 @@ public final class ModBlock implements GameBlock {
     }
 
     /** Broken ice turns into water over a solid block or a liquid, as when a player breaks it. */
+    // liquid() is deprecated, but the game's own IceBlock checks it here, and this does the same
+    @SuppressWarnings("deprecation")
     private void afterIceBroken(ServerLevel level, ItemStack tool) {
         if (EnchantmentHelper.hasTag(tool, EnchantmentTags.PREVENTS_ICE_MELTING)) {
             return;
@@ -186,6 +188,9 @@ public final class ModBlock implements GameBlock {
         return state().canBeReplaced();
     }
 
+    // liquid() is deprecated with nothing to replace it: it is the block's own liquid property (water, lava,
+    // bubble column)
+    @SuppressWarnings("deprecation")
     @Override
     public boolean isLiquid() {
         return state().liquid();
@@ -285,6 +290,9 @@ public final class ModBlock implements GameBlock {
         return new Box(x() + b.minX, y() + b.minY, z() + b.minZ, x() + b.maxX, y() + b.maxY, z() + b.maxZ);
     }
 
+    // getSoundType() is deprecated only on NeoForge, in favor of its own version, which Fabric doesn't have;
+    // this code is the same for both
+    @SuppressWarnings("deprecation")
     @Override
     public SoundGroup soundGroup() {
         return ModRegistry.of(state().getSoundType());

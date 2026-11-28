@@ -69,10 +69,14 @@ public final class ModPlatform implements ManhuntPlatform {
     private ModServer server;
     private ManhuntCore core;
     /**
-     * The values sent to FastStats, of the last core started. Kept when the server stops: FastStats sends
-     * once more when it stops, after Manhunt* has (ModStatistics). Read by FastStats' thread.
+     * The values sent to FastStats, of the last core started. On a dedicated server they are kept when it
+     * stops: FastStats sends once more when it stops, after Manhunt* has (ModStatistics). On the client
+     * they go when the singleplayer or LAN world closes: FastStats keeps sending from the menu, and the
+     * last world's bots aren't there any more. Read by FastStats' thread.
      */
     private volatile UsageStats usage;
+    /** Whether the running server is a dedicated one (not the client's singleplayer or LAN world). */
+    private boolean dedicated;
     private volatile boolean running;
     private ModMobGoals mobGoals;
     private ModAimDiagnostics aim;
@@ -102,7 +106,7 @@ public final class ModPlatform implements ManhuntPlatform {
         return core;
     }
 
-    /** Null until a server has started. */
+    /** Null until a server has started, and on the client while no world is open. */
     UsageStats usage() {
         return usage;
     }
@@ -125,6 +129,7 @@ public final class ModPlatform implements ManhuntPlatform {
     /** The server finished starting (worlds loaded): Manhunt* starts. */
     public void serverStarted(MinecraftServer minecraft) {
         try {
+            dedicated = minecraft.isDedicatedServer();
             server = new ModServer(minecraft, logger);
             Platform.set(server);
             ModTypes.init(minecraft.overworld());
@@ -157,6 +162,9 @@ public final class ModPlatform implements ManhuntPlatform {
             core = null;
             server = null;
             mobGoals = null;
+            if (!dedicated) {
+                usage = null;
+            }
             ModWorld.forgetAll();
         }
     }

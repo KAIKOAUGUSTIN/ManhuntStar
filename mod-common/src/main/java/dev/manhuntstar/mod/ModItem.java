@@ -29,6 +29,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.KineticWeapon;
 import net.minecraft.world.item.component.Weapon;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.item.equipment.Equippable;
 
 /** A Minecraft {@link ItemStack} as a core {@link GameItem}, on the same stack (as the Paper plugin's). */
@@ -94,7 +95,7 @@ public final class ModItem implements GameItem {
 
     @Override
     public int enchantLevel(Enchant enchant) {
-        return stack.getEnchantments().getLevel(ModRegistry.enchantment(enchant));
+        return stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).getLevel(ModRegistry.enchantment(enchant));
     }
 
     @Override

@@ -23,9 +23,9 @@ No friends online? Spawn a pack of hunters that play like real players and try t
 | **Client (singleplayer / LAN)** | — | ✅ Install it on your own client |
 | **Players who join** | Nothing to install (vanilla client) | Nothing to install (vanilla client) |
 
-The Paper plugin runs on the server. The Fabric and NeoForge mods are **not server side only: they are client side too**. Put them on a dedicated server, or in your own client's `mods/` folder to play with the bots in singleplayer and in the LAN worlds you open.
+The Paper plugin runs on the server. The Fabric and NeoForge mods work both ways: put them on a dedicated server, or in your own game's `mods/` folder to play with the bots in singleplayer and in the LAN worlds you open.
 
-Either way, whoever joins never needs to install anything: a vanilla client is enough. In a LAN world only the host needs the mod.
+Either way, whoever joins doesn't need to install anything: a vanilla client is enough. In a LAN world only the host needs the mod.
 
 ## ⭐ Support the project
 
@@ -38,141 +38,134 @@ If you like ManhuntStar, consider giving the repository a ⭐ on GitHub! It help
 1. Download `ManhuntStar-<version>.jar` from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or Hangar.
 2. Put it in your server's `plugins/` folder and start the server.
 
-Requirements: Paper 26.2 or 26.3 and Java 25. No other plugins needed.
+You need Paper 26.2 or 26.3 and Java 25. No other plugins are needed.
 
 **Fabric or NeoForge** (mod):
 
-1. Download the jar for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or CurseForge.
+1. Download the file for your loader and Minecraft version, for example `ManhuntStar-fabric-<version>+26.3.jar` or `ManhuntStar-neoforge-<version>+26.2.jar`, from the [latest release](https://github.com/KAIKOAUGUSTIN/ManhuntStar/releases/latest), Modrinth or CurseForge.
 2. Put it in the `mods/` folder:
    - **On a server:** the server's `mods/` folder, then start the server. Players join with a vanilla client.
-   - **For singleplayer or LAN:** your client's `mods/` folder, then open a world. Friends joining your LAN world don't need it.
-3. On Fabric, [Fabric API](https://modrinth.com/mod/fabric-api) is needed too, in the same `mods/` folder.
+   - **For singleplayer or LAN:** your game's `mods/` folder, then open a world. Friends joining your LAN world don't need it.
+3. On Fabric, you also need [Fabric API](https://modrinth.com/mod/fabric-api) in the same `mods/` folder.
 
-Requirements: Minecraft 26.2 or 26.3 and Java 25.
+You need Minecraft 26.2 or 26.3 and Java 25.
 
-The mods do the same as the plugin; their files (`config.yml`, `lang/`, `skins/`, the saved bots) are in `config/manhuntstar/` instead of `plugins/ManhuntStar/`. `/manhunt` is for operators, or for whoever has the `manhuntstar.admin` permission in a permissions mod such as LuckPerms.
+The mods do everything the plugin does. Their files (settings, languages, skins and saved bots) are in `config/manhuntstar/` instead of `plugins/ManhuntStar/`. Only operators can use `/manhunt`, unless you give the `manhuntstar.admin` permission to other players with a permissions mod such as LuckPerms.
 
 ## 🎯 Quick start
 
 1. Join as an operator and run `/manhunt create Hunter 3` (or open `/manhunt menu`). Three hunters appear in a ring around you.
 2. Walk out of the ring. A countdown starts, with a bar at the top of the screen and 3-2-1 titles.
 3. When it ends, the hunters come after you. Run!
-4. Kill the Ender Dragon to win. If the hunters get you, you lose (see `manhunt.defeat`). Everyone gets a victory or defeat title and a short summary in the chat, and the bots stay where they are, partying or moping, until the next hunt.
+4. Kill the Ender Dragon to win. If the hunters get you, you lose. Everyone sees a victory or defeat title and a short summary in the chat, and the bots stay where they are, celebrating or moping, until the next hunt.
 
-Use `/manhunt pause` and `/manhunt resume` to stop and continue the hunt, and `/manhunt remove all confirm` to clear every bot.
+Use `/manhunt pause` and `/manhunt resume` to stop and continue the hunt, and `/manhunt remove all confirm` to remove every bot.
 
 ## ⚙️ Commands
 
-Everything lives under `/manhunt` and needs the `manhuntstar.admin` permission (operators have it by default). The verbs are the same everywhere: `create`/`remove` for bots and groups, `add`/`remove` for lists and `clear` to erase a value. Positions accept `~ ~ ~`; with no position, your own position is used.
+Everything is under `/manhunt` and needs the `manhuntstar.admin` permission (operators have it by default). The words are the same everywhere: `create` and `remove` for bots and groups, `add` and `remove` for lists, and `clear` to erase something. Where a command asks for a position, you can use `~ ~ ~`; without one, your own position is used.
 
 ### 🎮 Match
 
 | Command | What it does |
 |---|---|
-| `/manhunt start` | Starts the hunt right away (releases every ring and skips the countdown). |
-| `/manhunt pause` · `/manhunt resume` | Pause: freezes each bot where it is (even in the air, mounted or in a boat), invincible and not thinking, and stops the ring countdown, the late-joiner protection, the phase timer and respawning. The pause survives a server restart. |
-| `/manhunt target <player>` · `/manhunt target clear` | Makes every bot chase one player / back to normal. |
-| `/manhunt ring` · `/manhunt ring point [x y z \| clear]` | Shows the ring; sets a fixed point for the rings (manual center) or clears it (back to automatic). |
-| `/manhunt players` · `players add\|remove <player>` · `players mode <off\|allowlist\|blocklist>` | List of players who can (or can't) be hunted and trigger the ring. |
+| `/manhunt start` | Starts the hunt right away, without waiting for the countdown. |
+| `/manhunt pause` · `/manhunt resume` | Freezes every bot where it is (even in the air, on a horse or in a boat), where nothing can hurt it, and stops the countdown and the hunt's timers until you resume. A paused hunt stays paused after a server restart. |
+| `/manhunt target <player>` · `/manhunt target clear` | Makes every bot chase one player / goes back to normal. |
+| `/manhunt ring` · `/manhunt ring point [x y z \| clear]` | Shows the ring; sets a fixed spot for the ring, or goes back to placing it where the bots are created. |
+| `/manhunt players` · `players add\|remove <player>` · `players mode <off\|allowlist\|blocklist>` | Chooses who can (or can't) be hunted. |
 
 ### 🤖 Bots
 
 | Command | What it does |
 |---|---|
-| `/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]` | Creates bots where you are (or at the ring point, with a manual center), or at `at x y z`. In MANHUNT mode they spawn in a ring. |
-| `/manhunt remove <bot>` · `/manhunt remove all confirm` | Removes the bots with that name / deletes them all, including the save. |
-| `/manhunt list` · `/manhunt info <bot>` | Lists the bots (health, phase, target, location, what each one is doing). |
+| `/manhunt create <name> [amount] [difficulty] [skin <player>] [at <x y z>] [phase] [aggression]` | Creates bots where you are (or at the ring's fixed spot, if you set one), or at `at x y z`. In a hunt they appear in a ring. |
+| `/manhunt remove <bot>` · `/manhunt remove all confirm` | Removes the bots with that name / removes all of them, for good. |
+| `/manhunt list` · `/manhunt info <bot>` | Lists the bots: health, phase, target, location and what each one is doing. |
 | `/manhunt tp <bot\|all> [player]` | Brings bots to a player (or to you). |
-| `/manhunt skin <bot> <player>` | Changes the skin. |
-| `/manhunt spawnpoint <bot> [x y z \| clear]` | A bot's respawn point. |
-| `/manhunt equip item <item>` · `/manhunt equip armor <tier>` | Gives an item / armor to every bot. |
-| `/manhunt test <tnt-craft\|bow-burst\|firework-crossbow>` | Tests a special ability against you. |
+| `/manhunt skin <bot> <player>` | Changes a bot's skin. |
+| `/manhunt spawnpoint <bot> [x y z \| clear]` | Sets where a bot respawns. |
+| `/manhunt equip item <item>` · `/manhunt equip armor <tier>` | Gives an item or armor to every bot. |
+| `/manhunt test <tnt-craft\|bow-burst\|firework-crossbow>` | Tries one of the bots' special moves on you. |
 
 ### 👥 Groups
 
-The group name comes before the action.
+Write the group's name before what you want to do.
 
 | Command | What it does |
 |---|---|
-| `/manhunt group <group> role <hunter\|escape>` | The group's role (hunter or escaper). |
+| `/manhunt group <group> role <hunter\|escape>` | Whether the group hunts or runs away. |
 | `/manhunt group <group> enemy add\|remove <other>` | Enemy groups fight each other. |
-| `/manhunt group <group> spawnpoint [x y z \| clear]` | The group's respawn point. |
-| `/manhunt group <group> phases <true\|false>` · `chaseplayers <true\|false>` | Phases and chasing players. |
+| `/manhunt group <group> spawnpoint [x y z \| clear]` | Sets where the group respawns. |
+| `/manhunt group <group> phases <true\|false>` · `chaseplayers <true\|false>` | Whether the group gets stronger through phases, and whether it chases players. |
 | `/manhunt group <group> remove` | Removes the group and its bots. |
 
 ### 🛠️ Settings and menu
 
 | Command | What it does |
 |---|---|
-| `/manhunt settings [option] [value]` | Shows or changes options (`language`, `pathmode`, `pathnodes`, `allowtowering`, `targetmode`, `glowhunters true red`, `countdown 20`, `ringradius auto`...). |
-| `/manhunt reload` | Reloads `config.yml` and the language files. |
-| `/manhunt menu` | Chest menu in four sections: Match, Hunt rules, Bots and Settings. Names (bots, skin, player) are typed in a dialog box. |
+| `/manhunt menu` | A chest menu in four sections: Match, Hunt rules, Bots and Settings. Names (of bots, skins, players) are typed in a text box. |
+| `/manhunt settings [option] [value]` | Shows or changes an option from the chat, for example `/manhunt settings language pt-br` or `/manhunt settings countdown 20`. |
+| `/manhunt reload` | Reloads the settings and the language files. |
 
 Difficulties: `easy`, `medium`, `hard`, `terminator`.
 
-Names with `%`, accents or spaces go in quotes in commands, for example `/manhunt create "Hunter%" 5` and `/manhunt group "Hunter%" role escape`. Tab completion already adds the quotes.
+Names with `%`, accents or spaces go in quotes, for example `/manhunt create "Hunter%" 5` and `/manhunt group "Hunter%" role escape`. Pressing Tab to complete a name adds the quotes for you.
 
 ## 🔧 Configuration
 
-Everything is commented in `plugins/ManhuntStar/config.yml` (`config/manhuntstar/config.yml` on Fabric and NeoForge) and can also be changed in game, with `/manhunt settings` or in `/manhunt menu`. Highlights:
+You can change everything in the game, in `/manhunt menu` or with `/manhunt settings`. Everything is also in `config.yml` (in `plugins/ManhuntStar/`, or `config/manhuntstar/` on the mods), where every option is explained. Some of what you can set:
 
-- ⏱️ **Ring and countdown before the hunt** (`manhunt.countdown-seconds`, default 20): the bots wait in the ring until a player who was inside leaves; then the head-start countdown begins, and only then do they start hunting. A ring created far from everyone waits for someone to walk in and out (or for `/manhunt start`). With `manhunt.countdown-on-ring-leave: false` the countdown starts as soon as the bots are created; `0` = the bots are released as soon as someone leaves the ring.
-- 📍 **Ring radius and center**: `manhunt.ring-radius` (`0` = automatic, grows with the number of bots) and `manhunt.ring-center` (`auto` = where the ring is created; `manual` = at the point set with `/manhunt ring point`).
-- 🛡️ **Late joiners** (`manhunt.late-join`): `protected` (default) isn't a target for the ring's countdown time, at least 5 s; `hunted` becomes a target right away; `out` isn't hunted until the next hunt. Someone who was already in the hunt, drops and comes back is still hunted.
-- 🏆 **End of the match**: the hunted players win when the Ender Dragon dies. `manhunt.defeat` says when they lose: `all-died` (default) = once each of them died once; `first-death` = at the first death; `never` = deaths don't end it. The hunted players are those the player list allows, plus the player set with `/manhunt target`, who counts even when the list leaves them out. With `all-died` and `first-death`, whoever dies goes through the death screen and then watches as a spectator; 15 s after the end they're back in their game mode, where they respawned. The summary shows who decided it, the hunt time (without the pauses), the deaths on each side, the bots' highest phase and the bot that killed the most.
-- 👤 **Player list** (`manhunt.player-list-mode` and `/manhunt players`): `allowlist` = only the listed players are hunted and trigger the ring; `blocklist` = the listed players aren't hunted and don't trigger the ring. `/manhunt target` overrides it.
-- ✨ **Glow** on the hunters (`appearance.glow-hunters`, with a color) and, separately, on the escapers. Off by default; turn it on and change the color in `/manhunt menu` (Settings) or with `/manhunt settings glowhunters true red`.
-- 👾 **Hostile mobs attack the bots** (zombies, skeletons, creepers, spiders in the dark, slimes on contact, piglins ignore whoever wears gold...), with an exception list (`bots.mobs-that-ignore-bots`).
-- 🔔 **Update check** (`general.update-check`, on by default): looks for a new version when the server starts and every 6 hours. A new version is logged to the console and shown to admins when they join, with a download link.
-- 📊 **Anonymous statistics** on [FastStats](https://faststats.dev) (`faststats.statistics`, on by default), on Paper and on the mods' dedicated servers (singleplayer and LAN worlds send nothing): server count, Minecraft, loader and Java versions, number of bots, language and default difficulty. When FastStats first runs on a server (no `faststats/config.properties` yet, from any plugin or mod), nothing is sent until the next restart. `faststats.statistics: false` turns off ManhuntStar's (at the next restart); `enabled=false` in `faststats/config.properties` (`plugins/` on Paper, `config/` on the mods) turns off every plugin's and mod's. If bStats was turned off for every plugin (`enabled: false` in `plugins/bStats/config.yml`), both FastStats options start off.
-- 🐞 **Error reports** on FastStats (`faststats.error-reports`, on by default): ManhuntStar's own errors (type, message and stack trace, without IP addresses or the system user name), sent with the statistics. `faststats.error-reports: false` turns them off (at the next restart); `submitErrors=false` in `faststats/config.properties` turns off every plugin's and mod's.
-- Combat, mobility, pathfinding, tactics, saving, default difficulty...
+- ⏱️ **Ring and head start**: before the hunt, the bots wait in a ring. When a player inside it walks out, a countdown gives everyone a head start (20 seconds by default), and only then do the bots start hunting. You can change how long it lasts, start it as soon as the bots are created, or skip it.
+- 📍 **Ring size and place**: the ring grows with the number of bots, or has the size you choose. It appears where the bots are created, or on a fixed spot you set with `/manhunt ring point`.
+- 🛡️ **Players who join late**: by default they get a head start too, as long as the ring's countdown (at least 5 seconds), before the bots go after them. You can also make them targets right away, or keep them out until the next hunt. Someone who was already playing, drops and comes back is still hunted.
+- 🏆 **End of the match**: the hunted players win when the Ender Dragon dies. By default they lose once each of them has died once; you can make the first death end it, or let them keep going no matter how many times they die. When deaths count, whoever dies watches the rest as a spectator, and 15 seconds after the end everyone is back to normal. A summary shows who decided the match, how long the hunt lasted (without the pauses), the deaths on each side, the bots' highest phase and the bot that killed the most.
+- 👤 **Who gets hunted**: everyone, only the players on a list, or everyone except them (`/manhunt players`). `/manhunt target` makes every bot chase one player, whatever the list says.
+- ✨ **Glow**: the hunters, and separately the escapers, can glow in a color you choose. Off by default.
+- 👾 **Hostile mobs attack the bots**: zombies, skeletons, creepers, spiders in the dark, slimes on contact... and piglins leave alone whoever wears gold. You can list mobs that should ignore the bots.
+- 🔔 **Update check**: ManhuntStar looks for a new version when the server starts and every 6 hours, and lets admins know when they join, with a download link.
+- 📊 **Anonymous statistics and error reports**: to help improve ManhuntStar, it sends anonymous statistics to [FastStats](https://faststats.dev) (how many servers use it, the Minecraft, loader and Java versions, the number of bots, the language and the default difficulty), and reports of its own errors, without IP addresses or user names. This happens on servers and on your client (singleplayer and LAN), and is on by default. You can turn either one off in `config.yml`, or every plugin's and mod's at once in FastStats' own settings (`faststats/config.properties`); in the game, also under Options → Telemetry Data → FastStats. The first time FastStats runs on a server or a computer, nothing is sent until the next restart. If you had turned bStats off for every plugin, these start off too.
+- And much more: combat, movement, tactics, saving and the bots' default difficulty.
 
-Updating ManhuntStar: `config.yml` and the language files in `lang/` have a version. When a new version changes one of them, it is updated on the first start: new options and texts are added with their comments, renamed ones are moved, and your values and edited texts are kept. A copy of the previous file goes to `old/` (`lang/old/` for the languages).
+When you update ManhuntStar, your `config.yml` and language files are updated on the first start: new options and texts are added and explained, and your values and the texts you edited are kept. A copy of the old file is saved in `old/` (`lang/old/` for the languages).
 
-Upgrading from 1.5.x or older: your old `config.yml` is converted on the first start (values kept, language set to `pt-br`) and the original is saved as `config-old.yml`. The old `messages.yml` is renamed to `messages-old.yml`; texts now live in the language files.
+Coming from version 1.5 or older? Your old settings are converted on the first start, with the language set to Brazilian Portuguese, and the original file is kept as `config-old.yml`. Your old `messages.yml` is kept as `messages-old.yml`: the texts are now in the language files.
 
 ## ✨ Features
 
-- 🎯 **Sharp aim**: bows, crossbows, tridents and firework crossbows lead moving targets, and the bots don't waste shots when a block is in the way.
+- 🎯 **Sharp aim**: bows, crossbows, tridents and firework crossbows aim ahead of moving targets, and the bots don't waste shots when a block is in the way.
 - 🐎 **Horses and spears**: mounted bots gallop, jump gaps and charge with spears; on foot they switch to swords.
 - 🚣 **Boats**: when crossing a lake is faster than walking around it, the bots place a boat and row across.
 - 🧭 **No idle bots**: bots far from every player keep moving and chasing.
-- 🎭 **They look like players**: shown in TAB with skin and ping, counted in the server list and in `/list`, with "joined/left the game" and vanilla death messages.
-- 🎨 **Skins**: from any Mojang account, from a `.png` in `plugins/ManhuntStar/skins/` or the default robot skin.
+- 🎭 **They look like players**: they show up in the player list (Tab) with skin and ping, count as online players, and get "joined/left the game" and the usual death messages.
+- 🎨 **Skins**: from any Minecraft account, from a `.png` you put in `plugins/ManhuntStar/skins/`, or the default robot skin.
 - 💾 **Saved**: bots, groups and gear come back after a restart.
-- ⚡ **Light on the server**: in testing, 40 bots fighting each other kept the server at about 3 ms per tick (the limit is 50 ms).
+- ⚡ **Light on the server**: in testing, 40 bots fighting each other used only a small part of what the server can handle (about 3 ms of the 50 ms it has each tick).
 
 ## 🌍 Languages
 
-ManhuntStar comes in **English** (`en`, the default), **Brazilian Portuguese** (`pt-br`), **French** (`fr`), **Russian** (`ru`) and **Simplified Chinese** (`zh-cn`). Every message and the whole menu are translated; commands and `config.yml` keys stay in English.
+ManhuntStar comes in **English** (`en`, the default), **Brazilian Portuguese** (`pt-br`), **French** (`fr`), **Russian** (`ru`) and **Simplified Chinese** (`zh-cn`). Every message and the whole menu are translated; commands and the option names in `config.yml` stay in English.
 
-Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` (Settings → General) or with `general.language` in `config.yml`. It switches right away.
+Change the language with `/manhunt settings language pt-br`, in `/manhunt menu` (Settings → General) or in `config.yml`. It switches right away.
 
-### Translating the plugin
+### Translating ManhuntStar
 
 1. Copy `plugins/ManhuntStar/lang/en.yml` to a new file in the same folder, named after your language, for example `es.yml`.
-2. Translate the texts between quotes. Keep the tags in `<...>`: `<bot>`, `<player>`, `<amount>` and the like are filled in by the plugin, and color tags such as `<red>` or `<bold>` follow the [MiniMessage](https://docs.advntr.dev/minimessage/format.html) format.
+2. Translate the texts between quotes. Leave everything between `<` and `>` as it is: names like `<bot>` and `<player>` are filled in by ManhuntStar, and tags like `<red>` or `<bold>` set the colors and styles.
 3. Run `/manhunt reload`, then `/manhunt settings language es`.
 
-Anything you leave out falls back to English, so you can translate a little at a time. You can also edit the included files (`en.yml`, `pt-br.yml`...): when an update brings a new version of one of them, it is updated on the first start, adding the new texts and keeping the ones you edited (except a text that no longer exists, or one whose meaning changed so much that the update replaces it), and a copy of your previous file goes to `lang/old/<language>-v<version>.yml`. A file with your own name is never changed.
+Anything you leave out shows up in English, so you can translate a little at a time. You can also edit the files that come with ManhuntStar (`en.yml`, `pt-br.yml`...): when an update brings new texts, they are added on the first start and the texts you edited are kept (unless a text was removed, or changed so much that the update replaces it). A copy of your previous file is saved in `lang/old/`. A file you created yourself is never changed.
 
-Want your translation in the plugin? Open a pull request adding it to `core/src/main/resources/lang/`.
+Want your translation to come with ManhuntStar? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 🔌 API for other plugins
+## 🧑‍💻 For developers
 
-On Paper, `dev.manhuntstar.api.ManhuntStarAPI` lists the bots and finds the bot behind an entity. Events: `BotEvents.BotDamageByPlayerEvent`, `BotFallDamageEvent`, `BotDeathEvent` and `BotKilledByPlayerEvent`.
-
-## 🏗️ Building
-
-Needs JDK 25. Run `./gradlew build`; the jars end up in `build/libs/`: the Paper plugin and the Fabric and NeoForge mods, one per Minecraft version (the versions are in `gradle.properties`).
-
-Gradle checks every dependency it downloads against the checksums in `gradle/verification-metadata.xml`. After adding or updating a dependency (or a Gradle plugin), write them again with `./gradlew --write-verification-metadata sha256 build` and commit the file. Writing the file doesn't check anything: it records the checksums of whatever the repositories (or Gradle's local cache) served, so before committing, compare the new checksums with an independent source where there is one (for example the checksums the project publishes with its release).
+Building ManhuntStar, its API for other plugins and how to send changes: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## ⚠️ Limitations
 
-- Other plugins and mods that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in TAB, in `/list` and in the player count, but they aren't real players.
+- Other plugins and mods that look for players (for example another ManHunt plugin's compass) don't see the bots: they show up in the player list and in the player count, but they aren't real players.
 
 ## 🙏 Credits
 
-Based on the Fabric mod **T\* (Terminator Star)** by **OpaleMC**, CC0 license: the behavior was studied in the mod and rewritten from scratch for the Paper API, with fixes and optimizations.
+Based on the Fabric mod **T\* (Terminator Star)** by **OpaleMC**, CC0 license: its behavior was studied and rewritten from scratch, with fixes and optimizations.

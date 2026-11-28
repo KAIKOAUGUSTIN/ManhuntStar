@@ -1,7 +1,7 @@
 package dev.manhuntstar.metrics;
 
 import dev.faststats.ErrorTracker;
-import dev.faststats.SimpleContext;
+import dev.faststats.FastStatsContext;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,16 +79,16 @@ public final class ErrorReports {
         /**
          * An idle tracker ({@code ErrorTracker.contextUnaware()}), which nothing feeds: only error reports
          * are on and FastStats won't send them (its first run on the server, or off in its config). The
-         * context needs a service to make its config and show its first-run notice.
+         * context needs a service to be built and show its first-run notice when it is made ready.
          */
         IDLE
     }
 
     /**
-     * Decides {@link Mode} from config.yml's two options and FastStats' config.properties. With
-     * statistics on there is never an idle tracker: they are the context's service already, and on the
-     * mods, where FastStats always keeps the error service, an idle tracker would only collect FastStats'
-     * own errors without sending them.
+     * Decides {@link Mode} from config.yml's two options and FastStats' config.properties; called before
+     * the context's builder, which writes that file on FastStats' first run. With statistics on there is
+     * never an idle tracker: they are the context's service already, and FastStats keeps the error service
+     * even when it sends nothing, so an idle tracker would only collect FastStats' own errors.
      */
     public static Mode mode(boolean errorReports, boolean statistics, File fastStatsConfig) {
         if (!errorReports) {
@@ -102,13 +102,14 @@ public final class ErrorReports {
 
     /**
      * Would FastStats send error reports, going by its config.properties as it is now? Read only (the
-     * SDK writes the file when it starts): no when the file isn't there yet (FastStats' first run on
-     * the server sends nothing), when {@code enabled} or {@code submitErrors} is false, or with
-     * {@code -Dfaststats.enabled=false}. Checked before making an {@code ErrorReports}, so that nothing
-     * is tracked when nothing will be sent.
+     * SDK's builder writes the file): no when the file isn't there yet (FastStats' first run on the server
+     * sends nothing), when another plugin or mod already had that first run in this JVM, when
+     * {@code enabled} or {@code submitErrors} is false, or with {@code -Dfaststats.enabled=false}. Checked
+     * before making an {@code ErrorReports}, so that nothing is tracked when nothing will be sent.
      */
     public static boolean sentBy(File fastStatsConfig) {
-        if (!Boolean.parseBoolean(System.getProperty("faststats.enabled", "true")) || !fastStatsConfig.isFile()) {
+        if (!Boolean.parseBoolean(System.getProperty("faststats.enabled", "true")) || Boolean.getBoolean(FirstRun.PROPERTY)
+                || !fastStatsConfig.isFile()) {
             return false;
         }
         Properties props = new Properties();
@@ -131,21 +132,32 @@ public final class ErrorReports {
     }
 
     /**
-     * Keeps tracking only if {@code context} sends the reports. It doesn't when FastStats is off for every
-     * plugin (faststats/config.properties: enabled or submitErrors false) or on FastStats' first run on
-     * this server; then nothing would send or clear what the tracker collects, so it stops.
+     * For the context's builder, after the platform's own setup: {@code builder.onReady(reports::closeUnlessSent)}.
+     * The SDK runs it when the context is made ready (onEnable on Paper, once the server has started on a
+     * mod's dedicated server), right after its own hook has started sending or not, and it keeps tracking
+     * only if the reports are sent. They aren't on FastStats' first run on the server (its notice sets
+     * {@code faststats.first-run} and nothing is sent until the next restart) or when FastStats is off for
+     * every plugin (faststats/config.properties: enabled or submitErrors false); then nothing would send or
+     * clear what the tracker collects, so it stops.
      *
-     * @return whether the reports are sent (and the tracking goes on)
+     * <p>On the client the context is made ready inside {@code build()}, just before the SDK starts sending:
+     * the answer is the same, since tracking only starts when config.properties was already there (not
+     * FastStats' first run there) and another mod's first run has set {@code faststats.first-run}. If the
+     * player turns the errors off in the game (Options, Telemetry Data, FastStats), the tracker keeps
+     * collecting ManhuntStar's distinct errors in memory, without sending them, until the game closes (the
+     * SDK doesn't say when its config changes); the next start doesn't track.
      */
-    public boolean closeUnlessSentBy(SimpleContext context) {
-        boolean sent = context.submissionActive && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();
+    public void closeUnlessSent(FastStatsContext context) {
+        boolean sent = !Boolean.getBoolean(FirstRun.PROPERTY) && context.getConfig().errorTracking() && context.errorTrackerService().isPresent();
         if (!sent) {
             close();
         }
-        return sent;
     }
 
-    /** Stops tracking (the plugin being disabled): the JVM's handler for uncaught errors goes back. */
+    /**
+     * Stops tracking (the plugin being disabled): the JVM's handler for uncaught errors goes back. Calling it
+     * again does nothing.
+     */
     public void close() {
         logger.removeHandler(handler);
         tracker.detachErrorContext();
