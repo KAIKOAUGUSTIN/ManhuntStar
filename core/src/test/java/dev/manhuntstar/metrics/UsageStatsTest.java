@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /** What FastStats is sent besides its own metrics, and the token the jars get at build time. */
 class UsageStatsTest {
 
-    private static final List<String> IDS = List.of(UsageStats.BOTS, UsageStats.LANGUAGE, UsageStats.DEFAULT_DIFFICULTY);
+    private static final List<String> IDS = List.of(UsageStats.BOTS_ID, UsageStats.LANGUAGE_ID, UsageStats.DEFAULT_DIFFICULTY_ID);
 
     /**
      * FastStats' own fields: the dashboard doesn't take a data source with one of these Reference IDs, so a
@@ -61,6 +61,6 @@ class UsageStatsTest {
     @Test
     void theLanguageIsPluginLanguage() {
         // the Reference ID of the data source on the FastStats project
-        assertEquals("plugin_language", UsageStats.LANGUAGE);
+        assertEquals("plugin_language", UsageStats.LANGUAGE_ID);
     }
 }

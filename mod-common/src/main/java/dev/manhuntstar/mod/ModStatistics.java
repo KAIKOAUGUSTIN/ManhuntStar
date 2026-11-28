@@ -58,9 +58,9 @@ public final class ModStatistics {
             FastStatsContext.Builder fastStats = builder.get().token(token);
             if (statistics) {
                 fastStats.metrics(f -> f
-                        .addMetric(Metric.number(UsageStats.BOTS, () -> read(platform, UsageStats::bots)))
-                        .addMetric(Metric.string(UsageStats.LANGUAGE, () -> read(platform, UsageStats::language)))
-                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY, () -> read(platform, UsageStats::defaultDifficulty)))
+                        .addMetric(Metric.number(UsageStats.BOTS_ID, () -> read(platform, UsageStats::bots)))
+                        .addMetric(Metric.string(UsageStats.LANGUAGE_ID, () -> read(platform, UsageStats::language)))
+                        .addMetric(Metric.string(UsageStats.DEFAULT_DIFFICULTY_ID, () -> read(platform, UsageStats::defaultDifficulty)))
                         .create());
             }
             switch (mode) {
